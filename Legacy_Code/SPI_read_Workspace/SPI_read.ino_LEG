@@ -1,0 +1,206 @@
+
+#include <SPI.h>
+
+/*
+Referencias: 
+https://circuitdigest.com/microcontroller-projects/arduino-spi-communication-tutorial
+https://forum.arduino.cc/t/arduino-as-spi-slave/52206/15
+
+https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf
+(punto 18.5 SPI Register Description);
+*/
+
+/*
+ * Equipo       Pin Config: 
+ * 
+ * DOUT (Y)     11  MOSI    Master Outputs, Slave Inputs    
+ *              12  MISO    Master Inputs, Slave Outputs
+ * PD_SCK (G)   13  SCK     SPI Clock 
+ * Ard Pin 4    10  ~SS     Slave Set (negative logic => LOW = Slave Selected)
+ */
+
+//Acquisition
+unsigned char buf[3];  //Por documentación son 24 bits por tanto 3 bytes
+uint32_t f = 0;
+volatile byte pos;  
+volatile boolean process_it; 
+int calib = 10; //10 first values plus  1 interception check 
+
+//Scalation
+float gradient = 3.5652;
+float intercept;
+
+
+int SSpin = 4; 
+
+void setup(){
+
+    Serial.begin(115200);
+    SPI_config(); 
+//    Initial_check();
+
+    pos = 0; 
+    process_it = false; 
+    digitalWrite(SSpin, LOW);
+
+}
+
+int32_t prev = 0; 
+int point = 0; 
+void loop(){
+
+    if(process_it)
+    {
+        int32_t deci = concat_convert(buf);
+        if(calib){
+            calibration(deci);
+        }
+        else{
+            //Código para calibración con Excel
+            Serial.print(point++); Serial.print("\t");
+            Serial.println(deci);
+            while(point > 250);
+
+            //Envío de Dato escalado
+            //Serial.print("\t");
+            //Serial.println(scalation(deci)); 
+
+        }
+        pos = 0;
+        process_it = false;
+        digitalWrite(SSpin, LOW);
+    }
+
+}
+
+
+
+float scalation(int32_t x)
+{
+    float y = (gradient/100000.0)*(x - intercept);
+    //Estos joputas sólo entregan valores desde y > 0.5 | y < -0.5!!!
+    y = y*((y > 0.5) + (y < -0.5)); 
+    return y;
+}
+
+void calibration(int32_t init_read){
+
+    intercept += init_read/10.0; //Average of the first 10 values at device startup
+    calib -- ;
+    if(!calib && !(-225800.0 < intercept && intercept < -169600.0)){      //If resultant Intercept not (-1Kg < intercept < 1Kg) assign -195680; 
+        intercept = -195680;
+    }    
+}
+
+
+
+int32_t concat_convert(unsigned char buffer[]){
+
+    //Concatenación de los bytes  (ojo que se ocupa uint32_t f, porque no existe uint24_t, por lo que sobra el MSB byte!)
+    uint32_t val = ((uint32_t)buffer[0]<<16) |((uint32_t)buffer[1]<<8) | ((uint32_t)buffer[2]<<0);; 
+
+    //Conversión de Two Complement -> Decimal con signo
+    uint32_t sign_mask = 0x800000; // 1 in MSB of 3 bytes
+
+    if ((val & sign_mask)==0){
+        return val; 
+    }
+    else{
+        return -(~(val | 0xFF000000 ) +1); 
+        // val | 0xFF000000 -> Como val es de 4 bytes, pero el valor útil es de sólo 3 bytes, 
+        // debo enmascarar el primer byte con 1, para que al invertir se omita. 
+        // -() + 1-> complemento + 1 me da el valor absoluto, y luego se agrega el signo
+    }
+
+}
+
+ISR(SPI_STC_vect){
+    byte c = SPDR;
+
+    if (pos < sizeof(buf)){
+        buf[pos++] = c; 
+        
+        if(pos==sizeof(buf)){
+            digitalWrite(SSpin, HIGH);
+            process_it = true;
+        }
+    }
+}
+
+
+
+
+void SPI_config(){
+    
+    pinMode(MISO, OUTPUT);
+    pinMode(SSpin,OUTPUT);
+
+
+    /* 
+     * Configuración de la comunicación SPI 
+     */
+
+    //Habilitación de la detección de dato SPI por interrupción 
+    SPCR |= 0x80; // |= 0b 1000 0000 // |= _BV(SPIE) // SPI.attachInterrupt();
+
+    //Habilitación de la Comunicación SPI!
+    SPCR |= 0x40; // |= 0b 0100 0000 // |=  _BV(SPE) 
+
+    //Data Order as MSB First (1 = LSB first; 0 = MSB First)
+    SPCR &= 0xDF; // &= 0b 1101 1111 // &= ~(_BV(DORD))
+
+    //Habilitación del Arduino como Slave
+    SPCR &= 0xEF; // &= 0b 1110 1111 // &= ~(_BV(MSTR))
+
+    //Configuración de CPOL => Señal HX710 es CPOL = 0
+    SPCR &= 0xF7; // &= 0b 1111 0111 // &= ~(_BV(CPOL))
+
+    //Configuración de CPHA => Señal HX710 es CPHA = 1 
+    SPCR |= 0x04; // |= 0b 0000 0100 // |=  _BV(CPHA) 
+
+    //Los últimos 2 bits son para configuración de freq' del SCK, lo cual no tiene efecto en el slave
+    //Serial.print("SPCR: ");
+    //Serial.println(SPCR, BIN);
+}
+
+void Initial_check(){
+    unsigned char A = 0b11111100; 
+    unsigned char B = 0b11111010;
+    unsigned char C = 0b10100010;
+    f = ((uint32_t)A<<16) |((uint32_t)B<<8) | ((uint32_t)C<<0);
+    Serial.print(f, BIN); Serial.print("  =>  ");
+
+    buf[0] = A; 
+    buf[1] = B; 
+    buf[2] = C; 
+    int32_t d = concat_convert(buf); //    int32_t d = -(~(f | 0xFF000000 ) +1);
+    Serial.println(d);
+
+}
+
+/*
+ * LEGACY CODE: 
+ * 
+    Data debería ser: 
+    1111 1100 1111 1010 0111 0010 => -197982
+
+
+    Rev del Buf
+        Serial.print((unsigned char)buf[0], BIN); Serial.print("\t");
+        Serial.print((unsigned char)buf[1], BIN); Serial.print("\t");
+        Serial.print((unsigned char)buf[2], BIN);  Serial.print("\t");
+
+    Concatenación de los bytes  (ojo que se ocupa uint32_t f, porque no existe uint24_t)
+    f = ((uint32_t)buf[0]<<16) |((uint32_t)buf[1]<<8) | ((uint32_t)buf[2]<<0);
+    Serial.println(f, BIN);
+
+    Datos: 
+    -   Char is an integer type, y corresponde a un byte de 8 bits => Lo que corresponde al tammaño del registo SPDR (la data recibida del SPI)
+    -   sizeof entrega el número de bytes del objeto 
+    -   array[index++]  => var++ post-increment, ++var pre-increment
+                        => primero entrega array[index]; y luego aplica index++;- 
+
+    -   Existe un SPI buffer, que luego de leer SPDR, lo vuelve a rellenar. 
+
+
+ */
