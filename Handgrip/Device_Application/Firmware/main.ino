@@ -178,7 +178,7 @@ void setup(){
 
 }
 
-void loop(){
+void loop(){signal_calibration_recording
 
     if(process_it)
     {
