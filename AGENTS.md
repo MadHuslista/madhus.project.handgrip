@@ -1,0 +1,8 @@
+- To review a rule, use `bash` command to read the file: `cat /home/levi/.augment/rules/<rule_file>`
+- To review a template, use `bash` command to read the file: `cat /home/levi/.augment/templates/<template_file>`
+- To review a standard, use `bash` command to read the file: `cat /home/levi/.augment/standards/<standard_file>`
+- For each rule:
+  - Before executing a rule, identify it's dependencies (other rules, templates, standards, placeholders).
+  - Validate that all dependencies are available in the appropriate directories.
+  - Update the placeholders at `<repo_root>/.augment/config/placeholders.env` with the correct values if needed.
+  - If a dependency is still missing, FAIL and report to user.
