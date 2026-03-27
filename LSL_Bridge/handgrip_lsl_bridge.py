@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import binascii
 import csv
+import importlib
 import logging
+import math
 import re
 import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Protocol
 
 import hydra
 from hydra.utils import to_absolute_path
@@ -18,6 +20,11 @@ from serial import Serial, SerialException
 from serial.tools import list_ports
 
 LOGGER = logging.getLogger("handgrip_lsl_bridge")
+
+
+class Processor(Protocol):
+    def process(self, value: float, sample_time_s: float) -> float:
+        ...
 
 
 @dataclass(slots=True)
@@ -36,7 +43,8 @@ class CsvSink:
         "host_unix_time_ns",
         "lsl_timestamp_s",
         "device_clock_us",
-        "value",
+        "value_raw",
+        "value_filtered",
         "sequence",
         "parser_mode",
         "raw_line",
@@ -55,13 +63,14 @@ class CsvSink:
             self._fh.flush()
         self._rows_since_flush = 0
 
-    def write(self, sample: ParsedSample) -> None:
+    def write(self, sample: ParsedSample, filtered_value: float) -> None:
         self._writer.writerow(
             {
                 "host_unix_time_ns": sample.host_unix_time_ns,
                 "lsl_timestamp_s": f"{sample.lsl_timestamp:.9f}",
                 "device_clock_us": sample.device_clock_us,
-                "value": repr(sample.value),
+                "value_raw": repr(sample.value),
+                "value_filtered": repr(filtered_value),
                 "sequence": "" if sample.sequence is None else sample.sequence,
                 "parser_mode": sample.parser_mode,
                 "raw_line": sample.raw_line,
@@ -212,6 +221,45 @@ class LineParser:
         return None
 
 
+class SampleTimeResolver:
+    def __init__(self, cfg: DictConfig) -> None:
+        self._source = str(cfg.processing.timestamp_source)
+        self._last_device_clock_us: int | None = None
+        self._last_resolved_time_s: float | None = None
+
+    def resolve(self, sample: ParsedSample) -> float:
+        if self._source == "lsl":
+            return float(sample.lsl_timestamp)
+
+        if self._source != "device_clock_us":
+            raise ValueError(f"Unsupported processing.timestamp_source: {self._source}")
+
+        if self._last_device_clock_us is None:
+            self._last_device_clock_us = sample.device_clock_us
+            self._last_resolved_time_s = 0.0
+            return 0.0
+
+        delta_us = sample.device_clock_us - self._last_device_clock_us
+        if delta_us <= 0:
+            if delta_us < 0:
+                LOGGER.warning(
+                    "Non-monotonic device clock detected: previous=%d current=%d. Resetting processor time base.",
+                    self._last_device_clock_us,
+                    sample.device_clock_us,
+                )
+            self._last_device_clock_us = sample.device_clock_us
+            if self._last_resolved_time_s is None:
+                self._last_resolved_time_s = 0.0
+            return self._last_resolved_time_s
+
+        if self._last_resolved_time_s is None:
+            self._last_resolved_time_s = 0.0
+        self._last_resolved_time_s += delta_us / 1_000_000.0
+        self._last_device_clock_us = sample.device_clock_us
+        return self._last_resolved_time_s
+
+
+
 def configure_logging(level_name: str) -> None:
     level = getattr(logging, level_name.upper(), logging.INFO)
     logging.basicConfig(
@@ -220,6 +268,7 @@ def configure_logging(level_name: str) -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
         force=True,
     )
+
 
 
 def find_port_metadata(port_name: str) -> dict[str, Optional[str]]:
@@ -236,6 +285,7 @@ def find_port_metadata(port_name: str) -> dict[str, Optional[str]]:
     return {"device": port_name, "serial_number": None, "manufacturer": None, "product": None, "vid": None, "pid": None}
 
 
+
 def build_source_id(cfg: DictConfig, port_meta: dict[str, Optional[str]]) -> str:
     if cfg.stream.source_id:
         return str(cfg.stream.source_id)
@@ -250,11 +300,12 @@ def build_source_id(cfg: DictConfig, port_meta: dict[str, Optional[str]]) -> str
     return f"arduino-handgrip-{device}-vid{vid}-pid{pid}"
 
 
+
 def build_outlet(cfg: DictConfig, source_id: str) -> StreamOutlet:
     info = StreamInfo(
         str(cfg.stream.name),
         str(cfg.stream.type),
-        2,
+        3,
         IRREGULAR_RATE,
         cf_double64,
         source_id,
@@ -265,6 +316,15 @@ def build_outlet(cfg: DictConfig, source_id: str) -> StreamOutlet:
     desc.append_child_value("device_name", str(cfg.stream.device_name))
     desc.append_child_value("protocol", "serial_to_lsl_bridge")
     desc.append_child_value("sampling_model", "irregular")
+    desc.append_child_value("processing_module", str(cfg.processing.module))
+    desc.append_child_value("processing_timestamp_source", str(cfg.processing.timestamp_source))
+
+    processing = desc.append_child("processing")
+    for idx, filter_cfg in enumerate(cfg.processing.filters):
+        filter_node = processing.append_child("filter")
+        filter_node.append_child_value("index", str(idx))
+        for key, value in filter_cfg.items():
+            filter_node.append_child_value(str(key), str(value))
 
     channels = desc.append_child("channels")
 
@@ -273,12 +333,18 @@ def build_outlet(cfg: DictConfig, source_id: str) -> StreamOutlet:
     ch_clock.append_child_value("type", str(cfg.stream.clock_channel_type))
     ch_clock.append_child_value("unit", str(cfg.stream.clock_unit))
 
-    ch_value = channels.append_child("channel")
-    ch_value.append_child_value("label", str(cfg.stream.value_channel_label))
-    ch_value.append_child_value("type", str(cfg.stream.value_channel_type))
-    ch_value.append_child_value("unit", str(cfg.stream.value_unit))
+    ch_raw = channels.append_child("channel")
+    ch_raw.append_child_value("label", str(cfg.stream.raw_channel_label))
+    ch_raw.append_child_value("type", str(cfg.stream.raw_channel_type))
+    ch_raw.append_child_value("unit", str(cfg.stream.value_unit))
+
+    ch_filtered = channels.append_child("channel")
+    ch_filtered.append_child_value("label", str(cfg.stream.filtered_channel_label))
+    ch_filtered.append_child_value("type", str(cfg.stream.filtered_channel_type))
+    ch_filtered.append_child_value("unit", str(cfg.stream.value_unit))
 
     return StreamOutlet(info, chunk_size=1)
+
 
 
 def settle_serial_input(ser: Serial, startup_settle_s: float) -> None:
@@ -287,6 +353,18 @@ def settle_serial_input(ser: Serial, startup_settle_s: float) -> None:
     while time.monotonic() < deadline:
         ser.readline()
     ser.reset_input_buffer()
+
+
+
+def build_processor(cfg: DictConfig) -> Processor:
+    module_name = str(cfg.processing.module)
+    module = importlib.import_module(module_name)
+    if not hasattr(module, "build_processor"):
+        raise AttributeError(
+            f"Processing module '{module_name}' must expose a build_processor(cfg) function"
+        )
+    processor = module.build_processor(cfg.processing)
+    return processor
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -301,6 +379,8 @@ def app(cfg: DictConfig) -> None:
         flush_every_n_rows=int(cfg.csv.flush_every_n_rows),
     )
     parser = LineParser(cfg)
+    processor = build_processor(cfg)
+    time_resolver = SampleTimeResolver(cfg)
 
     sample_count = 0
     try:
@@ -317,11 +397,12 @@ def app(cfg: DictConfig) -> None:
                     source_id = build_source_id(cfg, port_meta)
                     outlet = build_outlet(cfg, source_id)
                     LOGGER.info(
-                        "LSL outlet ready: name=%s type=%s source_id=%s csv=%s",
+                        "LSL outlet ready: name=%s type=%s source_id=%s csv=%s processing_module=%s",
                         cfg.stream.name,
                         cfg.stream.type,
                         source_id,
                         csv_path,
+                        cfg.processing.module,
                     )
 
                     while True:
@@ -339,20 +420,31 @@ def app(cfg: DictConfig) -> None:
                         if sample is None:
                             continue
 
+                        processing_time_s = time_resolver.resolve(sample)
+                        filtered_value = float(processor.process(sample.value, processing_time_s))
+                        if not math.isfinite(filtered_value):
+                            LOGGER.warning(
+                                "Processor returned non-finite value. raw=%s filtered=%s; substituting raw sample.",
+                                sample.value,
+                                filtered_value,
+                            )
+                            filtered_value = float(sample.value)
+
                         outlet.push_sample(
-                            [float(sample.device_clock_us), float(sample.value)],
+                            [float(sample.device_clock_us), float(sample.value), filtered_value],
                             timestamp=sample.lsl_timestamp,
                             pushthrough=True,
                         )
-                        sink.write(sample)
+                        sink.write(sample, filtered_value)
                         sample_count += 1
 
                         if sample_count == 1 or sample_count % int(cfg.logging.log_every_n_samples) == 0:
                             LOGGER.info(
-                                "Published samples=%d latest_clock_us=%d latest_value=%s parser=%s",
+                                "Published samples=%d latest_clock_us=%d raw=%s filtered=%s parser=%s",
                                 sample_count,
                                 sample.device_clock_us,
                                 sample.value,
+                                filtered_value,
                                 sample.parser_mode,
                             )
 
@@ -365,6 +457,7 @@ def app(cfg: DictConfig) -> None:
         LOGGER.info("Stopping on user request")
     finally:
         sink.close()
+
 
 
 def main() -> int:

@@ -2,20 +2,22 @@ defaults:
   - _self_
 
 stream:
-  name: Handgrip
+  name: ArduinoHandgrip
   type: Force
   source_id: null
   manufacturer: Arduino
   device_name: Handgrip
   value_unit: g
   clock_unit: us
-  value_channel_label: grip_force
   clock_channel_label: device_clock_us
-  value_channel_type: Force
+  raw_channel_label: grip_force_raw
+  filtered_channel_label: grip_force_filtered
   clock_channel_type: Time
+  raw_channel_type: Force
+  filtered_channel_type: Force
 
 serial:
-  port: /dev/ttyUSB2
+  port: /dev/ttyACM0
   baudrate: 115200
   timeout_s: 0.25
   reconnect_backoff_s: 2.0
@@ -29,6 +31,24 @@ protocol:
   tagged_prefix: D
   expect_crc16: false
   accepted_numeric_regex: '[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?'
+
+processing:
+  module: filter
+  timestamp_source: device_clock_us   # device_clock_us | lsl
+  filters:
+    - type: lowpass_1pole
+      name: lowpass_1hz
+      cutoff_hz: 1.0
+      reset_on_gap_s: 1.0
+      min_dt_s: 0.000001
+    - type: drift_corrector
+      name: slow_drift_corrector
+      baseline_cutoff_hz: 0.02
+      rest_band: 5.0
+      stable_slope_threshold_per_s: 5.0
+      warmup_samples: 20
+      reset_on_gap_s: 1.0
+      min_dt_s: 0.000001
 
 csv:
   path: ./data/handgrip_samples.csv
