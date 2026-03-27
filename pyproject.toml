@@ -1,0 +1,14 @@
+[project]
+name = "handgrip-lsl-bridge"
+version = "0.1.0"
+description = "Arduino serial to LSL irregular stream bridge with CSV logging"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "hydra-core>=1.3",
+  "pyserial>=3.5",
+  "pylsl>=1.17",
+]
+
+[tool.uv]
+package = false
