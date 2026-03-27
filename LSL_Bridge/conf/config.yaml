@@ -1,0 +1,47 @@
+defaults:
+  - _self_
+
+stream:
+  name: Handgrip
+  type: Force
+  source_id: null
+  manufacturer: Arduino
+  device_name: Handgrip
+  value_unit: g
+  clock_unit: us
+  value_channel_label: grip_force
+  clock_channel_label: device_clock_us
+  value_channel_type: Force
+  clock_channel_type: Time
+
+serial:
+  port: /dev/ttyUSB2
+  baudrate: 115200
+  timeout_s: 0.25
+  reconnect_backoff_s: 2.0
+  startup_settle_s: 2.0
+  max_line_bytes: 256
+  transport_latency_s: 0.0
+
+protocol:
+  mode: auto            # auto | tagged_csv | simple_csv | legacy_pair_lines
+  delimiter: ","
+  tagged_prefix: D
+  expect_crc16: false
+  accepted_numeric_regex: '[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?'
+
+csv:
+  path: ./data/handgrip_samples.csv
+  append: true
+  flush_every_n_rows: 1
+
+logging:
+  level: INFO
+  log_every_n_samples: 200
+  log_parse_errors_every_n: 20
+
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false

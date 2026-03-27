@@ -68,30 +68,14 @@ __pycache__/
 *.manifest
 *.spec
 
-# AI -----------------------------
-
-# Model Binaries 
-# **/*.keras
-# **/*.tflite
-# !**/latest/*.tflite
-
-# ST Edge AI
-**/*st_ai_output/
-**/*st_ai_ws/
-**/out/
-!**/network_data.hex
-!**/Model/*.tflite
-
-# Viewer ------------------------------
-**/viewer/storage
-**/viewer/*.ini
-**/viewer/**/*.png
-
 # Misc --------------------------------
 node_modules/
 dist/
+LSL_Bridge/data/
 
 # Logging -----------------------------
 **/outputs/  
-
+**/.hydra/
 uv.lock
+
+
