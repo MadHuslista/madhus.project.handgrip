@@ -1,24 +1,72 @@
-# handgrip-lsl-bridge
+# Handgrip LSL Bridge
 
-Serial-to-LSL bridge for an Arduino handgrip sensor.
+Serial-to-LSL bridge for the Arduino handgrip sensor.
 
-## What it does
+This script reads serial samples, parses one of several wire formats, applies a configurable filter pipeline, publishes to an LSL irregular stream, and logs accepted samples to CSV.
 
-- reads `clock,value` data from the Arduino over serial
-- republishes it as an **LSL irregular stream**
-- writes every accepted sample to a CSV file
-- supports reconnect on serial failure
-- supports three parser modes:
-  - `tagged_csv` (recommended)
-  - `simple_csv`
-  - `legacy_pair_lines` (compatible with the currently attached Arduino code)
-
-## Recommended Arduino wire format
-
-Prefer one line per sample:
+## Directory Contents
 
 ```text
-D,<seq>,<timestamp_us>,<value>\n
+LSL_Bridge/
+  handgrip_lsl_bridge.py       # Main serial -> LSL + CSV bridge
+  filter.py                    # Processing/filter pipeline implementation
+  conf/config.yaml             # Hydra config (serial, protocol, stream, processing, csv)
+  data/handgrip_samples.csv    # Default CSV output path
+  handgrip_lsl_bridge.log      # Runtime log file (if generated locally)
+```
+
+## Features
+
+- Serial reconnect loop on port failure
+- Parser modes: `auto`, `tagged_csv`, `simple_csv`, `legacy_pair_lines`
+- Optional CRC16 check for tagged frames
+- LSL stream with 3 channels:
+  - `device_clock_us`
+  - `grip_force_raw`
+  - `grip_force_filtered`
+- CSV logging with both raw and filtered values
+- Configurable processing timestamp source:
+  - `device_clock_us` (default)
+  - `lsl`
+
+## Requirements
+
+Dependencies are managed from the repository root `pyproject.toml`.
+
+```bash
+uv sync
+```
+
+Python `>=3.11` is required.
+
+## Run
+
+From the `LSL_Bridge` directory:
+
+```bash
+uv run python handgrip_lsl_bridge.py
+```
+
+Or from repository root:
+
+```bash
+uv run python LSL_Bridge/handgrip_lsl_bridge.py
+```
+
+Override config values at runtime (Hydra style):
+
+```bash
+uv run python handgrip_lsl_bridge.py serial.port=/dev/ttyUSB0 serial.baudrate=115200 csv.path=./data/run01.csv
+```
+
+## Input Protocols
+
+`protocol.mode` in `conf/config.yaml` controls parsing.
+
+### 1) `tagged_csv` (recommended)
+
+```text
+D,<seq>,<timestamp_us>,<value>
 ```
 
 Example:
@@ -27,48 +75,92 @@ Example:
 D,1532,41876250,12.437500
 ```
 
-Optional CRC16 line format:
+Optional CRC format (enable `protocol.expect_crc16: true`):
 
 ```text
-D,<seq>,<timestamp_us>,<value>,<crc16_hex>\n
+D,<seq>,<timestamp_us>,<value>,<crc16_hex>
 ```
 
-Example:
+### 2) `simple_csv`
 
 ```text
-D,1532,41876250,12.437500,7A4C
+<timestamp_us>,<value>
 ```
 
-If you need a minimal protocol first, this also works:
+### 3) `legacy_pair_lines`
 
 ```text
-41876250,12.437500
+>read_sample.timestamp:<timestamp_us>
+>read_sample.value:<value>
 ```
 
-## Install with uv
+`auto` mode attempts `tagged_csv`, then `simple_csv`, then `legacy_pair_lines`.
+
+## LSL Stream Model
+
+- Stream rate is irregular (`IRREGULAR_RATE`)
+- LSL timestamp is host-side receive time (`local_clock()`), optionally shifted by `serial.transport_latency_s`
+- Channel layout:
+  - channel 0: device clock in microseconds
+  - channel 1: raw sensor value
+  - channel 2: filtered value
+
+## Processing Pipeline
+
+`processing.module` defaults to `filter`, which builds a chain from `processing.filters`.
+
+Current filter types in `filter.py`:
+
+- `lowpass_1pole`
+- `drift_corrector`
+- `identity`
+
+Default config applies:
+
+1. 1-pole low-pass (`cutoff_hz: 1.0`)
+2. slow drift correction (`baseline_cutoff_hz: 0.02`)
+
+## CSV Output
+
+Default file: `LSL_Bridge/data/handgrip_samples.csv`
+
+Columns:
+
+- `host_unix_time_ns`
+- `lsl_timestamp_s`
+- `device_clock_us`
+- `value_raw`
+- `value_filtered`
+- `sequence`
+- `parser_mode`
+- `raw_line`
+
+## Configuration Reference
+
+Main sections in `conf/config.yaml`:
+
+- `stream`: LSL stream metadata and channel labels
+- `serial`: port, baudrate, timeout, reconnect behavior
+- `protocol`: parser mode and wire format details
+- `processing`: module, timestamp source, filter chain
+- `csv`: output path and flush behavior
+- `logging`: log level and sample/parse log cadence
+
+Useful overrides:
 
 ```bash
-uv sync
+# Select parser mode explicitly
+uv run python handgrip_lsl_bridge.py protocol.mode=tagged_csv
+
+# Enable tagged frame CRC checking
+uv run python handgrip_lsl_bridge.py protocol.expect_crc16=true
+
+# Use host LSL time inside processing filters
+uv run python handgrip_lsl_bridge.py processing.timestamp_source=lsl
 ```
 
-## Run
+## Notes
 
-```bash
-uv run python handgrip_lsl_bridge.py
-```
-
-Example override:
-
-```bash
-uv run python handgrip_lsl_bridge.py serial.port=/dev/ttyUSB0 csv.path=./captures/run01.csv
-```
-
-## Notes on timestamps
-
-The stream is published as an **irregular** LSL stream.
-
-- LSL timestamp = host-side `local_clock()` at the instant the serial frame is received
-- channel 0 = Arduino device clock in microseconds
-- channel 1 = measured value
-
-This keeps the Arduino clock available for offline analysis without pretending it is already synchronized to the host clock.
+- If the serial device resets on connect, tune `serial.startup_settle_s`.
+- Overlong serial lines are dropped when they exceed `serial.max_line_bytes`.
+- On serial errors, the bridge retries after `serial.reconnect_backoff_s`.
