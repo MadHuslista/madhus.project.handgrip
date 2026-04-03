@@ -17,7 +17,7 @@ stream:
   filtered_channel_type: Force
 
 serial:
-  port: /dev/ttyACM0
+  port: /dev/ttyUSB0
   baudrate: 115200
   timeout_s: 0.25
   reconnect_backoff_s: 2.0
