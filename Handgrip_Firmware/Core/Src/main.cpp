@@ -48,12 +48,19 @@
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
+/** Pin mapping for HX711 scale */
 #define GPIO_DATA_PIN    2U
 #define GPIO_CLOCK_PIN   3U
 
+/** Baud rate for the serial monitor */
 #define SERIAL_BAUD_RATE 115200U
 
+/** Size of the FIFO buffer */
 #define MAX_FIFO_SIZE    80U 
+
+/** Calibration mode values */
+#define CALIBRATE_SCALE_SCALE       1.0F
+#define CALIBRATE_SCALE_OFFSET      0.0F
 
 /** @} */
 /*----------------------------------------------------------------------------*/
@@ -106,6 +113,9 @@ FIFObuf<SensorSample>   _sensor_fifo(MAX_FIFO_SIZE);
 uint8_t                 _sensor_fifo_status = 0;
 uint32_t                _seq = 0;
 
+/** Calibration mode */
+bool                    _calibrate_mode = CALIBRATE_SCALE_MODE;
+
 /** @} */
 /*----------------------------------------------------------------------------*/
 /** @addtogroup PUBLIC_API                                                    */
@@ -122,8 +132,19 @@ void setup()
 
     // HX711 scale
     _scale.begin(GPIO_DATA_PIN, GPIO_CLOCK_PIN);
-    _scale.set_scale(SCALE_FACTOR);
-    _scale.set_offset(SCALE_OFFSET);
+
+    if (_calibrate_mode) 
+    {   
+        /* Set measured scale factor and offset */
+        _scale.set_scale(SCALE_FACTOR);
+        _scale.set_offset(SCALE_OFFSET);
+    } else
+    {
+        /* Set identity values to capture raw values */
+        _scale.set_scale(CALIBRATE_SCALE_SCALE);
+        _scale.set_offset(CALIBRATE_SCALE_OFFSET);
+    }
+
 
     // Set Timer based Interrupt for sampling
     Timer1.initialize(SAMPLING_PERIOD_US);
