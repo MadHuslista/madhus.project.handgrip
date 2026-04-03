@@ -194,6 +194,10 @@ void loop()
  */
 void sample_scale(void)
 {
+    if(!_scale.is_ready())
+    {
+        return;
+    }
     SensorSample save_sample;
     save_sample.timestamp_us = micros();
     save_sample.value_gr = _scale.get_units(1);

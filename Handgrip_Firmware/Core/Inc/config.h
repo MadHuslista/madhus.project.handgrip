@@ -27,10 +27,13 @@
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
-/** Sampling period in microseconds - 12500us = 12.5ms = 80Hz
+/** Sampling period in microseconds - 5000us = 5ms = 200Hz
  *  Empirical máximum frequency for the HX711 is 92Hz
+ *  Sampling is done at >= 2 x 92Hz allows for non-blocking reads on IRQ. 
+ *  If sensor is not ready, 200Hz ensure that the new sample will be captured
+ *  within the next IRQ.
  */
-#define SAMPLING_PERIOD_US      12500U
+#define SAMPLING_PERIOD_US      5000U
 
 /** Set Calibration flag to 1 (true) to calibrate the scale, 0 (false) to run the application
  *  This will take a few seconds to complete
