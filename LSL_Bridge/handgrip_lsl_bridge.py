@@ -4,13 +4,12 @@ import binascii
 import csv
 import importlib
 import logging
-import math
 import re
 import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Protocol
+from typing import Any, Optional, Protocol
 
 import hydra
 from hydra.utils import to_absolute_path
@@ -53,14 +52,13 @@ class CsvSink:
     def __init__(self, path: Path, append: bool, flush_every_n_rows: int) -> None:
         self._path = path
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._append = append
-        self._flush_every_n_rows = max(1, int(flush_every_n_rows))
         mode = "a" if append else "w"
         self._fh = self._path.open(mode, newline="", encoding="utf-8")
         self._writer = csv.DictWriter(self._fh, fieldnames=self.FIELDNAMES)
         if (not append) or self._path.stat().st_size == 0:
             self._writer.writeheader()
             self._fh.flush()
+        self._flush_every_n_rows = max(1, int(flush_every_n_rows))
         self._rows_since_flush = 0
 
     def write(self, sample: ParsedSample, filtered_value: float) -> None:
@@ -95,7 +93,9 @@ class LineParser:
         self.tagged_prefix = str(cfg.protocol.tagged_prefix)
         self.expect_crc16 = bool(cfg.protocol.expect_crc16)
         number = str(cfg.protocol.accepted_numeric_regex)
-        self._simple_re = re.compile(rf"^\s*(?P<clock>\d+)\s*{re.escape(self.delimiter)}\s*(?P<value>{number})\s*$")
+        self._simple_re = re.compile(
+            rf"^\s*(?P<clock>\d+)\s*{re.escape(self.delimiter)}\s*(?P<value>{number})\s*$"
+        )
         self._tagged_re = re.compile(
             rf"^\s*(?P<prefix>{re.escape(self.tagged_prefix)})\s*{re.escape(self.delimiter)}\s*"
             rf"(?P<seq>\d+)\s*{re.escape(self.delimiter)}\s*(?P<clock>\d+)\s*{re.escape(self.delimiter)}\s*"
@@ -133,11 +133,9 @@ class LineParser:
         match = self._simple_re.match(line)
         if not match:
             return None
-        clock_us = int(match.group("clock"))
-        value = float(match.group("value"))
         return ParsedSample(
-            device_clock_us=clock_us,
-            value=value,
+            device_clock_us=int(match.group("clock")),
+            value=float(match.group("value")),
             lsl_timestamp=arrival_lsl_time,
             host_unix_time_ns=arrival_unix_time_ns,
             sequence=None,
@@ -159,9 +157,9 @@ class LineParser:
             if crc is None:
                 LOGGER.warning("Dropped tagged frame without CRC16: %r", line)
                 return None
-            payload = self.delimiter.join(
-                [self.tagged_prefix, str(seq), str(clock_us), match.group("value")]
-            ).encode("ascii")
+            payload = self.delimiter.join([self.tagged_prefix, str(seq), str(clock_us), match.group("value")]).encode(
+                "ascii"
+            )
             expected_crc = binascii.crc_hqx(payload, 0xFFFF)
             received_crc = int(crc, 16)
             if expected_crc != received_crc:
@@ -230,7 +228,6 @@ class SampleTimeResolver:
     def resolve(self, sample: ParsedSample) -> float:
         if self._source == "lsl":
             return float(sample.lsl_timestamp)
-
         if self._source != "device_clock_us":
             raise ValueError(f"Unsupported processing.timestamp_source: {self._source}")
 
@@ -247,10 +244,9 @@ class SampleTimeResolver:
                     self._last_device_clock_us,
                     sample.device_clock_us,
                 )
-            self._last_device_clock_us = sample.device_clock_us
-            if self._last_resolved_time_s is None:
                 self._last_resolved_time_s = 0.0
-            return self._last_resolved_time_s
+            self._last_device_clock_us = sample.device_clock_us
+            return 0.0 if self._last_resolved_time_s is None else self._last_resolved_time_s
 
         if self._last_resolved_time_s is None:
             self._last_resolved_time_s = 0.0
@@ -259,19 +255,16 @@ class SampleTimeResolver:
         return self._last_resolved_time_s
 
 
-
 def configure_logging(level_name: str) -> None:
-    level = getattr(logging, level_name.upper(), logging.INFO)
+    level = getattr(logging, str(level_name).upper(), logging.INFO)
     logging.basicConfig(
         level=level,
         format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
-        force=True,
     )
 
 
-
-def find_port_metadata(port_name: str) -> dict[str, Optional[str]]:
+def find_port_metadata(port_name: str) -> dict[str, Any]:
     for port in list_ports.comports():
         if port.device == port_name:
             return {
@@ -279,26 +272,27 @@ def find_port_metadata(port_name: str) -> dict[str, Optional[str]]:
                 "serial_number": port.serial_number,
                 "manufacturer": port.manufacturer,
                 "product": port.product,
-                "vid": None if port.vid is None else f"{port.vid:04X}",
-                "pid": None if port.pid is None else f"{port.pid:04X}",
+                "vid": port.vid,
+                "pid": port.pid,
             }
-    return {"device": port_name, "serial_number": None, "manufacturer": None, "product": None, "vid": None, "pid": None}
+    return {"device": port_name}
 
 
-
-def build_source_id(cfg: DictConfig, port_meta: dict[str, Optional[str]]) -> str:
-    if cfg.stream.source_id:
-        return str(cfg.stream.source_id)
+def build_source_id(cfg: DictConfig, port_meta: dict[str, Any]) -> str:
+    explicit = cfg.stream.get("source_id")
+    if explicit:
+        return str(explicit)
 
     serial_number = port_meta.get("serial_number")
     if serial_number:
         return f"arduino-handgrip-{serial_number}"
 
-    vid = port_meta.get("vid") or "NA"
-    pid = port_meta.get("pid") or "NA"
-    device = (port_meta.get("device") or "unknown").replace("/", "_")
-    return f"arduino-handgrip-{device}-vid{vid}-pid{pid}"
-
+    vid = port_meta.get("vid")
+    pid = port_meta.get("pid")
+    device = str(port_meta.get("device", "unknown")).replace("/", "_")
+    if vid is not None and pid is not None:
+        return f"arduino-handgrip-{vid:04x}-{pid:04x}-{device}"
+    return f"arduino-handgrip-{device}"
 
 
 def build_outlet(cfg: DictConfig, source_id: str) -> StreamOutlet:
@@ -316,35 +310,30 @@ def build_outlet(cfg: DictConfig, source_id: str) -> StreamOutlet:
     desc.append_child_value("device_name", str(cfg.stream.device_name))
     desc.append_child_value("protocol", "serial_to_lsl_bridge")
     desc.append_child_value("sampling_model", "irregular")
-    desc.append_child_value("processing_module", str(cfg.processing.module))
-    desc.append_child_value("processing_timestamp_source", str(cfg.processing.timestamp_source))
-
-    processing = desc.append_child("processing")
-    for idx, filter_cfg in enumerate(cfg.processing.filters):
-        filter_node = processing.append_child("filter")
-        filter_node.append_child_value("index", str(idx))
-        for key, value in filter_cfg.items():
-            filter_node.append_child_value(str(key), str(value))
 
     channels = desc.append_child("channels")
 
-    ch_clock = channels.append_child("channel")
-    ch_clock.append_child_value("label", str(cfg.stream.clock_channel_label))
-    ch_clock.append_child_value("type", str(cfg.stream.clock_channel_type))
-    ch_clock.append_child_value("unit", str(cfg.stream.clock_unit))
-
-    ch_raw = channels.append_child("channel")
-    ch_raw.append_child_value("label", str(cfg.stream.raw_channel_label))
-    ch_raw.append_child_value("type", str(cfg.stream.raw_channel_type))
-    ch_raw.append_child_value("unit", str(cfg.stream.value_unit))
-
-    ch_filtered = channels.append_child("channel")
-    ch_filtered.append_child_value("label", str(cfg.stream.filtered_channel_label))
-    ch_filtered.append_child_value("type", str(cfg.stream.filtered_channel_type))
-    ch_filtered.append_child_value("unit", str(cfg.stream.value_unit))
+    channel_specs = [
+        (cfg.stream.clock_channel_label, cfg.stream.clock_channel_type, cfg.stream.clock_unit),
+        (cfg.stream.raw_channel_label, cfg.stream.raw_channel_type, cfg.stream.value_unit),
+        (cfg.stream.filtered_channel_label, cfg.stream.filtered_channel_type, cfg.stream.value_unit),
+    ]
+    for label, channel_type, unit in channel_specs:
+        channel = channels.append_child("channel")
+        channel.append_child_value("label", str(label))
+        channel.append_child_value("type", str(channel_type))
+        channel.append_child_value("unit", str(unit))
 
     return StreamOutlet(info, chunk_size=1)
 
+
+def build_processor(cfg: DictConfig) -> Processor:
+    module_name = str(cfg.processing.module)
+    module = importlib.import_module(module_name)
+    processor = module.build_processor(cfg.processing)
+    if not hasattr(processor, "process"):
+        raise TypeError(f"Processing module {module_name!r} returned an object without a process() method")
+    return processor
 
 
 def settle_serial_input(ser: Serial, startup_settle_s: float) -> None:
@@ -353,18 +342,6 @@ def settle_serial_input(ser: Serial, startup_settle_s: float) -> None:
     while time.monotonic() < deadline:
         ser.readline()
     ser.reset_input_buffer()
-
-
-
-def build_processor(cfg: DictConfig) -> Processor:
-    module_name = str(cfg.processing.module)
-    module = importlib.import_module(module_name)
-    if not hasattr(module, "build_processor"):
-        raise AttributeError(
-            f"Processing module '{module_name}' must expose a build_processor(cfg) function"
-        )
-    processor = module.build_processor(cfg.processing)
-    return processor
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -379,8 +356,6 @@ def app(cfg: DictConfig) -> None:
         flush_every_n_rows=int(cfg.csv.flush_every_n_rows),
     )
     parser = LineParser(cfg)
-    processor = build_processor(cfg)
-    time_resolver = SampleTimeResolver(cfg)
 
     sample_count = 0
     try:
@@ -396,13 +371,14 @@ def app(cfg: DictConfig) -> None:
                     port_meta = find_port_metadata(str(cfg.serial.port))
                     source_id = build_source_id(cfg, port_meta)
                     outlet = build_outlet(cfg, source_id)
+                    processor = build_processor(cfg)
+                    time_resolver = SampleTimeResolver(cfg)
                     LOGGER.info(
-                        "LSL outlet ready: name=%s type=%s source_id=%s csv=%s processing_module=%s",
+                        "LSL outlet ready: name=%s type=%s source_id=%s csv=%s",
                         cfg.stream.name,
                         cfg.stream.type,
                         source_id,
                         csv_path,
-                        cfg.processing.module,
                     )
 
                     while True:
@@ -420,15 +396,8 @@ def app(cfg: DictConfig) -> None:
                         if sample is None:
                             continue
 
-                        processing_time_s = time_resolver.resolve(sample)
-                        filtered_value = float(processor.process(sample.value, processing_time_s))
-                        if not math.isfinite(filtered_value):
-                            LOGGER.warning(
-                                "Processor returned non-finite value. raw=%s filtered=%s; substituting raw sample.",
-                                sample.value,
-                                filtered_value,
-                            )
-                            filtered_value = float(sample.value)
+                        sample_time_s = time_resolver.resolve(sample)
+                        filtered_value = float(processor.process(sample.value, sample_time_s))
 
                         outlet.push_sample(
                             [float(sample.device_clock_us), float(sample.value), filtered_value],
@@ -457,7 +426,6 @@ def app(cfg: DictConfig) -> None:
         LOGGER.info("Stopping on user request")
     finally:
         sink.close()
-
 
 
 def main() -> int:
