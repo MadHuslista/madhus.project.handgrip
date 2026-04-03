@@ -1,5 +1,5 @@
 [project]
-name = "handgrip-lsl-bridge"
+name = "handgrip-suite"
 version = "0.1.0"
 description = "Arduino serial to LSL irregular stream bridge with CSV logging"
 readme = "README.md"
@@ -14,7 +14,11 @@ dependencies = [
   "pandas>=3.0.2",
   "pyqt5>=5.15.11",
   "pyxdf>=1.17.4",
+  "handgrip-analysis",
 ]
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+"handgrip-analysis"  = {path = "Handgrip_Analysis", editable = true }
