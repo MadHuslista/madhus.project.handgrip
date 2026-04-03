@@ -158,7 +158,7 @@ def bandpower(f: np.ndarray, pxx: np.ndarray, low_hz: float, high_hz: float) -> 
     mask = (f >= low_hz) & (f <= high_hz)
     if np.count_nonzero(mask) < 2:
         return float("nan")
-    return float(np.trapz(pxx[mask], f[mask]))
+    return float(np.trapezoid(pxx[mask], f[mask]))
 
 
 def detect_events(
