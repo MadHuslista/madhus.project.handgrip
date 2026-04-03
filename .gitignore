@@ -78,4 +78,6 @@ LSL_Bridge/data/
 **/.hydra/
 uv.lock
 
+# Data --------------------------------
+LabRecorder/Data/
 
