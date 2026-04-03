@@ -843,20 +843,20 @@ New topology:
 
 Load Cell Amp:
 
-| HX711 Module | Cable | Arduino Nano |
-| ------------ | ----- | ------------ |
-| VCC          | Rojo  | 5V (output)  |
-| DAT          | Café  | D2           |
-| CLK          | Azul  | D3           |
-| GND          | Negro | GND          |
+| Pin HX711 Module | Cable | Pin Arduino Nano |
+| ---------------- | ----- | ---------------- |
+| VCC              | Rojo  | 5V (output)      |
+| DAT              | Café  | D2               |
+| CLK              | Azul  | D3               |
+| GND              | Negro | GND              |
 
 
-| Galgas | Semantic           | Cable | HX711 Module |
-| ------ | ------------------ | ----- | ------------ |
-| RED    | VCC                |       | RED          |
-| BLACK  | GND                |       | BLACK        |
-| WHITE  | Signal +           |       | WHITE        |
-| GREEN  | Signal -           |       | GREEN        |
-| YELLOW | Shield against EMI |       | YELLOW       |
+| Cable Galgas    | Semantic           | Pin HX711 Module |
+| --------------- | ------------------ | ---------------- |
+| Red Pair        | VCC                | RED              |
+| Black Pair      | GND                | BLA              |
+| White Pair      | Signal +           | WHT              |
+| Green Pair      | Signal -           | GRN              |
+| -not connected- | Shield against EMI | YEL              |
 
 
