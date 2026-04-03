@@ -1,0 +1,34 @@
+filters:
+  - name: identity
+    type: identity
+
+  - name: moving_average_5
+    type: moving_average
+    window_samples: 5
+
+  - name: median3_then_butter_10hz
+    type: chain
+    steps:
+      - type: median
+        kernel_size: 3
+      - type: butter_lowpass
+        order: 2
+        cutoff_hz: 10.0
+
+  - name: median3_then_butter_5hz
+    type: chain
+    steps:
+      - type: median
+        kernel_size: 3
+      - type: butter_lowpass
+        order: 2
+        cutoff_hz: 5.0
+
+  - name: butter_3hz
+    type: butter_lowpass
+    order: 2
+    cutoff_hz: 3.0
+
+  - name: one_pole_2hz
+    type: one_pole_lowpass
+    cutoff_hz: 2.0

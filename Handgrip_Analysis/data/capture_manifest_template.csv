@@ -1,0 +1,6 @@
+stage,label,path,channel,notes
+stage1,cold_start_trial01,path/to/20260402_stage1_cold_start_trial01.csv,raw,No touch no load from cold start
+stage2,rest_after_warmup_trial01,path/to/20260402_stage2_rest_after_warmup_trial01.csv,raw,Quiet rest capture
+stage3,constant_load_20kg_trial01,path/to/20260402_stage3_constant_load_20kg_trial01.csv,raw,Stable known load hold
+stage4,fast_max_trial01,path/to/20260402_stage4_fast_max_trial01.csv,raw,Fast maximal squeeze
+stage5,battery,path/to/20260402_stage5_battery_trial01.csv,raw,Power-source comparison
