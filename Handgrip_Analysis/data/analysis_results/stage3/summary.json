@@ -1,0 +1,21 @@
+{
+  "channel": "raw",
+  "detrended_std": 111633.02935840552,
+  "drift_slope_per_min": -60.29123489838057,
+  "drift_slope_per_s": -1.0048539149730096,
+  "input": "/home/levi/Repositories/madhus.project.handgrip/Handgrip_Analysis/data/calibration_signals/20260402_stage3_constant_load_4500g_trial01.csv",
+  "post_window_mean": -65699.705,
+  "pre_window_mean": -64915.525,
+  "return_to_zero_error": -784.1800000000003,
+  "sampling": {
+    "dt_max_s": 0.012504000000035376,
+    "dt_mean_s": 0.012491824955647546,
+    "dt_median_s": 0.012500000000017053,
+    "dt_min_s": 0.0032839999998941494,
+    "dt_std_s": 0.00022693211760815927,
+    "duration_s": 1478.65732,
+    "fs_median_hz": 79.99999999989086,
+    "n_samples": 118371
+  },
+  "time_source": "device_clock_us"
+}

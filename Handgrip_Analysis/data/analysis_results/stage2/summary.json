@@ -1,0 +1,36 @@
+{
+  "channels": {
+    "filtered": {
+      "bandpower_0_1_hz": 145189483.50553015,
+      "bandpower_12_30_hz": 10946957.050054573,
+      "bandpower_1_4_hz": 98922844.13238022,
+      "bandpower_4_12_hz": 30001579.898198187,
+      "mean": 517.8814891704653,
+      "peak_to_peak": 1069044.3043194416,
+      "rms": 18161.42986466502,
+      "std": 18154.221075362708
+    },
+    "raw": {
+      "bandpower_0_1_hz": 187377607.05481812,
+      "bandpower_12_30_hz": 3511351446.104098,
+      "bandpower_1_4_hz": 583074426.3652407,
+      "bandpower_4_12_hz": 1564799020.3069205,
+      "mean": -188859.6521460104,
+      "peak_to_peak": 14680064.0,
+      "rms": 210592.18068139104,
+      "std": 93173.31797625423
+    }
+  },
+  "input": "/home/levi/Repositories/madhus.project.handgrip/Handgrip_Analysis/data/calibration_signals/20260402_stage2_rest_after_warmup_trial01.csv",
+  "sampling": {
+    "dt_max_s": 0.012504000000035376,
+    "dt_mean_s": 0.01249111816413847,
+    "dt_median_s": 0.012499999999988631,
+    "dt_min_s": 0.0032839999999998426,
+    "dt_std_s": 0.0002375039389233393,
+    "duration_s": 642.293296,
+    "fs_median_hz": 80.00000000007276,
+    "n_samples": 51421
+  },
+  "time_source": "device_clock_us"
+}
