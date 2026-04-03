@@ -1,22 +1,22 @@
 {
   "channel": "raw",
-  "final_abs_slope": 1070.8161688872108,
-  "final_mean": -185777.09622559612,
-  "final_std": 101704.84018779348,
-  "input": "/home/levi/Repositories/madhus.project.handgrip/Handgrip_Analysis/data/calibration_signals/20260402_stage1_cold_start_trial01.csv",
+  "final_abs_slope": 1.5853993676582177,
+  "final_mean": -190024.4699539285,
+  "final_std": 66.31104126655478,
+  "input": "Handgrip_Analysis/data/calibration_signals/20260402_stage1_cold_start_trial01.csv",
   "sampling": {
-    "dt_max_s": 0.012504000000035376,
-    "dt_mean_s": 0.012490739125718625,
-    "dt_median_s": 0.012499999999995737,
-    "dt_min_s": 0.0032839999998941494,
-    "dt_std_s": 0.00024099443245972473,
-    "duration_s": 921.216992,
-    "fs_median_hz": 80.00000000002728,
-    "n_samples": 73753
+    "dt_max_s": 0.015008000000079846,
+    "dt_mean_s": 0.010772750351958273,
+    "dt_median_s": 0.009999999999990905,
+    "dt_min_s": 0.009991999999897416,
+    "dt_std_s": 0.0018073751719995112,
+    "duration_s": 933.545,
+    "fs_median_hz": 100.00000000009095,
+    "n_samples": 86659
   },
-  "slope_threshold": 2.002373280283123,
-  "std_threshold": 101.03997832096522,
-  "suggested_ready_time_s": 9.612499999999999,
+  "slope_threshold": 1.5754455125726943,
+  "std_threshold": 98.33450420635802,
+  "suggested_ready_time_s": 7.96,
   "time_source": "device_clock_us",
   "warmup_window_s": 10.0
 }

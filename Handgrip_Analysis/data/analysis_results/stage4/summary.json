@@ -1,19 +1,19 @@
 {
   "files": [
     {
-      "fs_estimate_hz": 80.0000000000017,
-      "input": "/home/levi/Repositories/madhus.project.handgrip/Handgrip_Analysis/data/calibration_signals/20260402_stage4_fast_max_trial01.csv",
+      "fs_estimate_hz": 100.00000000000213,
+      "input": "Handgrip_Analysis/data/calibration_signals/20260402_stage4_fast_max_trial01.csv",
+      "n_events": 1
+    },
+    {
+      "fs_estimate_hz": 99.99999999999991,
+      "input": "Handgrip_Analysis/data/calibration_signals/20260402_stage4_ramp_hold_trial01.csv",
       "n_events": 2
     },
     {
-      "fs_estimate_hz": 80.00000000000455,
-      "input": "/home/levi/Repositories/madhus.project.handgrip/Handgrip_Analysis/data/calibration_signals/20260402_stage4_ramp_hold_trial01.csv",
-      "n_events": 1
-    },
-    {
-      "fs_estimate_hz": 80.00000000000455,
-      "input": "/home/levi/Repositories/madhus.project.handgrip/Handgrip_Analysis/data/calibration_signals/20260402_stage4_sustained_hold_trial01.csv",
-      "n_events": 1
+      "fs_estimate_hz": 100.00000000000213,
+      "input": "Handgrip_Analysis/data/calibration_signals/20260402_stage4_sustained_hold_trial01.csv",
+      "n_events": 2
     }
   ]
 }
