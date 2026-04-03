@@ -89,6 +89,7 @@ typedef struct
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
+/** Prototype for the interrupt handler */
 void sample_scale(void);
 
 /** @} */
@@ -97,8 +98,10 @@ void sample_scale(void);
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
+/** HX711 scale object */
 HX711 _scale;
 
+/** Sensor sample FIFO buffer */
 FIFObuf<SensorSample>   _sensor_fifo(MAX_FIFO_SIZE);
 uint8_t                 _sensor_fifo_status = 0;
 uint32_t                _seq = 0;
@@ -131,6 +134,7 @@ void setup()
 
 /**
  * @brief Main loop.
+ * @note This function runs magnitudes faster than the sampling interrupt.
  */
 void loop()
 {
@@ -163,6 +167,10 @@ void loop()
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
+/**
+ * @brief Interrupt handler for the HX711 scale.
+ * @note Reads one raw sample from the scale and pushes it to the FIFO buffer.
+ */
 void sample_scale(void)
 {
     SensorSample save_sample;
