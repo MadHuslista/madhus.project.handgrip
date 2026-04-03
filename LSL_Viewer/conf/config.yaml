@@ -1,3 +1,5 @@
+mode: live
+
 stream:
   name: ArduinoHandgrip
   stype: Force
@@ -23,6 +25,15 @@ viewer:
 reference:
   csv_path: null
   xdf_path: null
+  inspect_in_replay_modes: false
+
+replay:
+  speed: 1.0
+  loop: false
+  start_offset_s: 0.0
+  time_column: auto
+  time_column_unit: auto
+  allow_index_fallback: true
 
 logging:
   level: INFO
