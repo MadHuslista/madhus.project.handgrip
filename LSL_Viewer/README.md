@@ -2,65 +2,174 @@
 
 ## Purpose
 
-This viewer connects to the **LSL stream emitted by `LSL_Bridge`** and plots the latest data in real time.
-It is designed for the current **irregular 3-channel stream**:
+This viewer supports four explicit modes for the current handgrip pipeline:
+
+- `live` — Connect to the live LSL stream for real-time monitoring
+- `live_with_reference_validation` — Monitor live while validating against persisted CSV/XDF artifacts
+- `csv_replay` — Replay a bridge CSV file for offline inspection
+- `xdf_replay` — Replay a LabRecorder XDF file for offline inspection
+
+It is designed around the current bridge contract:
 
 1. `device_clock_us`
 2. `grip_force_raw`
 3. `grip_force_filtered`
 
-It also supports **optional offline reference inspection** for:
-- the `.csv` produced by `LSL_Bridge`
-- the `.xdf` recorded by LabRecorder
+The UI shows three panels:
 
-The viewer shows three live panels:
-- **raw signal**
-- **filtered signal**
-- **device sample interval** in milliseconds, computed from `device_clock_us`
+- **raw signal** — the unfiltered device output
+- **filtered signal** — the DSP-processed output
+- **device sample interval** in milliseconds — computed from `device_clock_us` to expose timing irregularity
 
 ---
 
-## Important note about the current artifact state
+## Data-flow architecture
 
-The uploaded files are currently **not fully aligned**:
+### 1. Live acquisition path
 
-- `conf/config.yaml` is written for a **Hydra-based** entrypoint.
-- the current uploaded `handgrip_realtime_viewer.py` artifact is still **argparse-based**.
+```text
+Arduino
+  -> serial frames
+LSL_Bridge
+  -> parse raw sample
+  -> run DSP/filter pipeline
+  -> publish LSL stream [device_clock_us, grip_force_raw, grip_force_filtered]
+  -> write CSV in parallel
+LabRecorder (optional)
+  -> subscribe to the same LSL stream
+  -> write XDF
+Viewer (live modes)
+  -> subscribe to the live LSL stream
+  -> render rolling plots
+```
 
-So this README documents the **intended Hydra-style configuration contract** represented by `conf/config.yaml`.
-If you want the script to actually consume `conf/config.yaml` directly, the viewer entrypoint must be the Hydra-refactored version.
+### 2. Offline replay path
+
+```text
+CSV or XDF recording
+  -> viewer replay loader
+  -> replay timeline generator
+  -> render the same rolling plots without a live LSL source
+```
+
+The important separation is:
+
+- **live modes** read from the **LSL stream**
+- **replay modes** read from **CSV or XDF files**
+- reference files are no longer ambiguous because the mode determines whether they are the primary source or only a validation side input
 
 ---
 
-## Expected stream contract
+## Modes
 
-The viewer expects an LSL stream with:
+### `mode=live`
 
-- **name**: typically `ArduinoHandgrip`
-- **type**: typically `Force`
-- **sampling model**: **irregular** (`sfreq = 0` on the LSL side)
-- **channels**:
-  - `device_clock_us`
-  - `grip_force_raw`
-  - `grip_force_filtered`
+**Primary source:** live LSL stream
 
-If one of these channels is missing, the viewer should reject the stream.
+**Behavior:**
+- Connects to the configured LSL stream
+- Validates that the expected channels are present
+- Plots the latest rolling window
+- Ignores reference files as data sources
+
+**Use this for:**
+- Normal live monitoring during acquisition
+- Watching the signal in real time as the device acquires data
+
+**Environment requirements:**
+- Bridge must be running and streaming on the network
+- `mne-lsl` must be installed
+
+### `mode=live_with_reference_validation`
+
+**Primary source:** live LSL stream
+
+**Side inputs:** optional CSV reference, optional XDF reference
+
+**Behavior:**
+- Loads and inspects the configured reference files first
+- Connects to the live LSL stream
+- Keeps plotting the live stream
+- Uses the reference files only for schema/metadata validation and debugging context
+
+**Use this for:**
+- Checking that the live stream, bridge CSV, and recorded XDF are aligned
+- Validating the integration after any bridge schema change
+- Ensuring the recorder is capturing the same data the live stream shows
+
+**Environment requirements:**
+- Bridge must be running
+- Reference files should be from the same acquisition session
+
+### `mode=csv_replay`
+
+**Primary source:** `reference.csv_path`
+
+**Behavior:**
+- Loads the bridge CSV
+- Derives a replay timeline from the configured time column
+- Replays the file at the configured speed
+- Uses the same viewer layout as live mode
+
+**Use this for:**
+- Offline debugging of the bridge output
+- Quick review of a previous session without starting LSL_Bridge or LabRecorder
+- Checking filter behavior and signal quality post-acquisition
+
+**Environment requirements:**
+- CSV file must exist and be readable
+- Python environment only (no network needed)
+
+### `mode=xdf_replay`
+
+**Primary source:** `reference.xdf_path`
+
+**Behavior:**
+- Loads the XDF with `pyxdf`
+- Selects the stream that matches `stream.name`, `stream.stype`, and optionally `stream.source_id`
+- Replays the recorded samples using their recorded timestamps
+- Uses the same viewer layout as live mode
+
+**Use this for:**
+- Offline review of what LabRecorder captured
+- Checking whether the recorder output matches expectations
+- Verifying recorder fidelity and stream selection
+
+**Environment requirements:**
+- `pyxdf` must be installed for this mode
+- XDF file must exist and be readable
 
 ---
 
-## Recommended environment
+## Expected stream / recording schema
+
+The viewer assumes three numeric channels with these semantic roles:
+
+- `device_clock_us` — the device-side sample timestamp in microseconds
+- `grip_force_raw` — the unfiltered ADC or bridge-stage output
+- `grip_force_filtered` — the DSP-processed output
+
+For the **live LSL stream**, the channel labels must match the values in `channels.*`.
+
+For **replay sources:**
+- CSV columns are resolved by configured names first, then by fallback names such as `value_raw` and `value_filtered`
+- XDF channels are resolved by labels stored in the stream metadata
+
+---
+
+## Installation
 
 Typical dependencies:
 
 - Python 3.10+
-- `mne-lsl`
+- `hydra-core`
 - `numpy`
 - `pandas`
 - `matplotlib`
-- `hydra-core`
-- optionally `pyxdf` for `.xdf` inspection
+- `mne-lsl` for live modes
+- `pyxdf` for XDF replay mode
 
-If you are using `uv`, the typical flow is:
+Example with `uv`:
 
 ```bash
 uv sync
@@ -69,115 +178,56 @@ uv run python handgrip_realtime_viewer.py
 
 ---
 
-## Typical usage
+## Quick usage
 
-### 1. Start the LSL bridge
-
-Start your `LSL_Bridge` first so the stream is present on the network.
-
-### 2. Start the viewer
-
-With the intended Hydra-style interface:
+### Live monitoring
 
 ```bash
-uv run python handgrip_realtime_viewer.py
+uv run python handgrip_realtime_viewer.py mode=live
 ```
 
-### 3. Override parameters from the CLI
-
-Hydra-style overrides:
+### Live monitoring with CSV/XDF validation
 
 ```bash
-uv run python handgrip_realtime_viewer.py stream.name=ArduinoHandgrip stream.stype=Force
+uv run python handgrip_realtime_viewer.py   mode=live_with_reference_validation   reference.csv_path=./data/handgrip_samples.csv   reference.xdf_path=./data/session01.xdf
 ```
 
-With reference files:
+### CSV replay
 
 ```bash
-uv run python handgrip_realtime_viewer.py \
-  reference.csv_path=./handgrip_samples.csv \
-  reference.xdf_path=./sub-P001_ses-S001_task-Default_run-001_eeg.xdf
+uv run python handgrip_realtime_viewer.py   mode=csv_replay   reference.csv_path=./data/handgrip_samples.csv
 ```
 
-Override display window:
+### XDF replay
 
 ```bash
-uv run python handgrip_realtime_viewer.py \
-  viewer.window_seconds=15 \
-  viewer.refresh_s=0.03
+uv run python handgrip_realtime_viewer.py   mode=xdf_replay   reference.xdf_path=./data/session01.xdf
 ```
 
-Pin a specific source instance:
+### Faster replay
 
 ```bash
-uv run python handgrip_realtime_viewer.py \
-  stream.source_id='arduino-handgrip-1a86-7523-_dev_ttyUSB0'
+uv run python handgrip_realtime_viewer.py   mode=csv_replay   reference.csv_path=./data/handgrip_samples.csv   replay.speed=4.0
+```
+
+### Looping replay
+
+```bash
+uv run python handgrip_realtime_viewer.py   mode=xdf_replay   reference.xdf_path=./data/session01.xdf   replay.loop=true
 ```
 
 ---
 
-## How the viewer interprets time
+## Configuration reference
 
-This viewer is meant for an **irregular stream**.
-That matters because:
+## `mode`
 
-- the LSL side reports `sfreq = 0`
-- the viewer should **not** compute window length from `stream.info["sfreq"]`
-- plotting is driven by a **sample count window**, not by assuming a fixed-rate buffer
-
-The viewer uses:
-- `viewer.window_samples` **if provided**, otherwise
-- `viewer.window_seconds * viewer.expected_rate_hz`
-
-So `expected_rate_hz` is only a **display-sizing helper**, not a claim that the stream is truly regular.
+- **Type:** string
+- **Allowed values:** `live`, `live_with_reference_validation`, `csv_replay`, `xdf_replay`
+- **Default:** `live`
+- **Meaning:** Selects the primary data source and behavior of the viewer.
 
 ---
-
-## Configuration file
-
-Current config structure:
-
-```yaml
-stream:
-  name: ArduinoHandgrip
-  stype: Force
-  source_id: null
-  buffer_samples: 1600
-  acquisition_delay: 0.01
-  timeout: 5.0
-
-channels:
-  clock_label: device_clock_us
-  raw_label: grip_force_raw
-  filtered_label: grip_force_filtered
-
-viewer:
-  window_samples: null
-  window_seconds: 10.0
-  expected_rate_hz: 80.0
-  refresh_s: 0.05
-  raw_unit_label: g
-  filtered_unit_label: g
-  dt_unit_label: ms
-
-reference:
-  csv_path: null
-  xdf_path: null
-
-logging:
-  level: INFO
-
-hydra:
-  run:
-    dir: .
-  output_subdir: null
-  job:
-    chdir: false
-```
-
----
-
-## Parameter reference
 
 ## `stream`
 
@@ -187,6 +237,7 @@ hydra:
 - **Meaning:** LSL stream name used to resolve/connect to the correct stream.
 - **Typical values:** any non-empty string
 - **Recommended range:** exact producer stream name
+- **Used by:** live modes, XDF replay stream selection
 - **Notes:** If multiple streams share the same name, use `stream.source_id` as well.
 
 ### `stream.stype`
@@ -195,6 +246,7 @@ hydra:
 - **Meaning:** LSL stream type filter.
 - **Typical values:** `Force`, `EEG`, `Markers`, etc., but for this project it should normally stay `Force`.
 - **Recommended range:** exact producer stream type
+- **Used by:** live modes, XDF replay stream selection
 - **Notes:** Must match the bridge metadata.
 
 ### `stream.source_id`
@@ -203,6 +255,7 @@ hydra:
 - **Meaning:** Optional unique identifier for one exact LSL source.
 - **Typical values:** `null` or a stable unique string
 - **Recommended range:** `null` if only one matching stream exists; otherwise set it explicitly.
+- **Used by:** live modes, XDF replay stream selection
 - **Notes:** Use this when multiple streams with the same `name` and `stype` are present.
 
 ### `stream.buffer_samples`
@@ -211,6 +264,7 @@ hydra:
 - **Meaning:** Ring buffer size used by the LSL client.
 - **Valid range:** integer `>= 2`
 - **Practical range:** roughly `2x` to `5x` the visible window length in samples
+- **Used by:** live modes only
 - **Guideline:** For an ~80 Hz stream, `1600` samples is about 20 seconds of storage.
 - **Too low:** old data gets overwritten sooner, increased risk of losing context.
 - **Too high:** more memory use and slightly more sluggish behavior when debugging.
@@ -221,6 +275,7 @@ hydra:
 - **Meaning:** Background acquisition polling interval for `mne-lsl`.
 - **Valid range:** `> 0`
 - **Practical range:** `0.001` to `0.05`
+- **Used by:** live modes only
 - **Lower values:** lower latency, more CPU wakeups.
 - **Higher values:** less CPU overhead, slightly less responsive updates.
 - **Recommendation:** keep near `0.005` to `0.02` unless you have a reason to tune it.
@@ -231,6 +286,7 @@ hydra:
 - **Meaning:** Timeout for initial LSL connection.
 - **Valid range:** `> 0`
 - **Practical range:** `1.0` to `30.0`
+- **Used by:** live modes only
 - **Lower values:** fail fast if the stream is absent.
 - **Higher values:** more tolerant to slow discovery or slow startup.
 
@@ -238,27 +294,22 @@ hydra:
 
 ## `channels`
 
-These must match the **actual labels published by the bridge**.
+These must match the bridge metadata for live mode, and they are also used to resolve replay channels.
 
 ### `channels.clock_label`
 - **Type:** string
 - **Default:** `device_clock_us`
-- **Meaning:** Name of the channel carrying the device clock in microseconds.
-- **Recommended value:** exact bridge channel label
+- **Meaning:** Semantic label for the device clock channel.
 
 ### `channels.raw_label`
 - **Type:** string
 - **Default:** `grip_force_raw`
-- **Meaning:** Name of the raw signal channel.
-- **Recommended value:** exact bridge channel label
+- **Meaning:** Semantic label for the raw signal channel.
 
 ### `channels.filtered_label`
 - **Type:** string
 - **Default:** `grip_force_filtered`
-- **Meaning:** Name of the filtered signal channel.
-- **Recommended value:** exact bridge channel label
-
-If any of these labels do not exist in the connected stream, the viewer should fail early.
+- **Meaning:** Semantic label for the filtered signal channel.
 
 ---
 
@@ -328,215 +379,230 @@ Examples:
 ## `reference`
 
 ### `reference.csv_path`
-- **Type:** string path or `null`
+- **Type:** path or `null`
 - **Default:** `null`
-- **Meaning:** Optional path to the CSV written by the bridge.
-- **Expected file columns:** typically `device_clock_us`, `value_raw`, `value_filtered`
-- **Use:** quick schema validation and offline reference inspection
-- **Notes:** If set, the viewer logs detected CSV columns.
+- **Required for:** `mode=csv_replay`
+- **Optional for:** `mode=live_with_reference_validation`
+- **Meaning:** Bridge CSV file path.
 
 ### `reference.xdf_path`
-- **Type:** string path or `null`
+- **Type:** path or `null`
 - **Default:** `null`
-- **Meaning:** Optional path to a LabRecorder `.xdf` file.
-- **Use:** inspect stored stream metadata and channel labels
-- **Notes:**
-  - if `pyxdf` is installed, it performs a real `.xdf` parse
-  - otherwise it falls back to a lightweight metadata scan
+- **Required for:** `mode=xdf_replay`
+- **Optional for:** `mode=live_with_reference_validation`
+- **Meaning:** LabRecorder XDF file path.
 
----
-
-## `logging`
-
-### `logging.level`
-- **Type:** string
-- **Default:** `INFO`
-- **Allowed values:** `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
-- **Meaning:** Viewer log verbosity.
-- **Recommendation:**
-  - `INFO` for normal use
-  - `DEBUG` for stream-resolution or schema debugging
-
----
-
-## `hydra`
-
-These values control Hydra runtime behavior.
-
-### `hydra.run.dir`
-- **Default:** `.`
-- **Meaning:** Prevents Hydra from creating a separate per-run output directory.
-- **Why used here:** keeps the script behaving like a normal local utility.
-
-### `hydra.output_subdir`
-- **Default:** `null`
-- **Meaning:** disables Hydra’s default output subdirectory.
-
-### `hydra.job.chdir`
+### `reference.inspect_in_replay_modes`
+- **Type:** boolean
 - **Default:** `false`
-- **Meaning:** prevents Hydra from changing the working directory at runtime.
-- **Why used here:** avoids breaking relative paths for local data files.
+- **Meaning:** If `true`, the viewer will also run the lightweight CSV/XDF inspection step in replay modes before starting playback.
+- **Recommendation:** leave `false` unless you specifically want extra metadata logging.
+
+---
+
+## `replay`
+
+### `replay.speed`
+- **Type:** float
+- **Default:** `1.0`
+- **Valid range:** `> 0`
+- **Meaning:** Playback speed multiplier.
+- **Examples:**
+  - `1.0` = real time
+  - `2.0` = two times faster
+  - `0.5` = half speed
+
+### `replay.loop`
+- **Type:** boolean
+- **Default:** `false`
+- **Meaning:** Whether the replay restarts automatically at the end.
+
+### `replay.start_offset_s`
+- **Type:** float, seconds
+- **Default:** `0.0`
+- **Valid range:** `>= 0`
+- **Meaning:** Skip the beginning of the recording and start replaying from this relative offset.
+
+### `replay.time_column`
+- **Type:** string
+- **Default:** `auto`
+- **Used by:** CSV replay only
+- **Allowed values:** `auto`, `index`, or any CSV column name
+- **Meaning:** Selects which CSV column defines replay time.
+- **Auto resolution order:**
+  1. `lsl_timestamp_s`
+  2. `device_clock_us`
+  3. `host_unix_time_ns`
+  4. `index` if fallback is enabled
+
+### `replay.time_column_unit`
+- **Type:** string
+- **Default:** `auto`
+- **Used by:** CSV replay only
+- **Allowed values:** `auto`, `seconds`, `microseconds`, `nanoseconds`
+- **Meaning:** Required only when the chosen time column name does not already imply units.
+
+### `replay.allow_index_fallback`
+- **Type:** boolean
+- **Default:** `true`
+- **Used by:** CSV replay only
+- **Meaning:** Allows replay to fall back to sample index divided by `viewer.expected_rate_hz` when no time column is found.
+- **Recommendation:** keep `true` for robustness, set `false` when you want strict timebase validation.
+
+---
+
+## Notes on timing
+
+For live irregular streams, MNE-LSL treats:
+
+- `bufsize` as **samples**
+- `winsize` as **samples**
+
+That is why this viewer sizes the live window in samples instead of dividing by `sfreq`. This matches the MNE-LSL API for irregular streams. citeturn789503search0turn789503search8
 
 ---
 
 ## Practical tuning guidance
 
-### Stable default for your current setup
+### Live modes (`mode=live`, `mode=live_with_reference_validation`)
 
-For an Arduino stream around 80 Hz:
+- Start with `viewer.window_seconds=10.0` and `viewer.expected_rate_hz=80.0`. That yields an effective visible window of about `800` samples, which is a good default for handgrip inspection.
+- Keep `stream.buffer_samples` at about **2x to 4x** the visible window. With the defaults, `1600` is appropriate. Increase it if the UI occasionally stalls or if you want more tolerance to scheduling jitter.
+- Use `stream.acquisition_delay=0.005` to `0.02` for normal operation. Lower values reduce perceived lag but increase CPU wakeups. Higher values reduce overhead but make the display feel less responsive.
+- Use `viewer.refresh_s=0.03` to `0.10` for most sessions. Below that, the UI can spend more time repainting than adding value. Above that, short transients become harder to inspect interactively.
+- Set `stream.source_id` whenever more than one matching LSL stream may exist on the network. It is the safest way to avoid attaching to the wrong stream.
+- Treat `viewer.expected_rate_hz` only as a **display-sizing helper**. It does not change the actual live acquisition rate, and it should not be used to infer authoritative timing.
 
-```yaml
-stream:
-  buffer_samples: 1600
-  acquisition_delay: 0.01
-  timeout: 5.0
+### CSV replay (`mode=csv_replay`)
 
-viewer:
-  window_seconds: 10.0
-  expected_rate_hz: 80.0
-  refresh_s: 0.05
-```
+- Prefer `replay.time_column=auto` unless you are deliberately testing a specific timebase.
+- If the bridge CSV contains `lsl_timestamp_s`, keep it as the replay time source. It is usually the best representation of the host-side LSL timeline.
+- If you need to inspect device-side timing behavior, force `replay.time_column=device_clock_us` and set `replay.time_column_unit=microseconds`.
+- Keep `replay.allow_index_fallback=true` for convenience while iterating on the bridge schema. Set it to `false` when you want strict validation and would rather fail than silently use an inferred timebase.
+- Use `replay.speed=2.0` to `8.0` for rapid screening of long sessions, and return to `1.0` when checking timing-sensitive behavior.
 
-This is a good starting point.
+### XDF replay (`mode=xdf_replay`)
 
-### If the UI feels sluggish
+- Use XDF replay when the question is about **what LabRecorder persisted**, not just what the bridge emitted.
+- Keep `stream.name` / `stream.stype` aligned with the bridge metadata, and set `stream.source_id` if multiple similar streams may exist in the recording.
+- Use XDF replay as the authoritative offline check for recorder fidelity, stream selection, and channel labels.
 
-Try:
+### Validation mode (`mode=live_with_reference_validation`)
 
-```yaml
-viewer:
-  refresh_s: 0.02
-```
-
-and optionally:
-
-```yaml
-stream:
-  acquisition_delay: 0.005
-```
-
-### If CPU usage is unnecessarily high
-
-Try:
-
-```yaml
-viewer:
-  refresh_s: 0.1
-
-stream:
-  acquisition_delay: 0.02
-```
-
-### If you want a longer visible history
-
-Either set an explicit sample window:
-
-```yaml
-viewer:
-  window_samples: 2400
-```
-
-or increase seconds:
-
-```yaml
-viewer:
-  window_seconds: 30.0
-```
-
-If you do that, also consider increasing:
-
-```yaml
-stream:
-  buffer_samples: 3200
-```
-
-so the ring buffer is comfortably larger than the visible window.
+- Use this mode after any change to the bridge schema, filter pipeline, channel labels, stream identifiers, or recording workflow.
+- Keep `reference.csv_path` and `reference.xdf_path` pointed to the artifacts from the same acquisition session whenever possible.
+- Do **not** use validation mode as your default daily monitoring mode unless you are actively debugging integration, because it adds extra inspection work without improving the live source itself.
 
 ---
 
 ## Failure modes to expect
 
-### The viewer cannot connect to the stream
-Common causes:
-- the bridge is not running
-- `stream.name` or `stream.stype` is wrong
-- multiple similar streams exist and `stream.source_id` was not set
+### Live-stream failures
 
-### The viewer connects but rejects the stream
-Common causes:
-- channel labels do not match `channels.clock_label`, `channels.raw_label`, `channels.filtered_label`
-- the connected stream is not the current bridge schema
+- **No stream found:** the bridge is not running, the network is isolated, or `stream.name` / `stream.stype` / `stream.source_id` do not match.
+- **Wrong stream selected:** multiple LSL streams share the same name/type and `stream.source_id` was left null.
+- **Channel-label mismatch:** the live stream exists, but the labels do not match `channels.clock_label`, `channels.raw_label`, or `channels.filtered_label`.
+- **Display feels jumpy or laggy:** `stream.buffer_samples`, `stream.acquisition_delay`, and `viewer.refresh_s` are poorly balanced for the machine load.
+- **Sparse or bursty updates:** expected with irregular streams if the upstream serial or bridge path is bursty. This is why the device interval panel exists.
 
-### The plots appear flat or too narrow
-Common causes:
-- the live signal has very little variation
-- the wrong unit labels are being assumed
-- the filter output is not behaving as expected upstream in the bridge
+### Replay failures
 
-### The device interval panel is noisy
-That usually means the Arduino timing or host-side acquisition is irregular, which is exactly why this stream is modeled as irregular.
+- **CSV replay starts but timing looks wrong:** the wrong time column was auto-selected, units were inferred incorrectly, or replay fell back to index-based timing.
+- **CSV replay cannot start:** no usable time column was found and `replay.allow_index_fallback=false`.
+- **XDF replay cannot start:** `pyxdf` is not installed, the file path is wrong, or the target stream cannot be uniquely matched.
+- **Replay stream selected incorrectly inside XDF:** multiple streams match name/type and `stream.source_id` is missing.
+
+### Cross-artifact validation failures
+
+- **CSV and XDF disagree on channel identity:** usually indicates a schema drift between bridge output and recorded metadata.
+- **Bridge CSV looks correct but XDF replay does not:** likely points to recording-side selection, recorder timing, or stream metadata issues rather than the bridge transport itself.
+- **Live view is correct but replay is not:** usually indicates an artifact-selection or replay-timebase problem, not a live plotting issue.
+
+### Operational expectations
+
+- The viewer is a visualization and inspection tool. It is not the authoritative offline analysis pipeline.
+- Minor visual differences between live mode and replay mode can occur because the live path consumes the current stream ring buffer while replay modes reconstruct timing from persisted artifacts.
 
 ---
 
 ## Recommended operating workflow
 
-1. Start the Arduino / serial producer.
-2. Start `LSL_Bridge` and confirm it is publishing:
-   - `device_clock_us`
-   - `grip_force_raw`
-   - `grip_force_filtered`
-3. Optionally start LabRecorder.
-4. Start the viewer.
-5. Optionally provide the generated CSV/XDF as references for validation.
+### 1. Normal acquisition
 
----
+Use this for regular data collection:
 
-## Minimal override examples
+1. Start `LSL_Bridge`
+2. Start the viewer with `mode=live`
+3. Confirm that raw, filtered, and device-interval panels are behaving as expected
+4. Start LabRecorder if you want a persisted XDF
+5. Run the acquisition session
 
-Use a different stream name:
+Recommended command:
 
 ```bash
-uv run python handgrip_realtime_viewer.py stream.name=MyHandgrip
+uv run python handgrip_realtime_viewer.py mode=live
 ```
 
-Use a specific source instance:
+### 2. Integration / schema validation
+
+Use this after any bridge, protocol, filter, or metadata change:
+
+1. Run a short acquisition with the bridge and LabRecorder
+2. Start the viewer with `mode=live_with_reference_validation`
+3. Point `reference.csv_path` and `reference.xdf_path` to the artifacts from that same run
+4. Confirm that the live stream matches the persisted artifacts semantically
+
+Recommended command:
 
 ```bash
-uv run python handgrip_realtime_viewer.py stream.source_id=my-device-001
+uv run python handgrip_realtime_viewer.py   mode=live_with_reference_validation   reference.csv_path=./data/handgrip_samples.csv   reference.xdf_path=./data/session01.xdf
 ```
 
-Use a 20-second view:
+### 3. Fast offline bridge review
+
+Use this when the question is mainly about the bridge output or filter behavior:
+
+1. Start the viewer with `mode=csv_replay`
+2. Use a higher `replay.speed` for screening
+3. Drop back to `1.0` when inspecting a specific interval closely
+
+Recommended command:
 
 ```bash
-uv run python handgrip_realtime_viewer.py viewer.window_seconds=20
+uv run python handgrip_realtime_viewer.py   mode=csv_replay   reference.csv_path=./data/handgrip_samples.csv   replay.speed=4.0
 ```
 
-Use a fixed 1200-sample window instead:
+### 4. Recorder-fidelity review
+
+Use this when the question is about what LabRecorder actually captured:
+
+1. Start the viewer with `mode=xdf_replay`
+2. Use the same `stream.name` / `stream.stype` as the bridge
+3. Set `stream.source_id` if the recording may contain multiple similar streams
+
+Recommended command:
 
 ```bash
-uv run python handgrip_realtime_viewer.py viewer.window_samples=1200
-```
-
-Enable debug logs:
-
-```bash
-uv run python handgrip_realtime_viewer.py logging.level=DEBUG
-```
-
-Add offline references:
-
-```bash
-uv run python handgrip_realtime_viewer.py \
-  reference.csv_path=./handgrip_samples.csv \
-  reference.xdf_path=./sub-P001_ses-S001_task-Default_run-001_eeg.xdf
+uv run python handgrip_realtime_viewer.py   mode=xdf_replay   reference.xdf_path=./data/session01.xdf
 ```
 
 ---
 
 ## Final recommendation
 
-Treat the viewer config as a **display and stream-resolution contract**, not as a signal-processing contract.
-The signal processing should remain in the bridge / DSP module, while the viewer should stay simple:
-- connect
-- validate channel schema
-- display raw / filtered / interval
+Use the viewer in a **mode-specific** way instead of treating CSV/XDF as loosely attached optional files:
+
+- Use `mode=live` as the default operational mode during acquisition.
+- Use `mode=live_with_reference_validation` immediately after any bridge or recording-contract change.
+- Use `mode=csv_replay` for the fastest offline inspection of bridge output and placeholder-DSP behavior.
+- Use `mode=xdf_replay` when the goal is to verify recorder fidelity or reproduce exactly what was persisted by LabRecorder.
+
+For day-to-day work, the most efficient pattern is:
+
+1. monitor in `live`
+2. record XDF in parallel when needed
+3. validate with `live_with_reference_validation` after contract changes
+4. use `csv_replay` for quick offline triage
+5. use `xdf_replay` for final recorder-side confirmation
+
+This keeps the acquisition path, validation path, and replay path conceptually separate, which is the cleanest match to the latest bridge and viewer artifacts.
