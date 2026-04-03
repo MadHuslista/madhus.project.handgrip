@@ -51,7 +51,7 @@ processing:
       min_dt_s: 0.000001
 
 csv:
-  path: ../Handgrip_Analysis/data/calibration_signals/20260402_stage3_constant_load_4500g_trial01.csv
+  path: ../Handgrip_Analysis/data/calibration_signals/20260402_stage4_sustained_hold_trial01.csv
   append: false
   flush_every_n_rows: 1
 
