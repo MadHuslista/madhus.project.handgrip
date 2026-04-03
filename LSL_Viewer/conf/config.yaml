@@ -1,0 +1,35 @@
+stream:
+  name: ArduinoHandgrip
+  stype: Force
+  source_id: null
+  buffer_samples: 1600
+  acquisition_delay: 0.01
+  timeout: 5.0
+
+channels:
+  clock_label: device_clock_us
+  raw_label: grip_force_raw
+  filtered_label: grip_force_filtered
+
+viewer:
+  window_samples: null
+  window_seconds: 10.0
+  expected_rate_hz: 80.0
+  refresh_s: 0.05
+  raw_unit_label: g
+  filtered_unit_label: g
+  dt_unit_label: ms
+
+reference:
+  csv_path: null
+  xdf_path: null
+
+logging:
+  level: INFO
+
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+  job:
+    chdir: false
