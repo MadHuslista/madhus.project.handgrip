@@ -536,14 +536,55 @@ def run_live_mode(cfg: DictConfig, reference: OfflineReference, validate_referen
                 observed_rate_hz = float("nan")
                 mean_dt_ms = float("nan")
 
-            latest_text = (
-                f"mode={'live_with_reference_validation' if validate_reference else 'live'}  stream={stream.name}  type={stream.stype}  source_id={stream.source_id}\n"
-                f"channels={stream.ch_names}\n"
-                f"latest raw={live.raw[-1]:.3f} {cfg.viewer.raw_unit_label}   filtered={live.filtered[-1]:.3f} {cfg.viewer.filtered_unit_label}   "
-                f"device_clock={live.device_clock_us[-1]:.0f} us\n"
-                f"observed_rate≈{observed_rate_hz:.3f} Hz   mean_device_dt≈{mean_dt_ms:.3f} ms   n_new_samples={stream.n_new_samples}\n"
-                f"{_format_reference_summary(reference)}"
+            # Column-based layout for live mode
+            col_source = (
+                f"SOURCE/MODE\n"
+                f"name : {stream.name}\n"
+                f"type : {stream.stype}\n"
+                f"id   : {stream.source_id}\n"
+                f"mode : {'live_ref' if validate_reference else 'live'}"
             )
+            col_signal = (
+                f"SIGNAL ({cfg.viewer.raw_unit_label}/{cfg.viewer.filtered_unit_label})\n"
+                f"raw    : {live.raw[-1]:.3f}\n"
+                f"filt   : {live.filtered[-1]:.2f}\n"
+                f"clock  : {live.device_clock_us[-1]:.0f} us"
+            )
+            col_metrics = (
+                f"METRICS\n"
+                f"rate   : {observed_rate_hz:.2f} Hz\n"
+                f"dt     : {mean_dt_ms:.2f} ms\n"
+                f"new    : {stream.n_new_samples}"
+            )
+            col_channels = (
+                f"CHANNELS\n"
+                f"{'\n'.join(stream.ch_names)}"
+            )
+
+            # We use a single line for each category, but they are displayed as columns
+            def _zip_columns(*cols):
+                # Dynamically determine the maximum width for each column based on its content
+                col_lines = [c.split('\n') for c in cols]
+                col_widths = [max(len(line) for line in lines) + 2 for lines in col_lines]
+                
+                max_lines = max(len(lines) for lines in col_lines)
+                # Pad with empty strings
+                for cl in col_lines:
+                    while len(cl) < max_lines:
+                        cl.append("")
+                
+                res = []
+                for i in range(max_lines):
+                    row = ""
+                    for j, lines in enumerate(col_lines):
+                        w = col_widths[j]
+                        # Ensure the text doesn't overflow the calculated width (though here it's derived from it)
+                        text = lines[i][:w]
+                        row += f"{text:<{w}}"
+                    res.append(row.rstrip())
+                return "\n".join(res)
+
+            latest_text = _zip_columns(col_source, col_signal, col_metrics, col_channels)
             info_text.set_text(latest_text)
             plt.pause(float(cfg.viewer.refresh_s))
 
@@ -630,14 +671,24 @@ def run_replay_mode(cfg: DictConfig, replay_data: ReplayData, reference: Offline
                 observed_rate_hz = float("nan")
                 mean_dt_ms = float("nan")
 
-            latest_text = (
-                f"mode={mode}  source={replay_data.source_name}  type={replay_data.source_type}  source_id={replay_data.source_id}\n"
-                f"labels={replay_data.labels}\n"
-                f"latest raw={window.raw[-1]:.3f} {cfg.viewer.raw_unit_label}   filtered={window.filtered[-1]:.3f} {cfg.viewer.filtered_unit_label}   "
-                f"device_clock={window.device_clock_us[-1]:.0f} us\n"
-                f"replay_position={target_index}/{timestamps.size}   replay_elapsed={elapsed_s:.3f} s   replay_speed={replay_speed:.3f}x\n"
-                f"observed_rate≈{observed_rate_hz:.3f} Hz   mean_device_dt≈{mean_dt_ms:.3f} ms   {_format_reference_summary(reference)}"
-            )
+            # Helper for side-by-side multiline formatting
+            def _zip_cols(*cols, widths):
+                num_lines = [c.count("\n") + 1 for c in cols]
+                max_lines = max(num_lines)
+                lines = [c.split("\n") for c in cols]
+                for l in lines:
+                    while len(l) < max_lines:
+                        l.append("")
+                rows = []
+                for i in range(max_lines):
+                    row = ""
+                    for j, col_lines in enumerate(lines):
+                        w = widths[j] if j < len(widths) else 0
+                        row += f"{col_lines[i]:<{w}} "
+                    rows.append(row.rstrip())
+                return "\n".join(rows)
+
+            latest_text = _zip_cols(col_source, col_signal, col_replay, col_metrics, widths=[35, 30, 30, 25])
             info_text.set_text(latest_text)
 
             plt.pause(float(cfg.viewer.refresh_s))
