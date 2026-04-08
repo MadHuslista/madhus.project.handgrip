@@ -59,6 +59,96 @@ class FirstOrderLowPass:
 
 
 @dataclass(slots=True)
+class SecondOrderBiquadLowPass:
+    cutoff_hz: float
+    sample_rate_hz: float
+    q: float = 1.0 / math.sqrt(2.0)
+    reset_on_gap_s: float = 1.0
+    min_dt_s: float = 1e-6
+
+    _b0: float = field(init=False)
+    _b1: float = field(init=False)
+    _b2: float = field(init=False)
+    _a1: float = field(init=False)
+    _a2: float = field(init=False)
+    _last_time_s: float | None = field(init=False, default=None)
+    _x1: float = field(init=False, default=0.0)
+    _x2: float = field(init=False, default=0.0)
+    _y1: float = field(init=False, default=0.0)
+    _y2: float = field(init=False, default=0.0)
+    _initialized: bool = field(init=False, default=False)
+
+    def __post_init__(self) -> None:
+        if self.cutoff_hz <= 0.0:
+            raise ValueError(f"cutoff_hz must be > 0. Received {self.cutoff_hz}")
+        if self.sample_rate_hz <= 0.0:
+            raise ValueError(f"sample_rate_hz must be > 0. Received {self.sample_rate_hz}")
+        nyquist_hz = 0.5 * self.sample_rate_hz
+        if self.cutoff_hz >= nyquist_hz:
+            raise ValueError(
+                "cutoff_hz must be strictly below Nyquist. "
+                f"Received cutoff_hz={self.cutoff_hz} sample_rate_hz={self.sample_rate_hz}"
+            )
+        if self.q <= 0.0:
+            raise ValueError(f"q must be > 0. Received {self.q}")
+
+        omega = 2.0 * math.pi * self.cutoff_hz / self.sample_rate_hz
+        cos_omega = math.cos(omega)
+        sin_omega = math.sin(omega)
+        alpha = sin_omega / (2.0 * self.q)
+
+        b0 = (1.0 - cos_omega) / 2.0
+        b1 = 1.0 - cos_omega
+        b2 = (1.0 - cos_omega) / 2.0
+        a0 = 1.0 + alpha
+        a1 = -2.0 * cos_omega
+        a2 = 1.0 - alpha
+
+        self._b0 = b0 / a0
+        self._b1 = b1 / a0
+        self._b2 = b2 / a0
+        self._a1 = a1 / a0
+        self._a2 = a2 / a0
+
+    def _reset_state(self, value: float, sample_time_s: float) -> float:
+        self._last_time_s = sample_time_s
+        self._x1 = value
+        self._x2 = value
+        self._y1 = value
+        self._y2 = value
+        self._initialized = True
+        return value
+
+    def process(self, value: float, sample_time_s: float) -> float:
+        if not self._initialized or self._last_time_s is None:
+            return self._reset_state(value, sample_time_s)
+
+        dt = max(self.min_dt_s, sample_time_s - self._last_time_s)
+        if dt > self.reset_on_gap_s:
+            LOGGER.warning(
+                "Second-order low-pass state reset after large gap: dt=%.6fs > %.6fs",
+                dt,
+                self.reset_on_gap_s,
+            )
+            return self._reset_state(value, sample_time_s)
+
+        y = (
+            self._b0 * value
+            + self._b1 * self._x1
+            + self._b2 * self._x2
+            - self._a1 * self._y1
+            - self._a2 * self._y2
+        )
+
+        self._x2 = self._x1
+        self._x1 = value
+        self._y2 = self._y1
+        self._y1 = y
+        self._last_time_s = sample_time_s
+        return y
+
+
+@dataclass(slots=True)
 class DriftCorrector:
     baseline_cutoff_hz: float = 0.02
     rest_band: float = 5.0
@@ -156,6 +246,16 @@ def _build_filter_node(filter_cfg: DictConfig) -> FilterNode:
             min_dt_s=float(filter_cfg.get("min_dt_s", 1e-6)),
         )
 
+    if filter_type in {"biquad_lowpass", "butterworth_lowpass_2nd"}:
+        q = float(filter_cfg.get("q", 1.0 / math.sqrt(2.0)))
+        return SecondOrderBiquadLowPass(
+            cutoff_hz=float(filter_cfg.cutoff_hz),
+            sample_rate_hz=float(filter_cfg.sample_rate_hz),
+            q=q,
+            reset_on_gap_s=float(filter_cfg.get("reset_on_gap_s", 1.0)),
+            min_dt_s=float(filter_cfg.get("min_dt_s", 1e-6)),
+        )
+
     if filter_type == "drift_corrector":
         return DriftCorrector(
             baseline_cutoff_hz=float(filter_cfg.get("baseline_cutoff_hz", 0.02)),
@@ -188,7 +288,7 @@ class ProcessorAdapter:
 def build_processor(cfg: DictConfig) -> ProcessorAdapter:
     processor = ProcessorAdapter(cfg)
     LOGGER.info(
-        "Initialized placeholder processor with filter chain: %s",
+        "Initialized processor with filter chain: %s",
         ", ".join(type(filter_node).__name__ for filter_node in processor.filters) or "<empty>",
     )
     return processor

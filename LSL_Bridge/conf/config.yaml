@@ -36,23 +36,17 @@ processing:
   module: filter
   timestamp_source: device_clock_us   # device_clock_us | lsl
   filters:
-    - type: lowpass_1pole
-      name: lowpass_1hz
-      cutoff_hz: 1.0
-      reset_on_gap_s: 1.0
-      min_dt_s: 0.000001
-    - type: drift_corrector
-      name: slow_drift_corrector
-      baseline_cutoff_hz: 0.02
-      rest_band: 5.0
-      stable_slope_threshold_per_s: 5.0
-      warmup_samples: 20
+    - type: butterworth_lowpass_2nd
+      name: characterization_lowpass_15hz
+      sample_rate_hz: 100.0
+      cutoff_hz: 15.0
+      q: 0.7071067811865476
       reset_on_gap_s: 1.0
       min_dt_s: 0.000001
 
 csv:
-  path: ../Handgrip_Analysis/data/calibration_signals/20260402_stage4_sustained_hold_trial01.csv
-  append: false
+  path: ./data/handgrip_samples.csv
+  append: true
   flush_every_n_rows: 1
 
 logging:

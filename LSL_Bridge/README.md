@@ -28,6 +28,7 @@ LSL_Bridge/
 - Configurable processing timestamp source:
   - `device_clock_us` (default)
   - `lsl`
+- Configurable filter pipeline with sample-by-sample processing nodes
 
 ## Requirements
 
@@ -109,16 +110,68 @@ D,<seq>,<timestamp_us>,<value>,<crc16_hex>
 
 `processing.module` defaults to `filter`, which builds a chain from `processing.filters`.
 
-Current filter types in `filter.py`:
+### Default filtered channel
 
+The default `grip_force_filtered` channel now implements the filter recommended in `Handgrip_Analysis/README_filter_design_report.md` for the primary characterization path:
+
+1. **2nd-order Butterworth low-pass**
+2. **Cutoff = 15 Hz**
+3. **Nominal sample rate = 100 Hz**
+
+This keeps the filtered channel aligned with the current design recommendation for reconstructing the most realistic handgrip force curve while preserving the raw channel untouched.
+
+### Supported filter types in `filter.py`
+
+- `butterworth_lowpass_2nd`
+- `biquad_lowpass`
 - `lowpass_1pole`
 - `drift_corrector`
 - `identity`
 
-Default config applies:
+`butterworth_lowpass_2nd` is a convenience alias for a biquad low-pass with Butterworth damping (`q = 1/sqrt(2)`).
 
-1. 1-pole low-pass (`cutoff_hz: 1.0`)
-2. slow drift correction (`baseline_cutoff_hz: 0.02`)
+### Default config
+
+```yaml
+processing:
+  module: filter
+  timestamp_source: device_clock_us
+  filters:
+    - type: butterworth_lowpass_2nd
+      name: characterization_lowpass_15hz
+      sample_rate_hz: 100.0
+      cutoff_hz: 15.0
+      q: 0.7071067811865476
+      reset_on_gap_s: 1.0
+      min_dt_s: 0.000001
+```
+
+### Why drift correction is not in the default filtered channel anymore
+
+The latest filter-design report recommends keeping **baseline / zero handling separate** from the primary force waveform reconstruction path. So the bridge no longer applies continuous drift correction in the default filtered channel. If you need gated baseline tracking for a separate downstream path, you can still add it explicitly through `processing.filters`.
+
+### Example overrides
+
+Use the optional steadier display-style channel recommended by the report:
+
+```bash
+uv run python handgrip_lsl_bridge.py   processing.filters='[{type: butterworth_lowpass_2nd, name: ui_lowpass_10hz, sample_rate_hz: 100.0, cutoff_hz: 10.0, q: 0.7071067811865476}]'
+```
+
+Temporarily disable filtering:
+
+```bash
+uv run python handgrip_lsl_bridge.py processing.filters='[{type: identity, name: bypass}]'
+```
+
+Add a custom chained path:
+
+```bash
+uv run python handgrip_lsl_bridge.py   processing.filters='[
+    {type: butterworth_lowpass_2nd, name: lp15, sample_rate_hz: 100.0, cutoff_hz: 15.0, q: 0.7071067811865476},
+    {type: drift_corrector, name: optional_baseline_tracker, baseline_cutoff_hz: 0.02, rest_band: 5.0, stable_slope_threshold_per_s: 5.0, warmup_samples: 20}
+  ]'
+```
 
 ## CSV Output
 
@@ -164,3 +217,4 @@ uv run python handgrip_lsl_bridge.py processing.timestamp_source=lsl
 - If the serial device resets on connect, tune `serial.startup_settle_s`.
 - Overlong serial lines are dropped when they exceed `serial.max_line_bytes`.
 - On serial errors, the bridge retries after `serial.reconnect_backoff_s`.
+- The default 2nd-order low-pass assumes the current nominal device output rate is 100 Hz. If the firmware sample rate changes, update `processing.filters[0].sample_rate_hz` accordingly so the cutoff remains correct.
