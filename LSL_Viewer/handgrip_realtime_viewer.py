@@ -469,9 +469,19 @@ def inspect_references_if_enabled(cfg: DictConfig, mode: str) -> OfflineReferenc
 
 
 def init_figure(cfg: DictConfig):
-    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(12, 10), constrained_layout=False)
-    plt.subplots_adjust(top=0.82, bottom=0.1, left=0.1, right=0.95, hspace=0.35)
-    ax_raw, ax_filtered, ax_dt = axes
+    fig, axes = plt.subplots(
+        4,
+        1,
+        figsize=(12, 10),
+        constrained_layout=False,
+        gridspec_kw={"height_ratios": [1.35, 3.0, 3.0, 3.0]},
+    )
+    plt.subplots_adjust(top=0.96, bottom=0.06, left=0.1, right=0.95, hspace=0.42)
+
+    ax_info, ax_raw, ax_filtered, ax_dt = axes
+
+    ax_raw.sharex(ax_filtered)
+    ax_filtered.sharex(ax_dt)
     (line_raw,) = ax_raw.plot([], [], label="raw", linewidth=1.0)
     (line_filtered,) = ax_filtered.plot([], [], label="filtered", linewidth=1.2)
     (line_dt,) = ax_dt.plot([], [], label="device dt (ms)", linewidth=1.0)
@@ -483,13 +493,16 @@ def init_figure(cfg: DictConfig):
     ax_filtered.set_ylabel(str(cfg.viewer.filtered_unit_label))
     ax_dt.set_ylabel(str(cfg.viewer.dt_unit_label))
     ax_dt.set_xlabel("Relative time (s)")
-    for ax in axes:
+    for ax in [ax_raw, ax_filtered, ax_dt]:
         ax.grid(True, alpha=0.3)
         ax.legend(loc="upper right")  # Moved legend to avoid text overlap
-        
-    # Move text higher, adjust font size, and add top margin to figure
-    info_text = fig.text(0.02, 0.98, "", va="top", ha="left", family="monospace", fontsize=9)
-    return fig, axes, line_raw, line_filtered, line_dt, info_text
+    
+    ax_info.axis("off")
+    ax_info.set_xlim(0, 1)
+    ax_info.set_ylim(0, 1)
+    ax_info.set_title("Stream Overview", loc="left", pad=6)
+    
+    return fig, axes, line_raw, line_filtered, line_dt, ax_info
 
 
 def _format_reference_summary(reference: OfflineReference) -> str:
@@ -500,8 +513,8 @@ def run_live_mode(cfg: DictConfig, reference: OfflineReference, validate_referen
     window_samples = infer_window_samples(cfg)
     stream = build_stream(cfg)
     validate_live_stream(stream, cfg)
-    fig, axes, line_raw, line_filtered, line_dt, info_text = init_figure(cfg)
-    ax_raw, ax_filtered, ax_dt = axes
+    fig, axes, line_raw, line_filtered, line_dt, ax_info = init_figure(cfg)
+    _, ax_raw, ax_filtered, ax_dt = axes
 
     LOGGER.info(
         "Live viewer started: mode=%s buffer_samples=%d window_samples=%d refresh_s=%.3f",
@@ -558,7 +571,7 @@ def run_live_mode(cfg: DictConfig, reference: OfflineReference, validate_referen
             )
             col_channels = (
                 f"CHANNELS\n"
-                f"{'\n'.join(stream.ch_names)}"
+                f"- {'\n- '.join(stream.ch_names)}"
             )
 
             # We use a single line for each category, but they are displayed as columns
@@ -585,7 +598,12 @@ def run_live_mode(cfg: DictConfig, reference: OfflineReference, validate_referen
                 return "\n".join(res)
 
             latest_text = _zip_columns(col_source, col_signal, col_metrics, col_channels)
-            info_text.set_text(latest_text)
+            ax_info.clear()
+            ax_info.axis("off")
+            ax_info.set_xlim(0, 1)
+            ax_info.set_ylim(0, 1)
+            ax_info.set_title("Stream Overview", loc="left", pad=6)
+            ax_info.text(0.02, 0.88, latest_text, va="top", ha="left", family="monospace", fontsize=10, transform=ax_info.transAxes)
             plt.pause(float(cfg.viewer.refresh_s))
 
     except KeyboardInterrupt:
@@ -612,8 +630,8 @@ def _window_from_replay(data: ReplayData, end_index: int, window_samples: int) -
 
 def run_replay_mode(cfg: DictConfig, replay_data: ReplayData, reference: OfflineReference, mode: str) -> int:
     window_samples = infer_window_samples(cfg)
-    fig, axes, line_raw, line_filtered, line_dt, info_text = init_figure(cfg)
-    ax_raw, ax_filtered, ax_dt = axes
+    fig, axes, line_raw, line_filtered, line_dt, ax_info = init_figure(cfg)
+    _, ax_raw, ax_filtered, ax_dt = axes
 
     timestamps = replay_data.timestamps_s
     if timestamps.size == 0:
@@ -671,25 +689,57 @@ def run_replay_mode(cfg: DictConfig, replay_data: ReplayData, reference: Offline
                 observed_rate_hz = float("nan")
                 mean_dt_ms = float("nan")
 
+            col_source = (
+                f"SOURCE/MODE\n"
+                f"name : {replay_data.source_name}\n"
+                f"type : {replay_data.source_type}\n"
+                f"id   : {replay_data.source_id}\n"
+                f"mode : {mode}"
+            )
+            col_signal = (
+                f"SIGNAL ({cfg.viewer.raw_unit_label}/{cfg.viewer.filtered_unit_label})\n"
+                f"raw    : {window.raw[-1]:.3f}\n"
+                f"filt   : {window.filtered[-1]:.3f}\n"
+                f"clock  : {window.device_clock_us[-1]:.0f} us"
+            )
+            col_replay = (
+                f"REPLAY PROGRESS\n"
+                f"pos    : {target_index}/{timestamps.size}\n"
+                f"time   : {elapsed_s:.2f} s\n"
+                f"speed  : {replay_speed:.2f}x"
+            )
+            col_metrics = (
+                f"METRICS\n"
+                f"rate   : {observed_rate_hz:.2f} Hz\n"
+                f"dt     : {mean_dt_ms:.2f} ms"
+            )
+
             # Helper for side-by-side multiline formatting
-            def _zip_cols(*cols, widths):
-                num_lines = [c.count("\n") + 1 for c in cols]
-                max_lines = max(num_lines)
-                lines = [c.split("\n") for c in cols]
-                for l in lines:
-                    while len(l) < max_lines:
-                        l.append("")
+            def _zip_cols(*cols):
+                sections = [c.split("\n") for c in cols]
+                col_widths = [max(len(line) for line in s) + 2 for s in sections]
+                max_lines = max(len(s) for s in sections)
+                
+                for s in sections:
+                    while len(s) < max_lines:
+                        s.append("")
+                        
                 rows = []
                 for i in range(max_lines):
                     row = ""
-                    for j, col_lines in enumerate(lines):
-                        w = widths[j] if j < len(widths) else 0
-                        row += f"{col_lines[i]:<{w}} "
+                    for j, s_lines in enumerate(sections):
+                        w = col_widths[j]
+                        row += f"{s_lines[i]:<{w}}"
                     rows.append(row.rstrip())
                 return "\n".join(rows)
 
-            latest_text = _zip_cols(col_source, col_signal, col_replay, col_metrics, widths=[35, 30, 30, 25])
-            info_text.set_text(latest_text)
+            latest_text = _zip_cols(col_source, col_signal, col_replay, col_metrics)
+            ax_info.clear()
+            ax_info.axis("off")
+            ax_info.set_xlim(0, 1)
+            ax_info.set_ylim(0, 1)
+            ax_info.set_title("Stream Overview", loc="left", pad=6)
+            ax_info.text(0.02, 0.88, latest_text, va="top", ha="left", family="monospace", fontsize=8, transform=ax_info.transAxes)
 
             plt.pause(float(cfg.viewer.refresh_s))
             if target_index >= timestamps.size and not loop:
