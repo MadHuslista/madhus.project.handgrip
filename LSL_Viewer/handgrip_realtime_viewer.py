@@ -469,7 +469,8 @@ def inspect_references_if_enabled(cfg: DictConfig, mode: str) -> OfflineReferenc
 
 
 def init_figure(cfg: DictConfig):
-    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(12, 8), constrained_layout=True)
+    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(12, 10), constrained_layout=False)
+    plt.subplots_adjust(top=0.82, bottom=0.1, left=0.1, right=0.95, hspace=0.35)
     ax_raw, ax_filtered, ax_dt = axes
     (line_raw,) = ax_raw.plot([], [], label="raw", linewidth=1.0)
     (line_filtered,) = ax_filtered.plot([], [], label="filtered", linewidth=1.2)
@@ -484,8 +485,10 @@ def init_figure(cfg: DictConfig):
     ax_dt.set_xlabel("Relative time (s)")
     for ax in axes:
         ax.grid(True, alpha=0.3)
-        ax.legend(loc="upper left")
-    info_text = fig.text(0.01, 0.99, "", va="top", ha="left", family="monospace")
+        ax.legend(loc="upper right")  # Moved legend to avoid text overlap
+        
+    # Move text higher, adjust font size, and add top margin to figure
+    info_text = fig.text(0.02, 0.98, "", va="top", ha="left", family="monospace", fontsize=9)
     return fig, axes, line_raw, line_filtered, line_dt, info_text
 
 
