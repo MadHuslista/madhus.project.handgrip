@@ -1,0 +1,53 @@
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+
+app:
+  log_level: INFO
+  worker_join_timeout_s: 1.5
+
+ui:
+  page_title: High-Speed Acquisition Instrument GUI
+  host: 127.0.0.1
+  port: 8088
+  refresh_interval_s: 0.2
+  plot_height_px: 360
+  log_height_px: 380
+  event_log_height_px: 180
+  visible_log_entries: 40
+  visible_event_entries: 60
+  light_mode: true
+
+serial:
+  default_port: ""
+  default_baudrate: 9600
+  default_parity: N
+  default_stopbits: 1
+  bytesize: 8
+  timeout_s: 0.2
+  inter_frame_gap_s: 0.01
+  port_hints:
+    - USB
+    - RS485
+    - FTDI
+    - CH340
+    - CP210
+    - PL2303
+    - ttyUSB
+    - ttyACM
+
+device:
+  mode: modbus_rtu
+  slave_address: 1
+  active_send_frequency_code: 2
+  poll_interval_s: 0.1
+  error_backoff_s: 0.25
+
+active_send:
+  default_parser_profile: line_ascii_auto
+  default_numeric_index: 0
+  default_hex_word_endianness: big
+  read_timeout_s: 0.5
+  read_chunk_bytes: 256
+  max_binary_frame_bytes: 64
