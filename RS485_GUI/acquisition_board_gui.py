@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Deque, Dict, List, Optional, Tuple
 
-import hydra
+import sys
 from nicegui import app, ui
 from omegaconf import DictConfig, OmegaConf
 import plotly.graph_objects as go
@@ -706,8 +706,54 @@ def connect_state(app_state: AppState) -> None:
     )
 
 
-@hydra.main(version_base=None, config_path='.', config_name='config')
-def main(cfg: DictConfig) -> None:
+def load_app_config(argv: Optional[List[str]] = None) -> DictConfig:
+    """Load config.yaml and apply OmegaConf/Hydra-style dotlist overrides.
+
+    NiceGUI internally re-executes the script to serve the root page / 404 fallback.
+    Using the @hydra.main decorator here causes a second GlobalHydra initialization and
+    crashes the app. This loader preserves config.yaml + dotlist overrides without
+    relying on Hydra's global runtime state.
+    """
+    args = list(sys.argv[1:] if argv is None else argv)
+    config_path = Path(__file__).with_name('config.yaml')
+    cfg = OmegaConf.load(config_path)
+
+    overrides: List[str] = []
+    ignored: List[str] = []
+    for arg in args:
+        if arg in {'-h', '--help'}:
+            print(
+                'Usage: python acquisition_board_gui.py [key=value ...]\n\n'
+                'Examples:\n'
+                '  python acquisition_board_gui.py\n'
+                '  python acquisition_board_gui.py ui.port=8090 serial.default_port=/dev/ttyUSB0\n'
+                '  python acquisition_board_gui.py device.mode=active_send active_send.default_parser_profile=line_ascii_csv\n'
+            )
+            raise SystemExit(0)
+
+        if arg.startswith('hydra.'):
+            # Ignore Hydra-specific runtime flags to keep the script compatible with
+            # previous invocation habits while avoiding GlobalHydra re-initialization.
+            ignored.append(arg)
+            continue
+
+        if '=' in arg and not arg.startswith('--'):
+            overrides.append(arg)
+        else:
+            ignored.append(arg)
+
+    if overrides:
+        cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist(overrides))
+
+    configure_logging(cfg)
+
+    if ignored:
+        LOGGER.warning('Ignoring unsupported CLI args: %s', ignored)
+
+    return cfg
+
+
+def run_app(cfg: DictConfig) -> None:
     configure_logging(cfg)
     LOGGER.info('Loaded config:\n%s', OmegaConf.to_yaml(cfg))
 
@@ -915,6 +961,11 @@ def main(cfg: DictConfig) -> None:
 
     app.on_shutdown(cleanup)
     ui.run(host=str(cfg.ui.host), port=int(cfg.ui.port), reload=False, title=str(cfg.ui.page_title))
+
+
+def main() -> None:
+    cfg = load_app_config()
+    run_app(cfg)
 
 
 if __name__ in {'__main__', '__mp_main__'}:
