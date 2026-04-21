@@ -15,13 +15,24 @@ ui:
   plot_height_px: 360
   log_height_px: 380
   event_log_height_px: 180
-  visible_log_entries: 40
-  visible_event_entries: 60
+  visible_log_entries: 0  # 0 = show all retained entries and use scrollbar
+  visible_event_entries: 0  # 0 = show all retained entries and use scrollbar
+  max_retained_log_entries: 1000
+  max_retained_event_entries: 2000
+  max_plot_points: 10000
   light_mode: true
+
+logger:
+  enabled: true
+  directory: ./logs
+  write_mode: append  # append | overwrite
+  raw_signal_filename: raw_signal.ndjson
+  interpreted_signal_filename: interpreted_signal.ndjson
+  gui_signal_filename: gui_signal.csv
 
 serial:
   default_port: ""
-  default_baudrate: 115200
+  default_baudrate: 9600
   default_parity: N
   default_stopbits: 1
   bytesize: 8
@@ -40,7 +51,7 @@ serial:
 device:
   mode: modbus_rtu
   slave_address: 1
-  active_send_frequency_code: 7 # 100 Hz
+  active_send_frequency_code: 2
   poll_interval_s: 0.1
   error_backoff_s: 0.25
 

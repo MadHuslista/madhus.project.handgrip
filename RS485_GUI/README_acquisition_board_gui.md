@@ -9,6 +9,7 @@ A basic Python web UI for the **High-Speed Acquisition Instrument** board docume
   - **Active send** (`500.AS = 1`),
 - visualize the live time series using **host timestamps**,
 - inspect raw transport frames vs decoded values side by side,
+- persist `raw_signal`, `interpreted_signal`, and `gui_signal` files to a configurable logger directory, with append or overwrite behavior,
 - send the documented command-register actions in Modbus RTU mode.
 
 ---
@@ -55,6 +56,12 @@ You can override config values from CLI using OmegaConf/Hydra-style dotlist synt
 
 ```bash
 python acquisition_board_gui.py ui.port=8090 serial.default_baudrate=115200 device.slave_address=3
+```
+
+You can also override the logger location and write mode from CLI:
+
+```bash
+python acquisition_board_gui.py logger.directory=./session_logs logger.write_mode=overwrite
 ```
 
 ---
@@ -114,9 +121,37 @@ Left:
 Right:
 - semantic interpretation of the data.
 
+Both log panes now use fixed-height, monospace text areas with native scrollbars, so long logs can be traversed vertically without the widget expanding uncontrollably. The event log uses the same behavior.
+
 ### Event log
 
 Shows connect/disconnect, command writes, and acquisition errors.
+
+### Signal file logging
+
+The app can persist three files under a YAML-configurable logger directory:
+
+- `raw_signal.ndjson` — one JSON object per received frame containing the raw transport payload and host timestamp
+- `interpreted_signal.ndjson` — one JSON object per received frame containing the decoded payload and host timestamp
+- `gui_signal.csv` — the time-series material used by the GUI chart: `host_ts_epoch_s, host_ts_iso, mode, raw_value`
+
+Relevant YAML block:
+
+```yaml
+logger:
+  enabled: true
+  directory: ./logs
+  write_mode: append  # append | overwrite
+  raw_signal_filename: raw_signal.ndjson
+  interpreted_signal_filename: interpreted_signal.ndjson
+  gui_signal_filename: gui_signal.csv
+```
+
+Behavior:
+
+- `append` keeps adding samples to the existing files
+- `overwrite` truncates the three files on the next connection and starts a fresh capture
+- files are opened on connect and closed on disconnect/shutdown
 
 ### Modbus commands panel
 
@@ -229,6 +264,19 @@ active_send:
   default_numeric_index: 0
   default_hex_word_endianness: big
 ```
+
+Additional retention/scroll-related YAML keys:
+
+```yaml
+ui:
+  visible_log_entries: 0          # 0 = show all retained entries
+  visible_event_entries: 0        # 0 = show all retained entries
+  max_retained_log_entries: 1000
+  max_retained_event_entries: 2000
+  max_plot_points: 10000
+```
+
+With `visible_* = 0`, the text areas render the full retained deque content and you navigate it through the scrollbar.
 
 ---
 

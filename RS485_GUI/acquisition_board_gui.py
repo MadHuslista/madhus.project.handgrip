@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import binascii
+import csv
 import json
 import logging
 import queue
@@ -10,7 +11,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Deque, Dict, List, Optional, Tuple
+from typing import Any, Deque, Dict, List, Optional, TextIO, Tuple
 
 import sys
 from nicegui import app, ui
@@ -155,6 +156,83 @@ class PortInfo:
     score: int = 0
 
 
+
+
+class SignalFileLogger:
+    def __init__(self, cfg: DictConfig):
+        self.enabled = bool(getattr(cfg.logger, 'enabled', False))
+        self.directory = Path(str(cfg.logger.directory)).expanduser()
+        self.write_mode = str(cfg.logger.write_mode).lower()
+        if self.write_mode not in {'append', 'overwrite'}:
+            raise ValueError(f'logger.write_mode must be append or overwrite, got {self.write_mode}')
+
+        self.raw_path = self.directory / str(cfg.logger.raw_signal_filename)
+        self.interpreted_path = self.directory / str(cfg.logger.interpreted_signal_filename)
+        self.gui_path = self.directory / str(cfg.logger.gui_signal_filename)
+
+        self._raw_fp: Optional[TextIO] = None
+        self._interpreted_fp: Optional[TextIO] = None
+        self._gui_fp: Optional[TextIO] = None
+        self._gui_writer: Optional[csv.writer] = None
+        self._lock = threading.Lock()
+
+    def open(self) -> None:
+        if not self.enabled:
+            return
+
+        self.directory.mkdir(parents=True, exist_ok=True)
+        file_mode = 'a' if self.write_mode == 'append' else 'w'
+        self._raw_fp = self.raw_path.open(file_mode, encoding='utf-8', newline='')
+        self._interpreted_fp = self.interpreted_path.open(file_mode, encoding='utf-8', newline='')
+
+        gui_file_preexisting = self.gui_path.exists() and self.gui_path.stat().st_size > 0
+        self._gui_fp = self.gui_path.open(file_mode, encoding='utf-8', newline='')
+        self._gui_writer = csv.writer(self._gui_fp)
+
+        if self.write_mode == 'overwrite' or not gui_file_preexisting:
+            self._gui_writer.writerow(['host_ts_epoch_s', 'host_ts_iso', 'mode', 'raw_value'])
+            self._gui_fp.flush()
+
+    def close(self) -> None:
+        with self._lock:
+            for fp in (self._raw_fp, self._interpreted_fp, self._gui_fp):
+                if fp is not None and not fp.closed:
+                    fp.flush()
+                    fp.close()
+            self._raw_fp = None
+            self._interpreted_fp = None
+            self._gui_fp = None
+            self._gui_writer = None
+
+    def write_frame(self, frame: MeasurementFrame) -> None:
+        if not self.enabled:
+            return
+        with self._lock:
+            if self._raw_fp is None or self._interpreted_fp is None or self._gui_fp is None or self._gui_writer is None:
+                raise RuntimeError('SignalFileLogger.write_frame called before open()')
+
+            raw_record = {
+                'host_ts_epoch_s': frame.host_ts,
+                'host_ts_iso': frame.host_ts_iso,
+                'mode': frame.mode,
+                'raw_transport': frame.raw_transport,
+            }
+            interpreted_record = {
+                'host_ts_epoch_s': frame.host_ts,
+                'host_ts_iso': frame.host_ts_iso,
+                'mode': frame.mode,
+                'interpreted': frame.interpreted,
+            }
+            self._raw_fp.write(json.dumps(raw_record, ensure_ascii=False) + '\n')
+            self._interpreted_fp.write(json.dumps(interpreted_record, ensure_ascii=False) + '\n')
+
+            raw_value = frame.interpreted.get('raw_value')
+            self._gui_writer.writerow([frame.host_ts, frame.host_ts_iso, frame.mode, raw_value])
+
+            self._raw_fp.flush()
+            self._interpreted_fp.flush()
+            self._gui_fp.flush()
+
 @dataclass
 class AppState:
     cfg: DictConfig
@@ -175,6 +253,7 @@ class AppState:
     parse_profile: str = 'line_ascii_auto'
     parse_numeric_index: int = 0
     hex_word_endianness: str = 'big'
+    signal_logger: Optional[SignalFileLogger] = None
 
     def push_event(self, message: str) -> None:
         ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
@@ -190,6 +269,9 @@ class AppState:
 
         if 'raw_value' in frame.interpreted and frame.interpreted['raw_value'] is not None:
             self.plot_points.append((frame.host_ts, float(frame.interpreted['raw_value'])))
+
+        if self.signal_logger is not None:
+            self.signal_logger.write_frame(frame)
 
 
 # ---------- Port discovery ----------
@@ -679,6 +761,8 @@ def disconnect_state(app_state: AppState) -> None:
     app_state.connected = False
     app_state.connection_label = 'DISCONNECTED'
     app_state.status_text = 'Idle'
+    if app_state.signal_logger is not None:
+        app_state.signal_logger.close()
 
 
 
@@ -690,7 +774,15 @@ def connect_state(app_state: AppState) -> None:
         app_state.transport = ModbusBoardTransport(app_state)
     else:
         app_state.transport = ActiveSendBoardTransport(app_state)
-    app_state.transport.connect()
+    try:
+        if app_state.signal_logger is not None:
+            app_state.signal_logger.open()
+        app_state.transport.connect()
+    except Exception:
+        if app_state.signal_logger is not None:
+            app_state.signal_logger.close()
+        app_state.transport = None
+        raise
     app_state.worker_thread = threading.Thread(
         target=acquisition_worker,
         args=(app_state,),
@@ -704,6 +796,10 @@ def connect_state(app_state: AppState) -> None:
     app_state.push_event(
         f'Connected to {app_state.serial_cfg.port} baud={app_state.serial_cfg.baudrate} parity={app_state.serial_cfg.parity} stopbits={app_state.serial_cfg.stopbits} mode={mode}'
     )
+    if app_state.signal_logger is not None and app_state.signal_logger.enabled:
+        app_state.push_event(
+            f'Signal logger active dir={app_state.signal_logger.directory} mode={app_state.signal_logger.write_mode} files=({app_state.signal_logger.raw_path.name}, {app_state.signal_logger.interpreted_path.name}, {app_state.signal_logger.gui_path.name})'
+        )
 
 
 def load_app_config(argv: Optional[List[str]] = None) -> DictConfig:
@@ -757,13 +853,19 @@ def run_app(cfg: DictConfig) -> None:
     configure_logging(cfg)
     LOGGER.info('Loaded config:\n%s', OmegaConf.to_yaml(cfg))
 
+    signal_logger = SignalFileLogger(cfg)
     app_state = AppState(
         cfg=cfg,
         serial_cfg=cfg_to_serial_settings(cfg),
         mode=str(cfg.device.mode),
+        raw_log=deque(maxlen=int(cfg.ui.max_retained_log_entries)),
+        interpreted_log=deque(maxlen=int(cfg.ui.max_retained_log_entries)),
+        event_log=deque(maxlen=int(cfg.ui.max_retained_event_entries)),
+        plot_points=deque(maxlen=int(cfg.ui.max_plot_points)),
         parse_profile=str(cfg.active_send.default_parser_profile),
         parse_numeric_index=int(cfg.active_send.default_numeric_index),
         hex_word_endianness=str(cfg.active_send.default_hex_word_endianness),
+        signal_logger=signal_logger,
     )
 
     available_ports = enumerate_ports(list(cfg.serial.port_hints))
@@ -910,32 +1012,45 @@ def run_app(cfg: DictConfig) -> None:
     with ui.row().classes('w-full gap-4 items-start mt-4 no-wrap'):
         with ui.card().classes('w-1/2'):
             ui.label('Raw transport / raw interpreted').classes('text-lg font-semibold')
-            raw_log_area = ui.textarea(value='', label='Raw log').props('readonly autogrow').classes('w-full')
-            raw_log_area.style(f'height: {cfg.ui.log_height_px}px;')
+            raw_log_area = ui.textarea(value='', label='Raw log').props('readonly').classes('w-full font-mono')
+            raw_log_area.style(f'height: {cfg.ui.log_height_px}px; overflow-y: auto; overflow-x: auto; white-space: pre;')
         with ui.card().classes('w-1/2'):
             ui.label('Interpreted data').classes('text-lg font-semibold')
-            interpreted_log_area = ui.textarea(value='', label='Interpreted log').props('readonly autogrow').classes('w-full')
-            interpreted_log_area.style(f'height: {cfg.ui.log_height_px}px;')
+            interpreted_log_area = ui.textarea(value='', label='Interpreted log').props('readonly').classes('w-full font-mono')
+            interpreted_log_area.style(f'height: {cfg.ui.log_height_px}px; overflow-y: auto; overflow-x: auto; white-space: pre;')
 
     with ui.card().classes('w-full mt-4'):
         ui.label('Event log').classes('text-lg font-semibold')
-        event_log_area = ui.textarea(value='', label='Events').props('readonly autogrow').classes('w-full')
-        event_log_area.style(f'height: {cfg.ui.event_log_height_px}px;')
+        event_log_area = ui.textarea(value='', label='Events').props('readonly').classes('w-full font-mono')
+        event_log_area.style(f'height: {cfg.ui.event_log_height_px}px; overflow-y: auto; overflow-x: auto; white-space: pre;')
 
     with ui.card().classes('w-full mt-4'):
         ui.label('Current effective board-side communication settings you should mirror on the instrument').classes('text-lg font-semibold')
-        board_cfg_preview = ui.textarea(value='', label='Board-side values to mirror').props('readonly autogrow').classes('w-full')
+        board_cfg_preview = ui.textarea(value='', label='Board-side values to mirror').props('readonly').classes('w-full font-mono')
+        board_cfg_preview.style('height: 180px; overflow-y: auto; overflow-x: auto; white-space: pre;')
 
     def refresh_ui() -> None:
         status_label.text = f'Status: {app_state.status_text}'
         status_label.update()
         connection_badge.text = app_state.connection_label
         connection_badge.update()
-        raw_log_area.value = '\n\n'.join(list(app_state.raw_log)[: int(cfg.ui.visible_log_entries)])
+        visible_log_entries = int(cfg.ui.visible_log_entries)
+        visible_event_entries = int(cfg.ui.visible_event_entries)
+
+        raw_log_items = list(app_state.raw_log)
+        interpreted_log_items = list(app_state.interpreted_log)
+        event_log_items = list(app_state.event_log)
+        if visible_log_entries > 0:
+            raw_log_items = raw_log_items[:visible_log_entries]
+            interpreted_log_items = interpreted_log_items[:visible_log_entries]
+        if visible_event_entries > 0:
+            event_log_items = event_log_items[:visible_event_entries]
+
+        raw_log_area.value = '\n\n'.join(raw_log_items)
         raw_log_area.update()
-        interpreted_log_area.value = '\n\n'.join(list(app_state.interpreted_log)[: int(cfg.ui.visible_log_entries)])
+        interpreted_log_area.value = '\n\n'.join(interpreted_log_items)
         interpreted_log_area.update()
-        event_log_area.value = '\n'.join(list(app_state.event_log)[: int(cfg.ui.visible_event_entries)])
+        event_log_area.value = '\n'.join(event_log_items)
         event_log_area.update()
         plot.figure = build_plot_figure(app_state)
         plot.update()
