@@ -860,3 +860,50 @@ Load Cell Amp:
 | -not connected- | Shield against EMI | YEL              |
 
 
+Acquisition Board Setup: 
+
+## Power 
+| Pin Acquisition Board | Cable Power | Semantic |
+| --------------------- | ----------- | -------- |
+| 19 - L                | Live        | Live     |
+| 20 - N                | Neutral     | Neutral  |
+
+
+## Celda de carga PM58
+| Pin Acquisition Board | Cable Celda PM58 | Semantic     |
+| --------------------- | ---------------- | ------------ |
+| 5 - E+                | Red              | Excitation + |
+| 6 - E-                | Black            | Excitation - |
+| 7 - S-                | White            | Signal -     |
+| 8 - S+                | Green            | Signal +     |
+
+
+## Protocolo USB-RS485 (modbus - salida digital)
+
+| Pin Acquisition Board | Cable Galgas | Semantic |
+| --------------------- | ------------ | -------- |
+| 1 - A+                | Red          | A+       |
+| 2 - B-                | Black        | B-       |
+
+
+### Config: 
+
+1. Power the instrument and wait until it reaches normal display. 
+2. Press Fn once to enter the menu system. 
+3. Scroll main menus until you reach C5.CoM. 
+4. Press ENT to enter that menu. 
+5. Scroll to the parameter you want (check table below) 
+6. When the parameter is shown, use the up/T key to change its value. 
+7. Press ENT to confirm/save that item. 
+8. Press Fn to go back out.
+
+**Table of parameters**
+| Menu Ítem ID | Parameter / Semantic         | **Set Value**  | Value Range    | Default   |
+| ------------ | ---------------------------- | -------------- | -------------- | --------- |
+| 500.Ar       | Device address               | 001            | 001–253        | 001       |
+| 501.br       | Baud rate (in HectaBaud)     | 1152[hBaud]    | 24-6000[hBaud] | 96[hBaud] |
+| 502.Vb       | Parity bit                   | 0  (no parity) | 0–2            | 0         |
+| 503.so       | Stop bit                     | 1              | 1/2            | 1         |
+| 504.AS       | ModBus Active sending mode   |                | 0(off)–1(on)   | 0         |
+| 505.AF       | ModBus Active-send frequency | 100 Hz         | 0–9            | 2         |
+
