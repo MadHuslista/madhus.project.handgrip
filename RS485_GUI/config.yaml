@@ -21,7 +21,7 @@ ui:
 
 serial:
   default_port: ""
-  default_baudrate: 9600
+  default_baudrate: 115200
   default_parity: N
   default_stopbits: 1
   bytesize: 8
@@ -40,7 +40,7 @@ serial:
 device:
   mode: modbus_rtu
   slave_address: 1
-  active_send_frequency_code: 2
+  active_send_frequency_code: 7 # 100 Hz
   poll_interval_s: 0.1
   error_backoff_s: 0.25
 
