@@ -18,6 +18,9 @@ This is a reorganized, clarified Markdown version of the board manual you upload
 - **Lower confidence:** places where the source manual is obviously mistranslated or incomplete, especially around “dynamic tracking,” “stable weight,” and some relay / analog-output wording.
 
 ---
+## Table of Contents
+
+[TOC]
 
 ## 1. Product identity and scope
 
@@ -557,6 +560,8 @@ These define whether the instrument considers the weight **stable**. Stability m
 | `13` |  `500000` |
 | `14` |  `512000` |
 | `15` |  `600000` |
+
+   2400,   4800,   9600,  19200,  22800,  38400,  57600, 115200, 128000, 230400, 256000, 460800, 500000, 512000, 600000,
 
 ### 14.2 Parity codes
 | Code | Meaning |
