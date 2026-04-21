@@ -24,7 +24,7 @@ The script uses NiceGUI's standard `ui.run()` server entrypoint and its Plotly c
 ## 2. Files
 
 - `acquisition_board_gui.py` — main application
-- `config.yaml` — Hydra defaults
+- `config.yaml` — default configuration in Hydra/OmegaConf-style YAML
 - `README_acquisition_board_gui.md` — this document
 
 ---
@@ -36,7 +36,7 @@ Recommended with `uv`:
 ```bash
 uv venv
 source .venv/bin/activate
-uv pip install nicegui hydra-core omegaconf pyserial plotly
+uv pip install nicegui omegaconf pyserial plotly
 ```
 
 Run:
@@ -51,7 +51,27 @@ Then open:
 http://127.0.0.1:8088
 ```
 
-You can override Hydra values from CLI, for example:
+You can override config values from CLI using OmegaConf/Hydra-style dotlist syntax, for example:
+
+```bash
+python acquisition_board_gui.py ui.port=8090 serial.default_baudrate=115200 device.slave_address=3
+```
+
+---
+
+
+## 3.1 Important runtime note
+
+The current launcher deliberately **does not use `@hydra.main` at runtime**.
+NiceGUI re-executes the script internally for its page/404 handling path, and that caused `GlobalHydra is already initialized` crashes in practice.
+
+To keep the same ergonomics without the crash, the script now:
+
+- loads `config.yaml` with `OmegaConf.load(...)`,
+- accepts `key=value` CLI overrides using dotlist syntax,
+- ignores `hydra.*` runtime flags instead of failing.
+
+So commands like this still work:
 
 ```bash
 python acquisition_board_gui.py ui.port=8090 serial.default_baudrate=115200 device.slave_address=3
