@@ -15,6 +15,7 @@ dependencies = [
   "pyqt5>=5.15.11",
   "pyxdf>=1.17.4",
   "handgrip-analysis",
+  "rs485-gui",
 ]
 
 [tool.uv]
@@ -22,3 +23,4 @@ package = false
 
 [tool.uv.sources]
 "handgrip-analysis"  = {path = "Handgrip_Analysis", editable = true }
+"rs485-gui"          = {path = "RS485_GUI", editable = true }
