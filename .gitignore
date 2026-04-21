@@ -82,4 +82,5 @@ uv.lock
 
 # Data --------------------------------
 LabRecorder/Data/
+data/*
 
