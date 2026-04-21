@@ -90,7 +90,7 @@ Use these image references while following the steps.
 - **Fig. 4 — PM58 load cell label**: [pm58-load-cell_label.jpg](assets/pm58-load-cell_label.jpg)
 - **Fig. 5 — PM58 certificate + wire colors**: [pm58-certificate_wire-colors.jpg](assets/pm58-certificate_wire-colors.jpg)
 - **Fig. 6 — Google Lens translated rear label**: [rear-label_google-lens-translation.jpg](assets/rear-label_google-lens-translation.jpg)
-- **Fig. 7 — Original certificate photo**: [2026-04-08-033020.jpg](assets/2026-04-08-033020.jpg)
+- **Fig. 7 — Original certificate photo**: [original-certificate_photo.jpg](assets/pm58-certificate_wire-colors.jpg)
 
 ---
 
@@ -114,6 +114,8 @@ From **Fig. 1** and **Fig. 2**:
 
 Reference: **Fig. 2**
 
+![Fig. 2](assets/ac-input-sticker_close-up.jpg)
+
 - Inspect the yellow sticker on the side of the unit.
 - Confirm it explicitly says:
   - **AC100–240V**
@@ -127,6 +129,9 @@ Reference: **Fig. 2**
 
 Reference: **Fig. 1** and **Fig. 6**
 
+![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
+![Fig. 6](assets/rear-label_google-lens-translation.jpg)
+
 - On the terminal map, identify the two red-marked terminals at the lower side of the diagram.
 - Confirm:
   - **19 → L**
@@ -135,6 +140,8 @@ Reference: **Fig. 1** and **Fig. 6**
 ### Step 3 — Prepare the mains cable
 
 Reference: **Fig. 2**
+
+![Fig. 2](assets/ac-input-sticker_close-up.jpg)
 
 - Use a **2-conductor AC mains cable** rated for local mains voltage.
 - Strip only the minimum needed insulation.
@@ -145,6 +152,9 @@ Reference: **Fig. 2**
 
 Reference: **Fig. 1** and **Fig. 2**
 
+![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
+![Fig. 2](assets/ac-input-sticker_close-up.jpg)
+
 - Connect the **Live / Line** conductor to **terminal 19 (L)**.
 - Connect the **Neutral** conductor to **terminal 20 (N)**.
 - Tighten both screw terminals firmly.
@@ -153,6 +163,8 @@ Reference: **Fig. 1** and **Fig. 2**
 ### Step 5 — Keep power disconnected while wiring the rest of the system
 
 Reference: **Fig. 1**
+
+![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
 
 - After installing the mains cable, **do not energize the board yet**.
 - Complete the **sensor wiring** first.
@@ -163,6 +175,8 @@ Reference: **Fig. 1**
 
 Reference: **Fig. 3**
 
+![Fig. 3](assets/front-panel_buttons_indicators.jpg)
+
 - After all other wiring is complete, energize the board.
 - Watch the front display.
 - The manual indicates that on startup the unit may briefly show the initialization state **`PoiNt`** before normal acquisition begins.
@@ -171,6 +185,9 @@ Reference: **Fig. 3**
 ### Step 7 — If the board does not power up
 
 Reference: **Fig. 2** and **Fig. 3**
+
+![Fig. 2](assets/ac-input-sticker_close-up.jpg)
+![Fig. 3](assets/front-panel_buttons_indicators.jpg)
 
 Check the following in order:
 
@@ -234,6 +251,9 @@ From **Fig. 4**, **Fig. 5**, and **Fig. 7**:
 
 Reference: **Fig. 5** and **Fig. 4**
 
+![Fig. 5](assets/pm58-certificate_wire-colors.jpg)
+![Fig. 4](assets/pm58-load-cell_label.jpg)
+
 - Lay out the PM58 wires so the colors are clearly visible.
 - Identify the four core bridge connections:
   - red
@@ -245,6 +265,8 @@ Reference: **Fig. 5** and **Fig. 4**
 ### Step 2 — Treat the fifth conductor as shield/drain, not as a signal line
 
 Reference: **Fig. 5**
+
+![Fig. 5](assets/pm58-certificate_wire-colors.jpg)
 
 - The certificate describes the fifth lead as **shielding / bare wire**.
 - In your photo, that fifth lead looks **yellow-insulated** instead of bare.
@@ -258,6 +280,9 @@ If later you observe noise issues, you can evaluate a **single-point shield term
 
 Reference: **Fig. 1** and **Fig. 6**
 
+![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
+![Fig. 6](assets/rear-label_google-lens-translation.jpg)
+
 - On the rear label, find the sensor block identified as:
   - **8 = S+**
   - **7 = S-**
@@ -269,6 +294,10 @@ Reference: **Fig. 1** and **Fig. 6**
 
 Reference: **Fig. 1**, **Fig. 4**, **Fig. 5**
 
+![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
+![Fig. 4](assets/pm58-load-cell_label.jpg)
+![Fig. 5](assets/pm58-certificate_wire-colors.jpg)
+
 - Connect **red** to **terminal 5 (E+)**.
 - Connect **black** to **terminal 6 (E-)**.
 
@@ -278,6 +307,10 @@ These two wires power the bridge from the board's excitation source.
 
 Reference: **Fig. 1**, **Fig. 4**, **Fig. 5**
 
+![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
+![Fig. 4](assets/pm58-load-cell_label.jpg)
+![Fig. 5](assets/pm58-certificate_wire-colors.jpg)
+
 - Connect **white** to **terminal 7 (S-)**.
 - Connect **green** to **terminal 8 (S+)**.
 
@@ -286,6 +319,9 @@ These two wires carry the differential measurement signal from the load cell int
 ### Step 6 — Verify the wiring before power-on
 
 Reference: **Fig. 1** and **Fig. 5**
+
+![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
+![Fig. 5](assets/pm58-certificate_wire-colors.jpg)
 
 Check all of the following:
 
@@ -300,6 +336,8 @@ Check all of the following:
 
 Reference: **Fig. 3**
 
+![Fig. 3](assets/front-panel_buttons_indicators.jpg)
+
 - Apply power to the board.
 - Observe the front display.
 - With the sensor connected and unloaded, the reading should settle near some small value.
@@ -311,6 +349,8 @@ If the sign is reversed, you usually do **not** need to swap E+ / E-. In practic
 ### Step 8 — Perform zero and calibration after wiring
 
 Reference: **Fig. 3** and translated manual menu descriptions
+
+![Fig. 3](assets/front-panel_buttons_indicators.jpg)
 
 After confirming the wiring is alive:
 
@@ -401,6 +441,8 @@ That implies the safest first PC-side assumption is:
 
 Reference: **Fig. 1**
 
+![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
+
 Use an adapter that exposes at least:
 
 - **A / B**, or
@@ -409,6 +451,9 @@ Use an adapter that exposes at least:
 ### Step 2 — Wire the board to the adapter
 
 Reference: **Fig. 1** and **Fig. 6**
+
+![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
+![Fig. 6](assets/rear-label_google-lens-translation.jpg)
 
 Connect:
 
@@ -427,6 +472,8 @@ Keep this cable short for first bring-up.
 ### Step 4 — Configure the board communication settings if needed
 
 Reference: **Fig. 3** and translated manual `C5.CoM`
+
+![Fig. 3](assets/front-panel_buttons_indicators.jpg)
 
 If you are not sure the settings are still at default, use the front panel to inspect:
 
