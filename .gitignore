@@ -72,6 +72,8 @@ __pycache__/
 node_modules/
 dist/
 LSL_Bridge/data/
+.smart-env
+.obsidian/
 
 # Logging -----------------------------
 **/outputs/  
