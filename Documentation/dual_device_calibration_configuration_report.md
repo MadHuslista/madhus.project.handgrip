@@ -19,8 +19,8 @@ For the calibration use case you described, the strongest default architecture i
 |      |                               | ADC gain                | **128**                                        |                                                   |
 |      |                               | Filtering               | **median=3, average=5**                        | light filtering                                   |
 |      |                               | Dynamic helper features | **Disabled**                                   |                                                   |
-|      |                               | RS485 mode              | **Active-send at 100 Hz**                      |                                                   |
-|      |                               | Serial                  | **115200, 8N1**                                |                                                   |
+|      |                               | RS485 mode              | **Active-send at 500 Hz**                      |                                                   |
+|      |                               | Serial                  | **460800, 8N1**                                |                                                   |
 |    2 | **Target chain**              | HX711 rate              | **~93 Hz empirical max**                       | keep as-is                                        |
 |      |                               | Serial                  | **UART 115200, 8N1**                           | keep as-is                                        |
 |      |                               | Calibration output      | **raw counts + seq number + device timestamp** |                                                   |
@@ -34,8 +34,8 @@ For the calibration use case you described, the strongest default architecture i
 |    4 | **Calibration protocol**      | Reference role          | **Ground-truth force trace generation**        |                                                   |
 |      |                               | Model fitting data      | **Static staircase holds**                     | actual target calibration model                   |
 |      |                               | Dynamic trials role     | **Validate only**                              | lag, bandwidth, hysteresis (squeezes/ramp trials) |
-|    5 | **Transport choice**          | Default (reference)     | **Active mode at 100 Hz**                      | best default after payload validation in practice |
-|      |                               | Fallback (reference)    | **Modbus RTU polling at 100 Hz**               | highest-certainty; register map is documented     |
+|    5 | **Transport choice**          | Default (reference)     | **Active mode at 500 Hz**                      | best default after payload validation in practice |
+|      |                               | Fallback (reference)    | **Modbus RTU polling at 500 Hz**               | highest-certainty; register map is documented     |
 
 ### Executive recommendation
 
@@ -44,10 +44,10 @@ The best calibration setup is the one that:
 
 - keeps the **reference chain faster and cleaner** than the target,
 - avoids **hidden zeroing / drift compensation / stability gating** during live force capture,
-- uses a transport rate that is **close enough to the target to simplify comparison** without wasting bandwidth,
+- uses a transport rate that is **high enough to reduce temporal quantization and interpolation error** while staying operationally robust,
 - preserves enough metadata to diagnose **lag, jitter, dropped samples, hysteresis, and nonlinearity**.
 
-That is why the recommended reference output is **100 Hz**, not 500 or 1000 Hz, even though the board can be configured much faster internally.
+That is why the recommended reference output is **500 Hz** (with **460800, 8N1**), not 100 or 1000 Hz: it is fast enough to preserve timing detail while avoiding unnecessary top-end complexity.
 
 ### Epistemic status
 
@@ -111,8 +111,8 @@ That is why the recommended reference output is **100 Hz**, not 500 or 1000 Hz, 
 | Reference board           |               Stability range | `412.Wr` | **0**                                                                                                 | Disables stability gating so the board does not block operations based on a very small division-based window.                                                                                                                  |
 | Reference board           |                Stability time | `413.Wt` | **1.0 s** (irrelevant when `412=0`)                                                                   | Safe default; not load-bearing when stability gating is off.                                                                                                                                                                   |
 | Reference board transport |                    RS485 mode | `504.AS` | **1 (Active-send)**                                                                                   | Best default for a calibration capture path once parser behavior has been validated; avoids host polling jitter.                                                                                                               |
-| Reference board transport |              Active-send rate | `505.AF` | **100 Hz**                                                                                            | Closest available rate to the target’s ~93 Hz, preserves comparison simplicity, avoids needless serial load.                                                                                                                   |
-| Reference board transport |                          Baud | `501.br` | **115200**                                                                                            | Plenty of margin for 100 Hz capture, more universal/robust than higher nonstandard rates.                                                                                                                                      |
+| Reference board transport |                  Active Freq. | `505.AF` | **8 (500 Hz)**                                                                                        | Provides a stable **500 Hz** data stream to the PC, perfectly complementing the **640 Hz** internal sampling.                                                                                                                  |
+| Reference board transport |                     Baud Rate | `501.br` | **12 (460800)**                                                                                       | High bandwidth is required to prevent serial buffer bottlenecks when streaming high-rate packets at **500 Hz**.                                                                                                               |
 | Reference board transport |                 Parity / stop | `502.Vb` | **None**                                                                                              | Lowest overhead, simplest integration.                                                                                                                                                                                         |
 | Reference board transport |                 Parity / stop | `503.so` | **1**                                                                                                 | Lowest overhead, simplest integration.                                                                                                                                                                                         |
 | Reference board transport |                       Address | `500.Ar` | **1**                                                                                                 | Fine for a single-device bench link.                                                                                                                                                                                           |
@@ -122,7 +122,7 @@ That is why the recommended reference output is **100 Hz**, not 500 or 1000 Hz, 
 | Target device             |             Zero / tare logic |    -     | **Manual only before run**                                                                            | Disable continuous drift compensation during actual captures.                                                                                                                                                                  |
 | Target device             |                 Output fields |    -     | **seq, device_timestamp, raw_count, interpreted_value**                                               | Minimal set needed to audit lag, drops, and calibration mapping.                                                                                                                                                               |
 | Synchronization           |           Recording framework |    -     | **LSL + XDF / LabRecorder**                                                                           | Best practical way to unify both streams on one host, preserve timing metadata, and enable post-hoc alignment.                                                                                                                 |
-| Synchronization           | LSL nominal srate (reference) |    -     | **100 Hz regular**                                                                                    | Matches the actual reference output.                                                                                                                                                                                           |
+| Synchronization           | LSL nominal srate (reference) |    -     | **500 Hz regular**                                                                                    | Matches the actual reference output.                                                                                                                                                                                           |
 | Synchronization           |    LSL nominal srate (target) |    -     | **IRREGULAR_RATE / 0**                                                                                | The target’s observed ±15 ms timing variation should not be falsely advertised as fixed-rate.                                                                                                                                  |
 | Analysis                  |                  Fitting data |    -     | **Static staircase holds for parameter fit; dynamic trials for validation only**                      | Prevents transport/bandwidth differences from being misinterpreted as gain/offset errors.                                                                                                                                      |
 
@@ -592,19 +592,19 @@ None, beyond reducing confusion.
 
 | Code     | Name        | Recommended value |
 | -------- | ----------- | ----------------- |
-| `501.br` | `Baud`      | **115200**        |
+| `501.br` | `Baud`      | **460800**        |
 | `502.Vb` | `Parity`    | **none**          |
 | `503.so` | `Stop bits` | **1**             |
 
 **Overall reason**  
-At 100 Hz reference output, 115200 bps is easily sufficient and has stronger interoperability than higher nonstandard rates. Standard 8N1 is simplest to integrate.
+At 500 Hz reference output, **460800 bps** provides the headroom needed to prevent serial-side buffering pressure while keeping standard 8N1 framing.
 
 **Calibration impact**  
 Keeps transport latency small enough that it is not the bottleneck while preserving robustness.
 
 **Alternatives rejected**
-- **9600**: too slow; unnecessary increase in round-trip / buffering exposure.
-- **230400 / 256000 / higher**: technically attractive, but the practical improvement at 100 Hz is small while driver/adapter variability increases.
+- **115200**: acceptable at lower rates, but less robust margin for sustained 500 Hz operation.
+- **600000**: technically workable, but with lower interoperability margin across adapters and host drivers.
 
 #### `504.AS` - RS485 mode
 #### `505.AF` - Active-send rate
@@ -614,25 +614,25 @@ Keeps transport latency small enough that it is not the bottleneck while preserv
 | Code     | Name               | Recommended value   |
 | -------- | ------------------ | ------------------- |
 | `504.AS` | `RS485 mode`       | **1 (Active-send)** |
-| `505.AF` | `Active-send rate` | **100 Hz**          |
+| `505.AF` | `Active-send rate` | **500 Hz**          |
 
 **Overall reason**  
-For actual calibration capture, the best default is device-paced transmission close to the target’s sampling regime. `100 Hz` is the closest active-send option to your target’s ~93 Hz empirical stream. It reduces the need for aggressive resampling, limits serial overhead, and avoids poll-cycle jitter from a host-driven Modbus loop.
+For calibration capture with your updated transport profile, the best default is high-rate device-paced transmission. `500 Hz` preserves richer timing detail from the reference chain, reduces interpolation uncertainty during alignment, and avoids poll-cycle jitter from a host-driven Modbus loop.
 
 **Calibration impact**  
 Improves temporal regularity of the reference stream and simplifies downstream pairing with the target.
 
 **Alternatives rejected**
 - **`AS=0` Modbus RTU polling**: rejected as the *performance-first* default because it introduces host request/response cadence into the timing path. However, it remains the **highest-certainty fallback** because the board’s register map is documented.[A1][W5][W6]
-- **`AF=500` or `1000 Hz`**: rejected because the target cannot exploit that bandwidth in the default campaign, and the board’s active payload is not documented in the uploaded manual.
-- **`AF=50 Hz`**: rejected because it undersamples the target path instead of slightly oversampling it.
+- **`AF=1000 Hz`**: rejected because it increases transport and parser stress without clear calibration ROI over 500 Hz.
+- **`AF=100 Hz`**: rejected because it discards available reference timing detail from a chain already sampled internally at 640 Hz.
 
 #### Fallback if Active-send is not parser-stable
 
 Use:
 - `504.AS = 0`
-- same serial format (`115200, 8N1`)
-- poll **net weight** at **100 Hz** through the documented register map.
+- same serial format (`460800, 8N1`)
+- poll **net weight** at **500 Hz** through the documented register map.
 
 This is the highest-epistemic backup mode.
 
@@ -708,7 +708,7 @@ Improves time alignment, logging reproducibility, and debugging.
 - Independent CSV files only: rejected because alignment becomes more fragile.
 - GUI-only live view without unified recording: rejected because calibration should be replayable and auditable.
 
-#### Reference stream in LSL = regular `100 Hz`
+#### Reference stream in LSL = regular `500 Hz`
 
 **Overall reason**  
 The reference active-send path is intentionally regular.
@@ -859,7 +859,7 @@ Static holds identify the calibration model. Dynamic trials validate it.
 
 2. **Active-send epistemic gap.**  
    The board manual documents the existence and configurable rate of Active-send mode, but not its payload format. Therefore:
-   - `AS=1, AF=100` is the **best-performing recommended default after one successful parser validation**.
+   - `AS=1, AF=500` is the **best-performing recommended default after one successful parser validation**.
    - `AS=0` Modbus RTU is the **highest-certainty fallback**.
 
 3. **Target timing irregularity source unresolved.**  
@@ -896,11 +896,11 @@ Static holds identify the calibration model. Dynamic trials validate it.
 - `409.AZ = 0`
 - `412.Wr = 0`
 - `500.Ar = 1`
-- `501.br = 115200`
+- `501.br = 460800`
 - `502.Vb = none`
 - `503.so = 1`
 - `504.AS = 1`
-- `505.AF = 100`
+- `505.AF = 500`
 
 **Target**
 - keep the existing fastest stable acquisition path (~93 Hz empirical),
@@ -911,7 +911,7 @@ Static holds identify the calibration model. Dynamic trials validate it.
 **Recording**
 - same Linux host,
 - both streams into LSL,
-- reference stream advertised as regular 100 Hz,
+- reference stream advertised as regular 500 Hz,
 - target stream advertised as irregular,
 - record to XDF.
 
@@ -920,7 +920,7 @@ Static holds identify the calibration model. Dynamic trials validate it.
 If Active-send proves too opaque:
 - change only `504.AS = 0`,
 - keep the same serial format,
-- poll the documented Modbus registers at **100 Hz**.
+- poll the documented Modbus registers at **500 Hz**.
 
 That is the cleanest high-confidence fallback.
 
