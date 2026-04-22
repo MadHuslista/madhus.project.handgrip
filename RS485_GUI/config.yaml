@@ -32,7 +32,7 @@ logger:
 
 serial:
   default_port: ""
-  default_baudrate: 9600
+  default_baudrate: 460800
   default_parity: N
   default_stopbits: 1
   bytesize: 8
@@ -49,14 +49,14 @@ serial:
     - ttyACM
 
 device:
-  mode: modbus_rtu
+  mode: active_send  # modbus_rtu | active_send
   slave_address: 1
-  active_send_frequency_code: 2
-  poll_interval_s: 0.1
+  active_send_frequency_code: 8 # 500 Hz
+  poll_interval_s: 0.002  # 500 Hz fallback cadence when mode=modbus_rtu
   error_backoff_s: 0.25
 
 active_send:
-  default_parser_profile: line_ascii_auto
+  default_parser_profile: hex_s32  # line_ascii_auto | line_ascii_float | line_ascii_csv | hex_s32
   default_numeric_index: 0
   default_hex_word_endianness: big
   read_timeout_s: 0.5
