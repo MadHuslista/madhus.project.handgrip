@@ -24,7 +24,7 @@ ui:
   default_plot_signal_key: net_value
   plot_signal_key: net_value
   clear_plot_on_connect: true
-  sampling_rate_window_samples: 128
+  sampling_rate_window_samples: 5000
   max_signal_samples_per_second: 0
   active_send_render_downsample_factor: 4   # render-only downsample for active-send
   modbus_rtu_render_downsample_factor: 1  # render-only downsample for modbus-rtu

@@ -189,41 +189,57 @@ class SamplingStats:
     received_samples: int = 0
     dropped_samples_max_rate: int = 0
     last_processed_ts: Optional[float] = None
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def reset_window(self, window_size: int) -> None:
-        self.window_dts_s = deque(maxlen=max(2, int(window_size)))
-        self.last_processed_ts = None
+        with self._lock:
+            self.window_dts_s = deque(maxlen=max(2, int(window_size)))
+            self.last_processed_ts = None
 
     def reset_all(self, window_size: int) -> None:
-        self.window_dts_s = deque(maxlen=max(2, int(window_size)))
-        self.received_samples = 0
-        self.dropped_samples_max_rate = 0
-        self.last_processed_ts = None
+        with self._lock:
+            self.window_dts_s = deque(maxlen=max(2, int(window_size)))
+            self.received_samples = 0
+            self.dropped_samples_max_rate = 0
+            self.last_processed_ts = None
+
+    def record_received_samples(self, count: int) -> None:
+        with self._lock:
+            self.received_samples += int(count)
+
+    def add_dropped_samples(self, count: int) -> None:
+        with self._lock:
+            self.dropped_samples_max_rate += int(count)
+
+    def get_last_processed_ts(self) -> Optional[float]:
+        with self._lock:
+            return self.last_processed_ts
 
     def record_processed_frame(self, host_ts: float) -> None:
-        if self.last_processed_ts is not None:
-            dt = host_ts - self.last_processed_ts
-            if dt > 0:
-                self.window_dts_s.append(dt)
-        self.last_processed_ts = host_ts
+        with self._lock:
+            if self.last_processed_ts is not None:
+                dt = host_ts - self.last_processed_ts
+                if dt > 0:
+                    self.window_dts_s.append(dt)
+            self.last_processed_ts = host_ts
 
-    def mean_hz(self) -> Optional[float]:
-        if not self.window_dts_s:
-            return None
-        rates = [1.0 / dt for dt in self.window_dts_s if dt > 0]
+    def snapshot(self) -> Tuple[Optional[float], Optional[float], int, int, int]:
+        with self._lock:
+            dts = list(self.window_dts_s)
+            received = self.received_samples
+            dropped = self.dropped_samples_max_rate
+        if not dts:
+            return None, None, 0, received, dropped
+        rates = [1.0 / dt for dt in dts if dt > 0]
         if not rates:
-            return None
-        return sum(rates) / len(rates)
-
-    def std_hz(self) -> Optional[float]:
-        if not self.window_dts_s:
-            return None
-        rates = [1.0 / dt for dt in self.window_dts_s if dt > 0]
-        if len(rates) < 2:
-            return 0.0 if rates else None
+            return None, None, len(dts), received, dropped
         mean = sum(rates) / len(rates)
-        variance = sum((rate - mean) ** 2 for rate in rates) / len(rates)
-        return math.sqrt(variance)
+        if len(rates) < 2:
+            std = 0.0
+        else:
+            variance = sum((rate - mean) ** 2 for rate in rates) / len(rates)
+            std = math.sqrt(variance)
+        return mean, std, len(dts), received, dropped
 
 
 def truncate_text(text: str, max_chars: int) -> str:
@@ -688,13 +704,13 @@ class AppState:
     def filter_frames_by_max_sampling_rate(self, frames: List[MeasurementFrame]) -> List[MeasurementFrame]:
         if not frames:
             return frames
-        self.sampling_stats.received_samples += len(frames)
+        self.sampling_stats.record_received_samples(len(frames))
         max_hz = float(getattr(self.cfg.ui, 'max_signal_samples_per_second', 0.0) or 0.0)
         if max_hz <= 0:
             return frames
         min_dt = 1.0 / max_hz
         kept: List[MeasurementFrame] = []
-        last_ts = self.sampling_stats.last_processed_ts
+        last_ts = self.sampling_stats.get_last_processed_ts()
         dropped = 0
         for frame in frames:
             if last_ts is None or (frame.host_ts - last_ts) >= min_dt:
@@ -702,7 +718,7 @@ class AppState:
                 last_ts = frame.host_ts
             else:
                 dropped += 1
-        self.sampling_stats.dropped_samples_max_rate += dropped
+        self.sampling_stats.add_dropped_samples(dropped)
         return kept
 
     def push_frames(self, frames: List[MeasurementFrame]) -> None:
@@ -2062,13 +2078,14 @@ def run_app(cfg: DictConfig) -> None:
         sampling_stats = app_state.sampling_stats
         target_hz = get_target_sampling_rate_hz(cfg, str(mode_select.value))
         max_hz = float(getattr(cfg.ui, 'max_signal_samples_per_second', 0.0) or 0.0)
+        mean_hz, std_hz, window_count, received_count, dropped_count = sampling_stats.snapshot()
         sampling_text = (
             f'Target sampling rate: {format_rate(target_hz)}\n'
-            f'Measured mean rate: {format_rate(sampling_stats.mean_hz())}\n'
-            f'Measured std-dev: {format_rate(sampling_stats.std_hz())}\n'
-            f'Window size: last {len(sampling_stats.window_dts_s)} intervals / configured {int(getattr(cfg.ui, "sampling_rate_window_samples", 128))}\n'
-            f'Samples received: {sampling_stats.received_samples}\n'
-            f'Samples dropped by max-rate limiter: {sampling_stats.dropped_samples_max_rate}\n'
+            f'Measured mean rate: {format_rate(mean_hz)}\n'
+            f'Measured std-dev: {format_rate(std_hz)}\n'
+            f'Window size: last {window_count} intervals / configured {int(getattr(cfg.ui, "sampling_rate_window_samples", 128))}\n'
+            f'Samples received: {received_count}\n'
+            f'Samples dropped by max-rate limiter: {dropped_count}\n'
             f'Configured max processed sampling rate: {format_rate(max_hz)}'
         )
         if sampling_rate_label.text != sampling_text:
