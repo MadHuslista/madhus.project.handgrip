@@ -886,24 +886,21 @@ Acquisition Board Setup:
 | 2 - B-                | Black        | B-       |
 
 
-### Config: 
+## Initialization Workflow - Acquisition Board
+
+### Config Parameters
 
 1. Power the instrument and wait until it reaches normal display. 
 2. Press Fn once to enter the menu system. 
 3. Scroll main menus until you reach C5.CoM. 
 4. Press ENT to enter that menu. 
-5. Scroll to the parameter you want (check table below) 
+5. Scroll to the parameter you want (check table at [dual_device_calibration_configuration_report.md](Documentation/dual_device_calibration_configuration_report.md)) 
 6. When the parameter is shown, use the up/T key to change its value. 
 7. Press ENT to confirm/save that item. 
 8. Press Fn to go back out.
+9. Connect to the host PC using the RS485 cable and run the RS485 GUI with default settings (see config.yaml).
+   - Successful connection will show the live signal correctly reacting to the sensor input.
 
-**Table of parameters**
-| Menu Ítem ID | Parameter / Semantic         | **Set Value**  | Value Range    | Default   |
-| ------------ | ---------------------------- | -------------- | -------------- | --------- |
-| 500.Ar       | Device address               | 001            | 001–253        | 001       |
-| 501.br       | Baud rate (in HectaBaud)     | 1152[hBaud]    | 24-6000[hBaud] | 96[hBaud] |
-| 502.Vb       | Parity bit                   | 0  (no parity) | 0–2            | 0         |
-| 503.so       | Stop bit                     | 1              | 1/2            | 1         |
-| 504.AS       | ModBus Active sending mode   |                | 0(off)–1(on)   | 0         |
-| 505.AF       | ModBus Active-send frequency | 100 Hz         | 0–9            | 2         |
+
+### 
 
