@@ -16,6 +16,7 @@ dependencies = [
   "pyxdf>=1.17.4",
   "handgrip-analysis",
   "rs485-gui",
+  "numpy>=2.4.3",
 ]
 
 [tool.uv]

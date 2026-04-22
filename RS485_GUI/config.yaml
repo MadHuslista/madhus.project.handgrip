@@ -24,7 +24,7 @@ ui:
   plot_signal_key: internal_code_raw_value
   plot_signal_label: internal_code_raw_value
   active_send_render_downsample_factor: 4   # render-only downsample for active-send
-  modbus_rtu_render_downsample_factor: 1
+  modbus_rtu_render_downsample_factor: 1  # render-only downsample for modbus-rtu
   max_ui_entry_chars: 600
   max_log_textarea_chars: 120000
   max_event_textarea_chars: 40000
@@ -40,6 +40,7 @@ logger:
   gui_signal_filename: gui_signal.csv
   debug_log_to_file: true
   debug_log_filename: acquisition_debug.log
+  event_log_filename: event.log
 
 serial:
   default_port: ""

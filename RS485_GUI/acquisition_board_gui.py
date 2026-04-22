@@ -17,6 +17,10 @@ import sys
 from nicegui import app, ui
 from omegaconf import DictConfig, OmegaConf
 import plotly.graph_objects as go
+try:
+    import numpy as np
+except Exception:  # pragma: no cover - optional acceleration
+    np = None
 import serial
 from serial.tools import list_ports
 
@@ -229,8 +233,26 @@ def extract_plot_value(frame: MeasurementFrame, cfg: DictConfig) -> Optional[flo
 def downsample_points_for_render(points: List[Tuple[float, float]], factor: int, max_points: int) -> List[Tuple[float, float]]:
     if not points:
         return points
-    original_last = points[-1]
     factor = max(1, int(factor))
+    if np is not None:
+        arr = np.asarray(points, dtype=np.float64)
+        if arr.ndim != 2 or arr.shape[1] != 2:
+            return points
+        last_idx = arr.shape[0] - 1
+        if factor > 1:
+            idx = np.arange(0, arr.shape[0], factor, dtype=np.int64)
+            if idx.size == 0 or idx[-1] != last_idx:
+                idx = np.append(idx, last_idx)
+            arr = arr[idx]
+            last_idx = arr.shape[0] - 1
+        if max_points > 0 and arr.shape[0] > max_points:
+            stride = max(1, math.ceil(arr.shape[0] / max_points))
+            idx = np.arange(0, arr.shape[0], stride, dtype=np.int64)
+            if idx.size == 0 or idx[-1] != last_idx:
+                idx = np.append(idx, last_idx)
+            arr = arr[idx]
+        return [(float(x), float(y)) for x, y in arr]
+    original_last = points[-1]
     if factor > 1:
         points = points[::factor]
         if points[-1] != original_last:
@@ -296,10 +318,12 @@ class SignalFileLogger:
         self.raw_path = self.directory / str(cfg.logger.raw_signal_filename)
         self.interpreted_path = self.directory / str(cfg.logger.interpreted_signal_filename)
         self.gui_path = self.directory / str(cfg.logger.gui_signal_filename)
+        self.event_path = self.directory / str(getattr(cfg.logger, 'event_log_filename', 'event.log'))
 
         self._raw_fp: Optional[TextIO] = None
         self._interpreted_fp: Optional[TextIO] = None
         self._gui_fp: Optional[TextIO] = None
+        self._event_fp: Optional[TextIO] = None
         self._gui_writer: Optional[csv.writer] = None
         self._lock = threading.Lock()
 
@@ -314,6 +338,7 @@ class SignalFileLogger:
 
         gui_file_preexisting = self.gui_path.exists() and self.gui_path.stat().st_size > 0
         self._gui_fp = self.gui_path.open(file_mode, encoding='utf-8', newline='')
+        self._event_fp = self.event_path.open(file_mode, encoding='utf-8', newline='')
         self._gui_writer = csv.writer(self._gui_fp)
 
         if self.write_mode == 'overwrite' or not gui_file_preexisting:
@@ -322,13 +347,14 @@ class SignalFileLogger:
 
     def close(self) -> None:
         with self._lock:
-            for fp in (self._raw_fp, self._interpreted_fp, self._gui_fp):
+            for fp in (self._raw_fp, self._interpreted_fp, self._gui_fp, self._event_fp):
                 if fp is not None and not fp.closed:
                     fp.flush()
                     fp.close()
             self._raw_fp = None
             self._interpreted_fp = None
             self._gui_fp = None
+            self._event_fp = None
             self._gui_writer = None
 
     def write_frames(self, frames: List[MeasurementFrame]) -> None:
@@ -366,6 +392,15 @@ class SignalFileLogger:
     def write_frame(self, frame: MeasurementFrame) -> None:
         self.write_frames([frame])
 
+    def write_event(self, line: str) -> None:
+        if not self.enabled:
+            return
+        with self._lock:
+            if self._event_fp is None:
+                return
+            self._event_fp.write(line + '\n')
+            self._event_fp.flush()
+
 
 @dataclass
 class AppState:
@@ -394,6 +429,8 @@ class AppState:
         ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
         line = f'[{ts}] {message}'
         self.event_log.appendleft(line)
+        if self.signal_logger is not None and self.signal_logger.enabled:
+            self.signal_logger.write_event(line)
         LOGGER.info(message)
 
     def push_frames(self, frames: List[MeasurementFrame]) -> None:
@@ -613,7 +650,7 @@ def parse_active_send_frame(
     interpreted: Dict[str, Any] = {
         'parser_profile': profile,
         'raw_value': None,
-        'timestamp_source': diagnostics.get('timestamp_source', 'host_receive_time'),
+        'timestamp_source': 'host_receive_time',
     }
 
     stripped = payload.strip()
@@ -716,7 +753,7 @@ def decode_active_send_modbus_response(
     decoded.interpreted.update({
         'parser_profile': 'modbus_rtu_response_11regs',
         'parsed_from': 'active_send_binary_modbus_response',
-        'timestamp_source': diagnostics.get('timestamp_source', 'host_receive_time'),
+        'timestamp_source': 'host_receive_time',
     })
     return decoded
 
@@ -745,6 +782,7 @@ class ModbusBoardTransport(BoardTransport):
         self.app_state = app_state
         self.ser: Optional[serial.Serial] = None
         self.client: Optional[MinimalModbusRTU] = None
+        self._last_host_ts: Optional[float] = None
 
     def connect(self) -> None:
         cfg = self.app_state.serial_cfg
@@ -775,9 +813,29 @@ class ModbusBoardTransport(BoardTransport):
             address=READ_START_REGISTER,
             count=READ_REGISTER_COUNT,
         )
-        frame = decode_modbus_measurement(registers=registers, host_ts=time.time())
+        host_ts = time.time()
+        frame = decode_modbus_measurement(registers=registers, host_ts=host_ts)
+        observed_inter_read_s: Optional[float] = None
+        observed_inter_read_hz: Optional[float] = None
+        if self._last_host_ts is not None:
+            observed_inter_read_s = max(0.0, host_ts - self._last_host_ts)
+            if observed_inter_read_s > 0:
+                observed_inter_read_hz = 1.0 / observed_inter_read_s
+        self._last_host_ts = host_ts
         frame.raw_transport['request_hex'] = request_payload.hex(' ')
         frame.raw_transport['response_hex'] = response.hex(' ')
+        frame.raw_transport['diagnostics'] = {
+            'timestamp_source': 'host_poll_receive_time',
+            'configured_poll_interval_s': float(self.app_state.cfg.device.poll_interval_s),
+            'observed_inter_read_s': observed_inter_read_s,
+            'observed_inter_read_hz': observed_inter_read_hz,
+        }
+        frame.interpreted.update({
+            'timestamp_source': 'host_poll_receive_time',
+            'configured_poll_interval_s': float(self.app_state.cfg.device.poll_interval_s),
+            'observed_inter_read_s': observed_inter_read_s,
+            'observed_inter_read_hz': observed_inter_read_hz,
+        })
         return frame
 
     def send_command(self, command_name: str) -> None:
@@ -1184,9 +1242,15 @@ def build_plot_figure(app_state: AppState) -> go.Figure:
         factor = int(getattr(app_state.cfg.ui, 'modbus_rtu_render_downsample_factor', 1))
     render_points = downsample_points_for_render(render_points, factor=factor, max_points=max_render_points)
     if render_points:
-        t0 = render_points[0][0]
-        xs = [ts - t0 for ts, _ in render_points]
-        ys = [val for _, val in render_points]
+        if np is not None:
+            arr = np.asarray(render_points, dtype=np.float64)
+            t0 = float(arr[0, 0])
+            xs = (arr[:, 0] - t0).tolist()
+            ys = arr[:, 1].tolist()
+        else:
+            t0 = render_points[0][0]
+            xs = [ts - t0 for ts, _ in render_points]
+            ys = [val for _, val in render_points]
         fig.add_trace(
             go.Scatter(
                 x=xs,
@@ -1305,7 +1369,7 @@ def connect_state(app_state: AppState) -> None:
         )
     if app_state.signal_logger is not None and app_state.signal_logger.enabled:
         app_state.push_event(
-            f'Signal logger active dir={app_state.signal_logger.directory} mode={app_state.signal_logger.write_mode} files=({app_state.signal_logger.raw_path.name}, {app_state.signal_logger.interpreted_path.name}, {app_state.signal_logger.gui_path.name})'
+            f'Signal logger active dir={app_state.signal_logger.directory} mode={app_state.signal_logger.write_mode} files=({app_state.signal_logger.raw_path.name}, {app_state.signal_logger.interpreted_path.name}, {app_state.signal_logger.gui_path.name}, {app_state.signal_logger.event_path.name})'
         )
 
 
