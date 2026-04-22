@@ -5,6 +5,7 @@
 **Goal:** maximize calibration quality of the HX711-based target device using the RS485 load-cell acquisition board as reference, while preserving timing integrity, signal fidelity, and reproducibility.
 
 ---
+[TOC]
 
 ## Overview
 
@@ -78,59 +79,67 @@ That is why the recommended reference output is **100 Hz**, not 500 or 1000 Hz, 
 
 ### 1) Recommended operating profile
 
-| Domain                    | Parameter                             |                                                                                     Recommended value | Why this is the best default for calibration                                                                                                                                                                                   |
-| ------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Reference board           | Internal sampling `100.SP`            |                                                                                            **640 Hz** | Keeps the reference chain much faster than the ~93 Hz target without paying the extra noise penalty of 1280 Hz. It gives oversampling margin for clean peak/ramp reconstruction and later down-selection to target timestamps. |
-| Reference board           | ADC gain `101.GA`                     |                                                                                              **128B** | Your PM58 is ~1.504 mV/V at 5 V excitation, so full-scale bridge output is only about 7.52 mV. Gain 128 comfortably fits that range and maximizes useful resolution.                                                           |
-| Reference board           | Median filter `102.ME`                |                                                                                                 **3** | Suppresses impulsive outliers without introducing the lag of `5` or `9`.                                                                                                                                                       |
-| Reference board           | Average filter `103.rV`               |                                                                                                 **5** | Gives modest smoothing with only a short effective window at 640 Hz; enough to improve SNR while preserving hand-grip dynamics.                                                                                                |
-| Reference board           | Unit `105.uN`                         |                                                                                                 **N** | The target is a force device. Calibrating the reference directly in Newtons removes one later conversion step and makes the fitted model physically consistent.                                                                |
-| Reference board           | Decimal point `106.bi`                |                                                                                                 **1** | With `N`, one decimal place gives 0.1 N display increments and enough range headroom. It also makes the board’s stability/zero windows less unrealistically tight than `0.01 N` divisions would.                               |
-| Reference board           | Graduation `107.dV`                   |                                                                                                 **1** | Smallest available division for best display granularity.                                                                                                                                                                      |
-| Reference board           | Max weighing `108.ro`                 |                                                                                           **900.0 N** | Safe engineering cap below the nominal 100 kg full-scale (~980.7 N) while still covering strong hand-grip trials.                                                                                                              |
-| Reference board           | DI input `109.di`                     |                                                                                              **NoNE** | Avoids accidental remote tare/zero/peak-clear events during calibration runs.                                                                                                                                                  |
-| Reference board           | Peak threshold `110.MZ`               |                                                                                             **5.0 N** | High enough to prevent trivial noise-driven peak refreshes, low enough to preserve real grip peaks.                                                                                                                            |
-| Reference board           | Peak interval `111.MN`                |                                                                                            **0.10 s** | Lets you inspect repeated grip peaks without the sluggishness of the 0.5 s default.                                                                                                                                            |
-| Reference board           | Display refresh `113.uP`              |                                                                                            **0.05 s** | Responsive enough for operator feedback, still readable.                                                                                                                                                                       |
-| Reference board           | Backup `114.bp`                       |                                                                              **YES after validation** | Freezes a known-good calibration profile once verified.                                                                                                                                                                        |
-| Reference board           | Calibration mode `201.Mo`             |                                                                                              **Load** | Real-load calibration is higher-epistemic than datasheet-only entry for a reference instrument.                                                                                                                                |
-| Reference board           | Calibration load `202.WE`             | **Largest traceable load point in the intended operating range, preferably 60–80% of max used force** | Best compromise between span accuracy and rig practicality.                                                                                                                                                                    |
-| Reference board           | Datasheet backup range `203.rA`       |                                                                             **980.7 N** (backup only) | Sensible backup if you ever need `data` mode.                                                                                                                                                                                  |
-| Reference board           | Datasheet backup sensitivity `204.SE` |                                                                                        **1.504 mV/V** | From PM58 certificate / label.                                                                                                                                                                                                 |
-| Reference board           | Excitation `205.rE`                   |                                                                                           **5.000 V** | Matches the board’s excitation.                                                                                                                                                                                                |
-| Reference board           | Span trim `206.rV`                    |                                                                                   **1.000 initially** | Do not “trim blind”; only change after verification loads show a real span error.                                                                                                                                              |
-| Reference board           | Multipoint enable `207.mE`            |                                                                                 **0 (off) initially** | Two-point calibration is the highest ROI default; only open multipoint if residual nonlinearity is measured.                                                                                                                   |
-| Reference board           | Creep tracking `400.CV`               |                                                                                                 **0** | Prevents hidden slow baseline correction during calibration.                                                                                                                                                                   |
-| Reference board           | Display zero range `401.dZ`           |                                                                                                 **0** | Cosmetic zeroing is harmful during calibration because it hides real offset.                                                                                                                                                   |
-| Reference board           | Dynamic tracking `402.tV`             |                                                                                                 **0** | The vendor feature is insufficiently documented and can distort the trace.                                                                                                                                                     |
-| Reference board           | Stable weight switch `404.SV`         |                                                                                                 **0** | You want to see the real evolving signal, not a final settled jump.                                                                                                                                                            |
-| Reference board           | Zero range `405.Zr`                   |                                                                                             **5.0 N** | Allows manual zeroing but limits it to a narrow unloaded neighborhood.                                                                                                                                                         |
-| Reference board           | Power-on zero `406.PZ`                |                                                                                                 **0** | Prevents silent baseline shifts at startup.                                                                                                                                                                                    |
-| Reference board           | Auto-zero `409.AZ`                    |                                                                                                 **0** | Prevents slow drift compensation from contaminating live force traces.                                                                                                                                                         |
-| Reference board           | Stability range `412.Wr`              |                                                                                                 **0** | Disables stability gating so the board does not block operations based on a very small division-based window.                                                                                                                  |
-| Reference board           | Stability time `413.Wt`               |                                                                   **1.0 s** (irrelevant when `412=0`) | Safe default; not load-bearing when stability gating is off.                                                                                                                                                                   |
-| Reference board transport | RS485 mode `504.AS`                   |                                                                                   **1 (Active-send)** | Best default for a calibration capture path once parser behavior has been validated; avoids host polling jitter.                                                                                                               |
-| Reference board transport | Active-send rate `505.AF`             |                                                                                            **100 Hz** | Closest available rate to the target’s ~93 Hz, preserves comparison simplicity, avoids needless serial load.                                                                                                                   |
-| Reference board transport | Baud `501.br`                         |                                                                                            **115200** | Plenty of margin for 100 Hz capture, more universal/robust than higher nonstandard rates.                                                                                                                                      |
-| Reference board transport | Parity / stop `502.Vb`,`503.so`       |                                                                                           **None, 1** | Lowest overhead, simplest integration.                                                                                                                                                                                         |
-| Reference board transport | Address `500.Ar`                      |                                                                                                 **1** | Fine for a single-device bench link.                                                                                                                                                                                           |
-| Target device             | HX711 rate mode                       |                                      **Fastest stable mode already in use (~93 Hz empirical stream)** | Do not down-rate the target during calibration; the goal is to calibrate the actual device as used.                                                                                                                            |
-| Target device             | UART                                  |                                                                                       **115200, 8N1** | Easily sufficient for ~93 Hz raw + metadata streaming; likely already validated.                                                                                                                                               |
-| Target device             | Firmware filtering                    |                                                                   **Disabled for calibration output** | Calibration should be fit on raw counts or near-raw counts, not on pre-smoothed values.                                                                                                                                        |
-| Target device             | Zero / tare logic                     |                                                                            **Manual only before run** | Disable continuous drift compensation during actual captures.                                                                                                                                                                  |
-| Target device             | Output fields                         |                                               **seq, device_timestamp, raw_count, interpreted_value** | Minimal set needed to audit lag, drops, and calibration mapping.                                                                                                                                                               |
-| Synchronization           | Recording framework                   |                                                                           **LSL + XDF / LabRecorder** | Best practical way to unify both streams on one host, preserve timing metadata, and enable post-hoc alignment.                                                                                                                 |
-| Synchronization           | LSL nominal srate (reference)         |                                                                                    **100 Hz regular** | Matches the actual reference output.                                                                                                                                                                                           |
-| Synchronization           | LSL nominal srate (target)            |                                                                                **IRREGULAR_RATE / 0** | The target’s observed ±15 ms timing variation should not be falsely advertised as fixed-rate.                                                                                                                                  |
-| Analysis                  | Fitting data                          |                      **Static staircase holds for parameter fit; dynamic trials for validation only** | Prevents transport/bandwidth differences from being misinterpreted as gain/offset errors.                                                                                                                                      |
+| Domain                    |                     Parameter |    UI    | Recommended value                                                                                     | Why this is the best default for calibration                                                                                                                                                                                   |
+| ------------------------- | ----------------------------: | :------: | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Reference board           |             Internal sampling | `100.SP` | **640 Hz**                                                                                            | Keeps the reference chain much faster than the ~93 Hz target without paying the extra noise penalty of 1280 Hz. It gives oversampling margin for clean peak/ramp reconstruction and later down-selection to target timestamps. |
+| Reference board           |                      ADC gain | `101.GA` | **128B**                                                                                              | Your PM58 is ~1.504 mV/V at 5 V excitation, so full-scale bridge output is only about 7.52 mV. Gain 128 comfortably fits that range and maximizes useful resolution.                                                           |
+| Reference board           |                 Median filter | `102.ME` | **3**                                                                                                 | Suppresses impulsive outliers without introducing the lag of `5` or `9`.                                                                                                                                                       |
+| Reference board           |                Average filter | `103.rV` | **5**                                                                                                 | Gives modest smoothing with only a short effective window at 640 Hz; enough to improve SNR while preserving hand-grip dynamics.                                                                                                |
+| Reference board           |                          Unit | `105.uN` | **N**                                                                                                 | The target is a force device. Calibrating the reference directly in Newtons removes one later conversion step and makes the fitted model physically consistent.                                                                |
+| Reference board           |                 Decimal point | `106.bi` | **1**                                                                                                 | With `N`, one decimal place gives 0.1 N display increments and enough range headroom. It also makes the board’s stability/zero windows less unrealistically tight than `0.01 N` divisions would.                               |
+| Reference board           |                    Graduation | `107.dV` | **1**                                                                                                 | Smallest available division for best display granularity.                                                                                                                                                                      |
+| Reference board           |                  Max weighing | `108.ro` | **900.0 N**                                                                                           | Safe engineering cap below the nominal 100 kg full-scale (~980.7 N) while still covering strong hand-grip trials.                                                                                                              |
+| Reference board           |                      DI input | `109.di` | **NoNE**                                                                                              | Avoids accidental remote tare/zero/peak-clear events during calibration runs.                                                                                                                                                  |
+| Reference board           |                Peak threshold | `110.MZ` | **5.0 N**                                                                                             | High enough to prevent trivial noise-driven peak refreshes, low enough to preserve real grip peaks.                                                                                                                            |
+| Reference board           |                 Peak interval | `111.MN` | **0.10 s**                                                                                            | Lets you inspect repeated grip peaks without the sluggishness of the 0.5 s default.                                                                                                                                            |
+| Reference board           |               Display refresh | `113.uP` | **0.05 s**                                                                                            | Responsive enough for operator feedback, still readable.                                                                                                                                                                       |
+| Reference board           |                        Backup | `114.bp` | **YES after validation**                                                                              | Freezes a known-good calibration profile once verified.                                                                                                                                                                        |
+| Reference board           |              Calibration mode | `201.Mo` | **Load**                                                                                              | Real-load calibration is higher-epistemic than datasheet-only entry for a reference instrument.                                                                                                                                |
+| Reference board           |              Calibration load | `202.WE` | **Largest traceable load point in the intended operating range, preferably 60–80% of max used force** | Best compromise between span accuracy and rig practicality.                                                                                                                                                                    |
+| Reference board           |        Datasheet backup range | `203.rA` | **980.7 N** (backup only)                                                                             | Sensible backup if you ever need `data` mode.                                                                                                                                                                                  |
+| Reference board           |  Datasheet backup sensitivity | `204.SE` | **1.504 mV/V**                                                                                        | From PM58 certificate / label.                                                                                                                                                                                                 |
+| Reference board           |                    Excitation | `205.rE` | **5.000 V**                                                                                           | Matches the board’s excitation.                                                                                                                                                                                                |
+| Reference board           |                     Span trim | `206.rV` | **1.000 initially**                                                                                   | Do not “trim blind”; only change after verification loads show a real span error.                                                                                                                                              |
+| Reference board           |             Multipoint enable | `207.mE` | **0 (off) initially**                                                                                 | Two-point calibration is the highest ROI default; only open multipoint if residual nonlinearity is measured.                                                                                                                   |
+| Reference board           |                Creep tracking | `400.CV` | **0**                                                                                                 | Prevents hidden slow baseline correction during calibration.                                                                                                                                                                   |
+| Reference board           |            Display zero range | `401.dZ` | **0**                                                                                                 | Cosmetic zeroing is harmful during calibration because it hides real offset.                                                                                                                                                   |
+| Reference board           |              Dynamic tracking | `402.tV` | **0**                                                                                                 | The vendor feature is insufficiently documented and can distort the trace.                                                                                                                                                     |
+| Reference board           |          Stable weight switch | `404.SV` | **0**                                                                                                 | You want to see the real evolving signal, not a final settled jump.                                                                                                                                                            |
+| Reference board           |                    Zero range | `405.Zr` | **5.0 N**                                                                                             | Allows manual zeroing but limits it to a narrow unloaded neighborhood.                                                                                                                                                         |
+| Reference board           |                 Power-on zero | `406.PZ` | **0**                                                                                                 | Prevents silent baseline shifts at startup.                                                                                                                                                                                    |
+| Reference board           |                     Auto-zero | `409.AZ` | **0**                                                                                                 | Prevents slow drift compensation from contaminating live force traces.                                                                                                                                                         |
+| Reference board           |               Stability range | `412.Wr` | **0**                                                                                                 | Disables stability gating so the board does not block operations based on a very small division-based window.                                                                                                                  |
+| Reference board           |                Stability time | `413.Wt` | **1.0 s** (irrelevant when `412=0`)                                                                   | Safe default; not load-bearing when stability gating is off.                                                                                                                                                                   |
+| Reference board transport |                    RS485 mode | `504.AS` | **1 (Active-send)**                                                                                   | Best default for a calibration capture path once parser behavior has been validated; avoids host polling jitter.                                                                                                               |
+| Reference board transport |              Active-send rate | `505.AF` | **100 Hz**                                                                                            | Closest available rate to the target’s ~93 Hz, preserves comparison simplicity, avoids needless serial load.                                                                                                                   |
+| Reference board transport |                          Baud | `501.br` | **115200**                                                                                            | Plenty of margin for 100 Hz capture, more universal/robust than higher nonstandard rates.                                                                                                                                      |
+| Reference board transport |                 Parity / stop | `502.Vb` | **None**                                                                                              | Lowest overhead, simplest integration.                                                                                                                                                                                         |
+| Reference board transport |                 Parity / stop | `503.so` | **1**                                                                                                 | Lowest overhead, simplest integration.                                                                                                                                                                                         |
+| Reference board transport |                       Address | `500.Ar` | **1**                                                                                                 | Fine for a single-device bench link.                                                                                                                                                                                           |
+| Target device             |               HX711 rate mode |    -     | **Fastest stable mode already in use (~93 Hz empirical stream)**                                      | Do not down-rate the target during calibration; the goal is to calibrate the actual device as used.                                                                                                                            |
+| Target device             |                          UART |    -     | **115200, 8N1**                                                                                       | Easily sufficient for ~93 Hz raw + metadata streaming; likely already validated.                                                                                                                                               |
+| Target device             |            Firmware filtering |    -     | **Disabled for calibration output**                                                                   | Calibration should be fit on raw counts or near-raw counts, not on pre-smoothed values.                                                                                                                                        |
+| Target device             |             Zero / tare logic |    -     | **Manual only before run**                                                                            | Disable continuous drift compensation during actual captures.                                                                                                                                                                  |
+| Target device             |                 Output fields |    -     | **seq, device_timestamp, raw_count, interpreted_value**                                               | Minimal set needed to audit lag, drops, and calibration mapping.                                                                                                                                                               |
+| Synchronization           |           Recording framework |    -     | **LSL + XDF / LabRecorder**                                                                           | Best practical way to unify both streams on one host, preserve timing metadata, and enable post-hoc alignment.                                                                                                                 |
+| Synchronization           | LSL nominal srate (reference) |    -     | **100 Hz regular**                                                                                    | Matches the actual reference output.                                                                                                                                                                                           |
+| Synchronization           |    LSL nominal srate (target) |    -     | **IRREGULAR_RATE / 0**                                                                                | The target’s observed ±15 ms timing variation should not be falsely advertised as fixed-rate.                                                                                                                                  |
+| Analysis                  |                  Fitting data |    -     | **Static staircase holds for parameter fit; dynamic trials for validation only**                      | Prevents transport/bandwidth differences from being misinterpreted as gain/offset errors.                                                                                                                                      |
 
 ---
 
 ## Detailed breakdown of the recommended values
 
-## A. Reference board signal chain
+### A. Reference board signal chain
 
-### `100.SP = 640 Hz`
+#### `100.SP` - Sampling rate
+
+**Recommended values** 
+
+| Code     | Name            | Recommended value |
+| -------- | --------------- | ----------------- |
+| `100.SP` | `Sampling rate` | **640 Hz**        |
+
 
 **Overall reason for the selected value**  
 The reference chain should be faster than the target by a comfortable margin, but it does not need to be at the absolute board maximum. `640 Hz` is fast enough to capture the shape of hand-grip ramps, squeezes, and releases while still being a more favorable noise/stability point than `1280 Hz`.
@@ -143,7 +152,13 @@ It improves the reference trace’s time resolution and reduces interpolation er
 - **`1280 Hz`**: rejected as the default because it likely adds noise without improving the calibration model once the reference is ultimately compared against a ~93 Hz target.
 - **`10 Hz`**: rejected because it destroys dynamic validation value.
 
-### `101.GA = 128B`
+#### `101.GA` - Gain adjustment
+
+**Recommended values** 
+
+| Code     | Name              | Recommended value |
+| -------- | ----------------- | ----------------- |
+| `101.GA` | `Gain adjustment` | **128B**          |
 
 **Overall reason**  
 At 5 V excitation and ~1.504 mV/V sensitivity, the PM58 full-scale output is roughly 7.52 mV. HX711-style bridge front ends and this board’s ADC gain options make `128` the natural high-resolution choice while staying within input range.[W1]
@@ -155,7 +170,15 @@ Improves effective resolution of the reference measurement, especially important
 - **`64`**: more headroom than needed, lower sensitivity.
 - **`2` or `1`**: far too conservative for this bridge amplitude and would waste useful ADC range.
 
-### `102.ME = 3`, `103.rV = 5`
+#### `102.ME` - Median filter 
+#### `103.rV` - Average filter
+
+**Recommended values** 
+
+| Code     | Name             | Recommended value |
+| -------- | ---------------- | ----------------- |
+| `102.ME` | `Median filter`  | **3**             |
+| `103.rV` | `Average filter` | **5**             |
 
 **Overall reason**  
 This is a deliberately light filter stack:
@@ -170,7 +193,19 @@ Makes the reference cleaner than the target without smearing the dynamic shape. 
 - **`ME=5`, `rV=10+`**: rejected because the lag becomes more visible and can bias dynamic comparison.
 - **`ME=9`**: rejected because it is excessive unless the board is operating in an unusually noisy environment.
 
-### `105.uN = N`, `106.bi = 1`, `107.dV = 1`, `108.ro = 900.0 N`
+#### `105.uN` - Unit selection
+#### `106.bi` - Decimal point position
+#### `107.dV` - Graduation value
+#### `108.ro` - Maximum weighing
+
+**Recommended values** 
+
+| Code     | Name               | Recommended value |
+| -------- | ------------------ | ----------------- |
+| `105.uN` | `Unit selection`   | **N**             |
+| `106.bi` | `Decimal point`    | **1**             |
+| `107.dV` | `Graduation value` | **1**             |
+| `108.ro` | `Maximum weighing` | **900.0 N**       |
 
 **Overall reason**  
 The target is a force device. Use force units end-to-end. One decimal place in Newtons is a good compromise between readability, stability-window practicality, and dynamic range.
@@ -183,7 +218,14 @@ Reduces downstream ambiguity. The fitted calibration model can be stated directl
 - **two decimal places in N**: rejected because it makes division-based stability windows unrealistically small.
 - **`108.ro` near exact full-scale (~980.7 N)**: rejected because leaving no operating margin is poor bench practice.
 
-### `109.di = NoNE`
+#### `109.di` - DI switch input function
+
+**Recommended values** 
+
+| Code     | Name              | Recommended value |
+| -------- | ----------------- | ----------------- |
+| `109.di` | `DI switch input` | **NoNE**          |
+
 
 **Overall reason**  
 The DI feature is operationally useful, but not for a calibration bench unless you are deliberately using it as a trigger input.
@@ -195,10 +237,18 @@ Prevents accidental remote tare/zero/peak-clear events that would corrupt a run.
 - **`SZEro` / `CZEro`**: rejected because a stray short could silently rewrite baseline.
 - **`REMAX`**: useful only for a specialized peak test fixture.
 
-### `110.MZ = 5.0 N`, `111.MN = 0.10 s`
+#### `110.MZ` - Peak threshold
+#### `111.MN` - Peak interval
+
+**Recommended values** 
+
+| Code     | Name             | Recommended value |
+| -------- | ---------------- | ----------------- |
+| `110.MZ` | `Peak threshold` | **5.0 N**         |
+| `111.MN` | `Peak interval`  | **0.10 s**        |
 
 **Overall reason**  
-These are operator-assistance values, not core acquisition values. They make the board’s peak display useful without letting trivial noise refresh the peak.
+These are operator-assistance values, not core acquisition values. `110.MZ` prevents trivial noise from repeatedly refreshing peak display, while `111.MN` keeps peak updates responsive enough for repeated short squeezes.
 
 **Calibration impact**  
 Minimal for fitted calibration parameters, but helpful during validation trials.
@@ -207,7 +257,13 @@ Minimal for fitted calibration parameters, but helpful during validation trials.
 - **`MZ=0`**: too sensitive; any slightly larger noise bump can refresh the peak.
 - **`MN=0.5 s` default**: too slow for repeated short squeezes.
 
-### `113.uP = 0.05 s`
+#### `113.uP` - Display refresh
+
+**Recommended values** 
+
+| Code     | Name              | Recommended value |
+| -------- | ----------------- | ----------------- |
+| `113.uP` | `Display refresh` | **0.05 s**        |
 
 **Overall reason**  
 Display refresh should be fast enough for human supervision but it should not be confused with acquisition rate.
@@ -219,7 +275,13 @@ None on stored data, but it improves operator confidence during setup.
 - **`0.02 s`**: marginally faster, but unnecessary.
 - **`>0.1 s`**: makes live feedback feel sluggish.
 
-### `114.bp = YES` after validation
+#### `114.bp` - Backup
+
+**Recommended values** 
+
+| Code     | Name     | Recommended value          |
+| -------- | -------- | -------------------------- |
+| `114.bp` | `Backup` | **YES (after validation)** |
 
 **Overall reason**  
 Once the profile is verified, freeze it.
@@ -233,9 +295,15 @@ Improves reproducibility and reduces configuration drift across sessions.
 
 ---
 
-## B. Reference board calibration block
+### B. Reference board calibration block
 
-### `201.Mo = Load`
+#### `201.Mo` - Calibration mode
+
+**Recommended values** 
+
+| Code     | Name               | Recommended value |
+| -------- | ------------------ | ----------------- |
+| `201.Mo` | `Calibration mode` | **Load**          |
 
 **Overall reason**  
 For a reference instrument, real-load calibration is higher-quality than entering nominal datasheet values only. The board manual itself supports both, but `Load` is the correct primary mode for this use case.[A1]
@@ -246,7 +314,13 @@ Directly improves the credibility of the reference channel that will anchor the 
 **Alternatives rejected**
 - **`data` mode only**: rejected as the primary method because datasheet sensitivity and mechanical installation tolerance are not enough for best-possible reference calibration.
 
-### `202.WE = largest traceable load point within intended operating range`
+#### `202.WE` - Calibration load
+
+**Recommended values** 
+
+| Code     | Name               | Recommended value                                            |
+| -------- | ------------------ | ------------------------------------------------------------ |
+| `202.WE` | `Calibration load` | **Largest traceable load point in intended operating range** |
 
 **Overall reason**  
 This parameter is physically rig-dependent. The best value is not a universal constant; it is the best repeatable reference load you can actually apply. Prefer a point high enough to constrain span well, but not so high that the fixture becomes awkward or unsafe.
@@ -259,7 +333,17 @@ Better span accuracy, better repeatability, less operator-induced scatter.
 - **Near-absolute full scale every time**: unnecessary rig stress and worse ergonomics.
 - **Purely dynamic calibration without static holds**: wrong tool for gain/offset estimation.
 
-### `203.rA = 980.7 N`, `204.SE = 1.504 mV/V`, `205.rE = 5.000 V`
+#### `203.rA` - Datasheet backup range
+#### `204.SE` - Datasheet backup sensitivity
+#### `205.rE` - Excitation
+
+**Recommended values** 
+
+| Code     | Name                           | Recommended value |
+| -------- | ------------------------------ | ----------------- |
+| `203.rA` | `Datasheet backup range`       | **980.7 N**       |
+| `204.SE` | `Datasheet backup sensitivity` | **1.504 mV/V**    |
+| `205.rE` | `Excitation`                   | **5.000 V**       |
 
 **Overall reason**  
 These are the correct backup parameters if you must fall back to datasheet-entry calibration.
@@ -271,7 +355,13 @@ Good disaster-recovery values; not the first-choice calibration mode.
 - Leaving them unspecified: reduces recovery robustness.
 - Using approximate rounded values too aggressively: unnecessary if the PM58 certificate value is available.
 
-### `206.rV = 1.000`
+#### `206.rV` - Span trim
+
+**Recommended values** 
+
+| Code     | Name        | Recommended value |
+| -------- | ----------- | ----------------- |
+| `206.rV` | `Span trim` | **1.000**         |
 
 **Overall reason**  
 Do not compensate a problem you have not measured.
@@ -282,7 +372,13 @@ Prevents “tuning by folklore.” Only change this after reference verification
 **Alternatives rejected**
 - Ad hoc span trimming before verification: classic calibration anti-pattern.
 
-### `207.mE = 0` initially
+#### `207.mE` - Multipoint enable
+
+**Recommended values** 
+
+| Code     | Name                | Recommended value     |
+| -------- | ------------------- | --------------------- |
+| `207.mE` | `Multipoint enable` | **0 (off) initially** |
 
 **Overall reason**  
 Multipoint correction is worthwhile only after you have evidence that two-point calibration is not good enough over the operating band.
@@ -294,7 +390,15 @@ Keeps the reference chain simple and auditable.
 - **`207.mE = 1` by default**: rejected because it adds process complexity before you know it is needed.
 - **Never using multipoint**: also not ideal; if residual nonlinearity is demonstrated, then open it.
 
-### `208.mC`, `209.Mr`
+#### `208.mC` - Multipoint count
+#### `209.Mr` - Multipoint range
+
+**Recommended values** 
+
+| Code     | Name               | Recommended value             |
+| -------- | ------------------ | ----------------------------- |
+| `208.mC` | `Multipoint count` | **Unused in default profile** |
+| `209.Mr` | `Multipoint range` | **Unused in default profile** |
 
 **Overall recommendation**  
 Unused in the default profile. If enabled later, use **at least 4–5 points** spread across the actual operating region, not just near zero and full-scale.
@@ -307,9 +411,15 @@ Potentially improves residual nonlinearity, but only if your applied loads are t
 
 ---
 
-## C. Reference board advanced functions
+### C. Reference board advanced functions
 
-### `400.CV = 0`
+#### `400.CV` - Creep tracking
+
+**Recommended values** 
+
+| Code     | Name             | Recommended value |
+| -------- | ---------------- | ----------------- |
+| `400.CV` | `Creep tracking` | **0 (disabled)**  |
 
 **Overall reason**  
 Creep tracking is a convenience feature, not a reference-calibration feature.
@@ -320,7 +430,13 @@ Disabling it prevents slow baseline manipulation during long holds.
 **Alternatives rejected**
 - Any nonzero value: rejected until you have a quantified creep problem and understand the side effects.
 
-### `401.dZ = 0`
+#### `401.dZ` - Display zero range
+
+**Recommended values** 
+
+| Code     | Name                 | Recommended value |
+| -------- | -------------------- | ----------------- |
+| `401.dZ` | `Display zero range` | **0**             |
 
 **Overall reason**  
 The manual explicitly distinguishes “display zeroing” from true zeroing. Cosmetic zero is unacceptable in a reference trace because it hides real offset while retaining it internally.[A1]
@@ -331,7 +447,15 @@ Prevents masked baseline offsets.
 **Alternatives rejected**
 - Any nonzero cosmetic zero window: rejected for calibration captures.
 
-### `402.tV = 0`, `403.tC = default`
+#### `402.tV` - Dynamic tracking
+#### `403.tC` - Dynamic tracking coefficient
+
+**Recommended values** 
+
+| Code     | Name                           | Recommended value |
+| -------- | ------------------------------ | ----------------- |
+| `402.tV` | `Dynamic tracking`             | **0**             |
+| `403.tC` | `Dynamic tracking coefficient` | **default**       |
 
 **Overall reason**  
 The “dynamic tracking” feature is insufficiently documented and therefore low-epistemic.
@@ -342,7 +466,13 @@ Disabling it removes an unknown transform from the reference path.
 **Alternatives rejected**
 - Any nonzero dynamic-tracking configuration: rejected because it can alter transient shape in undocumented ways.
 
-### `404.SV = 0`
+#### `404.SV` - Stable weight switch
+
+**Recommended values** 
+
+| Code     | Name                   | Recommended value |
+| -------- | ---------------------- | ----------------- |
+| `404.SV` | `Stable weight switch` | **0**             |
 
 **Overall reason**  
 The manual states that stable-weight mode can make the display jump straight to the final value instead of showing the change process.[A1]
@@ -353,7 +483,13 @@ For calibration, you want the real evolving signal—not a display/logic abstrac
 **Alternatives rejected**
 - `1`: rejected because it suppresses useful operator insight during live dynamic trials.
 
-### `405.Zr = 5.0 N`
+#### `405.Zr` - Zero range
+
+**Recommended values** 
+
+| Code     | Name         | Recommended value |
+| -------- | ------------ | ----------------- |
+| `405.Zr` | `Zero range` | **5.0 N**         |
 
 **Overall reason**  
 The zero window should be tight enough to prevent zeroing under load, but not so tight that normal unloaded drift blocks manual zero.
@@ -365,7 +501,17 @@ Keeps the zero action meaningful and repeatable.
 - Much larger windows: risk zeroing on preload.
 - Extremely tiny windows: nuisance failures.
 
-### `406.PZ = 0`, `407.Pt = 0`, `408.Pr = 5.0 N`
+#### `406.PZ` - Power-on zero
+#### `407.Pt` - Power-on zero time
+#### `408.Pr` - Power-on zero range
+
+**Recommended values** 
+
+| Code     | Name                  | Recommended value |
+| -------- | --------------------- | ----------------- |
+| `406.PZ` | `Power-on zero`       | **0**             |
+| `407.Pt` | `Power-on zero time`  | **0**             |
+| `408.Pr` | `Power-on zero range` | **5.0 N**         |
 
 **Overall reason**  
 Power-on zero is convenient for process equipment, not for a metrology-style reference path. You want startup behavior to be explicit and operator-controlled.
@@ -376,7 +522,17 @@ Avoids silent baseline changes at power-up.
 **Alternatives rejected**
 - `PZ=1`: rejected because startup auto-zero can erase useful evidence of offset or mechanical preload.
 
-### `409.AZ = 0`, `410.At = default`, `411.Ar = default`
+#### `409.AZ` - Auto-zero
+#### `410.At` - Auto-zero time
+#### `411.Ar` - Auto-zero range
+
+**Recommended values** 
+
+| Code     | Name              | Recommended value |
+| -------- | ----------------- | ----------------- |
+| `409.AZ` | `Auto-zero`       | **0**             |
+| `410.At` | `Auto-zero time`  | **default**       |
+| `411.Ar` | `Auto-zero range` | **default**       |
 
 **Overall reason**  
 Continuous auto-zero is actively harmful during calibration because it can slowly drag the baseline.
@@ -387,7 +543,15 @@ Preserves true drift and true zero offset, which are important to see and quanti
 **Alternatives rejected**
 - Any enabled auto-zero profile: rejected for calibration capture mode.
 
-### `412.Wr = 0`, `413.Wt = 1.0 s`
+#### `412.Wr` - Stability range
+#### `413.Wt` - Stability time
+
+**Recommended values** 
+
+| Code     | Name              | Recommended value |
+| -------- | ----------------- | ----------------- |
+| `412.Wr` | `Stability range` | **0**             |
+| `413.Wt` | `Stability time`  | **1.0 s**         |
 
 **Overall reason**  
 The division-based stable-window logic is useful in process settings, but for calibration it is often an unnecessary gate that can prevent zero/tare operations for reasons tied to display divisions rather than actual engineering judgment.
@@ -401,9 +565,15 @@ Disabling stability gating reduces nuisance behavior and keeps the operator in c
 
 ---
 
-## D. Reference board communications
+### D. Reference board communications
 
-### `500.Ar = 1`
+#### `500.Ar` - Address
+
+**Recommended values** 
+
+| Code     | Name      | Recommended value |
+| -------- | --------- | ----------------- |
+| `500.Ar` | `Address` | **1**             |
 
 **Overall reason**  
 Single-device bench setup; simplest valid address.
@@ -411,7 +581,20 @@ Single-device bench setup; simplest valid address.
 **Calibration impact**  
 None, beyond reducing confusion.
 
-### `501.br = 115200`, `502.Vb = none`, `503.so = 1`
+**Alternatives rejected**
+- Using a higher nonessential device address in a single-device bench setup: rejected because it adds bookkeeping without improving calibration quality.
+
+#### `501.br` - Baud
+#### `502.Vb` - Parity
+#### `503.so` - Stop bits
+
+**Recommended values** 
+
+| Code     | Name        | Recommended value |
+| -------- | ----------- | ----------------- |
+| `501.br` | `Baud`      | **115200**        |
+| `502.Vb` | `Parity`    | **none**          |
+| `503.so` | `Stop bits` | **1**             |
 
 **Overall reason**  
 At 100 Hz reference output, 115200 bps is easily sufficient and has stronger interoperability than higher nonstandard rates. Standard 8N1 is simplest to integrate.
@@ -423,7 +606,15 @@ Keeps transport latency small enough that it is not the bottleneck while preserv
 - **9600**: too slow; unnecessary increase in round-trip / buffering exposure.
 - **230400 / 256000 / higher**: technically attractive, but the practical improvement at 100 Hz is small while driver/adapter variability increases.
 
-### `504.AS = 1`, `505.AF = 100 Hz`
+#### `504.AS` - RS485 mode
+#### `505.AF` - Active-send rate
+
+**Recommended values** 
+
+| Code     | Name               | Recommended value   |
+| -------- | ------------------ | ------------------- |
+| `504.AS` | `RS485 mode`       | **1 (Active-send)** |
+| `505.AF` | `Active-send rate` | **100 Hz**          |
 
 **Overall reason**  
 For actual calibration capture, the best default is device-paced transmission close to the target’s sampling regime. `100 Hz` is the closest active-send option to your target’s ~93 Hz empirical stream. It reduces the need for aggressive resampling, limits serial overhead, and avoids poll-cycle jitter from a host-driven Modbus loop.
@@ -436,7 +627,7 @@ Improves temporal regularity of the reference stream and simplifies downstream p
 - **`AF=500` or `1000 Hz`**: rejected because the target cannot exploit that bandwidth in the default campaign, and the board’s active payload is not documented in the uploaded manual.
 - **`AF=50 Hz`**: rejected because it undersamples the target path instead of slightly oversampling it.
 
-### Fallback if Active-send is not parser-stable
+#### Fallback if Active-send is not parser-stable
 
 Use:
 - `504.AS = 0`
@@ -447,9 +638,9 @@ This is the highest-epistemic backup mode.
 
 ---
 
-## E. Target-device configuration
+### E. Target-device configuration
 
-### HX711 operating mode = keep empirical fast mode
+#### HX711 operating mode = keep empirical fast mode
 
 **Overall reason**  
 The purpose of calibration is to calibrate the device you actually intend to use. If its deployed acquisition path is the ~93 Hz empirical fast path, keep it that way during calibration.
@@ -460,7 +651,7 @@ Makes the fitted model valid for real operation.
 **Alternatives rejected**
 - Slowing the target for convenience: rejected because it calibrates the wrong system.
 
-### UART = `115200, 8N1`
+#### UART = `115200, 8N1`
 
 **Overall reason**  
 At ~93 samples/s, 115200 has ample bandwidth for raw count + timestamp + interpreted value even in text mode, and it is already the stated configuration.
@@ -472,7 +663,7 @@ Keeps transport overhead low while preserving compatibility.
 - Lower baud: unnecessary and more buffering-sensitive.
 - Much higher baud: little benefit unless you also radically change the payload structure.
 
-### Target firmware filtering = disabled during calibration
+#### Target firmware filtering = disabled during calibration
 
 **Overall reason**  
 Do not fit a calibration model on already-smoothed or auto-zeroed data if you can avoid it.
@@ -484,7 +675,7 @@ Lets you estimate the raw transfer function from counts to force and then decide
 - Moving average or other smoothing in firmware: rejected because it mixes calibration and presentation.
 - Dynamic tare / drift tracking: rejected because it distorts baseline.
 
-### Target output payload = `seq`, `device_timestamp`, `raw_count`, `interpreted_value`
+#### Target output payload = `seq`, `device_timestamp`, `raw_count`, `interpreted_value`
 
 **Overall reason**  
 This is the minimum set that lets you diagnose:
@@ -503,9 +694,9 @@ Greatly improves auditability.
 
 ---
 
-## F. Synchronization and recording
+### F. Synchronization and recording
 
-### Use LSL for both devices
+#### Use LSL for both devices
 
 **Overall reason**  
 LSL is the best practical unification layer here because it provides sample timestamps, clock-offset handling, post-hoc correction/dejitter workflows, and regular vs irregular stream semantics.[W2][W3][W4]
@@ -517,7 +708,7 @@ Improves time alignment, logging reproducibility, and debugging.
 - Independent CSV files only: rejected because alignment becomes more fragile.
 - GUI-only live view without unified recording: rejected because calibration should be replayable and auditable.
 
-### Reference stream in LSL = regular `100 Hz`
+#### Reference stream in LSL = regular `100 Hz`
 
 **Overall reason**  
 The reference active-send path is intentionally regular.
@@ -525,7 +716,7 @@ The reference active-send path is intentionally regular.
 **Calibration impact**  
 Supports cleaner resampling / interpolation and simpler downstream analysis.
 
-### Target stream in LSL = `IRREGULAR_RATE`
+#### Target stream in LSL = `IRREGULAR_RATE`
 
 **Overall reason**  
 Official LSL guidance is to advertise irregular streams as irregular, not to pretend they are fixed-rate.[W4]
@@ -536,7 +727,7 @@ Prevents downstream tools from imposing a false clock model.
 **Alternatives rejected**
 - Advertising the target as exactly 93 Hz: rejected because the observed ±15 ms timing variation is too large to ignore.
 
-### Record to XDF
+#### Record to XDF
 
 **Overall reason**  
 XDF preserves both sample timestamps and LSL timing metadata.
@@ -546,44 +737,59 @@ Gives you the best post-hoc alignment path.
 
 ---
 
-## G. Parameters not in the calibration path
+### G. Parameters not in the calibration path
 
 These should be **disabled or left at safe defaults** for the calibration profile.
 
-### Relay block `C3.rEL`
+#### `C3.rEL` - Relay block
 
-| Parameters                                                                |                          Recommended value | Reason                                                                                 |
-| ------------------------------------------------------------------------- | -----------------------------------------: | -------------------------------------------------------------------------------------- |
-| `300.m1`, `306.m2`, `312.m3`                                              |                           **0 (disabled)** | Relay actions are outside the calibration path and can create accidental side effects. |
-| `301/307/313`, `302/308/314`, `303/309/315`, `304/310/316`, `305/311/317` | **leave default / ignored while disabled** | Non-load-bearing when relay modes are disabled.                                        |
+**Recommended values** 
+
+| Parameter | Name                                   |                          Recommended value | Reason                                                                                 |
+| --------- | -------------------------------------- | -----------------------------------------: | -------------------------------------------------------------------------------------- |
+| `300.m1`  | `Relay 1 operating mode`               |                           **0 (disabled)** | Relay actions are outside the calibration path and can create accidental side effects. |
+| `306.m2`  | `Relay 2 operating mode`               |                           **0 (disabled)** | Relay actions are outside the calibration path and can create accidental side effects. |
+| `312.m3`  | `Relay 3 operating mode`               |                           **0 (disabled)** | Relay actions are outside the calibration path and can create accidental side effects. |
+| `301-305` | `Relay 1 threshold/timing setting 1-5` | **leave default / ignored while disabled** | Non-load-bearing when relay modes are disabled.                                        |
+| `307-311` | `Relay 2 threshold/timing setting 1-5` | **leave default / ignored while disabled** | Non-load-bearing when relay modes are disabled.                                        |
+| `313-317` | `Relay 3 threshold/timing setting 1-5` | **leave default / ignored while disabled** | Non-load-bearing when relay modes are disabled.                                        |
 
 **Rejected alternatives**
 - Using relay thresholds as live calibration markers: possible, but unnecessary complication.
 
-### Analog output block `C6.aNa`
+#### `C6.aNa` - Analog output block
 
-| Parameters |            Recommended value | Reason                                                                                                  |
-| ---------- | ---------------------------: | ------------------------------------------------------------------------------------------------------- |
-| `600.At`   |                 **0 (NONE)** | Keep analog output out of the reference path unless you are explicitly calibrating an analog DAQ chain. |
-| `601–608`  | **ignored while `600.At=0`** | Non-load-bearing for the recommended digital architecture.                                              |
+**Recommended values** 
 
+| Parameter | Name                        |            Recommended value | Reason                                                                                                  |
+| --------- | --------------------------- | ---------------------------: | ------------------------------------------------------------------------------------------------------- |
+| `600.At`  | `Analog output type`        |                 **0 (NONE)** | Keep analog output out of the reference path unless you are explicitly calibrating an analog DAQ chain. |
+| `601-608` | `Analog output setting 601` | **ignored while `600.At=0`** | Non-load-bearing for the recommended digital architecture.                                              |
 **Rejected alternatives**
 - `AO` to external DAQ: technically valid, but inferior here to the direct digital RS485/LSL path because it adds another conversion stage.
 
-### Password / factory / info
+#### `700.oP` - Password enable
+#### `701.PW` - Password value
+#### `C8.FAC` - Factory calibration
+#### `C9.iNF` - Information block
 
-| Block    | Recommended value | Reason                                                                            |
-| -------- | ----------------: | --------------------------------------------------------------------------------- |
-| `700.oP` |             **0** | No value in locking a temporary calibration bench profile.                        |
-| `701.PW` |         unchanged | Not part of calibration quality.                                                  |
-| `C8.FAC` | **do not modify** | Factory analog/ADC trims should not be touched without traceable instrumentation. |
-| `C9.iNF` |         read only | Informational only.                                                               |
+**Recommended values** 
+
+| Block    | Name                  | Recommended value | Reason                                                                            |
+| -------- | --------------------- | ----------------: | --------------------------------------------------------------------------------- |
+| `700.oP` | `Password enable`     |             **0** | No value in locking a temporary calibration bench profile.                        |
+| `701.PW` | `Password value`      |         unchanged | Not part of calibration quality.                                                  |
+| `C8.FAC` | `Factory calibration` | **do not modify** | Factory analog/ADC trims should not be touched without traceable instrumentation. |
+| `C9.iNF` | `Information block`   |         read only | Informational only.                                                               |
+
+**Rejected alternatives**
+- Changing password, factory, or informational blocks as part of calibration setup: rejected because they do not improve calibration quality and can create avoidable configuration risk.
 
 ---
 
 ## Recommended end-to-end calibration procedure
 
-## Phase 1 — Reference-only verification
+### Phase 1 — Reference-only verification
 
 1. Warm up the reference board + PM58 for **15–30 min**.
 2. Zero unloaded.
@@ -595,7 +801,7 @@ These should be **disabled or left at safe defaults** for the calibration profil
    - no spontaneous zero drift,
    - no transport instability.
 
-## Phase 2 — Dual-device capture
+### Phase 2 — Dual-device capture
 
 1. Run both devices on the same Linux host.
 2. Push both streams into LSL.
@@ -605,7 +811,7 @@ These should be **disabled or left at safe defaults** for the calibration profil
    - **slow ramps** for monotonicity/hysteresis,
    - **short squeezes / releases** for lag validation.
 
-## Phase 3 — Fit the target calibration model
+### Phase 3 — Fit the target calibration model
 
 1. Use only the **static hold windows** to fit the primary target calibration model.
 2. Interpolate the regular reference stream onto the target timestamps.
