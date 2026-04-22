@@ -49,7 +49,7 @@ serial:
   default_stopbits: 1
   bytesize: 8
   timeout_s: 0.2
-  inter_frame_gap_s: 0.01
+  inter_frame_gap_s: 0.001
   port_hints:
     - USB
     - RS485
@@ -64,7 +64,7 @@ device:
   mode: modbus_rtu  # modbus_rtu | active_send
   slave_address: 1
   active_send_frequency_code: 8  # 500 Hz
-  poll_interval_s: 0.002  # 500 Hz fallback cadence when mode=modbus_rtu
+  poll_interval_s: 0.001  # 1 kHz target cadence; actual RTU rate remains transaction-limited
   error_backoff_s: 0.25
 
 active_send:

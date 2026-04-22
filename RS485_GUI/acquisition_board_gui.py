@@ -501,18 +501,62 @@ class MinimalModbusRTU:
         self.inter_frame_gap_s = inter_frame_gap_s
         self.lock = threading.Lock()
 
-    def _exchange(self, payload: bytes, expected_min_len: int) -> bytes:
+    def _effective_inter_frame_gap_s(self) -> float:
+        configured = max(0.0, float(self.inter_frame_gap_s))
+        try:
+            baud = max(1, int(self.ser.baudrate))
+        except Exception:
+            baud = 9600
+        # Modbus RTU silent interval is 3.5 character times. Use the larger of that or a small practical floor.
+        char_time_s = 11.0 / float(baud)
+        protocol_gap_s = 3.5 * char_time_s
+        return max(configured, protocol_gap_s, 0.0005)
+
+    def _read_exact_with_deadline(self, size: int, deadline: float) -> bytes:
+        buf = bytearray()
+        while len(buf) < size:
+            now = time.monotonic()
+            if now >= deadline:
+                break
+            chunk = self.ser.read(size - len(buf))
+            if chunk:
+                buf.extend(chunk)
+                continue
+            if time.monotonic() >= deadline:
+                break
+        return bytes(buf)
+
+    def _exchange(self, payload: bytes, expected_function: int) -> bytes:
         frame = payload + crc16_modbus(payload).to_bytes(2, byteorder='little')
+        deadline = time.monotonic() + max(0.01, float(getattr(self.ser, 'timeout', 0.2) or 0.2))
         with self.lock:
             self.ser.reset_input_buffer()
             self.ser.write(frame)
             self.ser.flush()
-            time.sleep(self.inter_frame_gap_s)
-            response = self.ser.read(256)
-        if len(response) < expected_min_len:
-            raise ModbusError(f'Short response: expected at least {expected_min_len} bytes, got {len(response)} bytes')
+            time.sleep(self._effective_inter_frame_gap_s())
+            header = self._read_exact_with_deadline(2, deadline)
+            if len(header) < 2:
+                raise ModbusError(f'Short response header: expected 2 bytes, got {len(header)} bytes')
+            slave_id = header[0]
+            function = header[1]
+            if function & 0x80:
+                rest = self._read_exact_with_deadline(3, deadline)
+                response = header + rest
+            elif function == 0x03:
+                byte_count_raw = self._read_exact_with_deadline(1, deadline)
+                if len(byte_count_raw) < 1:
+                    raise ModbusError('Short response: missing byte count')
+                byte_count = byte_count_raw[0]
+                rest = self._read_exact_with_deadline(byte_count + 2, deadline)
+                response = header + byte_count_raw + rest
+            elif function == 0x06:
+                rest = self._read_exact_with_deadline(4, deadline)
+                response = header + rest
+            else:
+                rest = self.ser.read(256)
+                response = header + rest
         if len(response) < 5:
-            raise ModbusError('Invalid RTU response length')
+            raise ModbusError(f'Invalid RTU response length: got {len(response)} bytes')
         data, received_crc = response[:-2], response[-2:]
         expected_crc = crc16_modbus(data).to_bytes(2, byteorder='little')
         if received_crc != expected_crc:
@@ -523,11 +567,13 @@ class MinimalModbusRTU:
             raise ModbusError(
                 f'CRC mismatch: got {received_crc.hex()}, expected {expected_crc.hex()}, frame={response.hex(" ")}{note}'
             )
-        if data[0] != self.slave_id:
-            raise ModbusError(f'Unexpected slave id: got {data[0]}, expected {self.slave_id}')
-        if data[1] & 0x80:
+        if slave_id != self.slave_id:
+            raise ModbusError(f'Unexpected slave id: got {slave_id}, expected {self.slave_id}')
+        if function != expected_function and not (function & 0x80):
+            raise ModbusError(f'Unexpected function: got 0x{function:02X}, expected 0x{expected_function:02X}')
+        if function & 0x80:
             code = data[2] if len(data) > 2 else None
-            raise ModbusError(f'Modbus exception function=0x{data[1]:02X} code={code}')
+            raise ModbusError(f'Modbus exception function=0x{function:02X} code={code}')
         return response
 
     def read_holding_registers(self, address: int, count: int) -> Tuple[List[int], bytes, bytes]:
@@ -540,7 +586,7 @@ class MinimalModbusRTU:
             count & 0xFF,
         ])
         expected_min_len = 5 + count * 2
-        response = self._exchange(payload, expected_min_len=expected_min_len)
+        response = self._exchange(payload, expected_function=0x03)
         raw_without_crc = response[:-2]
         byte_count = raw_without_crc[2]
         expected_byte_count = count * 2
@@ -561,7 +607,7 @@ class MinimalModbusRTU:
             (value >> 8) & 0xFF,
             value & 0xFF,
         ])
-        response = self._exchange(payload, expected_min_len=8)
+        response = self._exchange(payload, expected_function=0x06)
         return payload, response
 
 
@@ -809,10 +855,12 @@ class ModbusBoardTransport(BoardTransport):
     def read_once(self) -> MeasurementFrame:
         if self.client is None:
             raise RuntimeError('Transport not connected')
+        t_start = time.perf_counter()
         registers, request_payload, response = self.client.read_holding_registers(
             address=READ_START_REGISTER,
             count=READ_REGISTER_COUNT,
         )
+        transaction_duration_s = time.perf_counter() - t_start
         host_ts = time.time()
         frame = decode_modbus_measurement(registers=registers, host_ts=host_ts)
         observed_inter_read_s: Optional[float] = None
@@ -829,12 +877,16 @@ class ModbusBoardTransport(BoardTransport):
             'configured_poll_interval_s': float(self.app_state.cfg.device.poll_interval_s),
             'observed_inter_read_s': observed_inter_read_s,
             'observed_inter_read_hz': observed_inter_read_hz,
+            'transaction_duration_s': transaction_duration_s,
+            'response_bytes': len(response),
         }
         frame.interpreted.update({
             'timestamp_source': 'host_poll_receive_time',
             'configured_poll_interval_s': float(self.app_state.cfg.device.poll_interval_s),
             'observed_inter_read_s': observed_inter_read_s,
             'observed_inter_read_hz': observed_inter_read_hz,
+            'transaction_duration_s': transaction_duration_s,
+            'response_bytes': len(response),
         })
         return frame
 
@@ -1205,25 +1257,39 @@ class ActiveSendBoardTransport(BoardTransport):
 
 def acquisition_worker(app_state: AppState) -> None:
     assert app_state.transport is not None
-    poll_interval_s = float(app_state.cfg.device.poll_interval_s)
+    poll_interval_s = max(0.0, float(app_state.cfg.device.poll_interval_s))
+    next_poll_deadline = time.perf_counter()
     app_state.push_event(f'Worker started in mode={app_state.mode} parser={app_state.parse_profile}')
     while not app_state.stop_event.is_set():
         try:
+            if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
+                now = time.perf_counter()
+                if now < next_poll_deadline:
+                    time.sleep(next_poll_deadline - now)
+                cycle_start = time.perf_counter()
+            else:
+                cycle_start = time.perf_counter()
             frames = app_state.transport.read_frames()
             if not frames:
+                if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
+                    next_poll_deadline = cycle_start + poll_interval_s
                 continue
             app_state.push_frames(frames)
             if app_state.signal_logger is not None:
                 app_state.signal_logger.write_frames(frames)
             last_frame = frames[-1]
             app_state.status_text = f'Connected: last frame at {last_frame.host_ts_iso} (batch={len(frames)})'
-            if app_state.mode == 'modbus_rtu':
-                time.sleep(poll_interval_s)
+            if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
+                next_poll_deadline = cycle_start + poll_interval_s
         except TimeoutError as exc:
             app_state.status_text = f'Waiting for data: {exc}'
+            if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
+                next_poll_deadline = time.perf_counter() + poll_interval_s
         except Exception as exc:  # pragma: no cover - runtime guard
             app_state.status_text = f'Acquisition error: {exc}'
             app_state.push_event(f'Acquisition error: {exc}')
+            if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
+                next_poll_deadline = time.perf_counter() + poll_interval_s
             time.sleep(float(app_state.cfg.device.error_backoff_s))
     app_state.push_event('Worker stopped')
 
