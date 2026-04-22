@@ -11,19 +11,20 @@ ui:
   page_title: High-Speed Acquisition Instrument GUI
   host: 127.0.0.1
   port: 8088
-  refresh_interval_s: 0.2
+  refresh_interval_s: 0.1
   plot_height_px: 360
   log_height_px: 380
   event_log_height_px: 180
-  visible_log_entries: 120   # keep GUI responsive at high active-send rates
+  visible_log_entries: 80   # keep GUI responsive at high active-send rates
   visible_event_entries: 250
   max_retained_log_entries: 400
   max_retained_event_entries: 1000
-  max_plot_points: 4000
+  max_plot_points: 12000
+  max_render_plot_points: 3000
   max_ui_entry_chars: 600
   max_log_textarea_chars: 120000
   max_event_textarea_chars: 40000
-  plot_update_every_n_refreshes: 2
+  plot_update_every_n_refreshes: 1
   light_mode: true
 
 logger:
@@ -79,3 +80,4 @@ active_send:
   log_bad_frame_hex_bytes: 64
   warning_emit_interval_s: 1.0
   detailed_warning_limit: 8
+  reconstruct_timestamps_from_frequency: true
