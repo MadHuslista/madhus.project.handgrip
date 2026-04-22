@@ -15,11 +15,15 @@ ui:
   plot_height_px: 360
   log_height_px: 380
   event_log_height_px: 180
-  visible_log_entries: 0  # 0 = show all retained entries and use scrollbar
-  visible_event_entries: 0  # 0 = show all retained entries and use scrollbar
-  max_retained_log_entries: 1000
-  max_retained_event_entries: 2000
-  max_plot_points: 10000
+  visible_log_entries: 120   # keep GUI responsive at high active-send rates
+  visible_event_entries: 250
+  max_retained_log_entries: 400
+  max_retained_event_entries: 1000
+  max_plot_points: 4000
+  max_ui_entry_chars: 600
+  max_log_textarea_chars: 120000
+  max_event_textarea_chars: 40000
+  plot_update_every_n_refreshes: 2
   light_mode: true
 
 logger:
@@ -62,12 +66,16 @@ active_send:
   default_numeric_index: 0
   default_hex_word_endianness: big
   read_timeout_s: 0.5
-  read_chunk_bytes: 64
+  read_chunk_bytes: 256
+  max_read_bytes_per_cycle: 4096
+  idle_flush_window_s: 0.004
   max_binary_frame_bytes: 64  # only used by legacy non-framed parsers
-  max_buffer_bytes: 4096
-  frame_slave_id: 0  # 0 => follow device.slave_address
+  max_buffer_bytes: 16384
+  frame_slave_id: 1
   frame_function_code: 3
   frame_register_count: 11
   log_first_n_good_frames: 5
-  log_summary_every_n_good_frames: 100
+  log_summary_every_n_good_frames: 250
   log_bad_frame_hex_bytes: 64
+  warning_emit_interval_s: 1.0
+  detailed_warning_limit: 8

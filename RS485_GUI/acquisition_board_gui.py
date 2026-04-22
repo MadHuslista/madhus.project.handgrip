@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import os
 import threading
 import time
 from collections import deque
@@ -159,12 +160,88 @@ class ActiveSendStats:
     bytes_received: int = 0
     chunks_received: int = 0
     frames_ok: int = 0
+    frames_delivered: int = 0
+    frames_dropped_backlog: int = 0
     timeouts: int = 0
     crc_failures: int = 0
     header_resyncs: int = 0
     discarded_bytes: int = 0
+    buffer_overflow_events: int = 0
+    buffer_overflow_bytes: int = 0
+    max_buffer_len: int = 0
+    max_in_waiting: int = 0
+    warning_events_total: int = 0
+    warning_suppressed: int = 0
+    last_warning_emit_monotonic: float = 0.0
     last_good_frame_hex: str = ''
     last_bad_candidate_hex: str = ''
+
+
+def truncate_text(text: str, max_chars: int) -> str:
+    if max_chars <= 0 or len(text) <= max_chars:
+        return text
+    keep = max(16, max_chars - 24)
+    omitted = len(text) - keep
+    return f'{text[:keep]} ... (+{omitted} chars)'
+
+
+def build_log_text(items: List[str], separator: str, max_total_chars: int) -> str:
+    if max_total_chars <= 0:
+        return separator.join(items)
+    selected: List[str] = []
+    used = 0
+    total_items = len(items)
+    for idx, item in enumerate(items):
+        extra = len(item) + (len(separator) if selected else 0)
+        if used + extra > max_total_chars:
+            remaining = total_items - idx
+            selected.append(f'... truncated, {remaining} older entr{"y" if remaining == 1 else "ies"} hidden ...')
+            break
+        selected.append(item)
+        used += extra
+    return separator.join(selected)
+
+
+def render_raw_log_entry(frame: MeasurementFrame, max_chars: int) -> str:
+    raw = frame.raw_transport
+    diagnostics = raw.get('diagnostics', {}) if isinstance(raw.get('diagnostics'), dict) else {}
+    response_hex = raw.get('response_hex')
+    request_hex = raw.get('request_hex')
+    parts = [frame.host_ts_iso, frame.mode]
+    if response_hex:
+        parts.append(f'rx={truncate_text(str(response_hex), max(32, max_chars // 2))}')
+    if request_hex:
+        parts.append(f'tx={truncate_text(str(request_hex), max(32, max_chars // 3))}')
+    if 'frame_length_bytes' in raw:
+        parts.append(f'len={raw["frame_length_bytes"]}')
+    if diagnostics:
+        parts.append(
+            'diag='
+            f'parsed:{diagnostics.get("frames_ok", "?")},'
+            f'delivered:{diagnostics.get("frames_delivered", "?")},'
+            f'dropped:{diagnostics.get("frames_dropped_backlog", "?")},'
+            f'resync:{diagnostics.get("header_resyncs", "?")},'
+            f'discard:{diagnostics.get("discarded_bytes", "?")}'
+        )
+    if len(parts) == 2:
+        parts.append(truncate_text(json.dumps(raw, ensure_ascii=False, separators=(",", ":")), max_chars))
+    return truncate_text(' | '.join(parts), max_chars)
+
+
+def render_interpreted_log_entry(frame: MeasurementFrame, max_chars: int) -> str:
+    interpreted = frame.interpreted
+    summary = {
+        'ts': frame.host_ts_iso,
+        'mode': frame.mode,
+        'gross': interpreted.get('gross_value'),
+        'net': interpreted.get('net_value'),
+        'peak': interpreted.get('peak_value'),
+        'raw': interpreted.get('raw_value'),
+        'unit': interpreted.get('unit_label'),
+        'status': interpreted.get('status_flags'),
+        'parsed_from': interpreted.get('parsed_from'),
+    }
+    return truncate_text(json.dumps(summary, ensure_ascii=False, separators=(",", ":")), max_chars)
 
 
 class SignalFileLogger:
@@ -274,8 +351,9 @@ class AppState:
     def push_frame(self, frame: MeasurementFrame) -> None:
         with self.frame_lock:
             self.latest_frame = frame
-        self.raw_log.appendleft(json.dumps(frame.raw_transport, ensure_ascii=False, indent=2))
-        self.interpreted_log.appendleft(json.dumps(frame.interpreted, ensure_ascii=False, indent=2))
+        ui_entry_chars = int(getattr(self.cfg.ui, 'max_ui_entry_chars', 600))
+        self.raw_log.appendleft(render_raw_log_entry(frame, ui_entry_chars))
+        self.interpreted_log.appendleft(render_interpreted_log_entry(frame, ui_entry_chars))
 
         if 'raw_value' in frame.interpreted and frame.interpreted['raw_value'] is not None:
             self.plot_points.append((frame.host_ts, float(frame.interpreted['raw_value'])))
@@ -685,6 +763,105 @@ class ActiveSendBoardTransport(BoardTransport):
         self.line_buffer.clear()
         self.binary_buffer.clear()
 
+    def _maybe_log_active_warning(self, message: str) -> None:
+        stats = self.app_state.active_send_stats
+        stats.warning_events_total += 1
+        now = time.monotonic()
+        detailed_limit = int(getattr(self.app_state.cfg.active_send, 'detailed_warning_limit', 8))
+        emit_interval_s = float(getattr(self.app_state.cfg.active_send, 'warning_emit_interval_s', 1.0))
+        if stats.warning_events_total <= detailed_limit:
+            LOGGER.warning(message)
+            stats.last_warning_emit_monotonic = now
+            return
+        if now - stats.last_warning_emit_monotonic >= emit_interval_s:
+            LOGGER.warning(
+                'Active-send backlog summary: parsed_ok=%d delivered=%d dropped_backlog=%d crc_failures=%d resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d buffer_len=%d max_buffer=%d max_in_waiting=%d suppressed=%d',
+                stats.frames_ok,
+                stats.frames_delivered,
+                stats.frames_dropped_backlog,
+                stats.crc_failures,
+                stats.header_resyncs,
+                stats.buffer_overflow_events,
+                stats.buffer_overflow_bytes,
+                stats.discarded_bytes,
+                len(self.binary_buffer),
+                stats.max_buffer_len,
+                stats.max_in_waiting,
+                stats.warning_suppressed,
+            )
+            stats.last_warning_emit_monotonic = now
+            stats.warning_suppressed = 0
+            return
+        stats.warning_suppressed += 1
+
+    def _update_active_watermarks(self) -> None:
+        stats = self.app_state.active_send_stats
+        stats.max_buffer_len = max(stats.max_buffer_len, len(self.binary_buffer))
+        if self.ser is not None:
+            try:
+                stats.max_in_waiting = max(stats.max_in_waiting, int(self.ser.in_waiting))
+            except Exception:
+                pass
+
+    def _extract_modbus_response_frames(
+        self,
+        *,
+        header: bytes,
+        expected_len: int,
+        bad_hex_limit: int,
+        max_buffer_bytes: int,
+    ) -> List[bytes]:
+        stats = self.app_state.active_send_stats
+        frames: List[bytes] = []
+        if len(self.binary_buffer) > max_buffer_bytes:
+            overflow = len(self.binary_buffer) - max_buffer_bytes
+            stats.discarded_bytes += overflow
+            stats.buffer_overflow_events += 1
+            stats.buffer_overflow_bytes += overflow
+            del self.binary_buffer[:overflow]
+            self._maybe_log_active_warning(
+                f'Active-send buffer overflow: discarded {overflow} bytes to keep buffer <= {max_buffer_bytes}'
+            )
+        while True:
+            idx = self.binary_buffer.find(header)
+            if idx < 0:
+                if len(self.binary_buffer) > self.header_length - 1:
+                    discard = len(self.binary_buffer) - (self.header_length - 1)
+                    if discard > 0:
+                        stats.discarded_bytes += discard
+                        del self.binary_buffer[:discard]
+                break
+            if idx > 0:
+                prefix = bytes(self.binary_buffer[:idx])
+                preview = prefix[:bad_hex_limit].hex(' ')
+                stats.discarded_bytes += idx
+                stats.header_resyncs += 1
+                del self.binary_buffer[:idx]
+                self._maybe_log_active_warning(
+                    f'Active-send resync: discarded {idx} leading byte(s) before header {header.hex(" ")}; preview={preview}'
+                )
+            if len(self.binary_buffer) < expected_len:
+                break
+            candidate = bytes(self.binary_buffer[:expected_len])
+            expected_crc = crc16_modbus(candidate[:-2]).to_bytes(2, byteorder='little')
+            received_crc = candidate[-2:]
+            if received_crc != expected_crc:
+                stats.crc_failures += 1
+                stats.last_bad_candidate_hex = candidate[:bad_hex_limit].hex(' ')
+                del self.binary_buffer[0]
+                stats.discarded_bytes += 1
+                stats.header_resyncs += 1
+                self._maybe_log_active_warning(
+                    'Active-send CRC mismatch '
+                    f'#{stats.crc_failures}: got={received_crc.hex()} expected={expected_crc.hex()} '
+                    f'candidate_len={len(candidate)} preview={stats.last_bad_candidate_hex}'
+                )
+                continue
+            del self.binary_buffer[:expected_len]
+            frames.append(candidate)
+            self._update_active_watermarks()
+        return frames
+
     def _read_modbus_response_frame(self) -> Tuple[bytes, Dict[str, Any]]:
         if self.ser is None:
             raise RuntimeError('Transport not connected')
@@ -698,101 +875,129 @@ class ActiveSendBoardTransport(BoardTransport):
         header = bytes([slave_id, function_code, expected_byte_count])
         max_buffer_bytes = int(self.app_state.cfg.active_send.max_buffer_bytes)
         chunk_size = max(1, int(self.app_state.cfg.active_send.read_chunk_bytes))
+        max_read_bytes = max(chunk_size, int(getattr(self.app_state.cfg.active_send, 'max_read_bytes_per_cycle', max_buffer_bytes)))
+        idle_flush_s = float(getattr(self.app_state.cfg.active_send, 'idle_flush_window_s', 0.002))
         deadline = time.time() + float(self.app_state.cfg.active_send.read_timeout_s)
         stats = self.app_state.active_send_stats
         log_first_n_good = int(self.app_state.cfg.active_send.log_first_n_good_frames)
         log_summary_every_n = int(self.app_state.cfg.active_send.log_summary_every_n_good_frames)
         bad_hex_limit = int(self.app_state.cfg.active_send.log_bad_frame_hex_bytes)
+
+        latest_candidate: Optional[bytes] = None
+        frames_parsed_this_delivery = 0
         while time.time() < deadline:
-            chunk = self.ser.read(chunk_size)
+            try:
+                pending = int(self.ser.in_waiting)
+            except Exception:
+                pending = 0
+            read_size = max(chunk_size, min(max_read_bytes, pending if pending > 0 else chunk_size))
+            chunk = self.ser.read(read_size)
             if not chunk:
+                if latest_candidate is not None:
+                    break
                 continue
             stats.bytes_received += len(chunk)
             stats.chunks_received += 1
             self.binary_buffer.extend(chunk)
-            if len(self.binary_buffer) > max_buffer_bytes:
-                overflow = len(self.binary_buffer) - max_buffer_bytes
-                stats.discarded_bytes += overflow
-                del self.binary_buffer[:overflow]
-                LOGGER.warning(
-                    'Active-send buffer overflow: discarded %d bytes to keep buffer <= %d bytes',
-                    overflow,
-                    max_buffer_bytes,
+            self._update_active_watermarks()
+            frames = self._extract_modbus_response_frames(
+                header=header,
+                expected_len=expected_len,
+                bad_hex_limit=bad_hex_limit,
+                max_buffer_bytes=max_buffer_bytes,
+            )
+            if not frames:
+                continue
+            latest_candidate = frames[-1]
+            frames_parsed_this_delivery += len(frames)
+
+            flush_deadline = time.monotonic() + idle_flush_s
+            while time.monotonic() < flush_deadline:
+                try:
+                    pending = int(self.ser.in_waiting)
+                except Exception:
+                    pending = 0
+                self._update_active_watermarks()
+                if pending <= 0:
+                    break
+                chunk = self.ser.read(max(chunk_size, min(max_read_bytes, pending)))
+                if not chunk:
+                    break
+                stats.bytes_received += len(chunk)
+                stats.chunks_received += 1
+                self.binary_buffer.extend(chunk)
+                self._update_active_watermarks()
+                frames = self._extract_modbus_response_frames(
+                    header=header,
+                    expected_len=expected_len,
+                    bad_hex_limit=bad_hex_limit,
+                    max_buffer_bytes=max_buffer_bytes,
                 )
-            while True:
-                idx = self.binary_buffer.find(header)
-                if idx < 0:
-                    if len(self.binary_buffer) > self.header_length - 1:
-                        discard = len(self.binary_buffer) - (self.header_length - 1)
-                        if discard > 0:
-                            stats.discarded_bytes += discard
-                            del self.binary_buffer[:discard]
-                    break
-                if idx > 0:
-                    prefix = bytes(self.binary_buffer[:idx])
-                    preview = prefix[:bad_hex_limit].hex(' ')
-                    stats.discarded_bytes += idx
-                    stats.header_resyncs += 1
-                    LOGGER.warning(
-                        'Active-send resync: discarded %d leading byte(s) before header %s; preview=%s',
-                        idx,
-                        header.hex(' '),
-                        preview,
-                    )
-                    del self.binary_buffer[:idx]
-                if len(self.binary_buffer) < expected_len:
-                    break
-                candidate = bytes(self.binary_buffer[:expected_len])
-                expected_crc = crc16_modbus(candidate[:-2]).to_bytes(2, byteorder='little')
-                received_crc = candidate[-2:]
-                if received_crc != expected_crc:
-                    stats.crc_failures += 1
-                    stats.last_bad_candidate_hex = candidate[:bad_hex_limit].hex(' ')
-                    LOGGER.warning(
-                        'Active-send CRC mismatch #%d: got=%s expected=%s candidate_len=%d preview=%s',
-                        stats.crc_failures,
-                        received_crc.hex(),
-                        expected_crc.hex(),
-                        len(candidate),
-                        stats.last_bad_candidate_hex,
-                    )
-                    del self.binary_buffer[0]
-                    stats.discarded_bytes += 1
-                    stats.header_resyncs += 1
-                    continue
-                del self.binary_buffer[:expected_len]
-                stats.frames_ok += 1
-                stats.last_good_frame_hex = candidate.hex(' ')
-                diagnostics = {
-                    'decoder': 'modbus_rtu_response_push',
-                    'slave_id': slave_id,
-                    'function_code': function_code,
-                    'register_count': register_count,
-                    'frames_ok': stats.frames_ok,
-                    'crc_failures': stats.crc_failures,
-                    'header_resyncs': stats.header_resyncs,
-                    'discarded_bytes': stats.discarded_bytes,
-                    'bytes_received_total': stats.bytes_received,
-                    'chunks_received_total': stats.chunks_received,
-                }
-                if stats.frames_ok <= log_first_n_good:
-                    LOGGER.info('Active-send good frame #%d: len=%d hex=%s', stats.frames_ok, len(candidate), candidate.hex(' '))
-                elif log_summary_every_n > 0 and (stats.frames_ok % log_summary_every_n) == 0:
-                    LOGGER.info(
-                        'Active-send summary: frames_ok=%d bytes=%d crc_failures=%d resyncs=%d discarded=%d',
-                        stats.frames_ok,
-                        stats.bytes_received,
-                        stats.crc_failures,
-                        stats.header_resyncs,
-                        stats.discarded_bytes,
-                    )
-                return candidate, diagnostics
+                if frames:
+                    latest_candidate = frames[-1]
+                    frames_parsed_this_delivery += len(frames)
+                    flush_deadline = time.monotonic() + idle_flush_s
+
+            if latest_candidate is None:
+                continue
+
+            stats.frames_ok += frames_parsed_this_delivery
+            stats.frames_delivered += 1
+            dropped_this_delivery = max(0, frames_parsed_this_delivery - 1)
+            stats.frames_dropped_backlog += dropped_this_delivery
+            stats.last_good_frame_hex = latest_candidate.hex(' ')
+            diagnostics = {
+                'decoder': 'modbus_rtu_response_push',
+                'slave_id': slave_id,
+                'function_code': function_code,
+                'register_count': register_count,
+                'frames_ok': stats.frames_ok,
+                'frames_delivered': stats.frames_delivered,
+                'frames_dropped_backlog': stats.frames_dropped_backlog,
+                'frames_parsed_this_delivery': frames_parsed_this_delivery,
+                'frames_dropped_this_delivery': dropped_this_delivery,
+                'crc_failures': stats.crc_failures,
+                'header_resyncs': stats.header_resyncs,
+                'discarded_bytes': stats.discarded_bytes,
+                'bytes_received_total': stats.bytes_received,
+                'chunks_received_total': stats.chunks_received,
+                'buffer_len': len(self.binary_buffer),
+                'max_buffer_len': stats.max_buffer_len,
+                'max_in_waiting': stats.max_in_waiting,
+            }
+            if stats.frames_delivered <= log_first_n_good:
+                LOGGER.info(
+                    'Active-send delivered frame #%d: parsed_this=%d dropped_this=%d len=%d hex=%s',
+                    stats.frames_delivered,
+                    frames_parsed_this_delivery,
+                    dropped_this_delivery,
+                    len(latest_candidate),
+                    latest_candidate.hex(' '),
+                )
+            elif log_summary_every_n > 0 and (stats.frames_delivered % log_summary_every_n) == 0:
+                LOGGER.info(
+                    'Active-send summary: parsed_ok=%d delivered=%d dropped_backlog=%d bytes=%d crc_failures=%d resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d max_buffer=%d max_in_waiting=%d',
+                    stats.frames_ok,
+                    stats.frames_delivered,
+                    stats.frames_dropped_backlog,
+                    stats.bytes_received,
+                    stats.crc_failures,
+                    stats.header_resyncs,
+                    stats.buffer_overflow_events,
+                    stats.buffer_overflow_bytes,
+                    stats.discarded_bytes,
+                    stats.max_buffer_len,
+                    stats.max_in_waiting,
+                )
+            return latest_candidate, diagnostics
+
         stats.timeouts += 1
         raise TimeoutError(
             'Timed out waiting for active-send Modbus-style frame '
-            f'(frames_ok={stats.frames_ok}, crc_failures={stats.crc_failures}, '
+            f'(parsed_ok={stats.frames_ok}, delivered={stats.frames_delivered}, '
+            f'dropped_backlog={stats.frames_dropped_backlog}, crc_failures={stats.crc_failures}, '
             f'resyncs={stats.header_resyncs}, discarded_bytes={stats.discarded_bytes}, '
-            f'buffer_len={len(self.binary_buffer)})'
+            f'buffer_len={len(self.binary_buffer)}, max_buffer={stats.max_buffer_len})'
         )
 
     def _read_legacy_frame(self) -> bytes:
@@ -1067,7 +1272,9 @@ def load_app_config(argv: Optional[List[str]] = None) -> DictConfig:
 
 def run_app(cfg: DictConfig) -> None:
     configure_logging(cfg)
-    LOGGER.info('Loaded config:\n%s', OmegaConf.to_yaml(cfg))
+    if os.environ.get('ACQ_GUI_CONFIG_LOGGED_ONCE') != '1':
+        LOGGER.info('Loaded config:\n%s', OmegaConf.to_yaml(cfg))
+        os.environ['ACQ_GUI_CONFIG_LOGGED_ONCE'] = '1'
 
     signal_logger = SignalFileLogger(cfg)
     app_state = AppState(
@@ -1246,13 +1453,21 @@ def run_app(cfg: DictConfig) -> None:
         board_cfg_preview = ui.textarea(value='', label='Board-side values to mirror').props('readonly').classes('w-full font-mono')
         board_cfg_preview.style('height: 180px; overflow-y: auto; overflow-x: auto; white-space: pre;')
 
+    refresh_counter = {'count': 0}
+
     def refresh_ui() -> None:
-        status_label.text = f'Status: {app_state.status_text}'
-        status_label.update()
-        connection_badge.text = app_state.connection_label
-        connection_badge.update()
+        refresh_counter['count'] += 1
+        status_text = f'Status: {app_state.status_text}'
+        if status_label.text != status_text:
+            status_label.text = status_text
+            status_label.update()
+        if connection_badge.text != app_state.connection_label:
+            connection_badge.text = app_state.connection_label
+            connection_badge.update()
         visible_log_entries = int(cfg.ui.visible_log_entries)
         visible_event_entries = int(cfg.ui.visible_event_entries)
+        max_log_chars = int(getattr(cfg.ui, 'max_log_textarea_chars', 120000))
+        max_event_chars = int(getattr(cfg.ui, 'max_event_textarea_chars', 40000))
 
         raw_log_items = list(app_state.raw_log)
         interpreted_log_items = list(app_state.interpreted_log)
@@ -1263,20 +1478,29 @@ def run_app(cfg: DictConfig) -> None:
         if visible_event_entries > 0:
             event_log_items = event_log_items[:visible_event_entries]
 
-        raw_log_area.value = '\n\n'.join(raw_log_items)
-        raw_log_area.update()
-        interpreted_log_area.value = '\n\n'.join(interpreted_log_items)
-        interpreted_log_area.update()
-        event_log_area.value = '\n'.join(event_log_items)
-        event_log_area.update()
-        plot.figure = build_plot_figure(app_state)
-        plot.update()
+        raw_text = build_log_text(raw_log_items, '\n', max_log_chars)
+        interpreted_text = build_log_text(interpreted_log_items, '\n', max_log_chars)
+        event_text = build_log_text(event_log_items, '\n', max_event_chars)
+        if raw_log_area.value != raw_text:
+            raw_log_area.value = raw_text
+            raw_log_area.update()
+        if interpreted_log_area.value != interpreted_text:
+            interpreted_log_area.value = interpreted_text
+            interpreted_log_area.update()
+        if event_log_area.value != event_text:
+            event_log_area.value = event_text
+            event_log_area.update()
+
+        plot_stride = max(1, int(getattr(cfg.ui, 'plot_update_every_n_refreshes', 1)))
+        if (refresh_counter['count'] % plot_stride) == 0:
+            plot.figure = build_plot_figure(app_state)
+            plot.update()
 
         baud_code = next((k for k, v in BAUD_CODE_TO_VALUE.items() if v == int(baud_select.value)), None)
         parity_code = {'N': 0, 'E': 1, 'O': 2}.get(str(parity_select.value), '?')
         stop_code = int(stopbits_select.value)
         active_code = int(active_freq_select.value)
-        board_cfg_preview.value = (
+        board_cfg_text = (
             f'500.Ar = {int(address_input.value)}\n'
             f'501.br = {baud_code}  # {int(baud_select.value)} bps\n'
             f'502.Vb = {parity_code}  # {parity_select.value}\n'
@@ -1284,7 +1508,9 @@ def run_app(cfg: DictConfig) -> None:
             f'504.AS = {0 if str(mode_select.value) == "modbus_rtu" else 1}\n'
             f'505.AF = {active_code}  # {ACTIVE_SEND_FREQ_CODE_TO_VALUE[active_code]} Hz\n'
         )
-        board_cfg_preview.update()
+        if board_cfg_preview.value != board_cfg_text:
+            board_cfg_preview.value = board_cfg_text
+            board_cfg_preview.update()
 
     ui.timer(interval=float(cfg.ui.refresh_interval_s), callback=refresh_ui)
 
