@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import binascii
 import csv
 import json
 import logging
-import queue
 import threading
 import time
 from collections import deque
@@ -156,6 +154,17 @@ class PortInfo:
     score: int = 0
 
 
+@dataclass
+class ActiveSendStats:
+    bytes_received: int = 0
+    chunks_received: int = 0
+    frames_ok: int = 0
+    timeouts: int = 0
+    crc_failures: int = 0
+    header_resyncs: int = 0
+    discarded_bytes: int = 0
+    last_good_frame_hex: str = ''
+    last_bad_candidate_hex: str = ''
 
 
 class SignalFileLogger:
@@ -254,6 +263,7 @@ class AppState:
     parse_numeric_index: int = 0
     hex_word_endianness: str = 'big'
     signal_logger: Optional[SignalFileLogger] = None
+    active_send_stats: ActiveSendStats = field(default_factory=ActiveSendStats)
 
     def push_event(self, message: str) -> None:
         ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
@@ -505,7 +515,6 @@ def parse_active_send_frame(
         interpreted['line'] = stripped.decode('ascii', errors='replace')
         return raw_transport, interpreted
 
-    # default: line_ascii_auto
     text = stripped.decode('ascii', errors='replace')
     interpreted['line'] = text
     candidates: List[float] = []
@@ -525,6 +534,56 @@ def parse_active_send_frame(
     else:
         interpreted['parsed_from'] = 'no_numeric_candidate_found'
     return raw_transport, interpreted
+
+
+def extract_registers_from_modbus_response(frame: bytes, slave_id: int, function_code: int, register_count: int) -> List[int]:
+    expected_byte_count = register_count * 2
+    expected_len = 3 + expected_byte_count + 2
+    if len(frame) != expected_len:
+        raise ValueError(f'Unexpected frame length: got {len(frame)}, expected {expected_len}')
+    if frame[0] != slave_id:
+        raise ValueError(f'Unexpected slave id in active-send frame: got {frame[0]}, expected {slave_id}')
+    if frame[1] != function_code:
+        raise ValueError(f'Unexpected function code in active-send frame: got 0x{frame[1]:02X}, expected 0x{function_code:02X}')
+    if frame[2] != expected_byte_count:
+        raise ValueError(f'Unexpected byte count in active-send frame: got {frame[2]}, expected {expected_byte_count}')
+    received_crc = frame[-2:]
+    expected_crc = crc16_modbus(frame[:-2]).to_bytes(2, byteorder='little')
+    if received_crc != expected_crc:
+        raise ValueError(
+            f'CRC mismatch in active-send frame: got {received_crc.hex()}, expected {expected_crc.hex()}, frame={frame.hex(" ")}'
+        )
+    data = frame[3:-2]
+    regs: List[int] = []
+    for i in range(0, len(data), 2):
+        regs.append((data[i] << 8) | data[i + 1])
+    return regs
+
+
+def decode_active_send_modbus_response(
+    frame: bytes,
+    host_ts: float,
+    slave_id: int,
+    function_code: int,
+    register_count: int,
+    diagnostics: Dict[str, Any],
+) -> MeasurementFrame:
+    registers = extract_registers_from_modbus_response(frame, slave_id, function_code, register_count)
+    decoded = decode_modbus_measurement(registers=registers, host_ts=host_ts)
+    decoded.mode = 'active_send'
+    decoded.raw_transport = {
+        'response_hex': frame.hex(' '),
+        'frame_length_bytes': len(frame),
+        'frame_type': 'modbus_rtu_response_push',
+        'registers': {f'400{idx + 1:02d}': reg for idx, reg in enumerate(registers, start=0)},
+        'diagnostics': diagnostics,
+    }
+    decoded.interpreted.update({
+        'parser_profile': 'modbus_rtu_response_11regs',
+        'parsed_from': 'active_send_binary_modbus_response',
+        'timestamp_source': 'host_receive_time',
+    })
+    return decoded
 
 
 # ---------- Transport abstractions ----------
@@ -600,6 +659,8 @@ class ActiveSendBoardTransport(BoardTransport):
         self.app_state = app_state
         self.ser: Optional[serial.Serial] = None
         self.line_buffer = bytearray()
+        self.binary_buffer = bytearray()
+        self.header_length = 3
 
     def connect(self) -> None:
         cfg = self.app_state.serial_cfg
@@ -611,14 +672,130 @@ class ActiveSendBoardTransport(BoardTransport):
             stopbits=cfg.stopbits,
             timeout=cfg.timeout,
         )
+        self.binary_buffer.clear()
+        self.line_buffer.clear()
+        self.app_state.active_send_stats = ActiveSendStats()
+        if self.ser is not None:
+            self.ser.reset_input_buffer()
 
     def disconnect(self) -> None:
         if self.ser and self.ser.is_open:
             self.ser.close()
         self.ser = None
         self.line_buffer.clear()
+        self.binary_buffer.clear()
 
-    def _read_frame(self) -> bytes:
+    def _read_modbus_response_frame(self) -> Tuple[bytes, Dict[str, Any]]:
+        if self.ser is None:
+            raise RuntimeError('Transport not connected')
+        slave_id = int(getattr(self.app_state.cfg.active_send, 'frame_slave_id', 0) or 0)
+        if slave_id <= 0:
+            slave_id = int(self.app_state.cfg.device.slave_address)
+        function_code = int(self.app_state.cfg.active_send.frame_function_code)
+        register_count = int(self.app_state.cfg.active_send.frame_register_count)
+        expected_byte_count = register_count * 2
+        expected_len = 3 + expected_byte_count + 2
+        header = bytes([slave_id, function_code, expected_byte_count])
+        max_buffer_bytes = int(self.app_state.cfg.active_send.max_buffer_bytes)
+        chunk_size = max(1, int(self.app_state.cfg.active_send.read_chunk_bytes))
+        deadline = time.time() + float(self.app_state.cfg.active_send.read_timeout_s)
+        stats = self.app_state.active_send_stats
+        log_first_n_good = int(self.app_state.cfg.active_send.log_first_n_good_frames)
+        log_summary_every_n = int(self.app_state.cfg.active_send.log_summary_every_n_good_frames)
+        bad_hex_limit = int(self.app_state.cfg.active_send.log_bad_frame_hex_bytes)
+        while time.time() < deadline:
+            chunk = self.ser.read(chunk_size)
+            if not chunk:
+                continue
+            stats.bytes_received += len(chunk)
+            stats.chunks_received += 1
+            self.binary_buffer.extend(chunk)
+            if len(self.binary_buffer) > max_buffer_bytes:
+                overflow = len(self.binary_buffer) - max_buffer_bytes
+                stats.discarded_bytes += overflow
+                del self.binary_buffer[:overflow]
+                LOGGER.warning(
+                    'Active-send buffer overflow: discarded %d bytes to keep buffer <= %d bytes',
+                    overflow,
+                    max_buffer_bytes,
+                )
+            while True:
+                idx = self.binary_buffer.find(header)
+                if idx < 0:
+                    if len(self.binary_buffer) > self.header_length - 1:
+                        discard = len(self.binary_buffer) - (self.header_length - 1)
+                        if discard > 0:
+                            stats.discarded_bytes += discard
+                            del self.binary_buffer[:discard]
+                    break
+                if idx > 0:
+                    prefix = bytes(self.binary_buffer[:idx])
+                    preview = prefix[:bad_hex_limit].hex(' ')
+                    stats.discarded_bytes += idx
+                    stats.header_resyncs += 1
+                    LOGGER.warning(
+                        'Active-send resync: discarded %d leading byte(s) before header %s; preview=%s',
+                        idx,
+                        header.hex(' '),
+                        preview,
+                    )
+                    del self.binary_buffer[:idx]
+                if len(self.binary_buffer) < expected_len:
+                    break
+                candidate = bytes(self.binary_buffer[:expected_len])
+                expected_crc = crc16_modbus(candidate[:-2]).to_bytes(2, byteorder='little')
+                received_crc = candidate[-2:]
+                if received_crc != expected_crc:
+                    stats.crc_failures += 1
+                    stats.last_bad_candidate_hex = candidate[:bad_hex_limit].hex(' ')
+                    LOGGER.warning(
+                        'Active-send CRC mismatch #%d: got=%s expected=%s candidate_len=%d preview=%s',
+                        stats.crc_failures,
+                        received_crc.hex(),
+                        expected_crc.hex(),
+                        len(candidate),
+                        stats.last_bad_candidate_hex,
+                    )
+                    del self.binary_buffer[0]
+                    stats.discarded_bytes += 1
+                    stats.header_resyncs += 1
+                    continue
+                del self.binary_buffer[:expected_len]
+                stats.frames_ok += 1
+                stats.last_good_frame_hex = candidate.hex(' ')
+                diagnostics = {
+                    'decoder': 'modbus_rtu_response_push',
+                    'slave_id': slave_id,
+                    'function_code': function_code,
+                    'register_count': register_count,
+                    'frames_ok': stats.frames_ok,
+                    'crc_failures': stats.crc_failures,
+                    'header_resyncs': stats.header_resyncs,
+                    'discarded_bytes': stats.discarded_bytes,
+                    'bytes_received_total': stats.bytes_received,
+                    'chunks_received_total': stats.chunks_received,
+                }
+                if stats.frames_ok <= log_first_n_good:
+                    LOGGER.info('Active-send good frame #%d: len=%d hex=%s', stats.frames_ok, len(candidate), candidate.hex(' '))
+                elif log_summary_every_n > 0 and (stats.frames_ok % log_summary_every_n) == 0:
+                    LOGGER.info(
+                        'Active-send summary: frames_ok=%d bytes=%d crc_failures=%d resyncs=%d discarded=%d',
+                        stats.frames_ok,
+                        stats.bytes_received,
+                        stats.crc_failures,
+                        stats.header_resyncs,
+                        stats.discarded_bytes,
+                    )
+                return candidate, diagnostics
+        stats.timeouts += 1
+        raise TimeoutError(
+            'Timed out waiting for active-send Modbus-style frame '
+            f'(frames_ok={stats.frames_ok}, crc_failures={stats.crc_failures}, '
+            f'resyncs={stats.header_resyncs}, discarded_bytes={stats.discarded_bytes}, '
+            f'buffer_len={len(self.binary_buffer)})'
+        )
+
+    def _read_legacy_frame(self) -> bytes:
         if self.ser is None:
             raise RuntimeError('Transport not connected')
         deadline = time.time() + float(self.app_state.cfg.active_send.read_timeout_s)
@@ -626,9 +803,9 @@ class ActiveSendBoardTransport(BoardTransport):
             chunk = self.ser.read(max(1, int(self.app_state.cfg.active_send.read_chunk_bytes)))
             if not chunk:
                 continue
-            if b'\n' in chunk or b'\r' in chunk:
+            if b"\n" in chunk or b"\r" in chunk:
                 self.line_buffer.extend(chunk)
-                for sep in (b'\n', b'\r'):
+                for sep in (b"\n", b"\r"):
                     if sep in self.line_buffer:
                         line, _, rest = self.line_buffer.partition(sep)
                         self.line_buffer = bytearray(rest)
@@ -647,14 +824,28 @@ class ActiveSendBoardTransport(BoardTransport):
         raise TimeoutError('Timed out waiting for active-send frame')
 
     def read_once(self) -> MeasurementFrame:
-        payload = self._read_frame()
+        host_ts = time.time()
+        profile = self.app_state.parse_profile
+        slave_id = int(getattr(self.app_state.cfg.active_send, 'frame_slave_id', 0) or 0)
+        if slave_id <= 0:
+            slave_id = int(self.app_state.cfg.device.slave_address)
+        if profile == 'modbus_rtu_response_11regs':
+            frame_bytes, diagnostics = self._read_modbus_response_frame()
+            return decode_active_send_modbus_response(
+                frame=frame_bytes,
+                host_ts=host_ts,
+                slave_id=slave_id,
+                function_code=int(self.app_state.cfg.active_send.frame_function_code),
+                register_count=int(self.app_state.cfg.active_send.frame_register_count),
+                diagnostics=diagnostics,
+            )
+        payload = self._read_legacy_frame()
         raw_transport, interpreted = parse_active_send_frame(
             payload=payload,
-            profile=self.app_state.parse_profile,
+            profile=profile,
             numeric_index=self.app_state.parse_numeric_index,
             hex_word_endianness=self.app_state.hex_word_endianness,
         )
-        host_ts = time.time()
         interpreted.update(
             {
                 'timestamp_host_iso': datetime.fromtimestamp(host_ts).isoformat(timespec='milliseconds'),
@@ -678,7 +869,7 @@ class ActiveSendBoardTransport(BoardTransport):
 def acquisition_worker(app_state: AppState) -> None:
     assert app_state.transport is not None
     poll_interval_s = float(app_state.cfg.device.poll_interval_s)
-    app_state.push_event(f'Worker started in mode={app_state.mode}')
+    app_state.push_event(f'Worker started in mode={app_state.mode} parser={app_state.parse_profile}')
     while not app_state.stop_event.is_set():
         try:
             frame = app_state.transport.read_once()
@@ -728,10 +919,26 @@ def build_plot_figure(app_state: AppState) -> go.Figure:
 
 def configure_logging(cfg: DictConfig) -> None:
     level = getattr(logging, str(cfg.app.log_level).upper(), logging.INFO)
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
-    )
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.setLevel(level)
+
+    formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(name)s | %(message)s')
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(level)
+    stream_handler.setFormatter(formatter)
+    root.addHandler(stream_handler)
+
+    if bool(getattr(cfg.logger, 'debug_log_to_file', False)):
+        log_dir = Path(str(cfg.logger.directory)).expanduser()
+        log_dir.mkdir(parents=True, exist_ok=True)
+        debug_log_path = log_dir / str(cfg.logger.debug_log_filename)
+        file_mode = 'a' if str(cfg.logger.write_mode).lower() == 'append' else 'w'
+        file_handler = logging.FileHandler(debug_log_path, mode=file_mode, encoding='utf-8')
+        file_handler.setLevel(level)
+        file_handler.setFormatter(formatter)
+        root.addHandler(file_handler)
 
 
 
@@ -796,6 +1003,15 @@ def connect_state(app_state: AppState) -> None:
     app_state.push_event(
         f'Connected to {app_state.serial_cfg.port} baud={app_state.serial_cfg.baudrate} parity={app_state.serial_cfg.parity} stopbits={app_state.serial_cfg.stopbits} mode={mode}'
     )
+    if mode == 'active_send':
+        app_state.push_event(
+            'Active-send decoder config: '
+            f'parser={app_state.parse_profile} chunk_bytes={int(app_state.cfg.active_send.read_chunk_bytes)} '
+            f'timeout_s={float(app_state.cfg.active_send.read_timeout_s)} '
+            f'frame_slave_id={int(getattr(app_state.cfg.active_send, "frame_slave_id", 0) or 0) or int(app_state.cfg.device.slave_address)} '
+            f'function=0x{int(app_state.cfg.active_send.frame_function_code):02X} '
+            f'registers={int(app_state.cfg.active_send.frame_register_count)}'
+        )
     if app_state.signal_logger is not None and app_state.signal_logger.enabled:
         app_state.push_event(
             f'Signal logger active dir={app_state.signal_logger.directory} mode={app_state.signal_logger.write_mode} files=({app_state.signal_logger.raw_path.name}, {app_state.signal_logger.interpreted_path.name}, {app_state.signal_logger.gui_path.name})'
@@ -928,6 +1144,7 @@ def run_app(cfg: DictConfig) -> None:
             )
             parser_select = ui.select(
                 options={
+                    'modbus_rtu_response_11regs': 'modbus_rtu_response_11regs',
                     'line_ascii_auto': 'line_ascii_auto',
                     'line_ascii_float': 'line_ascii_float',
                     'line_ascii_csv': 'line_ascii_csv',
