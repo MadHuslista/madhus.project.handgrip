@@ -182,6 +182,50 @@ class ActiveSendStats:
     last_bad_candidate_hex: str = ''
 
 
+
+@dataclass
+class SamplingStats:
+    window_dts_s: Deque[float] = field(default_factory=lambda: deque(maxlen=128))
+    received_samples: int = 0
+    dropped_samples_max_rate: int = 0
+    last_processed_ts: Optional[float] = None
+
+    def reset_window(self, window_size: int) -> None:
+        self.window_dts_s = deque(maxlen=max(2, int(window_size)))
+        self.last_processed_ts = None
+
+    def reset_all(self, window_size: int) -> None:
+        self.window_dts_s = deque(maxlen=max(2, int(window_size)))
+        self.received_samples = 0
+        self.dropped_samples_max_rate = 0
+        self.last_processed_ts = None
+
+    def record_processed_frame(self, host_ts: float) -> None:
+        if self.last_processed_ts is not None:
+            dt = host_ts - self.last_processed_ts
+            if dt > 0:
+                self.window_dts_s.append(dt)
+        self.last_processed_ts = host_ts
+
+    def mean_hz(self) -> Optional[float]:
+        if not self.window_dts_s:
+            return None
+        rates = [1.0 / dt for dt in self.window_dts_s if dt > 0]
+        if not rates:
+            return None
+        return sum(rates) / len(rates)
+
+    def std_hz(self) -> Optional[float]:
+        if not self.window_dts_s:
+            return None
+        rates = [1.0 / dt for dt in self.window_dts_s if dt > 0]
+        if len(rates) < 2:
+            return 0.0 if rates else None
+        mean = sum(rates) / len(rates)
+        variance = sum((rate - mean) ** 2 for rate in rates) / len(rates)
+        return math.sqrt(variance)
+
+
 def truncate_text(text: str, max_chars: int) -> str:
     if max_chars <= 0 or len(text) <= max_chars:
         return text
@@ -209,25 +253,221 @@ def build_log_text(items: List[str], separator: str, max_total_chars: int) -> st
 
 
 
+SIGNAL_DEFINITIONS: Dict[str, Dict[str, str]] = {
+    'gross_value': {
+        'label': 'gross_value',
+        'description': 'Gross interpreted engineering value after applying the board decimal scaling.',
+        'unit_hint': 'Board-selected engineering unit.',
+        'source': 'gross_raw_value + decimal_code',
+    },
+    'net_value': {
+        'label': 'net_value',
+        'description': 'Net interpreted engineering value after tare/zero handling and decimal scaling.',
+        'unit_hint': 'Board-selected engineering unit.',
+        'source': 'net_raw_value + decimal_code',
+    },
+    'peak_value': {
+        'label': 'peak_value',
+        'description': 'Peak interpreted engineering value after decimal scaling.',
+        'unit_hint': 'Board-selected engineering unit.',
+        'source': 'peak_raw_value + decimal_code',
+    },
+    'gross_raw_value': {
+        'label': 'gross_raw_value',
+        'description': 'Raw signed 32-bit gross reading straight from the Modbus register pair.',
+        'unit_hint': 'Raw ADC-domain board value; decimal scaling not applied.',
+        'source': 'registers 40001/40002',
+    },
+    'net_raw_value': {
+        'label': 'net_raw_value',
+        'description': 'Raw signed 32-bit net reading straight from the Modbus register pair.',
+        'unit_hint': 'Raw ADC-domain board value; decimal scaling not applied.',
+        'source': 'registers 40003/40004',
+    },
+    'peak_raw_value': {
+        'label': 'peak_raw_value',
+        'description': 'Raw signed 32-bit peak reading straight from the Modbus register pair.',
+        'unit_hint': 'Raw ADC-domain board value; decimal scaling not applied.',
+        'source': 'registers 40005/40006',
+    },
+    'internal_code_raw_value': {
+        'label': 'internal_code_raw_value',
+        'description': 'Raw internal ADC code / internal measurement code exposed by the board.',
+        'unit_hint': 'Internal board code; not an engineering unit.',
+        'source': 'registers 40007/40008',
+    },
+    'raw_value': {
+        'label': 'raw_value',
+        'description': 'Compatibility alias for the primary raw plotted value. In Modbus decoding it maps to gross_raw_value.',
+        'unit_hint': 'Depends on parser profile; often raw board integer.',
+        'source': 'parser-dependent primary numeric output',
+    },
+    'gross_raw': {
+        'label': 'gross_raw',
+        'description': 'Alias of gross_raw_value.',
+        'unit_hint': 'Raw ADC-domain board value; decimal scaling not applied.',
+        'source': 'gross_raw_value',
+    },
+    'net_raw': {
+        'label': 'net_raw',
+        'description': 'Alias of net_raw_value.',
+        'unit_hint': 'Raw ADC-domain board value; decimal scaling not applied.',
+        'source': 'net_raw_value',
+    },
+    'peak_raw': {
+        'label': 'peak_raw',
+        'description': 'Alias of peak_raw_value.',
+        'unit_hint': 'Raw ADC-domain board value; decimal scaling not applied.',
+        'source': 'peak_raw_value',
+    },
+}
+
+COMMAND_METADATA: List[Dict[str, str]] = [
+    {
+        'name': 'tare_temp',
+        'title': 'Temporary tare',
+        'description': 'Applies tare without retaining it across power loss.',
+        'manual_equivalent': 'tPEEL / long-press tare key',
+    },
+    {
+        'name': 'tare_save',
+        'title': 'Saved tare',
+        'description': 'Applies tare and preserves it across power cycles.',
+        'manual_equivalent': 'SPEEL',
+    },
+    {
+        'name': 'cancel_tare',
+        'title': 'Cancel tare',
+        'description': 'Clears the currently stored tare value.',
+        'manual_equivalent': 'CPEEL',
+    },
+    {
+        'name': 'zero_temp',
+        'title': 'Temporary zero',
+        'description': 'Performs a temporary zero action without saving it after power loss.',
+        'manual_equivalent': 'SZEro / long-press zero key',
+    },
+    {
+        'name': 'zero_save',
+        'title': 'Saved zero calibration',
+        'description': 'Stores the current zero point persistently.',
+        'manual_equivalent': 'CZEro / 200.ZE',
+    },
+    {
+        'name': 'clear_peak',
+        'title': 'Clear peak',
+        'description': 'Clears the captured peak value.',
+        'manual_equivalent': 'REMAX / long-press ENT',
+    },
+    {
+        'name': 'calibration',
+        'title': 'Enter calibration flow',
+        'description': 'Triggers the calibration command pathway exposed by the board.',
+        'manual_equivalent': 'C2.CAL / calibration interface',
+    },
+    {
+        'name': 'factory_reset',
+        'title': 'Factory reset',
+        'description': 'Restores factory-default parameters on the instrument.',
+        'manual_equivalent': '116.FA Restore factory settings',
+    },
+]
+
+
 def get_plot_signal_key(cfg: DictConfig) -> str:
-    return str(getattr(cfg.ui, 'plot_signal_key', 'raw_value'))
+    default_key = str(getattr(cfg.ui, 'default_plot_signal_key', getattr(cfg.ui, 'plot_signal_key', 'net_value')))
+    return str(getattr(cfg.ui, 'plot_signal_key', default_key))
 
 
 def get_plot_signal_label(cfg: DictConfig) -> str:
-    return str(getattr(cfg.ui, 'plot_signal_label', get_plot_signal_key(cfg)))
-
-
-def extract_plot_value(frame: MeasurementFrame, cfg: DictConfig) -> Optional[float]:
     signal_key = get_plot_signal_key(cfg)
+    meta = SIGNAL_DEFINITIONS.get(signal_key, {})
+    return str(meta.get('label', getattr(cfg.ui, 'plot_signal_label', signal_key)))
+
+
+def get_plot_signal_options() -> Dict[str, str]:
+    return {key: meta.get('label', key) for key, meta in SIGNAL_DEFINITIONS.items()}
+
+
+def extract_signal_value(frame: MeasurementFrame, signal_key: str) -> Optional[float]:
     value = frame.interpreted.get(signal_key)
-    if value is None and signal_key != 'raw_value':
-        value = frame.interpreted.get('raw_value')
     if value is None:
         return None
     try:
         return float(value)
     except Exception:
         return None
+
+
+def extract_plot_value(frame: MeasurementFrame, cfg: DictConfig) -> Optional[float]:
+    return extract_signal_value(frame, get_plot_signal_key(cfg))
+
+
+def get_target_sampling_rate_hz(cfg: DictConfig, mode: str) -> Optional[float]:
+    if mode == 'active_send':
+        return float(ACTIVE_SEND_FREQ_CODE_TO_VALUE.get(int(cfg.device.active_send_frequency_code), 0) or 0)
+    poll_interval_s = float(getattr(cfg.device, 'poll_interval_s', 0.0) or 0.0)
+    if poll_interval_s <= 0:
+        return None
+    return 1.0 / poll_interval_s
+
+
+def format_rate(value: Optional[float]) -> str:
+    if value is None:
+        return 'n/a'
+    if value <= 0:
+        return 'unlimited'
+    return f'{value:.3f} Hz'
+
+
+def build_signal_metadata_text(app_state: 'AppState') -> str:
+    signal_key = get_plot_signal_key(app_state.cfg)
+    meta = SIGNAL_DEFINITIONS.get(
+        signal_key,
+        {'label': signal_key, 'description': 'No metadata available.', 'unit_hint': 'n/a', 'source': signal_key},
+    )
+    with app_state.frame_lock:
+        latest_frame = app_state.latest_frame
+        recent_frames = list(app_state.frame_history)
+    selected_values = [extract_signal_value(frame, signal_key) for frame in recent_frames]
+    selected_values = [value for value in selected_values if value is not None]
+    if selected_values:
+        value_min = min(selected_values)
+        value_max = max(selected_values)
+        value_range_line = f'Visible range: min={value_min:.6g}, max={value_max:.6g}'
+    else:
+        value_range_line = 'Visible range: n/a'
+
+    lines = [
+        f'Selected signal: {meta.get("label", signal_key)}',
+        f'Description: {meta.get("description", "n/a")}',
+        f'Calculation/source: {meta.get("source", signal_key)}',
+        f'Unit hint: {meta.get("unit_hint", "n/a")}',
+        value_range_line,
+    ]
+    if latest_frame is None:
+        lines.append('Latest frame metadata: no samples received yet.')
+        return '\n'.join(lines)
+
+    interpreted = latest_frame.interpreted
+    status_flags = interpreted.get('status_flags')
+    if isinstance(status_flags, list):
+        status_text = ', '.join(str(flag) for flag in status_flags) if status_flags else 'none'
+    else:
+        status_text = str(status_flags)
+
+    lines.extend([
+        'Latest frame metadata:',
+        f'  decimal_code: {interpreted.get("decimal_code", "n/a")}  -> board decimal-point code used for engineering-value scaling',
+        f'  unit_code: {interpreted.get("unit_code", "n/a")}  -> board engineering-unit code',
+        f'  unit_label: {interpreted.get("unit_label", "n/a")}  -> decoded engineering unit label',
+        f'  status_word: {interpreted.get("status_word", "n/a")}  -> raw board status bitfield',
+        f'  status_flags: {status_text}  -> decoded status bits / relay / alarm states',
+        f'  parsed_from: {interpreted.get("parsed_from", "n/a")}  -> decoder path used to build the plotted value',
+        f'  timestamp_source: {interpreted.get("timestamp_source", "n/a")}  -> origin of the assigned sample timestamp',
+        f'  timestamp_host_iso: {interpreted.get("timestamp_host_iso", "n/a")}  -> latest assigned host timestamp',
+    ])
+    return '\n'.join(lines)
 
 
 def downsample_points_for_render(points: List[Tuple[float, float]], factor: int, max_points: int) -> List[Tuple[float, float]]:
@@ -418,12 +658,13 @@ class AppState:
     raw_log: Deque[str] = field(default_factory=lambda: deque(maxlen=500))
     interpreted_log: Deque[str] = field(default_factory=lambda: deque(maxlen=500))
     event_log: Deque[str] = field(default_factory=lambda: deque(maxlen=500))
-    plot_points: Deque[Tuple[float, float]] = field(default_factory=lambda: deque(maxlen=5000))
+    frame_history: Deque[MeasurementFrame] = field(default_factory=lambda: deque(maxlen=5000))
     parse_profile: str = 'line_ascii_auto'
     parse_numeric_index: int = 0
     hex_word_endianness: str = 'big'
     signal_logger: Optional[SignalFileLogger] = None
     active_send_stats: ActiveSendStats = field(default_factory=ActiveSendStats)
+    sampling_stats: SamplingStats = field(default_factory=SamplingStats)
 
     def push_event(self, message: str) -> None:
         ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
@@ -433,20 +674,50 @@ class AppState:
             self.signal_logger.write_event(line)
         LOGGER.info(message)
 
+    def clear_signal_trace(self, *, reason: str, reset_session_counters: bool = False) -> None:
+        window_size = int(getattr(self.cfg.ui, 'sampling_rate_window_samples', 128))
+        with self.frame_lock:
+            self.latest_frame = None if not self.frame_history else self.latest_frame
+            self.frame_history.clear()
+        if reset_session_counters:
+            self.sampling_stats.reset_all(window_size)
+        else:
+            self.sampling_stats.reset_window(window_size)
+        self.push_event(f'Cleared plotted signal trace ({reason})')
+
+    def filter_frames_by_max_sampling_rate(self, frames: List[MeasurementFrame]) -> List[MeasurementFrame]:
+        if not frames:
+            return frames
+        self.sampling_stats.received_samples += len(frames)
+        max_hz = float(getattr(self.cfg.ui, 'max_signal_samples_per_second', 0.0) or 0.0)
+        if max_hz <= 0:
+            return frames
+        min_dt = 1.0 / max_hz
+        kept: List[MeasurementFrame] = []
+        last_ts = self.sampling_stats.last_processed_ts
+        dropped = 0
+        for frame in frames:
+            if last_ts is None or (frame.host_ts - last_ts) >= min_dt:
+                kept.append(frame)
+                last_ts = frame.host_ts
+            else:
+                dropped += 1
+        self.sampling_stats.dropped_samples_max_rate += dropped
+        return kept
+
     def push_frames(self, frames: List[MeasurementFrame]) -> None:
         if not frames:
             return
         latest_frame = frames[-1]
         with self.frame_lock:
             self.latest_frame = latest_frame
+            for frame in frames:
+                self.frame_history.append(frame)
         ui_entry_chars = int(getattr(self.cfg.ui, 'max_ui_entry_chars', 600))
         self.raw_log.appendleft(render_raw_log_entry(latest_frame, ui_entry_chars))
         self.interpreted_log.appendleft(render_interpreted_log_entry(latest_frame, ui_entry_chars))
-
         for frame in frames:
-            plot_value = extract_plot_value(frame, self.cfg)
-            if plot_value is not None:
-                self.plot_points.append((frame.host_ts, plot_value))
+            self.sampling_stats.record_processed_frame(frame.host_ts)
 
     def push_frame(self, frame: MeasurementFrame) -> None:
         self.push_frames([frame])
@@ -660,6 +931,9 @@ def decode_modbus_measurement(registers: List[int], host_ts: float) -> Measureme
         'gross_raw_value': gross_raw,
         'net_raw_value': net_raw,
         'peak_raw_value': peak_raw,
+        'gross_raw': gross_raw,
+        'net_raw': net_raw,
+        'peak_raw': peak_raw,
         'internal_code_raw_value': internal_raw,
         'gross_value': apply_decimal(gross_raw, decimal_code),
         'net_value': apply_decimal(net_raw, decimal_code),
@@ -1274,11 +1548,20 @@ def acquisition_worker(app_state: AppState) -> None:
                 if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
                     next_poll_deadline = cycle_start + poll_interval_s
                 continue
-            app_state.push_frames(frames)
+            processed_frames = app_state.filter_frames_by_max_sampling_rate(frames)
+            if not processed_frames:
+                app_state.status_text = (
+                    f'Connected: batch filtered by max signal rate '
+                    f'(received={len(frames)}, dropped_total={app_state.sampling_stats.dropped_samples_max_rate})'
+                )
+                if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
+                    next_poll_deadline = cycle_start + poll_interval_s
+                continue
+            app_state.push_frames(processed_frames)
             if app_state.signal_logger is not None:
-                app_state.signal_logger.write_frames(frames)
-            last_frame = frames[-1]
-            app_state.status_text = f'Connected: last frame at {last_frame.host_ts_iso} (batch={len(frames)})'
+                app_state.signal_logger.write_frames(processed_frames)
+            last_frame = processed_frames[-1]
+            app_state.status_text = f'Connected: last frame at {last_frame.host_ts_iso} (kept={len(processed_frames)}/{len(frames)})'
             if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
                 next_poll_deadline = cycle_start + poll_interval_s
         except TimeoutError as exc:
@@ -1298,8 +1581,14 @@ def acquisition_worker(app_state: AppState) -> None:
 
 def build_plot_figure(app_state: AppState) -> go.Figure:
     fig = go.Figure()
+    signal_key = get_plot_signal_key(app_state.cfg)
     with app_state.frame_lock:
-        points = list(app_state.plot_points)
+        frames = list(app_state.frame_history)
+    points: List[Tuple[float, float]] = []
+    for frame in frames:
+        value = extract_signal_value(frame, signal_key)
+        if value is not None:
+            points.append((frame.host_ts, value))
     render_points = points
     max_render_points = int(getattr(app_state.cfg.ui, 'max_render_plot_points', 0))
     if app_state.mode == 'active_send':
@@ -1323,16 +1612,20 @@ def build_plot_figure(app_state: AppState) -> go.Figure:
                 y=ys,
                 mode='lines',
                 name=get_plot_signal_label(app_state.cfg),
+                hovertemplate='t=%{x:.6f}s<br>%{fullData.name}=%{y:.6g}<extra></extra>',
             )
         )
     fig.update_layout(
-        title='Live signal (host-relative time vs selected interpreted value)',
+        title=f'Live signal ({get_plot_signal_label(app_state.cfg)})',
         xaxis_title='Seconds since current plot window start',
         yaxis_title=get_plot_signal_label(app_state.cfg),
         margin=dict(l=20, r=20, t=40, b=20),
         height=int(app_state.cfg.ui.plot_height_px),
         template='plotly_white',
+        uirevision='plot-x-window',
     )
+    fig.update_xaxes(uirevision='plot-x-window')
+    fig.update_yaxes(uirevision=f'plot-y:{signal_key}')
     return fig
 
 
@@ -1397,6 +1690,12 @@ def disconnect_state(app_state: AppState) -> None:
 def connect_state(app_state: AppState) -> None:
     disconnect_state(app_state)
     app_state.stop_event = threading.Event()
+    window_size = int(getattr(app_state.cfg.ui, 'sampling_rate_window_samples', 128))
+    app_state.sampling_stats.reset_all(window_size)
+    if bool(getattr(app_state.cfg.ui, 'clear_plot_on_connect', True)):
+        app_state.clear_signal_trace(reason='new connection', reset_session_counters=True)
+    else:
+        app_state.sampling_stats.reset_all(window_size)
     mode = app_state.mode
     if mode == 'modbus_rtu':
         app_state.transport = ModbusBoardTransport(app_state)
@@ -1434,8 +1733,16 @@ def connect_state(app_state: AppState) -> None:
             f'registers={int(app_state.cfg.active_send.frame_register_count)}'
         )
     if app_state.signal_logger is not None and app_state.signal_logger.enabled:
+        debug_log_path = None
+        if bool(getattr(app_state.cfg.logger, 'debug_log_to_file', False)):
+            debug_log_path = (app_state.signal_logger.directory / str(app_state.cfg.logger.debug_log_filename)).resolve()
         app_state.push_event(
-            f'Signal logger active dir={app_state.signal_logger.directory} mode={app_state.signal_logger.write_mode} files=({app_state.signal_logger.raw_path.name}, {app_state.signal_logger.interpreted_path.name}, {app_state.signal_logger.gui_path.name}, {app_state.signal_logger.event_path.name})'
+            'Logger paths: '
+            f'raw={app_state.signal_logger.raw_path.resolve()} | '
+            f'interpreted={app_state.signal_logger.interpreted_path.resolve()} | '
+            f'gui={app_state.signal_logger.gui_path.resolve()} | '
+            f'events={app_state.signal_logger.event_path.resolve()}'
+            + (f' | debug={debug_log_path}' if debug_log_path is not None else '')
         )
 
 
@@ -1500,7 +1807,7 @@ def run_app(cfg: DictConfig) -> None:
         raw_log=deque(maxlen=int(cfg.ui.max_retained_log_entries)),
         interpreted_log=deque(maxlen=int(cfg.ui.max_retained_log_entries)),
         event_log=deque(maxlen=int(cfg.ui.max_retained_event_entries)),
-        plot_points=deque(maxlen=int(cfg.ui.max_plot_points)),
+        frame_history=deque(maxlen=int(cfg.ui.max_plot_points)),
         parse_profile=str(cfg.active_send.default_parser_profile),
         parse_numeric_index=int(cfg.active_send.default_numeric_index),
         hex_word_endianness=str(cfg.active_send.default_hex_word_endianness),
@@ -1611,6 +1918,8 @@ def run_app(cfg: DictConfig) -> None:
                 app_state.hex_word_endianness = str(hex_endianness_select.value)
                 cfg.device.slave_address = int(address_input.value)
                 cfg.device.active_send_frequency_code = int(active_freq_select.value)
+                cfg.ui.plot_signal_key = str(signal_select.value)
+                cfg.ui.clear_plot_on_connect = bool(clear_on_connect_switch.value)
 
             def on_connect() -> None:
                 sync_form_to_state()
@@ -1625,30 +1934,44 @@ def run_app(cfg: DictConfig) -> None:
             ui.button('Disconnect', on_click=on_disconnect)
             connection_badge = ui.badge(app_state.connection_label)
 
-    with ui.card().classes('w-full mt-4'):
-        ui.label('Modbus actions / commands').classes('text-lg font-semibold')
-        ui.label('These write to register 40012. They only work when the board is in Modbus RTU mode (500.AS=0).').classes('text-sm')
-        with ui.row().classes('gap-2 flex-wrap'):
-            for command_name in COMMANDS:
-                def _make_handler(name: str):
-                    def _handler() -> None:
-                        if app_state.transport is None:
-                            ui.notify('Not connected')
-                            return
-                        try:
-                            app_state.transport.send_command(name)
-                            ui.notify(f'Sent {name}')
-                        except Exception as exc:
-                            app_state.push_event(f'Command failed: {name} -> {exc}')
-                            ui.notify(f'Command failed: {exc}', color='negative')
-                    return _handler
-
-                ui.button(command_name, on_click=_make_handler(command_name))
+        ui.separator().classes('mt-4 mb-2')
+        ui.label('Current effective board-side communication settings you should mirror on the instrument').classes('text-lg font-semibold')
+        board_cfg_preview = ui.textarea(value='', label='Board-side values to mirror').props('readonly').classes('w-full font-mono')
+        board_cfg_preview.style('height: 180px; overflow-y: auto; overflow-x: auto; white-space: pre;')
 
     with ui.card().classes('w-full mt-4'):
         ui.label('Live signal').classes('text-lg font-semibold')
-        plot = ui.plotly(build_plot_figure(app_state)).classes('w-full')
+        with ui.row().classes('w-full items-center gap-3 flex-wrap'):
+            signal_select = ui.select(
+                options=get_plot_signal_options(),
+                value=get_plot_signal_key(cfg),
+                label='Plotted signal',
+            )
+            clear_trace_button = ui.button('Clear signal trace')
+            clear_on_connect_switch = ui.switch(
+                'Clear signal trace on new connection',
+                value=bool(getattr(cfg.ui, 'clear_plot_on_connect', True)),
+            )
+        with ui.row().classes('w-full gap-4 items-start mt-2 no-wrap'):
+            with ui.card().classes('w-3/4'):
+                plot = ui.plotly(build_plot_figure(app_state)).classes('w-full')
+            with ui.column().classes('w-1/4 gap-3'):
+                with ui.card().classes('w-full'):
+                    ui.label('Measured sampling rate').classes('text-base font-semibold')
+                    sampling_rate_label = ui.label('').classes('w-full text-sm')
+                    sampling_rate_label.style('white-space: pre-wrap;')
+                with ui.expansion('Selected signal info').classes('w-full'):
+                    signal_metadata_label = ui.label('').classes('w-full text-xs font-mono')
+                    signal_metadata_label.style('white-space: pre-wrap;')
 
+        def on_signal_change() -> None:
+            cfg.ui.plot_signal_key = str(signal_select.value)
+            plot.figure = build_plot_figure(app_state)
+            plot.update()
+
+        signal_select.on('update:model-value', lambda _event: on_signal_change())
+        clear_trace_button.on('click', lambda _event: app_state.clear_signal_trace(reason='manual clear button', reset_session_counters=False))
+        clear_on_connect_switch.on('update:model-value', lambda _event: setattr(cfg.ui, 'clear_plot_on_connect', bool(clear_on_connect_switch.value)))
     with ui.row().classes('w-full gap-4 items-start mt-4 no-wrap'):
         with ui.card().classes('w-1/2'):
             ui.label('Raw transport / raw interpreted').classes('text-lg font-semibold')
@@ -1664,10 +1987,31 @@ def run_app(cfg: DictConfig) -> None:
         event_log_area = ui.textarea(value='', label='Events').props('readonly').classes('w-full font-mono')
         event_log_area.style(f'height: {cfg.ui.event_log_height_px}px; overflow-y: auto; overflow-x: auto; white-space: pre;')
 
-    with ui.card().classes('w-full mt-4'):
-        ui.label('Current effective board-side communication settings you should mirror on the instrument').classes('text-lg font-semibold')
-        board_cfg_preview = ui.textarea(value='', label='Board-side values to mirror').props('readonly').classes('w-full font-mono')
-        board_cfg_preview.style('height: 180px; overflow-y: auto; overflow-x: auto; white-space: pre;')
+    with ui.expansion('Advanced Actions').classes('w-full mt-4') as advanced_actions_expansion:
+        ui.label('These actions write to register 40012 and are only available in Modbus RTU mode (500.AS=0).').classes('text-sm')
+        advanced_action_buttons: List[Any] = []
+        with ui.column().classes('w-full gap-2'):
+            for command_meta in COMMAND_METADATA:
+                def _make_handler(name: str):
+                    def _handler() -> None:
+                        if app_state.transport is None:
+                            ui.notify('Not connected')
+                            return
+                        try:
+                            app_state.transport.send_command(name)
+                            ui.notify(f'Sent {name}')
+                        except Exception as exc:
+                            app_state.push_event(f'Command failed: {name} -> {exc}')
+                            ui.notify(f'Command failed: {exc}', color='negative')
+                    return _handler
+
+                with ui.row().classes('w-full items-start gap-4 no-wrap'):
+                    button = ui.button(command_meta['title'], on_click=_make_handler(command_meta['name']))
+                    advanced_action_buttons.append(button)
+                    desc = ui.label(
+                        f"{command_meta['description']}\nEquivalent manual action: {command_meta['manual_equivalent']}"
+                    ).classes('text-sm')
+                    desc.style('white-space: pre-wrap;')
 
     refresh_counter = {'count': 0}
 
@@ -1708,9 +2052,33 @@ def run_app(cfg: DictConfig) -> None:
             event_log_area.update()
 
         plot_stride = max(1, int(getattr(cfg.ui, 'plot_update_every_n_refreshes', 1)))
+        if signal_select.value != get_plot_signal_key(cfg):
+            signal_select.value = get_plot_signal_key(cfg)
+            signal_select.update()
         if (refresh_counter['count'] % plot_stride) == 0:
             plot.figure = build_plot_figure(app_state)
             plot.update()
+
+        sampling_stats = app_state.sampling_stats
+        target_hz = get_target_sampling_rate_hz(cfg, str(mode_select.value))
+        max_hz = float(getattr(cfg.ui, 'max_signal_samples_per_second', 0.0) or 0.0)
+        sampling_text = (
+            f'Target sampling rate: {format_rate(target_hz)}\n'
+            f'Measured mean rate: {format_rate(sampling_stats.mean_hz())}\n'
+            f'Measured std-dev: {format_rate(sampling_stats.std_hz())}\n'
+            f'Window size: last {len(sampling_stats.window_dts_s)} intervals / configured {int(getattr(cfg.ui, "sampling_rate_window_samples", 128))}\n'
+            f'Samples received: {sampling_stats.received_samples}\n'
+            f'Samples dropped by max-rate limiter: {sampling_stats.dropped_samples_max_rate}\n'
+            f'Configured max processed sampling rate: {format_rate(max_hz)}'
+        )
+        if sampling_rate_label.text != sampling_text:
+            sampling_rate_label.text = sampling_text
+            sampling_rate_label.update()
+
+        signal_metadata_text = build_signal_metadata_text(app_state)
+        if signal_metadata_label.text != signal_metadata_text:
+            signal_metadata_label.text = signal_metadata_text
+            signal_metadata_label.update()
 
         baud_code = next((k for k, v in BAUD_CODE_TO_VALUE.items() if v == int(baud_select.value)), None)
         parity_code = {'N': 0, 'E': 1, 'O': 2}.get(str(parity_select.value), '?')
@@ -1727,6 +2095,23 @@ def run_app(cfg: DictConfig) -> None:
         if board_cfg_preview.value != board_cfg_text:
             board_cfg_preview.value = board_cfg_text
             board_cfg_preview.update()
+
+        advanced_enabled = str(mode_select.value) == 'modbus_rtu'
+        try:
+            if advanced_enabled:
+                advanced_actions_expansion.enable()
+            else:
+                advanced_actions_expansion.disable()
+        except Exception:
+            pass
+        for button in advanced_action_buttons:
+            try:
+                if advanced_enabled and app_state.connected:
+                    button.enable()
+                else:
+                    button.disable()
+            except Exception:
+                pass
 
     ui.timer(interval=float(cfg.ui.refresh_interval_s), callback=refresh_ui)
 
