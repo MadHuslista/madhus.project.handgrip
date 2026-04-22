@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import math
 import os
 import threading
 import time
@@ -161,7 +162,6 @@ class ActiveSendStats:
     chunks_received: int = 0
     frames_ok: int = 0
     frames_delivered: int = 0
-    batches_delivered: int = 0
     frames_dropped_backlog: int = 0
     timeouts: int = 0
     crc_failures: int = 0
@@ -203,6 +203,45 @@ def build_log_text(items: List[str], separator: str, max_total_chars: int) -> st
     return separator.join(selected)
 
 
+
+
+def get_plot_signal_key(cfg: DictConfig) -> str:
+    return str(getattr(cfg.ui, 'plot_signal_key', 'raw_value'))
+
+
+def get_plot_signal_label(cfg: DictConfig) -> str:
+    return str(getattr(cfg.ui, 'plot_signal_label', get_plot_signal_key(cfg)))
+
+
+def extract_plot_value(frame: MeasurementFrame, cfg: DictConfig) -> Optional[float]:
+    signal_key = get_plot_signal_key(cfg)
+    value = frame.interpreted.get(signal_key)
+    if value is None and signal_key != 'raw_value':
+        value = frame.interpreted.get('raw_value')
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def downsample_points_for_render(points: List[Tuple[float, float]], factor: int, max_points: int) -> List[Tuple[float, float]]:
+    if not points:
+        return points
+    original_last = points[-1]
+    factor = max(1, int(factor))
+    if factor > 1:
+        points = points[::factor]
+        if points[-1] != original_last:
+            points.append(original_last)
+    if max_points > 0 and len(points) > max_points:
+        stride = max(1, math.ceil(len(points) / max_points))
+        points = points[::stride]
+        if points[-1] != original_last:
+            points.append(original_last)
+    return points
+
 def render_raw_log_entry(frame: MeasurementFrame, max_chars: int) -> str:
     raw = frame.raw_transport
     diagnostics = raw.get('diagnostics', {}) if isinstance(raw.get('diagnostics'), dict) else {}
@@ -220,7 +259,6 @@ def render_raw_log_entry(frame: MeasurementFrame, max_chars: int) -> str:
             'diag='
             f'parsed:{diagnostics.get("frames_ok", "?")},'
             f'delivered:{diagnostics.get("frames_delivered", "?")},'
-            f'batches:{diagnostics.get("batches_delivered", "?")},'
             f'dropped:{diagnostics.get("frames_dropped_backlog", "?")},'
             f'resync:{diagnostics.get("header_resyncs", "?")},'
             f'discard:{diagnostics.get("discarded_bytes", "?")}'
@@ -248,6 +286,7 @@ def render_interpreted_log_entry(frame: MeasurementFrame, max_chars: int) -> str
 
 class SignalFileLogger:
     def __init__(self, cfg: DictConfig):
+        self.cfg = cfg
         self.enabled = bool(getattr(cfg.logger, 'enabled', False))
         self.directory = Path(str(cfg.logger.directory)).expanduser()
         self.write_mode = str(cfg.logger.write_mode).lower()
@@ -278,7 +317,7 @@ class SignalFileLogger:
         self._gui_writer = csv.writer(self._gui_fp)
 
         if self.write_mode == 'overwrite' or not gui_file_preexisting:
-            self._gui_writer.writerow(['host_ts_epoch_s', 'host_ts_iso', 'mode', 'raw_value'])
+            self._gui_writer.writerow(['host_ts_epoch_s', 'host_ts_iso', 'mode', 'raw_value', 'plot_signal_key', 'plot_value'])
             self._gui_fp.flush()
 
     def close(self) -> None:
@@ -299,6 +338,7 @@ class SignalFileLogger:
             if self._raw_fp is None or self._interpreted_fp is None or self._gui_fp is None or self._gui_writer is None:
                 raise RuntimeError('SignalFileLogger.write_frames called before open()')
 
+            plot_signal_key = get_plot_signal_key(self.cfg)
             for frame in frames:
                 raw_record = {
                     'host_ts_epoch_s': frame.host_ts,
@@ -316,7 +356,8 @@ class SignalFileLogger:
                 self._interpreted_fp.write(json.dumps(interpreted_record, ensure_ascii=False) + '\n')
 
                 raw_value = frame.interpreted.get('raw_value')
-                self._gui_writer.writerow([frame.host_ts, frame.host_ts_iso, frame.mode, raw_value])
+                plot_value = extract_plot_value(frame, self.cfg)
+                self._gui_writer.writerow([frame.host_ts, frame.host_ts_iso, frame.mode, raw_value, plot_signal_key, plot_value])
 
             self._raw_fp.flush()
             self._interpreted_fp.flush()
@@ -324,6 +365,7 @@ class SignalFileLogger:
 
     def write_frame(self, frame: MeasurementFrame) -> None:
         self.write_frames([frame])
+
 
 @dataclass
 class AppState:
@@ -354,29 +396,23 @@ class AppState:
         self.event_log.appendleft(line)
         LOGGER.info(message)
 
-    def push_frames(self, frames: List[MeasurementFrame], latest_only_for_logs: bool = False) -> None:
+    def push_frames(self, frames: List[MeasurementFrame]) -> None:
         if not frames:
             return
-
         latest_frame = frames[-1]
         with self.frame_lock:
             self.latest_frame = latest_frame
+        ui_entry_chars = int(getattr(self.cfg.ui, 'max_ui_entry_chars', 600))
+        self.raw_log.appendleft(render_raw_log_entry(latest_frame, ui_entry_chars))
+        self.interpreted_log.appendleft(render_interpreted_log_entry(latest_frame, ui_entry_chars))
 
         for frame in frames:
-            if 'raw_value' in frame.interpreted and frame.interpreted['raw_value'] is not None:
-                self.plot_points.append((frame.host_ts, float(frame.interpreted['raw_value'])))
-
-        if self.signal_logger is not None:
-            self.signal_logger.write_frames(frames)
-
-        ui_entry_chars = int(getattr(self.cfg.ui, 'max_ui_entry_chars', 600))
-        frames_for_logs = [latest_frame] if latest_only_for_logs else frames
-        for frame in reversed(frames_for_logs):
-            self.raw_log.appendleft(render_raw_log_entry(frame, ui_entry_chars))
-            self.interpreted_log.appendleft(render_interpreted_log_entry(frame, ui_entry_chars))
+            plot_value = extract_plot_value(frame, self.cfg)
+            if plot_value is not None:
+                self.plot_points.append((frame.host_ts, plot_value))
 
     def push_frame(self, frame: MeasurementFrame) -> None:
-        self.push_frames([frame], latest_only_for_logs=False)
+        self.push_frames([frame])
 
 
 # ---------- Port discovery ----------
@@ -443,8 +479,12 @@ class MinimalModbusRTU:
         data, received_crc = response[:-2], response[-2:]
         expected_crc = crc16_modbus(data).to_bytes(2, byteorder='little')
         if received_crc != expected_crc:
+            note = ''
+            active_header = bytes([self.slave_id, 0x03, READ_REGISTER_COUNT * 2])
+            if response.count(active_header) >= 2:
+                note = ' (response looks like repeated active-send push frames; verify board setting 504.AS=0 for Modbus RTU)'
             raise ModbusError(
-                f'CRC mismatch: got {received_crc.hex()}, expected {expected_crc.hex()}, frame={response.hex(" ")}'
+                f'CRC mismatch: got {received_crc.hex()}, expected {expected_crc.hex()}, frame={response.hex(" ")}{note}'
             )
         if data[0] != self.slave_id:
             raise ModbusError(f'Unexpected slave id: got {data[0]}, expected {self.slave_id}')
@@ -573,7 +613,7 @@ def parse_active_send_frame(
     interpreted: Dict[str, Any] = {
         'parser_profile': profile,
         'raw_value': None,
-        'timestamp_source': timestamp_source,
+        'timestamp_source': diagnostics.get('timestamp_source', 'host_receive_time'),
     }
 
     stripped = payload.strip()
@@ -662,7 +702,6 @@ def decode_active_send_modbus_response(
     function_code: int,
     register_count: int,
     diagnostics: Dict[str, Any],
-    timestamp_source: str = 'host_receive_time',
 ) -> MeasurementFrame:
     registers = extract_registers_from_modbus_response(frame, slave_id, function_code, register_count)
     decoded = decode_modbus_measurement(registers=registers, host_ts=host_ts)
@@ -677,7 +716,7 @@ def decode_active_send_modbus_response(
     decoded.interpreted.update({
         'parser_profile': 'modbus_rtu_response_11regs',
         'parsed_from': 'active_send_binary_modbus_response',
-        'timestamp_source': 'host_receive_time',
+        'timestamp_source': diagnostics.get('timestamp_source', 'host_receive_time'),
     })
     return decoded
 
@@ -691,74 +730,11 @@ class BoardTransport:
     def disconnect(self) -> None:
         raise NotImplementedError
 
-    def _build_legacy_measurement_frame(self) -> MeasurementFrame:
-        host_ts = time.time()
-        payload = self._read_legacy_frame()
-        raw_transport, interpreted = parse_active_send_frame(
-            payload=payload,
-            profile=self.app_state.parse_profile,
-            numeric_index=self.app_state.parse_numeric_index,
-            hex_word_endianness=self.app_state.hex_word_endianness,
-        )
-        interpreted.update(
-            {
-                'timestamp_host_iso': datetime.fromtimestamp(host_ts).isoformat(timespec='milliseconds'),
-                'timestamp_host_epoch_s': host_ts,
-            }
-        )
-        return MeasurementFrame(
-            host_ts=host_ts,
-            host_ts_iso=datetime.fromtimestamp(host_ts).isoformat(timespec='milliseconds'),
-            mode='active_send',
-            raw_transport=raw_transport,
-            interpreted=interpreted,
-        )
-
-    def read_many(self) -> List[MeasurementFrame]:
-        profile = self.app_state.parse_profile
-        slave_id = int(getattr(self.app_state.cfg.active_send, 'frame_slave_id', 0) or 0)
-        if slave_id <= 0:
-            slave_id = int(self.app_state.cfg.device.slave_address)
-        if profile == 'modbus_rtu_response_11regs':
-            frame_batch, diagnostics = self._read_modbus_response_frames_batch()
-            hz = int(ACTIVE_SEND_FREQ_CODE_TO_VALUE.get(int(self.app_state.cfg.device.active_send_frequency_code), 1) or 1)
-            reconstruct_timestamps = bool(getattr(self.app_state.cfg.active_send, 'reconstruct_timestamps_from_frequency', True))
-            batch_size = len(frame_batch)
-            end_ts = time.time()
-            if reconstruct_timestamps and batch_size > 1 and hz > 0:
-                start_ts = end_ts - ((batch_size - 1) / float(hz))
-                timestamps = [start_ts + (idx / float(hz)) for idx in range(batch_size)]
-                timestamp_source = 'reconstructed_from_active_send_frequency'
-            else:
-                timestamps = [end_ts for _ in frame_batch]
-                timestamp_source = 'host_receive_time'
-
-            frames: List[MeasurementFrame] = []
-            for idx, (frame_bytes, sample_ts) in enumerate(zip(frame_batch, timestamps), start=1):
-                frame_diagnostics = dict(diagnostics)
-                frame_diagnostics.update({
-                    'batch_index': idx,
-                    'batch_size': batch_size,
-                    'active_send_frequency_hz': hz,
-                    'delivery_epoch_s': end_ts,
-                })
-                frames.append(
-                    decode_active_send_modbus_response(
-                        frame=frame_bytes,
-                        host_ts=sample_ts,
-                        slave_id=slave_id,
-                        function_code=int(self.app_state.cfg.active_send.frame_function_code),
-                        register_count=int(self.app_state.cfg.active_send.frame_register_count),
-                        diagnostics=frame_diagnostics,
-                        timestamp_source=timestamp_source,
-                    )
-                )
-            return frames
-
-        return [self._build_legacy_measurement_frame()]
-
     def read_once(self) -> MeasurementFrame:
-        return self.read_many()[-1]
+        raise NotImplementedError
+
+    def read_frames(self) -> List[MeasurementFrame]:
+        return [self.read_once()]
 
     def send_command(self, command_name: str) -> None:
         raise NotImplementedError
@@ -859,10 +835,9 @@ class ActiveSendBoardTransport(BoardTransport):
             return
         if now - stats.last_warning_emit_monotonic >= emit_interval_s:
             LOGGER.warning(
-                'Active-send backlog summary: parsed_ok=%d delivered=%d dropped_backlog=%d crc_failures=%d resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d buffer_len=%d max_buffer=%d max_in_waiting=%d suppressed=%d',
+                'Active-send backlog summary: parsed_ok=%d batches=%d crc_failures=%d resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d buffer_len=%d max_buffer=%d max_in_waiting=%d suppressed=%d',
                 stats.frames_ok,
                 stats.frames_delivered,
-                stats.frames_dropped_backlog,
                 stats.crc_failures,
                 stats.header_resyncs,
                 stats.buffer_overflow_events,
@@ -960,15 +935,25 @@ class ActiveSendBoardTransport(BoardTransport):
         max_buffer_bytes = int(self.app_state.cfg.active_send.max_buffer_bytes)
         chunk_size = max(1, int(self.app_state.cfg.active_send.read_chunk_bytes))
         max_read_bytes = max(chunk_size, int(getattr(self.app_state.cfg.active_send, 'max_read_bytes_per_cycle', max_buffer_bytes)))
-        idle_flush_s = float(getattr(self.app_state.cfg.active_send, 'idle_flush_window_s', 0.002))
-        deadline = time.time() + float(self.app_state.cfg.active_send.read_timeout_s)
+        read_timeout_s = float(self.app_state.cfg.active_send.read_timeout_s)
+        delivery_window_s = float(getattr(self.app_state.cfg.active_send, 'delivery_window_s', 0.05))
+        max_frames_per_delivery = max(1, int(getattr(self.app_state.cfg.active_send, 'max_frames_per_delivery', 64)))
         stats = self.app_state.active_send_stats
         log_first_n_good = int(self.app_state.cfg.active_send.log_first_n_good_frames)
         log_summary_every_n = int(self.app_state.cfg.active_send.log_summary_every_n_good_frames)
         bad_hex_limit = int(self.app_state.cfg.active_send.log_bad_frame_hex_bytes)
 
-        batch_frames: List[bytes] = []
-        while time.time() < deadline:
+        frames_batch: List[bytes] = []
+        batch_started_monotonic: Optional[float] = None
+        read_deadline = time.monotonic() + read_timeout_s
+
+        while time.monotonic() < read_deadline:
+            if frames_batch and batch_started_monotonic is not None:
+                if (time.monotonic() - batch_started_monotonic) >= delivery_window_s:
+                    break
+                if len(frames_batch) >= max_frames_per_delivery:
+                    break
+
             try:
                 pending = int(self.ser.in_waiting)
             except Exception:
@@ -976,9 +961,13 @@ class ActiveSendBoardTransport(BoardTransport):
             read_size = max(chunk_size, min(max_read_bytes, pending if pending > 0 else chunk_size))
             chunk = self.ser.read(read_size)
             if not chunk:
-                if batch_frames:
+                if frames_batch:
                     break
                 continue
+
+            if batch_started_monotonic is None:
+                batch_started_monotonic = time.monotonic()
+
             stats.bytes_received += len(chunk)
             stats.chunks_received += 1
             self.binary_buffer.extend(chunk)
@@ -990,95 +979,69 @@ class ActiveSendBoardTransport(BoardTransport):
                 max_buffer_bytes=max_buffer_bytes,
             )
             if frames:
-                batch_frames.extend(frames)
-
-            flush_deadline = time.monotonic() + idle_flush_s
-            while time.monotonic() < flush_deadline:
-                try:
-                    pending = int(self.ser.in_waiting)
-                except Exception:
-                    pending = 0
-                self._update_active_watermarks()
-                if pending <= 0:
+                frames_batch.extend(frames)
+                if len(frames_batch) >= max_frames_per_delivery:
                     break
-                chunk = self.ser.read(max(chunk_size, min(max_read_bytes, pending)))
-                if not chunk:
-                    break
-                stats.bytes_received += len(chunk)
-                stats.chunks_received += 1
-                self.binary_buffer.extend(chunk)
-                self._update_active_watermarks()
-                frames = self._extract_modbus_response_frames(
-                    header=header,
-                    expected_len=expected_len,
-                    bad_hex_limit=bad_hex_limit,
-                    max_buffer_bytes=max_buffer_bytes,
-                )
-                if frames:
-                    batch_frames.extend(frames)
-                    flush_deadline = time.monotonic() + idle_flush_s
 
-            if not batch_frames:
-                continue
+        if not frames_batch:
+            stats.timeouts += 1
+            raise TimeoutError(
+                'Timed out waiting for active-send Modbus-style frame batch '
+                f'(parsed_ok={stats.frames_ok}, batches={stats.frames_delivered}, '
+                f'crc_failures={stats.crc_failures}, resyncs={stats.header_resyncs}, '
+                f'discarded_bytes={stats.discarded_bytes}, buffer_len={len(self.binary_buffer)}, '
+                f'max_buffer={stats.max_buffer_len})'
+            )
 
-            batch_size = len(batch_frames)
-            stats.frames_ok += batch_size
-            stats.frames_delivered += batch_size
-            stats.batches_delivered += 1
-            stats.last_good_frame_hex = batch_frames[-1].hex(' ')
-            diagnostics = {
-                'decoder': 'modbus_rtu_response_push',
-                'slave_id': slave_id,
-                'function_code': function_code,
-                'register_count': register_count,
-                'frames_ok': stats.frames_ok,
-                'frames_delivered': stats.frames_delivered,
-                'batches_delivered': stats.batches_delivered,
-                'frames_dropped_backlog': stats.frames_dropped_backlog,
-                'batch_frames_delivered': batch_size,
-                'crc_failures': stats.crc_failures,
-                'header_resyncs': stats.header_resyncs,
-                'discarded_bytes': stats.discarded_bytes,
-                'bytes_received_total': stats.bytes_received,
-                'chunks_received_total': stats.chunks_received,
-                'buffer_len': len(self.binary_buffer),
-                'max_buffer_len': stats.max_buffer_len,
-                'max_in_waiting': stats.max_in_waiting,
-            }
-            if stats.batches_delivered <= log_first_n_good:
-                LOGGER.info(
-                    'Active-send batch #%d: frames=%d first_hex=%s last_hex=%s',
-                    stats.batches_delivered,
-                    batch_size,
-                    batch_frames[0].hex(' '),
-                    batch_frames[-1].hex(' '),
-                )
-            elif log_summary_every_n > 0 and (stats.frames_ok % log_summary_every_n) < batch_size:
-                LOGGER.info(
-                    'Active-send summary: frames_ok=%d delivered=%d batches=%d dropped_backlog=%d bytes=%d crc_failures=%d resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d max_buffer=%d max_in_waiting=%d',
-                    stats.frames_ok,
-                    stats.frames_delivered,
-                    stats.batches_delivered,
-                    stats.frames_dropped_backlog,
-                    stats.bytes_received,
-                    stats.crc_failures,
-                    stats.header_resyncs,
-                    stats.buffer_overflow_events,
-                    stats.buffer_overflow_bytes,
-                    stats.discarded_bytes,
-                    stats.max_buffer_len,
-                    stats.max_in_waiting,
-                )
-            return batch_frames, diagnostics
+        stats.frames_ok += len(frames_batch)
+        stats.frames_delivered += 1
+        stats.last_good_frame_hex = frames_batch[-1].hex(' ')
 
-        stats.timeouts += 1
-        raise TimeoutError(
-            'Timed out waiting for active-send Modbus-style frame '
-            f'(parsed_ok={stats.frames_ok}, delivered={stats.frames_delivered}, '
-            f'batches={stats.batches_delivered}, dropped_backlog={stats.frames_dropped_backlog}, crc_failures={stats.crc_failures}, '
-            f'resyncs={stats.header_resyncs}, discarded_bytes={stats.discarded_bytes}, '
-            f'buffer_len={len(self.binary_buffer)}, max_buffer={stats.max_buffer_len})'
-        )
+        diagnostics = {
+            'decoder': 'modbus_rtu_response_push_batch',
+            'slave_id': slave_id,
+            'function_code': function_code,
+            'register_count': register_count,
+            'frames_ok': stats.frames_ok,
+            'batches_delivered': stats.frames_delivered,
+            'frames_in_batch': len(frames_batch),
+            'crc_failures': stats.crc_failures,
+            'header_resyncs': stats.header_resyncs,
+            'discarded_bytes': stats.discarded_bytes,
+            'bytes_received_total': stats.bytes_received,
+            'chunks_received_total': stats.chunks_received,
+            'buffer_len': len(self.binary_buffer),
+            'max_buffer_len': stats.max_buffer_len,
+            'max_in_waiting': stats.max_in_waiting,
+            'delivery_window_s': delivery_window_s,
+            'max_frames_per_delivery': max_frames_per_delivery,
+        }
+
+        if stats.frames_delivered <= log_first_n_good:
+            LOGGER.info(
+                'Active-send delivered batch #%d: frames=%d first_len=%d last_len=%d last_hex=%s',
+                stats.frames_delivered,
+                len(frames_batch),
+                len(frames_batch[0]),
+                len(frames_batch[-1]),
+                frames_batch[-1].hex(' '),
+            )
+        elif log_summary_every_n > 0 and (stats.frames_delivered % log_summary_every_n) == 0:
+            LOGGER.info(
+                'Active-send summary: parsed_ok=%d batches=%d bytes=%d crc_failures=%d resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d max_buffer=%d max_in_waiting=%d',
+                stats.frames_ok,
+                stats.frames_delivered,
+                stats.bytes_received,
+                stats.crc_failures,
+                stats.header_resyncs,
+                stats.buffer_overflow_events,
+                stats.buffer_overflow_bytes,
+                stats.discarded_bytes,
+                stats.max_buffer_len,
+                stats.max_in_waiting,
+            )
+
+        return frames_batch, diagnostics
 
     def _read_legacy_frame(self) -> bytes:
         if self.ser is None:
@@ -1108,6 +1071,44 @@ class ActiveSendBoardTransport(BoardTransport):
             return data
         raise TimeoutError('Timed out waiting for active-send frame')
 
+    def read_frames(self) -> List[MeasurementFrame]:
+        profile = self.app_state.parse_profile
+        slave_id = int(getattr(self.app_state.cfg.active_send, 'frame_slave_id', 0) or 0)
+        if slave_id <= 0:
+            slave_id = int(self.app_state.cfg.device.slave_address)
+        if profile == 'modbus_rtu_response_11regs':
+            frame_bytes_batch, diagnostics = self._read_modbus_response_frames_batch()
+            freq_hz = ACTIVE_SEND_FREQ_CODE_TO_VALUE.get(int(self.app_state.cfg.device.active_send_frequency_code), 0)
+            batch_end_ts = time.time()
+            frames: List[MeasurementFrame] = []
+            if freq_hz > 0:
+                dt = 1.0 / float(freq_hz)
+                batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
+            else:
+                dt = 0.0
+                batch_start_ts = batch_end_ts
+            for idx, frame_bytes in enumerate(frame_bytes_batch):
+                host_ts = batch_start_ts + idx * dt if freq_hz > 0 else batch_end_ts
+                frame_diag = dict(diagnostics)
+                frame_diag.update({
+                    'batch_index': idx,
+                    'batch_size': len(frame_bytes_batch),
+                    'timestamp_source': 'reconstructed_from_active_send_rate' if freq_hz > 0 else 'host_batch_end_time',
+                    'configured_frequency_hz': freq_hz,
+                })
+                frames.append(
+                    decode_active_send_modbus_response(
+                        frame=frame_bytes,
+                        host_ts=host_ts,
+                        slave_id=slave_id,
+                        function_code=int(self.app_state.cfg.active_send.frame_function_code),
+                        register_count=int(self.app_state.cfg.active_send.frame_register_count),
+                        diagnostics=frame_diag,
+                    )
+                )
+            return frames
+        return [self.read_once()]
+
     def read_once(self) -> MeasurementFrame:
         host_ts = time.time()
         profile = self.app_state.parse_profile
@@ -1115,15 +1116,8 @@ class ActiveSendBoardTransport(BoardTransport):
         if slave_id <= 0:
             slave_id = int(self.app_state.cfg.device.slave_address)
         if profile == 'modbus_rtu_response_11regs':
-            frame_bytes, diagnostics = self._read_modbus_response_frame()
-            return decode_active_send_modbus_response(
-                frame=frame_bytes,
-                host_ts=host_ts,
-                slave_id=slave_id,
-                function_code=int(self.app_state.cfg.active_send.frame_function_code),
-                register_count=int(self.app_state.cfg.active_send.frame_register_count),
-                diagnostics=diagnostics,
-            )
+            frames = self.read_frames()
+            return frames[-1]
         payload = self._read_legacy_frame()
         raw_transport, interpreted = parse_active_send_frame(
             payload=payload,
@@ -1146,7 +1140,7 @@ class ActiveSendBoardTransport(BoardTransport):
         )
 
     def send_command(self, command_name: str) -> None:
-        raise RuntimeError('Active-send mode has no documented command payload in the manual; use Modbus RTU mode for write operations.')
+        raise RuntimeError('Commands are only implemented for Modbus RTU mode')
 
 
 # ---------- Worker ----------
@@ -1157,20 +1151,14 @@ def acquisition_worker(app_state: AppState) -> None:
     app_state.push_event(f'Worker started in mode={app_state.mode} parser={app_state.parse_profile}')
     while not app_state.stop_event.is_set():
         try:
-            frames = app_state.transport.read_many()
+            frames = app_state.transport.read_frames()
             if not frames:
                 continue
-            latest_frame = frames[-1]
-            latest_only_for_logs = app_state.mode == 'active_send' and len(frames) > 1
-            app_state.push_frames(frames, latest_only_for_logs=latest_only_for_logs)
-            if app_state.mode == 'active_send' and len(frames) > 1:
-                hz = int(ACTIVE_SEND_FREQ_CODE_TO_VALUE.get(int(app_state.cfg.device.active_send_frequency_code), 0) or 0)
-                app_state.status_text = (
-                    f'Connected: last frame at {latest_frame.host_ts_iso} '
-                    f'(batch {len(frames)} samples @ ~{hz} Hz)'
-                )
-            else:
-                app_state.status_text = f'Connected: last frame at {latest_frame.host_ts_iso}'
+            app_state.push_frames(frames)
+            if app_state.signal_logger is not None:
+                app_state.signal_logger.write_frames(frames)
+            last_frame = frames[-1]
+            app_state.status_text = f'Connected: last frame at {last_frame.host_ts_iso} (batch={len(frames)})'
             if app_state.mode == 'modbus_rtu':
                 time.sleep(poll_interval_s)
         except TimeoutError as exc:
@@ -1188,28 +1176,29 @@ def build_plot_figure(app_state: AppState) -> go.Figure:
     fig = go.Figure()
     with app_state.frame_lock:
         points = list(app_state.plot_points)
+    render_points = points
     max_render_points = int(getattr(app_state.cfg.ui, 'max_render_plot_points', 0))
-    if points and max_render_points > 0 and len(points) > max_render_points:
-        stride = max(1, (len(points) + max_render_points - 1) // max_render_points)
-        points = points[::stride]
-        if points[-1] != app_state.plot_points[-1]:
-            points.append(app_state.plot_points[-1])
-    if points:
-        t0 = points[0][0]
-        xs = [ts - t0 for ts, _ in points]
-        ys = [val for _, val in points]
+    if app_state.mode == 'active_send':
+        factor = int(getattr(app_state.cfg.ui, 'active_send_render_downsample_factor', 1))
+    else:
+        factor = int(getattr(app_state.cfg.ui, 'modbus_rtu_render_downsample_factor', 1))
+    render_points = downsample_points_for_render(render_points, factor=factor, max_points=max_render_points)
+    if render_points:
+        t0 = render_points[0][0]
+        xs = [ts - t0 for ts, _ in render_points]
+        ys = [val for _, val in render_points]
         fig.add_trace(
             go.Scatter(
                 x=xs,
                 y=ys,
                 mode='lines',
-                name='raw_value',
+                name=get_plot_signal_label(app_state.cfg),
             )
         )
     fig.update_layout(
-        title='Live signal (host-relative time vs raw interpreted value)',
+        title='Live signal (host-relative time vs selected interpreted value)',
         xaxis_title='Seconds since current plot window start',
-        yaxis_title='Raw interpreted value',
+        yaxis_title=get_plot_signal_label(app_state.cfg),
         margin=dict(l=20, r=20, t=40, b=20),
         height=int(app_state.cfg.ui.plot_height_px),
         template='plotly_white',

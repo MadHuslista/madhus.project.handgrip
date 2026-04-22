@@ -15,12 +15,16 @@ ui:
   plot_height_px: 360
   log_height_px: 380
   event_log_height_px: 180
-  visible_log_entries: 80   # keep GUI responsive at high active-send rates
+  visible_log_entries: 120
   visible_event_entries: 250
   max_retained_log_entries: 400
   max_retained_event_entries: 1000
-  max_plot_points: 12000
-  max_render_plot_points: 3000
+  max_plot_points: 12000              # retain full-fidelity samples for acquisition/analysis
+  max_render_plot_points: 1500        # cap only the rendered trace
+  plot_signal_key: internal_code_raw_value
+  plot_signal_label: internal_code_raw_value
+  active_send_render_downsample_factor: 4   # render-only downsample for active-send
+  modbus_rtu_render_downsample_factor: 1
   max_ui_entry_chars: 600
   max_log_textarea_chars: 120000
   max_event_textarea_chars: 40000
@@ -30,7 +34,7 @@ ui:
 logger:
   enabled: true
   directory: ./logs
-  write_mode: overwrite  # append | overwrite
+  write_mode: overwrite
   raw_signal_filename: raw_signal.ndjson
   interpreted_signal_filename: interpreted_signal.ndjson
   gui_signal_filename: gui_signal.csv
@@ -67,10 +71,11 @@ active_send:
   default_numeric_index: 0
   default_hex_word_endianness: big
   read_timeout_s: 0.5
+  delivery_window_s: 0.05            # batch window for real-time GUI delivery
+  max_frames_per_delivery: 64
   read_chunk_bytes: 256
   max_read_bytes_per_cycle: 4096
-  idle_flush_window_s: 0.004
-  max_binary_frame_bytes: 64  # only used by legacy non-framed parsers
+  max_binary_frame_bytes: 64
   max_buffer_bytes: 16384
   frame_slave_id: 1
   frame_function_code: 3
@@ -80,4 +85,3 @@ active_send:
   log_bad_frame_hex_bytes: 64
   warning_emit_interval_s: 1.0
   detailed_warning_limit: 8
-  reconstruct_timestamps_from_frequency: true
