@@ -191,6 +191,9 @@ class ActiveSendStats:
     last_warning_emit_monotonic: float = 0.0
     last_good_frame_hex: str = ''
     last_bad_candidate_hex: str = ''
+    timestamp_reanchors: int = 0
+    timestamp_drift_reanchors: int = 0
+    timestamp_parser_reanchors: int = 0
 
 
 
@@ -1411,6 +1414,11 @@ class ActiveSendBoardTransport(BoardTransport):
         self.header_length = 3
         self._last_assigned_sample_ts: Optional[float] = None
         self._last_assigned_sample_lsl_ts: Optional[float] = None
+        # Active-send has no explicit sample timestamp in the vendor payload.
+        # We reconstruct a monotonic device clock from the configured send rate.
+        # Any parser resync/CRC loss breaks strict frame-count continuity, so the
+        # next valid batch must be re-anchored to the host LSL clock.
+        self._force_timestamp_reanchor: bool = False
 
     def connect(self) -> None:
         cfg = self.app_state.serial_cfg
@@ -1426,6 +1434,7 @@ class ActiveSendBoardTransport(BoardTransport):
         self.line_buffer.clear()
         self._last_assigned_sample_ts = None
         self._last_assigned_sample_lsl_ts = None
+        self._force_timestamp_reanchor = False
         self.app_state.active_send_stats = ActiveSendStats()
         if self.ser is not None:
             self.ser.reset_input_buffer()
@@ -1438,6 +1447,7 @@ class ActiveSendBoardTransport(BoardTransport):
         self.binary_buffer.clear()
         self._last_assigned_sample_ts = None
         self._last_assigned_sample_lsl_ts = None
+        self._force_timestamp_reanchor = False
 
     def _maybe_log_active_warning(self, message: str) -> None:
         stats = self.app_state.active_send_stats
@@ -1451,7 +1461,7 @@ class ActiveSendBoardTransport(BoardTransport):
             return
         if now - stats.last_warning_emit_monotonic >= emit_interval_s:
             LOGGER.warning(
-                'Active-send backlog summary: parsed_ok=%d batches=%d crc_failures=%d resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d buffer_len=%d max_buffer=%d max_in_waiting=%d suppressed=%d',
+                'Active-send backlog summary: parsed_ok=%d batches=%d crc_failures=%d resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d buffer_len=%d max_buffer=%d max_in_waiting=%d timestamp_reanchors=%d suppressed=%d',
                 stats.frames_ok,
                 stats.frames_delivered,
                 stats.crc_failures,
@@ -1462,6 +1472,7 @@ class ActiveSendBoardTransport(BoardTransport):
                 len(self.binary_buffer),
                 stats.max_buffer_len,
                 stats.max_in_waiting,
+                stats.timestamp_reanchors,
                 stats.warning_suppressed,
             )
             stats.last_warning_emit_monotonic = now
@@ -1511,6 +1522,7 @@ class ActiveSendBoardTransport(BoardTransport):
                 preview = prefix[:bad_hex_limit].hex(' ')
                 stats.discarded_bytes += idx
                 stats.header_resyncs += 1
+                self._force_timestamp_reanchor = True
                 del self.binary_buffer[:idx]
                 self._maybe_log_active_warning(
                     f'Active-send resync: discarded {idx} leading byte(s) before header {header.hex(" ")}; preview={preview}'
@@ -1526,6 +1538,7 @@ class ActiveSendBoardTransport(BoardTransport):
                 del self.binary_buffer[0]
                 stats.discarded_bytes += 1
                 stats.header_resyncs += 1
+                self._force_timestamp_reanchor = True
                 self._maybe_log_active_warning(
                     'Active-send CRC mismatch '
                     f'#{stats.crc_failures}: got={received_crc.hex()} expected={expected_crc.hex()} '
@@ -1629,6 +1642,9 @@ class ActiveSendBoardTransport(BoardTransport):
             'buffer_len': len(self.binary_buffer),
             'max_buffer_len': stats.max_buffer_len,
             'max_in_waiting': stats.max_in_waiting,
+            'timestamp_reanchors': stats.timestamp_reanchors,
+            'timestamp_drift_reanchors': stats.timestamp_drift_reanchors,
+            'timestamp_parser_reanchors': stats.timestamp_parser_reanchors,
             'delivery_window_s': delivery_window_s,
             'max_frames_per_delivery': max_frames_per_delivery,
         }
@@ -1644,7 +1660,7 @@ class ActiveSendBoardTransport(BoardTransport):
             )
         elif log_summary_every_n > 0 and (stats.frames_delivered % log_summary_every_n) == 0:
             LOGGER.info(
-                'Active-send summary: parsed_ok=%d batches=%d bytes=%d crc_failures=%d resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d max_buffer=%d max_in_waiting=%d',
+                'Active-send summary: parsed_ok=%d batches=%d bytes=%d crc_failures=%d resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d max_buffer=%d max_in_waiting=%d timestamp_reanchors=%d',
                 stats.frames_ok,
                 stats.frames_delivered,
                 stats.bytes_received,
@@ -1655,6 +1671,7 @@ class ActiveSendBoardTransport(BoardTransport):
                 stats.discarded_bytes,
                 stats.max_buffer_len,
                 stats.max_in_waiting,
+                stats.timestamp_reanchors,
             )
 
         return frames_batch, diagnostics
@@ -1700,10 +1717,33 @@ class ActiveSendBoardTransport(BoardTransport):
             frames: List[MeasurementFrame] = []
             if freq_hz > 0:
                 dt = 1.0 / float(freq_hz)
-                if self._last_assigned_sample_ts is None:
+                clock_reanchor_max_drift_s = float(getattr(self.app_state.cfg.active_send, 'clock_reanchor_max_drift_s', 0.12))
+                should_reanchor = self._last_assigned_sample_ts is None or self._force_timestamp_reanchor
+
+                if not should_reanchor and self._last_assigned_sample_lsl_ts is not None:
+                    continuous_last_lsl_ts = self._last_assigned_sample_lsl_ts + dt * len(frame_bytes_batch)
+                    reconstruction_drift_s = batch_end_lsl_ts - continuous_last_lsl_ts
+                    if clock_reanchor_max_drift_s > 0 and abs(reconstruction_drift_s) > clock_reanchor_max_drift_s:
+                        should_reanchor = True
+                        self.app_state.active_send_stats.timestamp_drift_reanchors += 1
+                        self._maybe_log_active_warning(
+                            'Active-send timestamp re-anchor due to reconstruction drift: '
+                            f'drift={reconstruction_drift_s:.6f}s threshold={clock_reanchor_max_drift_s:.6f}s '
+                            f'batch_size={len(frame_bytes_batch)}'
+                        )
+
+                if should_reanchor:
                     batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
                     batch_start_lsl_ts = batch_end_lsl_ts - dt * (len(frame_bytes_batch) - 1)
-                    timestamp_source = 'reconstructed_from_active_send_rate_batch_start'
+                    if self._last_assigned_sample_ts is None:
+                        timestamp_source = 'reconstructed_from_active_send_rate_batch_start'
+                    elif self._force_timestamp_reanchor:
+                        timestamp_source = 'reconstructed_from_active_send_rate_reanchored_after_parser_resync'
+                        self.app_state.active_send_stats.timestamp_parser_reanchors += 1
+                    else:
+                        timestamp_source = 'reconstructed_from_active_send_rate_reanchored_after_drift'
+                    self.app_state.active_send_stats.timestamp_reanchors += 1
+                    self._force_timestamp_reanchor = False
                 else:
                     batch_start_ts = self._last_assigned_sample_ts + dt
                     batch_start_lsl_ts = (self._last_assigned_sample_lsl_ts or batch_end_lsl_ts) + dt
@@ -1722,6 +1762,7 @@ class ActiveSendBoardTransport(BoardTransport):
                     'batch_size': len(frame_bytes_batch),
                     'timestamp_source': timestamp_source,
                     'configured_frequency_hz': freq_hz,
+                    'timestamp_reanchors': self.app_state.active_send_stats.timestamp_reanchors,
                 })
                 decoded_frame = decode_active_send_modbus_response(
                     frame=frame_bytes,
