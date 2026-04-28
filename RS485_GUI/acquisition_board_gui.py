@@ -5,6 +5,7 @@ import json
 import logging
 import math
 import os
+import statistics
 import threading
 import time
 from collections import deque
@@ -223,23 +224,44 @@ class SamplingStats:
                     self.window_dts_s.append(dt)
             self.last_processed_ts = host_ts
 
-    def snapshot(self) -> Tuple[Optional[float], Optional[float], int, int, int]:
+    def snapshot(
+        self,
+        *,
+        outlier_low_ratio: float = 0.25,
+        outlier_high_ratio: float = 4.0,
+        outlier_min_samples: int = 16,
+    ) -> Tuple[Optional[float], Optional[float], int, int, int]:
         with self._lock:
-            dts = list(self.window_dts_s)
+            dts = [dt for dt in self.window_dts_s if dt > 0]
             received = self.received_samples
             dropped = self.dropped_samples_max_rate
+
         if not dts:
             return None, None, 0, received, dropped
-        rates = [1.0 / dt for dt in dts if dt > 0]
-        if not rates:
-            return None, None, len(dts), received, dropped
-        mean = sum(rates) / len(rates)
-        if len(rates) < 2:
-            std = 0.0
+
+        working_dts = dts
+        if len(dts) >= max(3, int(outlier_min_samples)):
+            median_dt = statistics.median(dts)
+            if median_dt > 0:
+                low_bound = median_dt * max(0.0, float(outlier_low_ratio))
+                high_bound = median_dt * max(1.0, float(outlier_high_ratio))
+                filtered_dts = [dt for dt in dts if low_bound <= dt <= high_bound]
+                minimum_kept = max(3, int(len(dts) * 0.5))
+                if len(filtered_dts) >= minimum_kept:
+                    working_dts = filtered_dts
+
+        mean_dt = sum(working_dts) / len(working_dts)
+        if mean_dt <= 0:
+            return None, None, len(working_dts), received, dropped
+
+        mean_hz = 1.0 / mean_dt
+        if len(working_dts) < 2:
+            std_hz = 0.0
         else:
-            variance = sum((rate - mean) ** 2 for rate in rates) / len(rates)
-            std = math.sqrt(variance)
-        return mean, std, len(dts), received, dropped
+            rates_hz = [1.0 / dt for dt in working_dts]
+            variance = sum((rate - mean_hz) ** 2 for rate in rates_hz) / len(rates_hz)
+            std_hz = math.sqrt(variance)
+        return mean_hz, std_hz, len(working_dts), received, dropped
 
 
 def truncate_text(text: str, max_chars: int) -> str:
@@ -1199,6 +1221,7 @@ class ActiveSendBoardTransport(BoardTransport):
         self.line_buffer = bytearray()
         self.binary_buffer = bytearray()
         self.header_length = 3
+        self._last_assigned_sample_ts: Optional[float] = None
 
     def connect(self) -> None:
         cfg = self.app_state.serial_cfg
@@ -1212,6 +1235,7 @@ class ActiveSendBoardTransport(BoardTransport):
         )
         self.binary_buffer.clear()
         self.line_buffer.clear()
+        self._last_assigned_sample_ts = None
         self.app_state.active_send_stats = ActiveSendStats()
         if self.ser is not None:
             self.ser.reset_input_buffer()
@@ -1222,6 +1246,7 @@ class ActiveSendBoardTransport(BoardTransport):
         self.ser = None
         self.line_buffer.clear()
         self.binary_buffer.clear()
+        self._last_assigned_sample_ts = None
 
     def _maybe_log_active_warning(self, message: str) -> None:
         stats = self.app_state.active_send_stats
@@ -1483,29 +1508,37 @@ class ActiveSendBoardTransport(BoardTransport):
             frames: List[MeasurementFrame] = []
             if freq_hz > 0:
                 dt = 1.0 / float(freq_hz)
-                batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
+                if self._last_assigned_sample_ts is None:
+                    batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
+                    timestamp_source = 'reconstructed_from_active_send_rate_batch_start'
+                else:
+                    batch_start_ts = self._last_assigned_sample_ts + dt
+                    timestamp_source = 'reconstructed_from_active_send_rate_continuous'
             else:
                 dt = 0.0
                 batch_start_ts = batch_end_ts
+                timestamp_source = 'host_batch_end_time'
             for idx, frame_bytes in enumerate(frame_bytes_batch):
                 host_ts = batch_start_ts + idx * dt if freq_hz > 0 else batch_end_ts
                 frame_diag = dict(diagnostics)
                 frame_diag.update({
                     'batch_index': idx,
                     'batch_size': len(frame_bytes_batch),
-                    'timestamp_source': 'reconstructed_from_active_send_rate' if freq_hz > 0 else 'host_batch_end_time',
+                    'timestamp_source': timestamp_source,
                     'configured_frequency_hz': freq_hz,
                 })
-                frames.append(
-                    decode_active_send_modbus_response(
-                        frame=frame_bytes,
-                        host_ts=host_ts,
-                        slave_id=slave_id,
-                        function_code=int(self.app_state.cfg.active_send.frame_function_code),
-                        register_count=int(self.app_state.cfg.active_send.frame_register_count),
-                        diagnostics=frame_diag,
-                    )
+                decoded_frame = decode_active_send_modbus_response(
+                    frame=frame_bytes,
+                    host_ts=host_ts,
+                    slave_id=slave_id,
+                    function_code=int(self.app_state.cfg.active_send.frame_function_code),
+                    register_count=int(self.app_state.cfg.active_send.frame_register_count),
+                    diagnostics=frame_diag,
                 )
+                decoded_frame.interpreted['timestamp_source'] = timestamp_source
+                frames.append(decoded_frame)
+            if frames:
+                self._last_assigned_sample_ts = frames[-1].host_ts
             return frames
         return [self.read_once()]
 
@@ -2078,7 +2111,11 @@ def run_app(cfg: DictConfig) -> None:
         sampling_stats = app_state.sampling_stats
         target_hz = get_target_sampling_rate_hz(cfg, str(mode_select.value))
         max_hz = float(getattr(cfg.ui, 'max_signal_samples_per_second', 0.0) or 0.0)
-        mean_hz, std_hz, window_count, received_count, dropped_count = sampling_stats.snapshot()
+        mean_hz, std_hz, window_count, received_count, dropped_count = sampling_stats.snapshot(
+            outlier_low_ratio=float(getattr(cfg.ui, 'sampling_rate_outlier_low_ratio', 0.25)),
+            outlier_high_ratio=float(getattr(cfg.ui, 'sampling_rate_outlier_high_ratio', 4.0)),
+            outlier_min_samples=int(getattr(cfg.ui, 'sampling_rate_outlier_min_samples', 16)),
+        )
         sampling_text = (
             f'Target sampling rate: {format_rate(target_hz)}\n'
             f'Measured mean rate: {format_rate(mean_hz)}\n'
