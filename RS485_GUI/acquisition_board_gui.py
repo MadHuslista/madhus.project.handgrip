@@ -770,6 +770,8 @@ class SignalFileLogger:
         self._event_fp: Optional[TextIO] = None
         self._gui_writer: Optional[csv.writer] = None
         self._lock = threading.Lock()
+        self._write_batches_since_flush = 0
+        self._last_flush_monotonic = time.monotonic()
 
     def open(self) -> None:
         if not self.enabled:
@@ -785,12 +787,23 @@ class SignalFileLogger:
         self._event_fp = self.event_path.open(file_mode, encoding='utf-8', newline='')
         self._gui_writer = csv.writer(self._gui_fp)
 
+        self._write_batches_since_flush = 0
+        self._last_flush_monotonic = time.monotonic()
+
         if self.write_mode == 'overwrite' or not gui_file_preexisting:
             self._gui_writer.writerow(['host_ts_epoch_s', 'host_ts_iso', 'mode', 'raw_value', 'plot_signal_key', 'plot_value'])
-            self._gui_fp.flush()
+            self._flush_unlocked()
+
+    def _flush_unlocked(self) -> None:
+        for fp in (self._raw_fp, self._interpreted_fp, self._gui_fp, self._event_fp):
+            if fp is not None and not fp.closed:
+                fp.flush()
+        self._write_batches_since_flush = 0
+        self._last_flush_monotonic = time.monotonic()
 
     def close(self) -> None:
         with self._lock:
+            self._flush_unlocked()
             for fp in (self._raw_fp, self._interpreted_fp, self._gui_fp, self._event_fp):
                 if fp is not None and not fp.closed:
                     fp.flush()
@@ -829,9 +842,14 @@ class SignalFileLogger:
                 plot_value = extract_plot_value(frame, self.cfg)
                 self._gui_writer.writerow([frame.host_ts, frame.host_ts_iso, frame.mode, raw_value, plot_signal_key, plot_value])
 
-            self._raw_fp.flush()
-            self._interpreted_fp.flush()
-            self._gui_fp.flush()
+            self._write_batches_since_flush += 1
+            flush_every_n_batches = int(getattr(self.cfg.logger, 'flush_every_n_batches', 1) or 1)
+            flush_interval_s = float(getattr(self.cfg.logger, 'flush_interval_s', 0.0) or 0.0)
+            should_flush = self._write_batches_since_flush >= max(1, flush_every_n_batches)
+            if flush_interval_s > 0 and (time.monotonic() - self._last_flush_monotonic) >= flush_interval_s:
+                should_flush = True
+            if should_flush:
+                self._flush_unlocked()
 
     def write_frame(self, frame: MeasurementFrame) -> None:
         self.write_frames([frame])
@@ -870,6 +888,7 @@ class AppState:
     ipc_publisher: Optional[MeasurementFramePublisher] = None
     active_send_stats: ActiveSendStats = field(default_factory=ActiveSendStats)
     sampling_stats: SamplingStats = field(default_factory=SamplingStats)
+    _last_ui_frame_ts: Optional[float] = None
 
     def push_event(self, message: str) -> None:
         ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
@@ -884,6 +903,7 @@ class AppState:
         with self.frame_lock:
             self.latest_frame = None if not self.frame_history else self.latest_frame
             self.frame_history.clear()
+            self._last_ui_frame_ts = None
         if reset_session_counters:
             self.sampling_stats.reset_all(window_size)
         else:
@@ -902,12 +922,43 @@ class AppState:
         last_ts = self.sampling_stats.get_last_processed_ts()
         dropped = 0
         for frame in frames:
+            # Active-send recovery may re-anchor reconstructed timestamps. If the
+            # display clock moves backwards, reset only the display throttle.
+            if last_ts is not None and frame.host_ts < (last_ts - min_dt):
+                last_ts = None
             if last_ts is None or (frame.host_ts - last_ts) >= min_dt:
                 kept.append(frame)
                 last_ts = frame.host_ts
             else:
                 dropped += 1
         self.sampling_stats.add_dropped_samples(dropped)
+        return kept
+
+    def filter_frames_for_ui(self, frames: List[MeasurementFrame]) -> List[MeasurementFrame]:
+        """Return a display-rate-limited subset for browser/UI rendering only.
+
+        This intentionally does not affect IPC publishing or file logging. At
+        500 Hz active-send rates, pushing every frame into NiceGUI/Plotly/text
+        areas causes visible browser lag while adding little display value.
+        """
+        if not frames:
+            return frames
+        max_hz = float(getattr(self.cfg.ui, 'display_max_samples_per_second', 0.0) or 0.0)
+        if max_hz <= 0:
+            return frames
+        min_dt = 1.0 / max_hz
+        kept: List[MeasurementFrame] = []
+        last_ts = self._last_ui_frame_ts
+        for frame in frames:
+            if last_ts is None or (frame.host_ts - last_ts) >= min_dt:
+                kept.append(frame)
+                last_ts = frame.host_ts
+        self._last_ui_frame_ts = last_ts
+        if not kept:
+            latest = frames[-1]
+            if self._last_ui_frame_ts is None or (latest.host_ts - self._last_ui_frame_ts) >= min_dt * 0.5:
+                kept.append(latest)
+                self._last_ui_frame_ts = latest.host_ts
         return kept
 
     def push_frames(self, frames: List[MeasurementFrame]) -> None:
@@ -1982,22 +2033,28 @@ def acquisition_worker(app_state: AppState) -> None:
                 if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
                     next_poll_deadline = cycle_start + poll_interval_s
                 continue
-            processed_frames = app_state.filter_frames_by_max_sampling_rate(frames)
-            if not processed_frames:
+            acquisition_frames = app_state.filter_frames_by_max_sampling_rate(frames)
+            if not acquisition_frames:
                 app_state.status_text = (
-                    f'Connected: batch filtered by max signal rate '
+                    f'Connected: batch filtered by acquisition max signal rate '
                     f'(received={len(frames)}, dropped_total={app_state.sampling_stats.dropped_samples_max_rate})'
                 )
                 if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
                     next_poll_deadline = cycle_start + poll_interval_s
                 continue
             if app_state.ipc_publisher is not None and bool(getattr(app_state.cfg.ipc, 'publish_after_max_rate_filter', False)):
-                app_state.ipc_publisher.publish_frames(processed_frames)
-            app_state.push_frames(processed_frames)
+                app_state.ipc_publisher.publish_frames(acquisition_frames)
             if app_state.signal_logger is not None:
-                app_state.signal_logger.write_frames(processed_frames)
-            last_frame = processed_frames[-1]
-            app_state.status_text = f'Connected: last frame at {last_frame.host_ts_iso} (kept={len(processed_frames)}/{len(frames)})'
+                app_state.signal_logger.write_frames(acquisition_frames)
+
+            ui_frames = app_state.filter_frames_for_ui(acquisition_frames)
+            if ui_frames:
+                app_state.push_frames(ui_frames)
+            last_frame = acquisition_frames[-1]
+            app_state.status_text = (
+                f'Connected: last frame at {last_frame.host_ts_iso} '
+                f'(ipc/log={len(acquisition_frames)}/{len(frames)}, ui={len(ui_frames)}/{len(acquisition_frames)})'
+            )
             if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
                 next_poll_deadline = cycle_start + poll_interval_s
         except TimeoutError as exc:
@@ -2501,27 +2558,29 @@ def run_app(cfg: DictConfig) -> None:
         max_log_chars = int(getattr(cfg.ui, 'max_log_textarea_chars', 120000))
         max_event_chars = int(getattr(cfg.ui, 'max_event_textarea_chars', 40000))
 
-        raw_log_items = list(app_state.raw_log)
-        interpreted_log_items = list(app_state.interpreted_log)
-        event_log_items = list(app_state.event_log)
-        if visible_log_entries > 0:
-            raw_log_items = raw_log_items[:visible_log_entries]
-            interpreted_log_items = interpreted_log_items[:visible_log_entries]
-        if visible_event_entries > 0:
-            event_log_items = event_log_items[:visible_event_entries]
+        log_stride = max(1, int(getattr(cfg.ui, 'log_update_every_n_refreshes', 1)))
+        if (refresh_counter['count'] % log_stride) == 0:
+            raw_log_items = list(app_state.raw_log)
+            interpreted_log_items = list(app_state.interpreted_log)
+            event_log_items = list(app_state.event_log)
+            if visible_log_entries > 0:
+                raw_log_items = raw_log_items[:visible_log_entries]
+                interpreted_log_items = interpreted_log_items[:visible_log_entries]
+            if visible_event_entries > 0:
+                event_log_items = event_log_items[:visible_event_entries]
 
-        raw_text = build_log_text(raw_log_items, '\n', max_log_chars)
-        interpreted_text = build_log_text(interpreted_log_items, '\n', max_log_chars)
-        event_text = build_log_text(event_log_items, '\n', max_event_chars)
-        if raw_log_area.value != raw_text:
-            raw_log_area.value = raw_text
-            raw_log_area.update()
-        if interpreted_log_area.value != interpreted_text:
-            interpreted_log_area.value = interpreted_text
-            interpreted_log_area.update()
-        if event_log_area.value != event_text:
-            event_log_area.value = event_text
-            event_log_area.update()
+            raw_text = build_log_text(raw_log_items, '\n', max_log_chars)
+            interpreted_text = build_log_text(interpreted_log_items, '\n', max_log_chars)
+            event_text = build_log_text(event_log_items, '\n', max_event_chars)
+            if raw_log_area.value != raw_text:
+                raw_log_area.value = raw_text
+                raw_log_area.update()
+            if interpreted_log_area.value != interpreted_text:
+                interpreted_log_area.value = interpreted_text
+                interpreted_log_area.update()
+            if event_log_area.value != event_text:
+                event_log_area.value = event_text
+                event_log_area.update()
 
         plot_stride = max(1, int(getattr(cfg.ui, 'plot_update_every_n_refreshes', 1)))
         if signal_select.value != get_plot_signal_key(cfg):

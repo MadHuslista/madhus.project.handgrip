@@ -15,12 +15,13 @@ ui:
   plot_height_px: 360
   log_height_px: 380
   event_log_height_px: 180
-  visible_log_entries: 120
-  visible_event_entries: 250
-  max_retained_log_entries: 400
-  max_retained_event_entries: 1000
-  max_plot_points: 12000              # retain full-fidelity samples for acquisition/analysis
-  max_render_plot_points: 1500        # cap only the rendered trace
+  visible_log_entries: 40
+  visible_event_entries: 120
+  max_retained_log_entries: 160
+  max_retained_event_entries: 500
+  # Browser-facing retention only. Full-rate IPC to the LSL bridge is unaffected.
+  max_plot_points: 3000
+  max_render_plot_points: 700
   default_plot_signal_key: net_value
   plot_signal_key: net_value
   clear_plot_on_connect: true
@@ -28,13 +29,17 @@ ui:
   sampling_rate_outlier_low_ratio: 0.25   # reject grossly too-fast dt outliers vs rolling median
   sampling_rate_outlier_high_ratio: 4.0   # reject grossly too-slow dt outliers vs rolling median
   sampling_rate_outlier_min_samples: 16   # only apply outlier rejection once the window is populated
+  # Acquisition max-rate limiter. Keep 0 so file logging and IPC receive full-rate frames.
   max_signal_samples_per_second: 0
-  active_send_render_downsample_factor: 4   # render-only downsample for active-send
-  modbus_rtu_render_downsample_factor: 1  # render-only downsample for modbus-rtu
-  max_ui_entry_chars: 600
-  max_log_textarea_chars: 120000
-  max_event_textarea_chars: 40000
+  # Display-only limiter. This is applied only to GUI plot/log history, not IPC or files.
+  display_max_samples_per_second: 60
+  active_send_render_downsample_factor: 1
+  modbus_rtu_render_downsample_factor: 1
+  max_ui_entry_chars: 300
+  max_log_textarea_chars: 30000
+  max_event_textarea_chars: 20000
   plot_update_every_n_refreshes: 1
+  log_update_every_n_refreshes: 5
   light_mode: true
 
 logger:
@@ -47,6 +52,9 @@ logger:
   debug_log_to_file: true
   debug_log_filename: acquisition_debug.log
   event_log_filename: event.log
+  # Avoid flushing every 500 Hz batch; this reduces GUI/process jitter while preserving logs.
+  flush_every_n_batches: 25
+  flush_interval_s: 1.0
 
 ipc:
   enabled: true
@@ -130,5 +138,5 @@ active_send:
   log_first_n_good_frames: 5
   log_summary_every_n_good_frames: 250
   log_bad_frame_hex_bytes: 64
-  warning_emit_interval_s: 1.0
-  detailed_warning_limit: 8
+  warning_emit_interval_s: 3.0
+  detailed_warning_limit: 2
