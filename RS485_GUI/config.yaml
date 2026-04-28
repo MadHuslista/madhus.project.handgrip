@@ -33,13 +33,19 @@ ui:
   max_signal_samples_per_second: 0
   # Display-only limiter. This is applied only to GUI plot/log history, not IPC or files.
   display_max_samples_per_second: 60
-  active_send_render_downsample_factor: 1
+  active_send_render_downsample_factor: 2
   modbus_rtu_render_downsample_factor: 1
   max_ui_entry_chars: 300
   max_log_textarea_chars: 30000
   max_event_textarea_chars: 20000
-  plot_update_every_n_refreshes: 1
+  plot_update_every_n_refreshes: 2
   log_update_every_n_refreshes: 5
+  sampling_update_every_n_refreshes: 5
+  metadata_update_every_n_refreshes: 10
+  board_config_update_every_n_refreshes: 10
+  controls_update_every_n_refreshes: 10
+  plot_skip_if_unchanged: true
+  plot_trace_type: scattergl
   light_mode: true
 
 logger:

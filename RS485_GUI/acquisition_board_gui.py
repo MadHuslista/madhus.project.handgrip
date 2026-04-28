@@ -570,6 +570,12 @@ def downsample_points_for_render(points: List[Tuple[float, float]], factor: int,
             points.append(original_last)
     return points
 
+
+
+def get_plot_history_version(app_state: AppState) -> int:
+    with app_state.frame_lock:
+        return int(app_state.frame_history_version)
+
 def render_raw_log_entry(frame: MeasurementFrame, max_chars: int) -> str:
     raw = frame.raw_transport
     diagnostics = raw.get('diagnostics', {}) if isinstance(raw.get('diagnostics'), dict) else {}
@@ -889,6 +895,7 @@ class AppState:
     active_send_stats: ActiveSendStats = field(default_factory=ActiveSendStats)
     sampling_stats: SamplingStats = field(default_factory=SamplingStats)
     _last_ui_frame_ts: Optional[float] = None
+    frame_history_version: int = 0
 
     def push_event(self, message: str) -> None:
         ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
@@ -903,6 +910,7 @@ class AppState:
         with self.frame_lock:
             self.latest_frame = None if not self.frame_history else self.latest_frame
             self.frame_history.clear()
+            self.frame_history_version += 1
             self._last_ui_frame_ts = None
         if reset_session_counters:
             self.sampling_stats.reset_all(window_size)
@@ -969,6 +977,7 @@ class AppState:
             self.latest_frame = latest_frame
             for frame in frames:
                 self.frame_history.append(frame)
+            self.frame_history_version += len(frames)
         ui_entry_chars = int(getattr(self.cfg.ui, 'max_ui_entry_chars', 600))
         self.raw_log.appendleft(render_raw_log_entry(latest_frame, ui_entry_chars))
         self.interpreted_log.appendleft(render_interpreted_log_entry(latest_frame, ui_entry_chars))
@@ -2099,8 +2108,10 @@ def build_plot_figure(app_state: AppState) -> go.Figure:
             t0 = render_points[0][0]
             xs = [ts - t0 for ts, _ in render_points]
             ys = [val for _, val in render_points]
+        trace_type = str(getattr(app_state.cfg.ui, 'plot_trace_type', 'scattergl')).lower()
+        trace_cls = go.Scattergl if trace_type == 'scattergl' and hasattr(go, 'Scattergl') else go.Scatter
         fig.add_trace(
-            go.Scatter(
+            trace_cls(
                 x=xs,
                 y=ys,
                 mode='lines',
@@ -2116,6 +2127,7 @@ def build_plot_figure(app_state: AppState) -> go.Figure:
         height=int(app_state.cfg.ui.plot_height_px),
         template='plotly_white',
         uirevision='plot-x-window',
+        transition={'duration': 0},
     )
     fig.update_xaxes(uirevision='plot-x-window')
     fig.update_yaxes(uirevision=f'plot-y:{signal_key}')
@@ -2495,6 +2507,8 @@ def run_app(cfg: DictConfig) -> None:
 
         def on_signal_change() -> None:
             cfg.ui.plot_signal_key = str(signal_select.value)
+            plot_cache['version'] = -1
+            plot_cache['signal_key'] = None
             plot.figure = build_plot_figure(app_state)
             plot.update()
 
@@ -2543,6 +2557,7 @@ def run_app(cfg: DictConfig) -> None:
                     desc.style('white-space: pre-wrap;')
 
     refresh_counter = {'count': 0}
+    plot_cache = {'version': -1, 'signal_key': None, 'mode': None}
 
     def refresh_ui() -> None:
         refresh_counter['count'] += 1
@@ -2587,67 +2602,88 @@ def run_app(cfg: DictConfig) -> None:
             signal_select.value = get_plot_signal_key(cfg)
             signal_select.update()
         if (refresh_counter['count'] % plot_stride) == 0:
-            plot.figure = build_plot_figure(app_state)
-            plot.update()
+            current_version = get_plot_history_version(app_state)
+            current_signal_key = get_plot_signal_key(cfg)
+            current_mode = app_state.mode
+            skip_unchanged = bool(getattr(cfg.ui, 'plot_skip_if_unchanged', True))
+            if (
+                (not skip_unchanged)
+                or current_version != plot_cache['version']
+                or current_signal_key != plot_cache['signal_key']
+                or current_mode != plot_cache['mode']
+            ):
+                plot.figure = build_plot_figure(app_state)
+                plot.update()
+                plot_cache['version'] = current_version
+                plot_cache['signal_key'] = current_signal_key
+                plot_cache['mode'] = current_mode
 
-        sampling_stats = app_state.sampling_stats
-        target_hz = get_target_sampling_rate_hz(cfg, str(mode_select.value))
-        max_hz = float(getattr(cfg.ui, 'max_signal_samples_per_second', 0.0) or 0.0)
-        mean_hz, std_hz, window_count, received_count, dropped_count = sampling_stats.snapshot(
-            outlier_low_ratio=float(getattr(cfg.ui, 'sampling_rate_outlier_low_ratio', 0.25)),
-            outlier_high_ratio=float(getattr(cfg.ui, 'sampling_rate_outlier_high_ratio', 4.0)),
-            outlier_min_samples=int(getattr(cfg.ui, 'sampling_rate_outlier_min_samples', 16)),
-        )
-        sampling_text = (
-            f'Target sampling rate: {format_rate(target_hz)}\n'
-            f'Measured mean rate: {format_rate(mean_hz)}\n'
-            f'Measured std-dev: {format_rate(std_hz)}\n'
-            f'Window size: last {window_count} intervals / configured {int(getattr(cfg.ui, "sampling_rate_window_samples", 128))}\n'
-            f'Samples received: {received_count}\n'
-            f'Samples dropped by max-rate limiter: {dropped_count}\n'
-            f'Configured max processed sampling rate: {format_rate(max_hz)}'
-        )
-        if sampling_rate_label.text != sampling_text:
-            sampling_rate_label.text = sampling_text
-            sampling_rate_label.update()
+        sampling_stride = max(1, int(getattr(cfg.ui, 'sampling_update_every_n_refreshes', 5)))
+        if (refresh_counter['count'] % sampling_stride) == 0:
+            sampling_stats = app_state.sampling_stats
+            target_hz = get_target_sampling_rate_hz(cfg, str(mode_select.value))
+            max_hz = float(getattr(cfg.ui, 'max_signal_samples_per_second', 0.0) or 0.0)
+            mean_hz, std_hz, window_count, received_count, dropped_count = sampling_stats.snapshot(
+                outlier_low_ratio=float(getattr(cfg.ui, 'sampling_rate_outlier_low_ratio', 0.25)),
+                outlier_high_ratio=float(getattr(cfg.ui, 'sampling_rate_outlier_high_ratio', 4.0)),
+                outlier_min_samples=int(getattr(cfg.ui, 'sampling_rate_outlier_min_samples', 16)),
+            )
+            sampling_text = (
+                f'Target sampling rate: {format_rate(target_hz)}\n'
+                f'Measured mean rate: {format_rate(mean_hz)}\n'
+                f'Measured std-dev: {format_rate(std_hz)}\n'
+                f'Window size: last {window_count} intervals / configured {int(getattr(cfg.ui, "sampling_rate_window_samples", 128))}\n'
+                f'Samples received: {received_count}\n'
+                f'Samples dropped by max-rate limiter: {dropped_count}\n'
+                f'Configured max processed sampling rate: {format_rate(max_hz)}'
+            )
+            if sampling_rate_label.text != sampling_text:
+                sampling_rate_label.text = sampling_text
+                sampling_rate_label.update()
 
-        signal_metadata_text = build_signal_metadata_text(app_state)
-        if signal_metadata_label.text != signal_metadata_text:
-            signal_metadata_label.text = signal_metadata_text
-            signal_metadata_label.update()
+        metadata_stride = max(1, int(getattr(cfg.ui, 'metadata_update_every_n_refreshes', 10)))
+        if (refresh_counter['count'] % metadata_stride) == 0:
+            signal_metadata_text = build_signal_metadata_text(app_state)
+            if signal_metadata_label.text != signal_metadata_text:
+                signal_metadata_label.text = signal_metadata_text
+                signal_metadata_label.update()
 
-        baud_code = next((k for k, v in BAUD_CODE_TO_VALUE.items() if v == int(baud_select.value)), None)
-        parity_code = {'N': 0, 'E': 1, 'O': 2}.get(str(parity_select.value), '?')
-        stop_code = int(stopbits_select.value)
-        active_code = int(active_freq_select.value)
-        board_cfg_text = (
-            f'500.Ar = {int(address_input.value)}\n'
-            f'501.br = {baud_code}  # {int(baud_select.value)} bps\n'
-            f'502.Vb = {parity_code}  # {parity_select.value}\n'
-            f'503.so = {stop_code}\n'
-            f'504.AS = {0 if str(mode_select.value) == "modbus_rtu" else 1}\n'
-            f'505.AF = {active_code}  # {ACTIVE_SEND_FREQ_CODE_TO_VALUE[active_code]} Hz\n'
-        )
-        if board_cfg_preview.value != board_cfg_text:
-            board_cfg_preview.value = board_cfg_text
-            board_cfg_preview.update()
+        board_stride = max(1, int(getattr(cfg.ui, 'board_config_update_every_n_refreshes', 10)))
+        if (refresh_counter['count'] % board_stride) == 0:
+            baud_code = next((k for k, v in BAUD_CODE_TO_VALUE.items() if v == int(baud_select.value)), None)
+            parity_code = {'N': 0, 'E': 1, 'O': 2}.get(str(parity_select.value), '?')
+            stop_code = int(stopbits_select.value)
+            active_code = int(active_freq_select.value)
+            board_cfg_text = (
+                f'500.Ar = {int(address_input.value)}\n'
+                f'501.br = {baud_code}  # {int(baud_select.value)} bps\n'
+                f'502.Vb = {parity_code}  # {parity_select.value}\n'
+                f'503.so = {stop_code}\n'
+                f'504.AS = {0 if str(mode_select.value) == "modbus_rtu" else 1}\n'
+                f'505.AF = {active_code}  # {ACTIVE_SEND_FREQ_CODE_TO_VALUE[active_code]} Hz\n'
+            )
+            if board_cfg_preview.value != board_cfg_text:
+                board_cfg_preview.value = board_cfg_text
+                board_cfg_preview.update()
 
-        advanced_enabled = str(mode_select.value) == 'modbus_rtu'
-        try:
-            if advanced_enabled:
-                advanced_actions_expansion.enable()
-            else:
-                advanced_actions_expansion.disable()
-        except Exception:
-            pass
-        for button in advanced_action_buttons:
+        controls_stride = max(1, int(getattr(cfg.ui, 'controls_update_every_n_refreshes', 10)))
+        if (refresh_counter['count'] % controls_stride) == 0:
+            advanced_enabled = str(mode_select.value) == 'modbus_rtu'
             try:
-                if advanced_enabled and app_state.connected:
-                    button.enable()
+                if advanced_enabled:
+                    advanced_actions_expansion.enable()
                 else:
-                    button.disable()
+                    advanced_actions_expansion.disable()
             except Exception:
                 pass
+            for button in advanced_action_buttons:
+                try:
+                    if advanced_enabled and app_state.connected:
+                        button.enable()
+                    else:
+                        button.disable()
+                except Exception:
+                    pass
 
     ui.timer(interval=float(cfg.ui.refresh_interval_s), callback=refresh_ui)
 
