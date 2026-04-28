@@ -1,7 +1,7 @@
 mode: live
 
 stream:
-  name: ArduinoHandgrip
+  name: UnifiedHandgripRS485
   stype: Force
   source_id: null
   buffer_samples: 1600
@@ -18,8 +18,8 @@ viewer:
   window_seconds: 10.0
   expected_rate_hz: 80.0
   refresh_s: 0.05
-  raw_unit_label: g
-  filtered_unit_label: g
+  raw_unit_label: N
+  filtered_unit_label: N
   dt_unit_label: ms
 
 reference:

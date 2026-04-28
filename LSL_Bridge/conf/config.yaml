@@ -9,7 +9,7 @@ stream:
   device_name: Handgrip+AcquisitionBoard
 
   # Arduino / handgrip channels
-  value_unit: g
+  value_unit: N
   clock_unit: us
   clock_channel_label: device_clock_us
   raw_channel_label: grip_force_raw
