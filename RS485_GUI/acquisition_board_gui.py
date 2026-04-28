@@ -632,6 +632,8 @@ class MeasurementFramePublisher:
         if not self.enabled:
             LOGGER.info('RS485 IPC publisher disabled')
             return
+        if self._socket is not None:
+            return
         if self.transport != 'zmq_pub':
             raise ValueError(f'Unsupported ipc.transport={self.transport!r}; only zmq_pub is implemented')
         if zmq is None:
@@ -639,10 +641,22 @@ class MeasurementFramePublisher:
         if _pylsl_local_clock is None and bool(getattr(self.cfg.ipc, 'require_pylsl_clock', True)):
             raise RuntimeError('ipc.enabled=true requires pylsl for LSL-local RS485 timestamps. Install with: uv add pylsl')
         self._context = zmq.Context.instance()
-        self._socket = self._context.socket(zmq.PUB)
-        self._socket.setsockopt(zmq.SNDHWM, int(getattr(self.cfg.ipc, 'send_hwm', 2000)))
-        self._socket.setsockopt(zmq.LINGER, int(getattr(self.cfg.ipc, 'linger_ms', 0)))
-        self._socket.bind(self.bind)
+        socket = self._context.socket(zmq.PUB)
+        socket.setsockopt(zmq.SNDHWM, int(getattr(self.cfg.ipc, 'send_hwm', 2000)))
+        socket.setsockopt(zmq.LINGER, int(getattr(self.cfg.ipc, 'linger_ms', 0)))
+        try:
+            socket.bind(self.bind)
+        except Exception as exc:
+            try:
+                socket.close(0)
+            except Exception:
+                pass
+            raise RuntimeError(
+                f'Could not bind RS485 IPC publisher to {self.bind}. '
+                'Another RS485_GUI process/page is probably already bound to that endpoint, '
+                'or a previous process did not exit cleanly. Stop the other process or change ipc.bind/rs485_ipc.connect.'
+            ) from exc
+        self._socket = socket
         LOGGER.info('RS485 IPC publisher bound to %s topic=%s signal_key=%s', self.bind, self.topic, self.signal_key)
 
     def stop(self) -> None:
@@ -1765,6 +1779,35 @@ class ActiveSendBoardTransport(BoardTransport):
         raise RuntimeError('Commands are only implemented for Modbus RTU mode')
 
 
+
+
+def ensure_ipc_publisher(app_state: AppState) -> Optional[MeasurementFramePublisher]:
+    """Create the IPC publisher object lazily, but do not bind unless start() is called."""
+    if not bool(getattr(app_state.cfg.ipc, 'enabled', False)):
+        return None
+    if app_state.ipc_publisher is None:
+        app_state.ipc_publisher = MeasurementFramePublisher(app_state.cfg)
+    return app_state.ipc_publisher
+
+
+def start_ipc_publisher_for_connection(app_state: AppState) -> None:
+    """Bind the IPC endpoint only when acquisition starts.
+
+    NiceGUI can execute the script more than once while serving the root page. Binding
+    ZMQ at application construction time therefore creates a false self-conflict:
+    the first execution owns the port and the page execution tries to bind it again.
+    Starting the publisher on Connect keeps the bind owned by the acquisition session
+    that actually emits MeasurementFrame objects.
+    """
+    publisher = ensure_ipc_publisher(app_state)
+    if publisher is None:
+        return
+    publisher.start()
+    app_state.push_event(
+        f'RS485 IPC publisher active: bind={app_state.cfg.ipc.bind} '
+        f'topic={app_state.cfg.ipc.topic} signal_key={app_state.cfg.ipc.signal_key}'
+    )
+
 # ---------- Worker ----------
 
 def acquisition_worker(app_state: AppState) -> None:
@@ -1921,6 +1964,8 @@ def disconnect_state(app_state: AppState) -> None:
             app_state.push_event(f'Disconnect cleanup warning: {exc}')
     app_state.transport = None
     app_state.worker_thread = None
+    if app_state.ipc_publisher is not None and bool(getattr(app_state.cfg.ipc, 'stop_on_disconnect', True)):
+        app_state.ipc_publisher.stop()
     app_state.connected = False
     app_state.connection_label = 'DISCONNECTED'
     app_state.status_text = 'Idle'
@@ -1947,7 +1992,16 @@ def connect_state(app_state: AppState) -> None:
         if app_state.signal_logger is not None:
             app_state.signal_logger.open()
         app_state.transport.connect()
+        if bool(getattr(app_state.cfg.ipc, 'enabled', False)) and bool(getattr(app_state.cfg.ipc, 'start_on_connect', True)):
+            start_ipc_publisher_for_connection(app_state)
     except Exception:
+        if app_state.ipc_publisher is not None and bool(getattr(app_state.cfg.ipc, 'stop_on_disconnect', True)):
+            app_state.ipc_publisher.stop()
+        if app_state.transport is not None:
+            try:
+                app_state.transport.disconnect()
+            except Exception as cleanup_exc:  # pragma: no cover - cleanup guard
+                app_state.push_event(f'Connect cleanup warning: {cleanup_exc}')
         if app_state.signal_logger is not None:
             app_state.signal_logger.close()
         app_state.transport = None
@@ -2058,8 +2112,21 @@ def run_app(cfg: DictConfig) -> None:
 
     if bool(getattr(cfg.ipc, 'enabled', False)):
         app_state.ipc_publisher = MeasurementFramePublisher(cfg)
-        app_state.ipc_publisher.start()
-        app_state.push_event(f'RS485 IPC publisher enabled: bind={cfg.ipc.bind} topic={cfg.ipc.topic} signal_key={cfg.ipc.signal_key}')
+        if bool(getattr(cfg.ipc, 'start_on_app_launch', False)):
+            try:
+                app_state.ipc_publisher.start()
+                app_state.push_event(
+                    f'RS485 IPC publisher enabled at app launch: bind={cfg.ipc.bind} '
+                    f'topic={cfg.ipc.topic} signal_key={cfg.ipc.signal_key}'
+                )
+            except Exception as exc:
+                LOGGER.warning('RS485 IPC publisher did not start at app launch: %s', exc)
+                app_state.push_event(f'RS485 IPC publisher start warning: {exc}')
+        else:
+            app_state.push_event(
+                f'RS485 IPC publisher configured; it will bind on Connect: bind={cfg.ipc.bind} '
+                f'topic={cfg.ipc.topic} signal_key={cfg.ipc.signal_key}'
+            )
 
     available_ports = enumerate_ports(list(cfg.serial.port_hints))
 
@@ -2170,7 +2237,11 @@ def run_app(cfg: DictConfig) -> None:
 
             def on_connect() -> None:
                 sync_form_to_state()
-                connect_state(app_state)
+                try:
+                    connect_state(app_state)
+                except Exception as exc:
+                    app_state.status_text = f'Connect failed: {exc}'
+                    app_state.push_event(f'Connect failed: {exc}')
 
             def on_disconnect() -> None:
                 disconnect_state(app_state)

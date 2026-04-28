@@ -61,6 +61,12 @@ ipc:
   send_hwm: 2000
   linger_ms: 0
   drop_on_backpressure: true
+  # Avoid binding the ZMQ endpoint during NiceGUI app construction; NiceGUI may
+  # re-execute the script while serving the root page. Bind only when the user
+  # starts a real acquisition session.
+  start_on_app_launch: false
+  start_on_connect: true
+  stop_on_disconnect: true
   require_pylsl_clock: true
 
   # false = publish full RS485 acquisition frames before GUI max-rate filtering.
