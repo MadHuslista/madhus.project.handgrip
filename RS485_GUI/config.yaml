@@ -109,13 +109,21 @@ active_send:
   # Larger batches are valid but make bridge-side fusion intermittently stale.
   delivery_window_s: 0.010
   max_frames_per_delivery: 16
-  read_chunk_bytes: 512
-  max_read_bytes_per_cycle: 4096
+  # Read enough to drain the OS serial buffer; the parser enforces
+  # max_frames_per_delivery before returning each batch.
+  read_chunk_bytes: 1024
+  max_read_bytes_per_cycle: 8192
   # Re-anchor the reconstructed active-send clock if parser loss or serial backlog
   # makes frame-count reconstruction drift too far from the host LSL clock.
   clock_reanchor_max_drift_s: 0.080
+  # If the active-send parser enters a CRC/resync cascade, discard stale
+  # buffered bytes and recover from the current live byte stream.
+  recovery_enabled: true
+  recovery_warning_threshold: 48
+  recovery_min_interval_s: 1.0
+  recovery_reset_input_buffer: true
   max_binary_frame_bytes: 64
-  max_buffer_bytes: 16384
+  max_buffer_bytes: 8192
   frame_slave_id: 1
   frame_function_code: 3
   frame_register_count: 11

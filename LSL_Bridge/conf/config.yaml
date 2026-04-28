@@ -39,8 +39,8 @@ rs485_ipc:
   # It selects the closest RS485 frame inside [Arduino timestamp - max_age_s,
   # Arduino timestamp + max_future_s]. Active-Send is delivered in short bursts,
   # so this window must tolerate the burst interval plus OS scheduling jitter.
-  max_age_s: 0.150
-  max_future_s: 0.030
+  max_age_s: 0.200
+  max_future_s: 0.050
 
   # nan makes missing/stale RS485 data explicit without crashing Arduino acquisition.
   missing_policy: nan       # nan | hold_last

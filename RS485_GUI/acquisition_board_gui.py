@@ -194,6 +194,9 @@ class ActiveSendStats:
     timestamp_reanchors: int = 0
     timestamp_drift_reanchors: int = 0
     timestamp_parser_reanchors: int = 0
+    recovery_events: int = 0
+    last_recovery_monotonic: float = 0.0
+    last_recovery_warning_count: int = 0
 
 
 
@@ -1449,6 +1452,51 @@ class ActiveSendBoardTransport(BoardTransport):
         self._last_assigned_sample_lsl_ts = None
         self._force_timestamp_reanchor = False
 
+    def _maybe_recover_active_stream(self, reason: str) -> None:
+        """Drop stale/corrupted active-send backlog and re-anchor timing.
+
+        Active-send is a real-time push stream. If the parser enters a CRC/resync
+        cascade, processing old buffered bytes is worse than dropping a short
+        segment and returning to the current live byte stream.
+        """
+        stats = self.app_state.active_send_stats
+        if not bool(getattr(self.app_state.cfg.active_send, 'recovery_enabled', True)):
+            return
+        now = time.monotonic()
+        min_interval_s = float(getattr(self.app_state.cfg.active_send, 'recovery_min_interval_s', 1.0))
+        warning_threshold = max(1, int(getattr(self.app_state.cfg.active_send, 'recovery_warning_threshold', 48)))
+        if now - stats.last_recovery_monotonic < min_interval_s:
+            return
+        if (stats.warning_events_total - stats.last_recovery_warning_count) < warning_threshold:
+            return
+
+        pending = 0
+        if self.ser is not None:
+            try:
+                pending = int(self.ser.in_waiting)
+            except Exception:
+                pending = 0
+        dropped_buffer = len(self.binary_buffer)
+        self.binary_buffer.clear()
+        self.line_buffer.clear()
+        if self.ser is not None and bool(getattr(self.app_state.cfg.active_send, 'recovery_reset_input_buffer', True)):
+            try:
+                self.ser.reset_input_buffer()
+            except Exception as exc:
+                LOGGER.warning('Active-send recovery could not reset serial input buffer: %s', exc)
+        self._force_timestamp_reanchor = True
+        stats.recovery_events += 1
+        stats.last_recovery_monotonic = now
+        stats.last_recovery_warning_count = stats.warning_events_total
+        stats.discarded_bytes += dropped_buffer + pending
+        LOGGER.warning(
+            'Active-send parser recovery #%d: reason=%s dropped_buffer=%d dropped_serial_pending=%d; timing will re-anchor on next valid batch',
+            stats.recovery_events,
+            reason,
+            dropped_buffer,
+            pending,
+        )
+
     def _maybe_log_active_warning(self, message: str) -> None:
         stats = self.app_state.active_send_stats
         stats.warning_events_total += 1
@@ -1477,8 +1525,10 @@ class ActiveSendBoardTransport(BoardTransport):
             )
             stats.last_warning_emit_monotonic = now
             stats.warning_suppressed = 0
+            self._maybe_recover_active_stream('warning_threshold')
             return
         stats.warning_suppressed += 1
+        self._maybe_recover_active_stream('warning_threshold')
 
     def _update_active_watermarks(self) -> None:
         stats = self.app_state.active_send_stats
@@ -1496,19 +1546,43 @@ class ActiveSendBoardTransport(BoardTransport):
         expected_len: int,
         bad_hex_limit: int,
         max_buffer_bytes: int,
+        max_frames: int,
     ) -> List[bytes]:
+        """Extract CRC-valid Modbus-style active-send frames from the byte buffer.
+
+        The parser performs a short look-ahead for the next CRC-valid header
+        before deciding how much to discard. This avoids long false-lock cascades
+        when header-looking bytes appear inside payloads during backlog/corruption.
+        """
         stats = self.app_state.active_send_stats
         frames: List[bytes] = []
+        max_frames = max(1, int(max_frames))
         if len(self.binary_buffer) > max_buffer_bytes:
             overflow = len(self.binary_buffer) - max_buffer_bytes
             stats.discarded_bytes += overflow
             stats.buffer_overflow_events += 1
             stats.buffer_overflow_bytes += overflow
             del self.binary_buffer[:overflow]
+            self._force_timestamp_reanchor = True
             self._maybe_log_active_warning(
                 f'Active-send buffer overflow: discarded {overflow} bytes to keep buffer <= {max_buffer_bytes}'
             )
-        while True:
+
+        def _find_next_crc_valid_header(start_pos: int = 0) -> Optional[int]:
+            pos = max(0, start_pos)
+            while True:
+                idx = self.binary_buffer.find(header, pos)
+                if idx < 0:
+                    return None
+                if len(self.binary_buffer) - idx < expected_len:
+                    return None
+                candidate = bytes(self.binary_buffer[idx:idx + expected_len])
+                expected_crc = crc16_modbus(candidate[:-2]).to_bytes(2, byteorder='little')
+                if candidate[-2:] == expected_crc:
+                    return idx
+                pos = idx + 1
+
+        while len(frames) < max_frames:
             idx = self.binary_buffer.find(header)
             if idx < 0:
                 if len(self.binary_buffer) > self.header_length - 1:
@@ -1529,22 +1603,38 @@ class ActiveSendBoardTransport(BoardTransport):
                 )
             if len(self.binary_buffer) < expected_len:
                 break
+
             candidate = bytes(self.binary_buffer[:expected_len])
             expected_crc = crc16_modbus(candidate[:-2]).to_bytes(2, byteorder='little')
             received_crc = candidate[-2:]
             if received_crc != expected_crc:
                 stats.crc_failures += 1
                 stats.last_bad_candidate_hex = candidate[:bad_hex_limit].hex(' ')
+                self._force_timestamp_reanchor = True
+
+                valid_idx = _find_next_crc_valid_header(1)
+                if valid_idx is not None:
+                    discard = valid_idx
+                    del self.binary_buffer[:discard]
+                    stats.discarded_bytes += discard
+                    stats.header_resyncs += 1
+                    self._maybe_log_active_warning(
+                        'Active-send CRC mismatch; skipped to next CRC-valid header '
+                        f'#{stats.crc_failures}: got={received_crc.hex()} expected={expected_crc.hex()} '
+                        f'skipped={discard} candidate_len={len(candidate)} preview={stats.last_bad_candidate_hex}'
+                    )
+                    continue
+
                 del self.binary_buffer[0]
                 stats.discarded_bytes += 1
                 stats.header_resyncs += 1
-                self._force_timestamp_reanchor = True
                 self._maybe_log_active_warning(
                     'Active-send CRC mismatch '
                     f'#{stats.crc_failures}: got={received_crc.hex()} expected={expected_crc.hex()} '
                     f'candidate_len={len(candidate)} preview={stats.last_bad_candidate_hex}'
                 )
                 continue
+
             del self.binary_buffer[:expected_len]
             frames.append(candidate)
             self._update_active_watermarks()
@@ -1576,6 +1666,19 @@ class ActiveSendBoardTransport(BoardTransport):
         batch_started_monotonic: Optional[float] = None
         read_deadline = time.monotonic() + read_timeout_s
 
+        # Consume already-buffered complete frames before reading more serial bytes.
+        if self.binary_buffer:
+            buffered_frames = self._extract_modbus_response_frames(
+                header=header,
+                expected_len=expected_len,
+                bad_hex_limit=bad_hex_limit,
+                max_buffer_bytes=max_buffer_bytes,
+                max_frames=max_frames_per_delivery,
+            )
+            if buffered_frames:
+                frames_batch.extend(buffered_frames)
+                batch_started_monotonic = time.monotonic()
+
         while time.monotonic() < read_deadline:
             if frames_batch and batch_started_monotonic is not None:
                 if (time.monotonic() - batch_started_monotonic) >= delivery_window_s:
@@ -1587,7 +1690,12 @@ class ActiveSendBoardTransport(BoardTransport):
                 pending = int(self.ser.in_waiting)
             except Exception:
                 pending = 0
-            read_size = max(chunk_size, min(max_read_bytes, pending if pending > 0 else chunk_size))
+            # Avoid pyserial blocking while trying to fill a large chunk when
+            # only a few bytes are available. If bytes are already pending, drain
+            # exactly that pending amount up to max_read_bytes. If not, read one
+            # expected frame worth of bytes to keep latency low.
+            read_size = min(max_read_bytes, pending) if pending > 0 else min(chunk_size, expected_len)
+            read_size = max(1, int(read_size))
             chunk = self.ser.read(read_size)
             if not chunk:
                 if frames_batch:
@@ -1606,6 +1714,7 @@ class ActiveSendBoardTransport(BoardTransport):
                 expected_len=expected_len,
                 bad_hex_limit=bad_hex_limit,
                 max_buffer_bytes=max_buffer_bytes,
+                max_frames=max_frames_per_delivery - len(frames_batch),
             )
             if frames:
                 frames_batch.extend(frames)
@@ -1645,6 +1754,7 @@ class ActiveSendBoardTransport(BoardTransport):
             'timestamp_reanchors': stats.timestamp_reanchors,
             'timestamp_drift_reanchors': stats.timestamp_drift_reanchors,
             'timestamp_parser_reanchors': stats.timestamp_parser_reanchors,
+            'recovery_events': stats.recovery_events,
             'delivery_window_s': delivery_window_s,
             'max_frames_per_delivery': max_frames_per_delivery,
         }

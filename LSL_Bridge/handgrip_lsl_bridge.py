@@ -427,21 +427,25 @@ class RS485IpcSubscriber:
             gap_count = self._gap_count
 
         # Select the closest RS485 sample in the allowed fusion window.
-        # Active-Send arrives in small bursts; closest-sample fusion is better
-        # synchronized than simply holding the newest causal sample.
+        # Active-Send timestamp re-anchors after CRC/resync recovery can make
+        # arrival order differ from reconstructed timestamp order. Therefore we
+        # scan the whole bounded ring buffer instead of early-breaking on append
+        # order.
         chosen: Optional[RS485IpcSample] = None
         best_abs_age = math.inf
         lower_bound = target_lsl_ts - max_age_s
         upper_bound = target_lsl_ts + max_future_s
-        for candidate in reversed(buffer_snapshot):
+        latest_ts = math.nan
+        latest_age = math.nan
+        oldest_ts = math.nan
+        if buffer_snapshot:
+            latest_ts = buffer_snapshot[-1].host_lsl_ts
+            latest_age = target_lsl_ts - latest_ts
+            oldest_ts = buffer_snapshot[0].host_lsl_ts
+        for candidate in buffer_snapshot:
             candidate_ts = candidate.host_lsl_ts
-            if candidate_ts > upper_bound:
+            if candidate_ts < lower_bound or candidate_ts > upper_bound:
                 continue
-            if candidate_ts < lower_bound:
-                # Buffer is append-ordered by timestamp in normal operation; once
-                # we are older than the lower bound while scanning backwards, the
-                # remaining candidates will be older too.
-                break
             abs_age = abs(target_lsl_ts - candidate_ts)
             if abs_age < best_abs_age:
                 chosen = candidate
@@ -451,7 +455,14 @@ class RS485IpcSubscriber:
             if missing_policy == "hold_last" and last_valid is not None:
                 age = target_lsl_ts - last_valid.host_lsl_ts
                 return RS485Selection(sample=last_valid, age_s=age, missing_reason="hold_last_missing")
-            self._log_status_if_due(received_count, malformed_count, gap_count, reason="no_frames")
+            if not buffer_snapshot:
+                reason = "empty_buffer"
+            else:
+                reason = (
+                    f"no_candidate target={target_lsl_ts:.6f} window=[{lower_bound:.6f},{upper_bound:.6f}] "
+                    f"oldest_ts={oldest_ts:.6f} latest_ts={latest_ts:.6f} latest_age={latest_age:.6f}"
+                )
+            self._log_status_if_due(received_count, malformed_count, gap_count, reason=reason)
             return RS485Selection(sample=None, age_s=math.nan, missing_reason="missing")
 
         age_s = target_lsl_ts - chosen.host_lsl_ts
