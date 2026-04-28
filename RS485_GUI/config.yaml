@@ -91,6 +91,10 @@ ipc:
 
 serial:
   default_port: ""
+  # Protect the Arduino/LSL bridge serial port from accidental GUI ownership.
+  # Update this if udev assigns your Arduino to a different stable name.
+  excluded_ports:
+    - /dev/ttyUSB0
   default_baudrate: 460800
   default_parity: N
   default_stopbits: 1
@@ -127,9 +131,9 @@ active_send:
   # max_frames_per_delivery before returning each batch.
   read_chunk_bytes: 1024
   max_read_bytes_per_cycle: 8192
-  # Re-anchor the reconstructed active-send clock if parser loss or serial backlog
-  # makes frame-count reconstruction drift too far from the host LSL clock.
-  clock_reanchor_max_drift_s: 0.080
+  # Re-anchor only on large reconstruction drift. Normal burst scheduling jitter is
+  # not an error and should not produce warning/recovery cascades.
+  clock_reanchor_max_drift_s: 0.250
   # If the active-send parser enters a CRC/resync cascade, discard stale
   # buffered bytes and recover from the current live byte stream.
   recovery_enabled: true
@@ -144,5 +148,5 @@ active_send:
   log_first_n_good_frames: 5
   log_summary_every_n_good_frames: 250
   log_bad_frame_hex_bytes: 64
-  warning_emit_interval_s: 3.0
+  warning_emit_interval_s: 5.0
   detailed_warning_limit: 2

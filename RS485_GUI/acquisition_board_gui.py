@@ -893,8 +893,12 @@ class AppState:
     signal_logger: Optional[SignalFileLogger] = None
     ipc_publisher: Optional[MeasurementFramePublisher] = None
     active_send_stats: ActiveSendStats = field(default_factory=ActiveSendStats)
+    # Full-rate acquisition/IPC/log timing. Do not use GUI-throttled frames here.
     sampling_stats: SamplingStats = field(default_factory=SamplingStats)
+    # Browser/display timing after display throttling/downsampling.
+    display_sampling_stats: SamplingStats = field(default_factory=SamplingStats)
     _last_ui_frame_ts: Optional[float] = None
+    _last_max_rate_frame_ts: Optional[float] = None
     frame_history_version: int = 0
 
     def push_event(self, message: str) -> None:
@@ -912,10 +916,13 @@ class AppState:
             self.frame_history.clear()
             self.frame_history_version += 1
             self._last_ui_frame_ts = None
+        self._last_max_rate_frame_ts = None
         if reset_session_counters:
             self.sampling_stats.reset_all(window_size)
+            self.display_sampling_stats.reset_all(window_size)
         else:
             self.sampling_stats.reset_window(window_size)
+            self.display_sampling_stats.reset_window(window_size)
         self.push_event(f'Cleared plotted signal trace ({reason})')
 
     def filter_frames_by_max_sampling_rate(self, frames: List[MeasurementFrame]) -> List[MeasurementFrame]:
@@ -927,7 +934,7 @@ class AppState:
             return frames
         min_dt = 1.0 / max_hz
         kept: List[MeasurementFrame] = []
-        last_ts = self.sampling_stats.get_last_processed_ts()
+        last_ts = self._last_max_rate_frame_ts
         dropped = 0
         for frame in frames:
             # Active-send recovery may re-anchor reconstructed timestamps. If the
@@ -939,8 +946,19 @@ class AppState:
                 last_ts = frame.host_ts
             else:
                 dropped += 1
+        self._last_max_rate_frame_ts = last_ts
         self.sampling_stats.add_dropped_samples(dropped)
         return kept
+
+    def record_acquisition_frames(self, frames: List[MeasurementFrame]) -> None:
+        """Record full-rate acquisition timing before GUI display throttling.
+
+        This is the authoritative sampling-rate measurement shown in the UI.
+        It intentionally runs on the frames that are logged/published over IPC,
+        not on the display-throttled subset sent to Plotly.
+        """
+        for frame in frames:
+            self.sampling_stats.record_processed_frame(frame.host_ts)
 
     def filter_frames_for_ui(self, frames: List[MeasurementFrame]) -> List[MeasurementFrame]:
         """Return a display-rate-limited subset for browser/UI rendering only.
@@ -982,7 +1000,7 @@ class AppState:
         self.raw_log.appendleft(render_raw_log_entry(latest_frame, ui_entry_chars))
         self.interpreted_log.appendleft(render_interpreted_log_entry(latest_frame, ui_entry_chars))
         for frame in frames:
-            self.sampling_stats.record_processed_frame(frame.host_ts)
+            self.display_sampling_stats.record_processed_frame(frame.host_ts)
 
     def push_frame(self, frame: MeasurementFrame) -> None:
         self.push_frames([frame])
@@ -1896,10 +1914,12 @@ class ActiveSendBoardTransport(BoardTransport):
                     if clock_reanchor_max_drift_s > 0 and abs(reconstruction_drift_s) > clock_reanchor_max_drift_s:
                         should_reanchor = True
                         self.app_state.active_send_stats.timestamp_drift_reanchors += 1
-                        self._maybe_log_active_warning(
+                        LOGGER.info(
                             'Active-send timestamp re-anchor due to reconstruction drift: '
-                            f'drift={reconstruction_drift_s:.6f}s threshold={clock_reanchor_max_drift_s:.6f}s '
-                            f'batch_size={len(frame_bytes_batch)}'
+                            'drift=%.6fs threshold=%.6fs batch_size=%d',
+                            reconstruction_drift_s,
+                            clock_reanchor_max_drift_s,
+                            len(frame_bytes_batch),
                         )
 
                 if should_reanchor:
@@ -2056,6 +2076,7 @@ def acquisition_worker(app_state: AppState) -> None:
             if app_state.signal_logger is not None:
                 app_state.signal_logger.write_frames(acquisition_frames)
 
+            app_state.record_acquisition_frames(acquisition_frames)
             ui_frames = app_state.filter_frames_for_ui(acquisition_frames)
             if ui_frames:
                 app_state.push_frames(ui_frames)
@@ -2173,6 +2194,37 @@ def cfg_to_serial_settings(cfg: DictConfig) -> SerialSettings:
 
 
 
+def get_excluded_serial_ports(cfg: DictConfig) -> List[str]:
+    """Return serial ports that this GUI must not open.
+
+    This prevents accidental contention with the Arduino/LSL bridge port. In the
+    latest failure log, the GUI briefly opened /dev/ttyUSB0 while the bridge was
+    already using it, which produced pyserial "multiple access" failures in the
+    bridge and reset the Arduino sequence.
+    """
+    raw = getattr(cfg.serial, 'excluded_ports', [])
+    if raw is None:
+        return []
+    try:
+        return [str(item) for item in list(raw) if str(item).strip()]
+    except TypeError:
+        return [str(raw)] if str(raw).strip() else []
+
+
+def is_serial_port_excluded(cfg: DictConfig, port: str) -> bool:
+    port_str = str(port or '')
+    if not port_str:
+        return False
+    return port_str in set(get_excluded_serial_ports(cfg))
+
+
+def filter_excluded_ports(cfg: DictConfig, ports: List[PortInfo]) -> List[PortInfo]:
+    excluded = set(get_excluded_serial_ports(cfg))
+    if not excluded:
+        return ports
+    return [port for port in ports if port.device not in excluded]
+
+
 def disconnect_state(app_state: AppState) -> None:
     app_state.stop_event.set()
     if app_state.worker_thread and app_state.worker_thread.is_alive():
@@ -2195,14 +2247,25 @@ def disconnect_state(app_state: AppState) -> None:
 
 
 def connect_state(app_state: AppState) -> None:
+    selected_port = str(app_state.serial_cfg.port or '')
+    if is_serial_port_excluded(app_state.cfg, selected_port):
+        excluded = ', '.join(get_excluded_serial_ports(app_state.cfg))
+        raise RuntimeError(
+            f'Serial port {selected_port} is reserved/excluded for another process. '
+            f'Configured excluded_ports=[{excluded}]. Select the RS485 board port instead.'
+        )
     disconnect_state(app_state)
     app_state.stop_event = threading.Event()
     window_size = int(getattr(app_state.cfg.ui, 'sampling_rate_window_samples', 128))
     app_state.sampling_stats.reset_all(window_size)
+    app_state.display_sampling_stats.reset_all(window_size)
+    app_state._last_max_rate_frame_ts = None
     if bool(getattr(app_state.cfg.ui, 'clear_plot_on_connect', True)):
         app_state.clear_signal_trace(reason='new connection', reset_session_counters=True)
     else:
         app_state.sampling_stats.reset_all(window_size)
+        app_state.display_sampling_stats.reset_all(window_size)
+        app_state._last_max_rate_frame_ts = None
     mode = app_state.mode
     if mode == 'modbus_rtu':
         app_state.transport = ModbusBoardTransport(app_state)
@@ -2351,7 +2414,7 @@ def run_app(cfg: DictConfig) -> None:
                 f'topic={cfg.ipc.topic} signal_key={cfg.ipc.signal_key}'
             )
 
-    available_ports = enumerate_ports(list(cfg.serial.port_hints))
+    available_ports = filter_excluded_ports(cfg, enumerate_ports(list(cfg.serial.port_hints)))
 
     dark_mode = ui.dark_mode()
     if bool(cfg.ui.light_mode):
@@ -2436,13 +2499,15 @@ def run_app(cfg: DictConfig) -> None:
 
         with ui.row().classes('gap-2 mt-4'):
             def refresh_port_list() -> None:
-                ports = enumerate_ports(list(cfg.serial.port_hints))
+                ports = filter_excluded_ports(cfg, enumerate_ports(list(cfg.serial.port_hints)))
                 options = {p.device: f'{p.device} | {p.description} | {p.hwid}' for p in ports}
                 port_select.options = options
                 if options and port_select.value not in options:
                     port_select.value = next(iter(options.keys()))
                 port_select.update()
-                app_state.push_event(f'Refreshed port list: {len(options)} ports found')
+                excluded = get_excluded_serial_ports(cfg)
+                suffix = f' (excluded: {excluded})' if excluded else ''
+                app_state.push_event(f'Refreshed port list: {len(options)} ports found{suffix}')
 
             def sync_form_to_state() -> None:
                 app_state.serial_cfg.port = str(port_select.value or '')
@@ -2621,21 +2686,31 @@ def run_app(cfg: DictConfig) -> None:
         sampling_stride = max(1, int(getattr(cfg.ui, 'sampling_update_every_n_refreshes', 5)))
         if (refresh_counter['count'] % sampling_stride) == 0:
             sampling_stats = app_state.sampling_stats
+            display_sampling_stats = app_state.display_sampling_stats
             target_hz = get_target_sampling_rate_hz(cfg, str(mode_select.value))
             max_hz = float(getattr(cfg.ui, 'max_signal_samples_per_second', 0.0) or 0.0)
+            display_max_hz = float(getattr(cfg.ui, 'display_max_samples_per_second', 0.0) or 0.0)
             mean_hz, std_hz, window_count, received_count, dropped_count = sampling_stats.snapshot(
                 outlier_low_ratio=float(getattr(cfg.ui, 'sampling_rate_outlier_low_ratio', 0.25)),
                 outlier_high_ratio=float(getattr(cfg.ui, 'sampling_rate_outlier_high_ratio', 4.0)),
                 outlier_min_samples=int(getattr(cfg.ui, 'sampling_rate_outlier_min_samples', 16)),
             )
+            display_mean_hz, display_std_hz, display_window_count, _, _ = display_sampling_stats.snapshot(
+                outlier_low_ratio=float(getattr(cfg.ui, 'sampling_rate_outlier_low_ratio', 0.25)),
+                outlier_high_ratio=float(getattr(cfg.ui, 'sampling_rate_outlier_high_ratio', 4.0)),
+                outlier_min_samples=int(getattr(cfg.ui, 'sampling_rate_outlier_min_samples', 16)),
+            )
             sampling_text = (
-                f'Target sampling rate: {format_rate(target_hz)}\n'
-                f'Measured mean rate: {format_rate(mean_hz)}\n'
-                f'Measured std-dev: {format_rate(std_hz)}\n'
-                f'Window size: last {window_count} intervals / configured {int(getattr(cfg.ui, "sampling_rate_window_samples", 128))}\n'
-                f'Samples received: {received_count}\n'
-                f'Samples dropped by max-rate limiter: {dropped_count}\n'
-                f'Configured max processed sampling rate: {format_rate(max_hz)}'
+                f'Target acquisition rate: {format_rate(target_hz)}\n'
+                f'Measured acquisition mean: {format_rate(mean_hz)}\n'
+                f'Measured acquisition std-dev: {format_rate(std_hz)}\n'
+                f'Acquisition window: last {window_count} intervals / configured {int(getattr(cfg.ui, "sampling_rate_window_samples", 128))}\n'
+                f'Frames received from transport: {received_count}\n'
+                f'Frames dropped by acquisition max-rate limiter: {dropped_count}\n'
+                f'Configured max processed acquisition rate: {format_rate(max_hz)}\n'
+                f'Display/render mean: {format_rate(display_mean_hz)}\n'
+                f'Display/render std-dev: {format_rate(display_std_hz)}\n'
+                f'Display window: last {display_window_count} intervals; display limiter: {format_rate(display_max_hz)}'
             )
             if sampling_rate_label.text != sampling_text:
                 sampling_rate_label.text = sampling_text
