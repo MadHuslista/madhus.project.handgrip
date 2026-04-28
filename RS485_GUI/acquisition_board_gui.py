@@ -2023,6 +2023,9 @@ def connect_state(app_state: AppState) -> None:
         app_state.push_event(
             'Active-send decoder config: '
             f'parser={app_state.parse_profile} chunk_bytes={int(app_state.cfg.active_send.read_chunk_bytes)} '
+            f'max_read_bytes_per_cycle={int(getattr(app_state.cfg.active_send, "max_read_bytes_per_cycle", 0))} '
+            f'delivery_window_s={float(getattr(app_state.cfg.active_send, "delivery_window_s", 0.0))} '
+            f'max_frames_per_delivery={int(getattr(app_state.cfg.active_send, "max_frames_per_delivery", 0))} '
             f'timeout_s={float(app_state.cfg.active_send.read_timeout_s)} '
             f'frame_slave_id={int(getattr(app_state.cfg.active_send, "frame_slave_id", 0) or 0) or int(app_state.cfg.device.slave_address)} '
             f'function=0x{int(app_state.cfg.active_send.frame_function_code):02X} '
@@ -2444,7 +2447,12 @@ def run_app(cfg: DictConfig) -> None:
             app_state.ipc_publisher.stop()
 
     app.on_shutdown(cleanup)
-    ui.run(host=str(cfg.ui.host), port=int(cfg.ui.port), reload=False, title=str(cfg.ui.page_title))
+    try:
+        ui.run(host=str(cfg.ui.host), port=int(cfg.ui.port), reload=False, title=str(cfg.ui.page_title))
+    except KeyboardInterrupt:
+        LOGGER.info('Stopping on user request')
+    finally:
+        cleanup()
 
 
 def main() -> None:

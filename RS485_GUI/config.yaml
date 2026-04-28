@@ -105,10 +105,12 @@ active_send:
   default_numeric_index: 0
   default_hex_word_endianness: big
   read_timeout_s: 0.5
-  delivery_window_s: 0.05            # batch window for real-time GUI delivery
-  max_frames_per_delivery: 64
-  read_chunk_bytes: 256
-  max_read_bytes_per_cycle: 4096
+  # Keep Active-Send IPC low-latency. At 500 Hz, 8 frames ≈ 16 ms.
+  # Larger batches are valid but make bridge-side fusion intermittently stale.
+  delivery_window_s: 0.012
+  max_frames_per_delivery: 8
+  read_chunk_bytes: 64
+  max_read_bytes_per_cycle: 128
   max_binary_frame_bytes: 64
   max_buffer_bytes: 16384
   frame_slave_id: 1

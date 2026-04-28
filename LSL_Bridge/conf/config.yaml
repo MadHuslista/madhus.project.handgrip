@@ -36,9 +36,11 @@ rs485_ipc:
   buffer_max_frames: 5000
 
   # Fusion rule: bridge publishes one unified LSL sample per Arduino sample.
-  # It selects the newest RS485 frame not later than Arduino LSL timestamp + max_future_s.
-  max_age_s: 0.050
-  max_future_s: 0.005
+  # It selects the closest RS485 frame inside [Arduino timestamp - max_age_s,
+  # Arduino timestamp + max_future_s]. Active-Send is delivered in short bursts,
+  # so this window must tolerate the burst interval plus OS scheduling jitter.
+  max_age_s: 0.120
+  max_future_s: 0.020
 
   # nan makes missing/stale RS485 data explicit without crashing Arduino acquisition.
   missing_policy: nan       # nan | hold_last

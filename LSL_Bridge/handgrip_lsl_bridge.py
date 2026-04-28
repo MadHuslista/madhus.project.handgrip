@@ -426,12 +426,26 @@ class RS485IpcSubscriber:
             malformed_count = self._malformed_count
             gap_count = self._gap_count
 
+        # Select the closest RS485 sample in the allowed fusion window.
+        # Active-Send arrives in small bursts; closest-sample fusion is better
+        # synchronized than simply holding the newest causal sample.
         chosen: Optional[RS485IpcSample] = None
-        cutoff = target_lsl_ts + max_future_s
+        best_abs_age = math.inf
+        lower_bound = target_lsl_ts - max_age_s
+        upper_bound = target_lsl_ts + max_future_s
         for candidate in reversed(buffer_snapshot):
-            if candidate.host_lsl_ts <= cutoff:
-                chosen = candidate
+            candidate_ts = candidate.host_lsl_ts
+            if candidate_ts > upper_bound:
+                continue
+            if candidate_ts < lower_bound:
+                # Buffer is append-ordered by timestamp in normal operation; once
+                # we are older than the lower bound while scanning backwards, the
+                # remaining candidates will be older too.
                 break
+            abs_age = abs(target_lsl_ts - candidate_ts)
+            if abs_age < best_abs_age:
+                chosen = candidate
+                best_abs_age = abs_age
 
         if chosen is None:
             if missing_policy == "hold_last" and last_valid is not None:
@@ -444,7 +458,12 @@ class RS485IpcSubscriber:
         if abs(age_s) > max_age_s:
             if stale_policy == "hold_last":
                 return RS485Selection(sample=chosen, age_s=age_s, missing_reason="hold_last_stale")
-            self._log_status_if_due(received_count, malformed_count, gap_count, reason=f"stale age={age_s:.6f}s")
+            self._log_status_if_due(
+                received_count,
+                malformed_count,
+                gap_count,
+                reason=f"stale age={age_s:.6f}s window=[-{max_age_s:.3f},+{max_future_s:.3f}]",
+            )
             return RS485Selection(sample=None, age_s=age_s, missing_reason="stale")
 
         if now_monotonic - self._last_status_log_monotonic >= float(self.cfg.rs485_ipc.log_status_every_s):
