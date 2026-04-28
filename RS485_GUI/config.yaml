@@ -48,6 +48,27 @@ logger:
   debug_log_filename: acquisition_debug.log
   event_log_filename: event.log
 
+ipc:
+  enabled: true
+  transport: zmq_pub
+  bind: tcp://127.0.0.1:5557
+  topic: rs485.measurement.v1
+
+  # Which MeasurementFrame interpreted value becomes LSL channel 3.
+  # net_value is the recommended calibrated force signal for the reference board.
+  signal_key: net_value
+
+  send_hwm: 2000
+  linger_ms: 0
+  drop_on_backpressure: true
+  require_pylsl_clock: true
+
+  # false = publish full RS485 acquisition frames before GUI max-rate filtering.
+  # true  = publish only frames kept by ui.max_signal_samples_per_second.
+  publish_after_max_rate_filter: false
+
+  log_every_s: 5.0
+
 serial:
   default_port: ""
   default_baudrate: 460800

@@ -2,11 +2,13 @@ defaults:
   - _self_
 
 stream:
-  name: ArduinoHandgrip
+  name: UnifiedHandgripRS485
   type: Force
   source_id: null
-  manufacturer: Arduino
-  device_name: Handgrip
+  manufacturer: Arduino+RS485
+  device_name: Handgrip+AcquisitionBoard
+
+  # Arduino / handgrip channels
   value_unit: g
   clock_unit: us
   clock_channel_label: device_clock_us
@@ -15,6 +17,34 @@ stream:
   clock_channel_type: Time
   raw_channel_type: Force
   filtered_channel_type: Force
+
+  # RS485 acquisition-board channels
+  rs485_value_unit: N
+  rs485_clock_unit: s
+  rs485_raw_channel_label: rs485_raw
+  rs485_clock_channel_label: rs485_clock
+  rs485_raw_channel_type: Force
+  rs485_clock_channel_type: Time
+
+rs485_ipc:
+  enabled: true
+  transport: zmq_sub
+  connect: tcp://127.0.0.1:5557
+  topic: rs485.measurement.v1
+
+  receive_hwm: 5000
+  buffer_max_frames: 5000
+
+  # Fusion rule: bridge publishes one unified LSL sample per Arduino sample.
+  # It selects the newest RS485 frame not later than Arduino LSL timestamp + max_future_s.
+  max_age_s: 0.050
+  max_future_s: 0.005
+
+  # nan makes missing/stale RS485 data explicit without crashing Arduino acquisition.
+  missing_policy: nan       # nan | hold_last
+  stale_policy: nan         # nan | hold_last
+
+  log_status_every_s: 5.0
 
 serial:
   port: /dev/ttyUSB0

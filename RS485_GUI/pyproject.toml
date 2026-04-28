@@ -9,5 +9,7 @@ dependencies = [
     "nicegui",
     "plotly",
     "pyserial",
+    "pyzmq",
+    "pylsl",
 ]
 

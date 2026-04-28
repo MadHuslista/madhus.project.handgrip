@@ -25,6 +25,16 @@ except Exception:  # pragma: no cover - optional acceleration
 import serial
 from serial.tools import list_ports
 
+try:
+    import zmq
+except Exception:  # pragma: no cover - optional dependency, required only when ipc.enabled=true
+    zmq = None
+
+try:
+    from pylsl import local_clock as _pylsl_local_clock
+except Exception:  # pragma: no cover - optional until IPC/LSL timing is enabled
+    _pylsl_local_clock = None
+
 LOGGER = logging.getLogger('acquisition_board_gui')
 
 
@@ -270,6 +280,18 @@ def truncate_text(text: str, max_chars: int) -> str:
     keep = max(16, max_chars - 24)
     omitted = len(text) - keep
     return f'{text[:keep]} ... (+{omitted} chars)'
+
+
+def lsl_local_clock() -> float:
+    """Return the host clock in the Lab Streaming Layer local-clock domain.
+
+    The fallback to time.time() keeps the GUI usable when pylsl is missing and
+    IPC is disabled, but IPC startup rejects pylsl absence by default because the
+    bridge expects RS485 timestamps in LSL-local time.
+    """
+    if _pylsl_local_clock is not None:
+        return float(_pylsl_local_clock())
+    return time.time()
 
 
 def build_log_text(items: List[str], separator: str, max_total_chars: int) -> str:
@@ -584,6 +606,130 @@ def render_interpreted_log_entry(frame: MeasurementFrame, max_chars: int) -> str
     return truncate_text(json.dumps(summary, ensure_ascii=False, separators=(",", ":")), max_chars)
 
 
+
+class MeasurementFramePublisher:
+    """Best-effort ZeroMQ publisher for decoded RS485 MeasurementFrame data."""
+
+    SCHEMA = 'rs485.measurement.v1'
+
+    def __init__(self, cfg: DictConfig):
+        self.cfg = cfg
+        self.enabled = bool(getattr(cfg.ipc, 'enabled', False))
+        self.transport = str(getattr(cfg.ipc, 'transport', 'zmq_pub'))
+        self.bind = str(getattr(cfg.ipc, 'bind', 'tcp://127.0.0.1:5557'))
+        self.topic = str(getattr(cfg.ipc, 'topic', 'rs485.measurement.v1'))
+        self.signal_key = str(getattr(cfg.ipc, 'signal_key', 'net_value'))
+        self.drop_on_backpressure = bool(getattr(cfg.ipc, 'drop_on_backpressure', True))
+        self._context: Any = None
+        self._socket: Any = None
+        self._seq = 0
+        self._dropped_publish_errors = 0
+        self._published = 0
+        self._last_log_monotonic = 0.0
+        self._lock = threading.Lock()
+
+    def start(self) -> None:
+        if not self.enabled:
+            LOGGER.info('RS485 IPC publisher disabled')
+            return
+        if self.transport != 'zmq_pub':
+            raise ValueError(f'Unsupported ipc.transport={self.transport!r}; only zmq_pub is implemented')
+        if zmq is None:
+            raise RuntimeError('ipc.enabled=true requires pyzmq. Install with: uv add pyzmq')
+        if _pylsl_local_clock is None and bool(getattr(self.cfg.ipc, 'require_pylsl_clock', True)):
+            raise RuntimeError('ipc.enabled=true requires pylsl for LSL-local RS485 timestamps. Install with: uv add pylsl')
+        self._context = zmq.Context.instance()
+        self._socket = self._context.socket(zmq.PUB)
+        self._socket.setsockopt(zmq.SNDHWM, int(getattr(self.cfg.ipc, 'send_hwm', 2000)))
+        self._socket.setsockopt(zmq.LINGER, int(getattr(self.cfg.ipc, 'linger_ms', 0)))
+        self._socket.bind(self.bind)
+        LOGGER.info('RS485 IPC publisher bound to %s topic=%s signal_key=%s', self.bind, self.topic, self.signal_key)
+
+    def stop(self) -> None:
+        with self._lock:
+            if self._socket is not None:
+                try:
+                    self._socket.close(0)
+                except Exception:
+                    pass
+            self._socket = None
+
+    def publish_frames(self, frames: List[MeasurementFrame]) -> None:
+        if not self.enabled or not frames:
+            return
+        with self._lock:
+            if self._socket is None:
+                return
+            for frame in frames:
+                record = self._build_record(frame)
+                if record is None:
+                    continue
+                flags = zmq.NOBLOCK if self.drop_on_backpressure else 0
+                try:
+                    self._socket.send_multipart(
+                        [
+                            self.topic.encode('utf-8'),
+                            json.dumps(record, ensure_ascii=False, separators=(',', ':')).encode('utf-8'),
+                        ],
+                        flags=flags,
+                    )
+                    self._published += 1
+                except Exception as exc:
+                    self._dropped_publish_errors += 1
+                    if self._dropped_publish_errors == 1 or self._dropped_publish_errors % 100 == 0:
+                        LOGGER.warning('RS485 IPC publish drop #%d: %s', self._dropped_publish_errors, exc)
+        self._log_status_if_due()
+
+    def _build_record(self, frame: MeasurementFrame) -> Optional[Dict[str, Any]]:
+        value = extract_signal_value(frame, self.signal_key)
+        if value is None:
+            self._dropped_publish_errors += 1
+            if self._dropped_publish_errors == 1 or self._dropped_publish_errors % 100 == 0:
+                LOGGER.warning('RS485 IPC skipped frame without numeric signal_key=%s', self.signal_key)
+            return None
+
+        interpreted = frame.interpreted
+        host_lsl_ts = interpreted.get('host_lsl_ts')
+        if host_lsl_ts is None:
+            host_lsl_ts = lsl_local_clock()
+        rs485_clock = interpreted.get('rs485_clock', host_lsl_ts)
+        clock_source = str(interpreted.get('rs485_clock_source', interpreted.get('timestamp_source', 'unknown')))
+
+        self._seq += 1
+        return {
+            'schema': self.SCHEMA,
+            'seq': self._seq,
+            'mode': frame.mode,
+            'signal_key': self.signal_key,
+            'rs485_raw': float(value),
+            'rs485_clock': float(rs485_clock),
+            'rs485_clock_source': clock_source,
+            'host_lsl_ts': float(host_lsl_ts),
+            'host_unix_ts': float(frame.host_ts),
+            'host_ts_iso': frame.host_ts_iso,
+            'unit_label': interpreted.get('unit_label'),
+            'status_word': interpreted.get('status_word'),
+            'timestamp_source': interpreted.get('timestamp_source'),
+            'configured_frequency_hz': interpreted.get('configured_frequency_hz'),
+            'parsed_from': interpreted.get('parsed_from'),
+        }
+
+    def _log_status_if_due(self) -> None:
+        interval_s = float(getattr(self.cfg.ipc, 'log_every_s', 5.0))
+        if interval_s <= 0:
+            return
+        now = time.monotonic()
+        if now - self._last_log_monotonic < interval_s:
+            return
+        self._last_log_monotonic = now
+        LOGGER.info(
+            'RS485 IPC publisher status: published=%d publish_drops=%d topic=%s',
+            self._published,
+            self._dropped_publish_errors,
+            self.topic,
+        )
+
+
 class SignalFileLogger:
     def __init__(self, cfg: DictConfig):
         self.cfg = cfg
@@ -701,6 +847,7 @@ class AppState:
     parse_numeric_index: int = 0
     hex_word_endianness: str = 'big'
     signal_logger: Optional[SignalFileLogger] = None
+    ipc_publisher: Optional[MeasurementFramePublisher] = None
     active_send_stats: ActiveSendStats = field(default_factory=ActiveSendStats)
     sampling_stats: SamplingStats = field(default_factory=SamplingStats)
 
@@ -947,7 +1094,17 @@ def apply_decimal(value: Optional[int], decimal_code: int) -> Optional[float]:
 
 
 
-def decode_modbus_measurement(registers: List[int], host_ts: float) -> MeasurementFrame:
+def decode_modbus_measurement(
+    registers: List[int],
+    host_ts: float,
+    host_lsl_ts: Optional[float] = None,
+    rs485_clock: Optional[float] = None,
+    rs485_clock_source: str = 'host_lsl_clock',
+) -> MeasurementFrame:
+    if host_lsl_ts is None:
+        host_lsl_ts = lsl_local_clock()
+    if rs485_clock is None:
+        rs485_clock = host_lsl_ts
     decimal_code = registers[8]
     unit_code = registers[9]
     status_word = registers[10]
@@ -960,6 +1117,9 @@ def decode_modbus_measurement(registers: List[int], host_ts: float) -> Measureme
     interpreted = {
         'timestamp_host_iso': datetime.fromtimestamp(host_ts).isoformat(timespec='milliseconds'),
         'timestamp_host_epoch_s': host_ts,
+        'host_lsl_ts': float(host_lsl_ts),
+        'rs485_clock': float(rs485_clock),
+        'rs485_clock_source': rs485_clock_source,
         'decimal_code': decimal_code,
         'decimal_digits': DECIMAL_CODE_TO_DIGITS.get(decimal_code, 0),
         'unit_code': unit_code,
@@ -1093,13 +1253,20 @@ def extract_registers_from_modbus_response(frame: bytes, slave_id: int, function
 def decode_active_send_modbus_response(
     frame: bytes,
     host_ts: float,
+    host_lsl_ts: float,
     slave_id: int,
     function_code: int,
     register_count: int,
     diagnostics: Dict[str, Any],
 ) -> MeasurementFrame:
     registers = extract_registers_from_modbus_response(frame, slave_id, function_code, register_count)
-    decoded = decode_modbus_measurement(registers=registers, host_ts=host_ts)
+    decoded = decode_modbus_measurement(
+        registers=registers,
+        host_ts=host_ts,
+        host_lsl_ts=host_lsl_ts,
+        rs485_clock=host_lsl_ts,
+        rs485_clock_source='active_send_reconstructed_lsl_clock',
+    )
     decoded.mode = 'active_send'
     decoded.raw_transport = {
         'response_hex': frame.hex(' '),
@@ -1174,7 +1341,14 @@ class ModbusBoardTransport(BoardTransport):
         )
         transaction_duration_s = time.perf_counter() - t_start
         host_ts = time.time()
-        frame = decode_modbus_measurement(registers=registers, host_ts=host_ts)
+        host_lsl_ts = lsl_local_clock()
+        frame = decode_modbus_measurement(
+            registers=registers,
+            host_ts=host_ts,
+            host_lsl_ts=host_lsl_ts,
+            rs485_clock=host_lsl_ts,
+            rs485_clock_source='modbus_rtu_host_lsl_clock',
+        )
         observed_inter_read_s: Optional[float] = None
         observed_inter_read_hz: Optional[float] = None
         if self._last_host_ts is not None:
@@ -1222,6 +1396,7 @@ class ActiveSendBoardTransport(BoardTransport):
         self.binary_buffer = bytearray()
         self.header_length = 3
         self._last_assigned_sample_ts: Optional[float] = None
+        self._last_assigned_sample_lsl_ts: Optional[float] = None
 
     def connect(self) -> None:
         cfg = self.app_state.serial_cfg
@@ -1236,6 +1411,7 @@ class ActiveSendBoardTransport(BoardTransport):
         self.binary_buffer.clear()
         self.line_buffer.clear()
         self._last_assigned_sample_ts = None
+        self._last_assigned_sample_lsl_ts = None
         self.app_state.active_send_stats = ActiveSendStats()
         if self.ser is not None:
             self.ser.reset_input_buffer()
@@ -1247,6 +1423,7 @@ class ActiveSendBoardTransport(BoardTransport):
         self.line_buffer.clear()
         self.binary_buffer.clear()
         self._last_assigned_sample_ts = None
+        self._last_assigned_sample_lsl_ts = None
 
     def _maybe_log_active_warning(self, message: str) -> None:
         stats = self.app_state.active_send_stats
@@ -1505,21 +1682,26 @@ class ActiveSendBoardTransport(BoardTransport):
             frame_bytes_batch, diagnostics = self._read_modbus_response_frames_batch()
             freq_hz = ACTIVE_SEND_FREQ_CODE_TO_VALUE.get(int(self.app_state.cfg.device.active_send_frequency_code), 0)
             batch_end_ts = time.time()
+            batch_end_lsl_ts = lsl_local_clock()
             frames: List[MeasurementFrame] = []
             if freq_hz > 0:
                 dt = 1.0 / float(freq_hz)
                 if self._last_assigned_sample_ts is None:
                     batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
+                    batch_start_lsl_ts = batch_end_lsl_ts - dt * (len(frame_bytes_batch) - 1)
                     timestamp_source = 'reconstructed_from_active_send_rate_batch_start'
                 else:
                     batch_start_ts = self._last_assigned_sample_ts + dt
+                    batch_start_lsl_ts = (self._last_assigned_sample_lsl_ts or batch_end_lsl_ts) + dt
                     timestamp_source = 'reconstructed_from_active_send_rate_continuous'
             else:
                 dt = 0.0
                 batch_start_ts = batch_end_ts
+                batch_start_lsl_ts = batch_end_lsl_ts
                 timestamp_source = 'host_batch_end_time'
             for idx, frame_bytes in enumerate(frame_bytes_batch):
                 host_ts = batch_start_ts + idx * dt if freq_hz > 0 else batch_end_ts
+                host_lsl_ts = batch_start_lsl_ts + idx * dt if freq_hz > 0 else batch_end_lsl_ts
                 frame_diag = dict(diagnostics)
                 frame_diag.update({
                     'batch_index': idx,
@@ -1530,20 +1712,24 @@ class ActiveSendBoardTransport(BoardTransport):
                 decoded_frame = decode_active_send_modbus_response(
                     frame=frame_bytes,
                     host_ts=host_ts,
+                    host_lsl_ts=host_lsl_ts,
                     slave_id=slave_id,
                     function_code=int(self.app_state.cfg.active_send.frame_function_code),
                     register_count=int(self.app_state.cfg.active_send.frame_register_count),
                     diagnostics=frame_diag,
                 )
                 decoded_frame.interpreted['timestamp_source'] = timestamp_source
+                decoded_frame.interpreted['configured_frequency_hz'] = freq_hz
                 frames.append(decoded_frame)
             if frames:
                 self._last_assigned_sample_ts = frames[-1].host_ts
+                self._last_assigned_sample_lsl_ts = float(frames[-1].interpreted.get('host_lsl_ts', batch_end_lsl_ts))
             return frames
         return [self.read_once()]
 
     def read_once(self) -> MeasurementFrame:
         host_ts = time.time()
+        host_lsl_ts = lsl_local_clock()
         profile = self.app_state.parse_profile
         slave_id = int(getattr(self.app_state.cfg.active_send, 'frame_slave_id', 0) or 0)
         if slave_id <= 0:
@@ -1562,6 +1748,9 @@ class ActiveSendBoardTransport(BoardTransport):
             {
                 'timestamp_host_iso': datetime.fromtimestamp(host_ts).isoformat(timespec='milliseconds'),
                 'timestamp_host_epoch_s': host_ts,
+                'host_lsl_ts': host_lsl_ts,
+                'rs485_clock': host_lsl_ts,
+                'rs485_clock_source': 'active_send_host_receive_lsl_clock',
             }
         )
         return MeasurementFrame(
@@ -1593,6 +1782,8 @@ def acquisition_worker(app_state: AppState) -> None:
             else:
                 cycle_start = time.perf_counter()
             frames = app_state.transport.read_frames()
+            if app_state.ipc_publisher is not None and not bool(getattr(app_state.cfg.ipc, 'publish_after_max_rate_filter', False)):
+                app_state.ipc_publisher.publish_frames(frames)
             if not frames:
                 if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
                     next_poll_deadline = cycle_start + poll_interval_s
@@ -1606,6 +1797,8 @@ def acquisition_worker(app_state: AppState) -> None:
                 if app_state.mode == 'modbus_rtu' and poll_interval_s > 0:
                     next_poll_deadline = cycle_start + poll_interval_s
                 continue
+            if app_state.ipc_publisher is not None and bool(getattr(app_state.cfg.ipc, 'publish_after_max_rate_filter', False)):
+                app_state.ipc_publisher.publish_frames(processed_frames)
             app_state.push_frames(processed_frames)
             if app_state.signal_logger is not None:
                 app_state.signal_logger.write_frames(processed_frames)
@@ -1862,6 +2055,11 @@ def run_app(cfg: DictConfig) -> None:
         hex_word_endianness=str(cfg.active_send.default_hex_word_endianness),
         signal_logger=signal_logger,
     )
+
+    if bool(getattr(cfg.ipc, 'enabled', False)):
+        app_state.ipc_publisher = MeasurementFramePublisher(cfg)
+        app_state.ipc_publisher.start()
+        app_state.push_event(f'RS485 IPC publisher enabled: bind={cfg.ipc.bind} topic={cfg.ipc.topic} signal_key={cfg.ipc.signal_key}')
 
     available_ports = enumerate_ports(list(cfg.serial.port_hints))
 
@@ -2171,6 +2369,8 @@ def run_app(cfg: DictConfig) -> None:
 
     def cleanup() -> None:
         disconnect_state(app_state)
+        if app_state.ipc_publisher is not None:
+            app_state.ipc_publisher.stop()
 
     app.on_shutdown(cleanup)
     ui.run(host=str(cfg.ui.host), port=int(cfg.ui.port), reload=False, title=str(cfg.ui.page_title))

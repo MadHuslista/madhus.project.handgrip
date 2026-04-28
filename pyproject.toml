@@ -17,6 +17,7 @@ dependencies = [
   "handgrip-analysis",
   "rs485-gui",
   "numpy>=2.4.3",
+  "pyzmq",
 ]
 
 [tool.uv]
