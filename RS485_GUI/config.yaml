@@ -94,7 +94,7 @@ serial:
   # Protect the Arduino/LSL bridge serial port from accidental GUI ownership.
   # Update this if udev assigns your Arduino to a different stable name.
   excluded_ports:
-    - /dev/ttyUSB0
+    # - /dev/ttyUSB0
   default_baudrate: 460800
   default_parity: N
   default_stopbits: 1
@@ -112,7 +112,7 @@ serial:
     - ttyACM
 
 device:
-  mode: modbus_rtu  # modbus_rtu | active_send
+  mode: active_send  # modbus_rtu | active_send
   slave_address: 1
   active_send_frequency_code: 8  # 500 Hz
   poll_interval_s: 0.001  # 1 kHz target cadence; actual RTU rate remains transaction-limited
