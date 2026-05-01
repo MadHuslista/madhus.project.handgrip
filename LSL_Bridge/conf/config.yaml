@@ -49,7 +49,7 @@ rs485_ipc:
   log_status_every_s: 5.0
 
 serial:
-  port: /dev/ttyUSB0
+  port: /dev/ttyUSB1
   baudrate: 115200
   timeout_s: 0.25
   reconnect_backoff_s: 2.0
