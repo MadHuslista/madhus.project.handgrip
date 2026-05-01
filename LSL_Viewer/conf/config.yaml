@@ -12,14 +12,18 @@ channels:
   clock_label: device_clock_us
   raw_label: grip_force_raw
   filtered_label: grip_force_filtered
+  rs485_raw_label: rs485_raw
+  rs485_clock_label: rs485_clock
 
 viewer:
   window_samples: null
   window_seconds: 10.0
-  expected_rate_hz: 80.0
+  expected_rate_hz: 100.0
   refresh_s: 0.05
+  force_unit_label: N
   raw_unit_label: N
   filtered_unit_label: N
+  rs485_unit_label: N
   dt_unit_label: ms
 
 reference:

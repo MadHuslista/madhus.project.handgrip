@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 from hydra.utils import to_absolute_path
 from matplotlib import colors as mcolors
+from matplotlib.collections import LineCollection
 from matplotlib import pyplot as plt
 from omegaconf import DictConfig, OmegaConf
 
@@ -698,7 +699,8 @@ def init_figure(cfg: DictConfig, has_rs485: bool) -> FigureHandles:
         (artists["overlay_rs"],) = axes["overlay"].plot([], [], color=RAW_COLOR, linestyle="--", label="RS485 raw", linewidth=1.0)
         (artists["handgrip_dt"],) = axes["handgrip_dt"].plot([], [], color=TIMING_COLOR, label="handgrip dt", linewidth=1.0)
         (artists["rs485_dt"],) = axes["rs485_dt"].plot([], [], color=TIMING_COLOR, label="RS485 dt", linewidth=1.0)
-        artists["xy"] = axes["xy"].scatter([], [], s=12, alpha=0.7, label="current window")
+        artists["xy"] = LineCollection([], linewidths=1.6, label="current window")
+        axes["xy"].add_collection(artists["xy"])
 
         axes["raw"].set_title("Handgrip raw signal")
         axes["rs485_raw"].set_title("RS485 raw signal")
@@ -706,7 +708,7 @@ def init_figure(cfg: DictConfig, has_rs485: bool) -> FigureHandles:
         axes["overlay"].set_title("Time-synchronized raw overlay")
         axes["handgrip_dt"].set_title("Handgrip sample interval")
         axes["rs485_dt"].set_title("RS485 sample interval")
-        axes["xy"].set_title("XY correlation: Handgrip raw vs RS485 raw")
+        axes["xy"].set_title("XY correlation: RS485 raw vs Handgrip raw")
 
         for key in ["raw", "rs485_raw", "filtered", "overlay"]:
             axes[key].set_ylabel(f"Force ({force_unit})")
@@ -718,8 +720,8 @@ def init_figure(cfg: DictConfig, has_rs485: bool) -> FigureHandles:
         axes["overlay"].set_xlabel("Device-relative time (s)")
         axes["handgrip_dt"].set_xlabel("Relative time (s)")
         axes["rs485_dt"].set_xlabel("Relative time (s)")
-        axes["xy"].set_xlabel(f"Handgrip raw force ({force_unit})")
-        axes["xy"].set_ylabel(f"RS485 raw force ({force_unit})")
+        axes["xy"].set_xlabel(f"RS485 raw force ({force_unit})")
+        axes["xy"].set_ylabel(f"Handgrip raw force ({force_unit})")
 
         for key, ax in axes.items():
             if key == "info":
@@ -801,6 +803,14 @@ def _clock_interval_ms(clock: np.ndarray, scale_to_ms: float) -> tuple[np.ndarra
 
 
 def _interpolated_xy(window: LiveWindow) -> tuple[np.ndarray, np.ndarray]:
+    """Return the XY calibration trace as RS485 reference force vs handgrip target force.
+
+    X-axis: RS485 reference (`rs485_raw`) interpolated onto handgrip timestamps.
+    Y-axis: original target-device signal (`grip_force_raw` / `window.raw`).
+
+    The interpolation keeps the temporal ordering of the target stream, which makes the
+    line trace useful for observing hysteresis/lag loops during dynamic squeezes.
+    """
     if not window.has_rs485:
         return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
 
@@ -830,23 +840,24 @@ def _interpolated_xy(window: LiveWindow) -> tuple[np.ndarray, np.ndarray]:
     if np.count_nonzero(inside) < 2:
         return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
 
-    xy_x = hg_y[inside]
-    xy_y = np.interp(hg_t[inside], rs_t, rs_y)
+    xy_x = np.interp(hg_t[inside], rs_t, rs_y)
+    xy_y = hg_y[inside]
     finite = np.isfinite(xy_x) & np.isfinite(xy_y)
     return xy_x[finite], xy_y[finite]
 
 
-def _update_xy_scatter(scatter, x: np.ndarray, y: np.ndarray) -> None:
-    if x.size == 0 or y.size == 0:
-        scatter.set_offsets(np.empty((0, 2)))
-        scatter.set_facecolors(np.empty((0, 4)))
+def _update_xy_line(line_collection: LineCollection, x: np.ndarray, y: np.ndarray) -> None:
+    if x.size < 2 or y.size < 2:
+        line_collection.set_segments([])
+        line_collection.set_colors([])
         return
-    offsets = np.column_stack([x, y])
-    rgba = np.tile(mcolors.to_rgba(RAW_COLOR), (x.size, 1))
-    rgba[:, 3] = np.linspace(0.10, 0.85, x.size)
-    scatter.set_offsets(offsets)
-    scatter.set_facecolors(rgba)
-    scatter.set_edgecolors("none")
+
+    points = np.column_stack([x, y])
+    segments = np.stack([points[:-1], points[1:]], axis=1)
+    rgba = np.tile(mcolors.to_rgba(RAW_COLOR), (segments.shape[0], 1))
+    rgba[:, 3] = np.linspace(0.15, 0.90, segments.shape[0])
+    line_collection.set_segments(segments)
+    line_collection.set_colors(rgba)
 
 
 def _zip_columns(*cols: str) -> str:
@@ -962,7 +973,7 @@ def update_plots(
             update_axis(handles.axes["overlay"], overlay_x, overlay_y)
 
         xy_x, xy_y = _interpolated_xy(window)
-        _update_xy_scatter(handles.artists["xy"], xy_x, xy_y)
+        _update_xy_line(handles.artists["xy"], xy_x, xy_y)
         if xy_x.size:
             update_axis(handles.axes["xy"], xy_x, xy_y)
 
