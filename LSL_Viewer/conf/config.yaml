@@ -25,6 +25,12 @@ viewer:
   filtered_unit_label: N
   rs485_unit_label: N
   dt_unit_label: ms
+  xy_correlation:
+    # false = current behavior: fully adaptive autoscale on every refresh.
+    # true  = only zoom out: preserve the largest observed XY axis span.
+    lock_max_span: false
+    # Runtime toggle key in the Matplotlib window. Set to "" to disable.
+    toggle_key: x
 
 reference:
   csv_path: null

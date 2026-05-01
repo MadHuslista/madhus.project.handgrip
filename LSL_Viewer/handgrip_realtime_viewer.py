@@ -97,6 +97,7 @@ class FigureHandles:
     fig: Any
     axes: dict[str, Any]
     artists: dict[str, Any]
+    state: dict[str, Any]
 
 
 ALLOWED_MODES = {
@@ -140,8 +141,28 @@ def _cfg_str(cfg: DictConfig, section: str, key: str, default: str) -> str:
     return default if value is None else str(value)
 
 
+def _cfg_bool_path(cfg: DictConfig, path: str, default: bool) -> bool:
+    value = OmegaConf.select(cfg, path, default=default)
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def _cfg_str_path(cfg: DictConfig, path: str, default: str) -> str:
+    value = OmegaConf.select(cfg, path, default=default)
+    return default if value is None else str(value)
+
+
 def _force_unit_label(cfg: DictConfig) -> str:
     return _cfg_str(cfg, "viewer", "force_unit_label", _cfg_str(cfg, "viewer", "raw_unit_label", "N"))
+
+
+def _xy_lock_max_span_enabled(cfg: DictConfig) -> bool:
+    return _cfg_bool_path(cfg, "viewer.xy_correlation.lock_max_span", False)
+
+
+def _xy_lock_toggle_key(cfg: DictConfig) -> str:
+    return _cfg_str_path(cfg, "viewer.xy_correlation.toggle_key", "x").strip()
 
 
 def _first_scalar(value: Any):
@@ -332,10 +353,14 @@ def _finite_xy(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return x[mask], y[mask]
 
 
-def update_axis(ax, x: np.ndarray, y: np.ndarray, margin_ratio: float = 0.05) -> None:
+def _compute_axis_limits(
+    x: np.ndarray,
+    y: np.ndarray,
+    margin_ratio: float = 0.05,
+) -> tuple[float, float, float, float] | None:
     x, y = _finite_xy(np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64))
     if y.size == 0 or x.size == 0:
-        return
+        return None
 
     ymin = float(np.nanmin(y))
     ymax = float(np.nanmax(y))
@@ -354,8 +379,59 @@ def update_axis(ax, x: np.ndarray, y: np.ndarray, margin_ratio: float = 0.05) ->
         span = max(1.0, abs(xmin) * 0.05)
         xmin -= span
         xmax += span
+    else:
+        margin = (xmax - xmin) * margin_ratio
+        xmin -= margin
+        xmax += margin
+
+    return xmin, xmax, ymin, ymax
+
+
+def update_axis(ax, x: np.ndarray, y: np.ndarray, margin_ratio: float = 0.05) -> None:
+    limits = _compute_axis_limits(x, y, margin_ratio=margin_ratio)
+    if limits is None:
+        return
+    xmin, xmax, ymin, ymax = limits
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
+
+
+def update_axis_expand_only(
+    ax,
+    x: np.ndarray,
+    y: np.ndarray,
+    state: dict[str, Any],
+    state_key: str,
+    margin_ratio: float = 0.05,
+) -> None:
+    """Autoscale an axis outward only, preserving the largest observed span.
+
+    Normal autoscaling is useful for detailed local inspection, but it zooms in and
+    out as the current rolling window changes. For the XY correlation view this
+    optional mode accumulates the min/max limits reached so far and only expands
+    them, giving the signal a stable visual context after the maximum observed
+    span has been reached.
+    """
+    limits = _compute_axis_limits(x, y, margin_ratio=margin_ratio)
+    if limits is None:
+        return
+
+    xmin, xmax, ymin, ymax = limits
+    axis_limits = state.setdefault("axis_expand_only_limits", {})
+    previous = axis_limits.get(state_key)
+    if previous is None:
+        locked = {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax}
+    else:
+        locked = {
+            "xmin": min(float(previous["xmin"]), xmin),
+            "xmax": max(float(previous["xmax"]), xmax),
+            "ymin": min(float(previous["ymin"]), ymin),
+            "ymax": max(float(previous["ymax"]), ymax),
+        }
+
+    axis_limits[state_key] = locked
+    ax.set_xlim(locked["xmin"], locked["xmax"])
+    ax.set_ylim(locked["ymin"], locked["ymax"])
 
 
 def _candidate_columns(preferred: str, fallbacks: list[str]) -> list[str]:
@@ -671,6 +747,11 @@ def inspect_references_if_enabled(cfg: DictConfig, mode: str) -> OfflineReferenc
 def init_figure(cfg: DictConfig, has_rs485: bool) -> FigureHandles:
     force_unit = _force_unit_label(cfg)
     dt_unit = str(cfg.viewer.dt_unit_label)
+    state: dict[str, Any] = {
+        "xy_lock_max_span": _xy_lock_max_span_enabled(cfg),
+        "xy_lock_toggle_key": _xy_lock_toggle_key(cfg),
+        "axis_expand_only_limits": {},
+    }
 
     if has_rs485:
         fig = plt.figure(figsize=(14, 13), constrained_layout=False)
@@ -759,11 +840,27 @@ def init_figure(cfg: DictConfig, has_rs485: bool) -> FigureHandles:
             axes[key].grid(True, alpha=GRID_ALPHA)
             axes[key].legend(loc="upper right")
 
+    if has_rs485:
+        toggle_key = str(state.get("xy_lock_toggle_key", "")).strip()
+        if toggle_key:
+            def _toggle_xy_lock(event) -> None:
+                if event.key != toggle_key:
+                    return
+                state["xy_lock_max_span"] = not bool(state.get("xy_lock_max_span", False))
+                state.setdefault("axis_expand_only_limits", {}).pop("xy", None)
+                LOGGER.info(
+                    "XY correlation max-span lock toggled %s with key '%s'.",
+                    "ON" if state["xy_lock_max_span"] else "OFF",
+                    toggle_key,
+                )
+
+            fig.canvas.mpl_connect("key_press_event", _toggle_xy_lock)
+
     axes["info"].axis("off")
     axes["info"].set_xlim(0, 1)
     axes["info"].set_ylim(0, 1)
     axes["info"].set_title("Stream Overview", loc="left", pad=6)
-    return FigureHandles(fig=fig, axes=axes, artists=artists)
+    return FigureHandles(fig=fig, axes=axes, artists=artists, state=state)
 
 
 def _format_reference_summary(reference: OfflineReference) -> str:
@@ -974,8 +1071,19 @@ def update_plots(
 
         xy_x, xy_y = _interpolated_xy(window)
         _update_xy_line(handles.artists["xy"], xy_x, xy_y)
+        xy_lock_max_span = bool(handles.state.get("xy_lock_max_span", False))
+        xy_mode = "max-span lock" if xy_lock_max_span else "adaptive"
+        xy_toggle_key = str(handles.state.get("xy_lock_toggle_key", "")).strip()
+        xy_toggle_hint = f" | press '{xy_toggle_key}' to toggle" if xy_toggle_key else ""
+        handles.axes["xy"].set_title(
+            f"XY correlation: RS485 raw vs Handgrip raw [{xy_mode}{xy_toggle_hint}]"
+        )
         if xy_x.size:
-            update_axis(handles.axes["xy"], xy_x, xy_y)
+            if xy_lock_max_span:
+                update_axis_expand_only(handles.axes["xy"], xy_x, xy_y, handles.state, "xy")
+            else:
+                handles.state.setdefault("axis_expand_only_limits", {}).pop("xy", None)
+                update_axis(handles.axes["xy"], xy_x, xy_y)
 
         rs_valid_pct = _valid_percentage(window.rs485_raw, window.rs485_clock)
 
