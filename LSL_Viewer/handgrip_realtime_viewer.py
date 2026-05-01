@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 from hydra.utils import to_absolute_path
 from matplotlib import pyplot as plt
+from matplotlib import colors as mcolors
+from matplotlib.collections import LineCollection
 from omegaconf import DictConfig, OmegaConf
 
 LOGGER = logging.getLogger("handgrip_realtime_viewer")
@@ -417,7 +419,10 @@ def update_axis_expand_only(ax, x: np.ndarray, y: np.ndarray, state: dict[str, A
 
 def clear_plot_artists(handles: FigureHandles, reset_axes: bool = True) -> None:
     for artist in handles.artists.values():
-        if hasattr(artist, "set_data"):
+        if isinstance(artist, LineCollection):
+            artist.set_segments([])
+            artist.set_colors([])
+        elif hasattr(artist, "set_data"):
             artist.set_data([], [])
     handles.state.setdefault("axis_expand_only_limits", {}).clear()
     if reset_axes:
@@ -464,16 +469,38 @@ def _lsl_interval_ms(timestamps_s: np.ndarray) -> tuple[np.ndarray, np.ndarray, 
     return out_idx, out_dt, rate_hz, mean_dt_ms
 
 
-def _interpolate_reference_to_target(target: TargetWindow | None, reference: ReferenceWindow | None, max_reference_gap_s: float) -> tuple[np.ndarray, np.ndarray]:
+def _interpolate_reference_to_target(
+    target: TargetWindow | None,
+    reference: ReferenceWindow | None,
+    max_reference_gap_s: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return XY samples using reference interpolated onto real target timestamps.
+
+    Output orientation intentionally follows the original viewer layout:
+    x = reference/RS485 raw at target timestamps; y = target/handgrip raw.
+    The third output is the target LSL timestamp for each XY pair and is used
+    to fade the LineCollection over the active rolling window.
+    """
+    empty = (
+        np.array([], dtype=np.float64),
+        np.array([], dtype=np.float64),
+        np.array([], dtype=np.float64),
+    )
     if target is None or reference is None:
-        return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
+        return empty
     if target.timestamps_s.size == 0 or reference.timestamps_s.size < 2:
-        return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
+        return empty
 
     ref_t = np.asarray(reference.timestamps_s, dtype=np.float64)
     ref_y = np.asarray(reference.raw, dtype=np.float64)
     target_t = np.asarray(target.timestamps_s, dtype=np.float64)
     target_y = np.asarray(target.raw, dtype=np.float64)
+
+    valid_ref = np.isfinite(ref_t) & np.isfinite(ref_y)
+    ref_t = ref_t[valid_ref]
+    ref_y = ref_y[valid_ref]
+    if ref_t.size < 2:
+        return empty
 
     order = np.argsort(ref_t)
     ref_t = ref_t[order]
@@ -482,24 +509,67 @@ def _interpolate_reference_to_target(target: TargetWindow | None, reference: Ref
     ref_t = ref_t[unique_mask]
     ref_y = ref_y[unique_mask]
     if ref_t.size < 2:
-        return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
+        return empty
 
-    inside = (target_t >= ref_t[0]) & (target_t <= ref_t[-1]) & np.isfinite(target_y)
+    inside = (target_t >= ref_t[0]) & (target_t <= ref_t[-1]) & np.isfinite(target_y) & np.isfinite(target_t)
     if not np.any(inside):
-        return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
+        return empty
 
-    nearest_right = np.searchsorted(ref_t, target_t[inside], side="left")
+    candidate_t = target_t[inside]
+    candidate_target_y = target_y[inside]
+    nearest_right = np.searchsorted(ref_t, candidate_t, side="left")
     nearest_right = np.clip(nearest_right, 0, ref_t.size - 1)
     nearest_left = np.clip(nearest_right - 1, 0, ref_t.size - 1)
-    nearest_gap = np.minimum(np.abs(target_t[inside] - ref_t[nearest_left]), np.abs(ref_t[nearest_right] - target_t[inside]))
+    nearest_gap = np.minimum(np.abs(candidate_t - ref_t[nearest_left]), np.abs(ref_t[nearest_right] - candidate_t))
     valid_gap = nearest_gap <= float(max_reference_gap_s)
     if not np.any(valid_gap):
-        return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
+        return empty
 
-    selected_t = target_t[inside][valid_gap]
-    selected_target_y = target_y[inside][valid_gap]
+    selected_t = candidate_t[valid_gap]
+    selected_target_y = candidate_target_y[valid_gap]
     ref_at_target = np.interp(selected_t, ref_t, ref_y)
-    return selected_target_y, ref_at_target
+    finite = np.isfinite(ref_at_target) & np.isfinite(selected_target_y) & np.isfinite(selected_t)
+    return ref_at_target[finite], selected_target_y[finite], selected_t[finite]
+
+
+def _update_xy_line_collection(
+    line_collection: LineCollection,
+    x: np.ndarray,
+    y: np.ndarray,
+    timestamps_s: np.ndarray,
+    *,
+    window_seconds: float,
+    color: str = RAW_COLOR,
+    alpha_old: float = 0.12,
+    alpha_new: float = 0.92,
+) -> None:
+    """Render the XY correlation as connected, time-faded line segments."""
+    x = np.asarray(x, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    t = np.asarray(timestamps_s, dtype=np.float64)
+    if x.size < 2 or y.size < 2 or t.size < 2:
+        line_collection.set_segments([])
+        line_collection.set_colors([])
+        return
+
+    order = np.argsort(t)
+    x = x[order]
+    y = y[order]
+    t = t[order]
+    points = np.column_stack([x, y])
+    segments = np.stack([points[:-1], points[1:]], axis=1)
+
+    rgba = np.tile(mcolors.to_rgba(color), (segments.shape[0], 1))
+    if np.isfinite(window_seconds) and window_seconds > 0 and np.isfinite(t[-1]):
+        segment_t = t[1:]
+        age_s = np.clip(t[-1] - segment_t, 0.0, float(window_seconds))
+        freshness = 1.0 - (age_s / float(window_seconds))
+        rgba[:, 3] = float(alpha_old) + freshness * (float(alpha_new) - float(alpha_old))
+    else:
+        rgba[:, 3] = np.linspace(float(alpha_old), float(alpha_new), segments.shape[0])
+
+    line_collection.set_segments(segments)
+    line_collection.set_colors(rgba)
 
 
 def _format_latest(value: float, suffix: str = "", precision: int = 3) -> str:
@@ -523,59 +593,66 @@ def _zip_columns(*columns: str, pad: int = 3) -> str:
 
 
 def init_figure(cfg: DictConfig) -> FigureHandles:
-    fig = plt.figure(figsize=(16, 10))
-    gs = fig.add_gridspec(4, 2, height_ratios=[1.0, 1.2, 1.2, 1.2])
+    fig = plt.figure(figsize=(14, 13), constrained_layout=False)
+    gs = fig.add_gridspec(
+        5,
+        2,
+        height_ratios=[1.15, 2.0, 2.0, 2.0, 2.4],
+        hspace=0.58,
+        wspace=0.30,
+    )
     axes = {
         "info": fig.add_subplot(gs[0, :]),
         "target_raw": fig.add_subplot(gs[1, 0]),
-        "target_filtered": fig.add_subplot(gs[2, 0]),
-        "target_dt": fig.add_subplot(gs[3, 0]),
         "reference_raw": fig.add_subplot(gs[1, 1]),
+        "target_filtered": fig.add_subplot(gs[2, 0]),
         "overlay": fig.add_subplot(gs[2, 1]),
+        "target_dt": fig.add_subplot(gs[3, 0]),
         "reference_dt": fig.add_subplot(gs[3, 1]),
+        "xy": fig.add_subplot(gs[4, :]),
     }
-    # Twin the overlay axis for XY as a separate floating figure-like axis? Keep
-    # one extra inset-style axis by using a secondary y panel title. Simpler and
-    # more readable: create XY in a new axes over the info panel's right side.
-    xy_ax = axes["info"].inset_axes([0.70, 0.05, 0.28, 0.85])
-    axes["xy"] = xy_ax
 
     artists: dict[str, Any] = {}
     axes["info"].axis("off")
     artists["target_raw"], = axes["target_raw"].plot([], [], color=RAW_COLOR, lw=1.0, label="target raw")
-    artists["target_filtered"], = axes["target_filtered"].plot([], [], color=FILTERED_COLOR, lw=1.0, label="target filtered")
-    artists["target_dt"], = axes["target_dt"].plot([], [], color=TIMING_COLOR, lw=1.0, label="target dt")
     artists["reference_raw"], = axes["reference_raw"].plot([], [], color=REFERENCE_COLOR, lw=1.0, label="reference raw")
+    artists["target_filtered"], = axes["target_filtered"].plot([], [], color=FILTERED_COLOR, lw=1.2, label="target filtered")
     artists["overlay_target"], = axes["overlay"].plot([], [], color=RAW_COLOR, lw=1.0, label="target raw")
-    artists["overlay_reference"], = axes["overlay"].plot([], [], color=REFERENCE_COLOR, lw=1.0, label="reference raw")
+    artists["overlay_reference"], = axes["overlay"].plot([], [], color=REFERENCE_COLOR, linestyle="--", lw=1.0, label="reference raw")
+    artists["target_dt"], = axes["target_dt"].plot([], [], color=TIMING_COLOR, lw=1.0, label="target dt")
     artists["reference_dt"], = axes["reference_dt"].plot([], [], color=TIMING_COLOR, lw=1.0, label="reference dt")
-    artists["xy"], = axes["xy"].plot([], [], color="black", lw=0.8, marker=".", ms=2, linestyle="none", label="target vs ref@target")
+    xy_linewidth = float(OmegaConf.select(cfg, "viewer.xy_correlation.line_width", default=1.6))
+    artists["xy"] = LineCollection([], linewidths=xy_linewidth, label="current window")
+    axes["xy"].add_collection(artists["xy"])
 
     force_unit = _force_unit_label(cfg)
-    axes["target_raw"].set_title("Target raw - native samples")
-    axes["target_raw"].set_ylabel(force_unit)
-    axes["target_filtered"].set_title("Target filtered - native samples")
-    axes["target_filtered"].set_ylabel(force_unit)
+    dt_unit = str(OmegaConf.select(cfg, "viewer.dt_unit_label", default="ms"))
+    axes["target_raw"].set_title("Target raw signal - native samples")
+    axes["reference_raw"].set_title("Reference RS485 raw signal - native 500 Hz samples")
+    axes["target_filtered"].set_title("Target filtered signal - native samples")
+    axes["overlay"].set_title("Time-synchronized raw overlay on common LSL time axis")
     axes["target_dt"].set_title("Target LSL sample interval")
-    axes["target_dt"].set_xlabel("time relative to latest sample (s)")
-    axes["target_dt"].set_ylabel("dt (ms)")
-    axes["reference_raw"].set_title("Reference RS485 raw - native 500 Hz samples")
-    axes["reference_raw"].set_ylabel(force_unit)
-    axes["overlay"].set_title("Overlay on common LSL time axis")
-    axes["overlay"].set_ylabel(force_unit)
     axes["reference_dt"].set_title("Reference LSL sample interval")
-    axes["reference_dt"].set_xlabel("time relative to latest sample (s)")
-    axes["reference_dt"].set_ylabel("dt (ms)")
-    axes["xy"].set_title("XY: target raw vs reference interpolated to target timestamps", fontsize=8)
-    axes["xy"].set_xlabel("target raw", fontsize=8)
-    axes["xy"].set_ylabel("reference", fontsize=8)
+    axes["xy"].set_title("XY correlation: reference raw vs target raw")
+
+    for key in ["target_raw", "reference_raw", "target_filtered", "overlay"]:
+        axes[key].set_ylabel(f"Force ({force_unit})")
+    axes["target_dt"].set_ylabel(f"Interval ({dt_unit})")
+    axes["reference_dt"].set_ylabel(f"Interval ({dt_unit})")
+    axes["target_raw"].set_xlabel("Relative LSL time (s)")
+    axes["reference_raw"].set_xlabel("Relative LSL time (s)")
+    axes["target_filtered"].set_xlabel("Relative LSL time (s)")
+    axes["overlay"].set_xlabel("Relative LSL time (s)")
+    axes["target_dt"].set_xlabel("Relative LSL time (s)")
+    axes["reference_dt"].set_xlabel("Relative LSL time (s)")
+    axes["xy"].set_xlabel(f"Reference raw force at target timestamps ({force_unit})")
+    axes["xy"].set_ylabel(f"Target raw force ({force_unit})")
 
     for key, ax in axes.items():
         if key == "info":
             continue
         ax.grid(True, alpha=GRID_ALPHA)
-        if key != "xy":
-            ax.legend(loc="upper right", fontsize=8)
+        ax.legend(loc="upper right", fontsize=8)
 
     state = {
         "axis_expand_only_limits": {},
@@ -609,13 +686,11 @@ def init_figure(cfg: DictConfig) -> FigureHandles:
             LOGGER.info("Live pause toggled: %s", state["live_paused"])
 
     fig.canvas.mpl_connect("key_press_event", on_key)
-    fig.tight_layout()
+    fig.subplots_adjust(top=0.96, bottom=0.06, left=0.07, right=0.97, hspace=0.58, wspace=0.30)
     return handles
-
 
 def _render_info_panel(handles: FigureHandles, text: str) -> None:
     ax = handles.axes["info"]
-    # Preserve XY inset; clear only text artists previously added to the main info axis.
     for artist in list(ax.texts):
         artist.remove()
     ax.axis("off")
@@ -672,26 +747,39 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
     overlay_y: list[np.ndarray] = []
     if target is not None and target.timestamps_s.size:
         target_t_rel = target.timestamps_s - t_end
-        overlay_x.append(target_t_rel[np.isfinite(target_t_rel)])
-        overlay_y.append(target.raw[np.isfinite(target_t_rel) & np.isfinite(target.raw)])
+        valid_target_overlay = np.isfinite(target_t_rel) & np.isfinite(target.raw)
+        overlay_x.append(target_t_rel[valid_target_overlay])
+        overlay_y.append(target.raw[valid_target_overlay])
     if reference is not None and reference.timestamps_s.size:
         ref_t_rel = reference.timestamps_s - t_end
-        overlay_x.append(ref_t_rel[np.isfinite(ref_t_rel)])
-        overlay_y.append(reference.raw[np.isfinite(ref_t_rel) & np.isfinite(reference.raw)])
+        valid_reference_overlay = np.isfinite(ref_t_rel) & np.isfinite(reference.raw)
+        overlay_x.append(ref_t_rel[valid_reference_overlay])
+        overlay_y.append(reference.raw[valid_reference_overlay])
     if overlay_x and overlay_y:
         x = np.concatenate(overlay_x)
         y = np.concatenate(overlay_y)
         update_axis(handles.axes["overlay"], x, y)
 
-    xy_x, xy_y = _interpolate_reference_to_target(
+    xy_x, xy_y, xy_t = _interpolate_reference_to_target(
         target,
         reference,
         max_reference_gap_s=float(cfg.alignment.max_reference_gap_s),
     )
-    handles.artists["xy"].set_data(xy_x, xy_y)
+    _update_xy_line_collection(
+        handles.artists["xy"],
+        xy_x,
+        xy_y,
+        xy_t,
+        window_seconds=float(cfg.viewer.window_seconds),
+        color=str(OmegaConf.select(cfg, "viewer.xy_correlation.color", default=RAW_COLOR)),
+        alpha_old=float(OmegaConf.select(cfg, "viewer.xy_correlation.alpha_old", default=0.12)),
+        alpha_new=float(OmegaConf.select(cfg, "viewer.xy_correlation.alpha_new", default=0.92)),
+    )
     xy_lock_max_span = bool(handles.state.get("xy_lock_max_span", False))
     xy_mode = "max-span lock" if xy_lock_max_span else "adaptive"
-    handles.axes["xy"].set_title(f"XY: target raw vs reference@target [{xy_mode}]", fontsize=8)
+    xy_toggle_key = str(handles.state.get("xy_lock_toggle_key", "")).strip()
+    xy_toggle_hint = f" | press '{xy_toggle_key}' to toggle" if xy_toggle_key else ""
+    handles.axes["xy"].set_title(f"XY correlation: reference raw vs target raw [{xy_mode}{xy_toggle_hint}]")
     if xy_x.size:
         if xy_lock_max_span:
             update_axis_expand_only(handles.axes["xy"], xy_x, xy_y, handles.state, "xy")

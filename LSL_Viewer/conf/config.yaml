@@ -41,6 +41,13 @@ viewer:
     # true  = only zoom out: preserve the largest observed XY axis span.
     lock_max_span: false
     toggle_key: x
+    # XY uses a connected LineCollection instead of point markers. Alpha is
+    # computed from sample age across viewer.window_seconds, so the oldest
+    # segments fade out while the newest segments remain prominent.
+    line_width: 1.6
+    color: red
+    alpha_old: 0.12
+    alpha_new: 0.92
   controls:
     clear_key: c
     pause_key: p
