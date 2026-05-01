@@ -469,6 +469,65 @@ def _lsl_interval_ms(timestamps_s: np.ndarray) -> tuple[np.ndarray, np.ndarray, 
     return out_idx, out_dt, rate_hz, mean_dt_ms
 
 
+def _clock_validation_metrics(
+    lsl_timestamps_s: np.ndarray,
+    clock_values: np.ndarray,
+    *,
+    clock_scale_to_s: float,
+) -> dict[str, float]:
+    """Compare LSL sample timestamps against the diagnostic clock channel.
+
+    The diagnostic clock channel is not used as the LSL clock authority here.
+    This is a validation layer: for the RS485 reference stream, rs485_clock is
+    expected to be in LSL seconds; for the target stream, device_clock_us is a
+    device-local monotonic clock, so only interval/rate agreement is meaningful.
+    """
+    ts = np.asarray(lsl_timestamps_s, dtype=np.float64)
+    clock_s = np.asarray(clock_values, dtype=np.float64) * float(clock_scale_to_s)
+    mask = np.isfinite(ts) & np.isfinite(clock_s)
+    if np.count_nonzero(mask) < 2:
+        return {
+            "lsl_rate_hz": float("nan"),
+            "clock_rate_hz": float("nan"),
+            "median_dt_error_ms": float("nan"),
+            "clock_vs_lsl_span_error_ms": float("nan"),
+            "median_clock_minus_lsl_s": float("nan"),
+        }
+
+    ts = ts[mask]
+    clock_s = clock_s[mask]
+    order = np.argsort(ts)
+    ts = ts[order]
+    clock_s = clock_s[order]
+
+    dt_lsl = np.diff(ts)
+    dt_clock = np.diff(clock_s)
+    valid_dt = np.isfinite(dt_lsl) & np.isfinite(dt_clock) & (dt_lsl > 0) & (dt_clock > 0)
+    if not np.any(valid_dt):
+        return {
+            "lsl_rate_hz": float("nan"),
+            "clock_rate_hz": float("nan"),
+            "median_dt_error_ms": float("nan"),
+            "clock_vs_lsl_span_error_ms": float("nan"),
+            "median_clock_minus_lsl_s": float("nan"),
+        }
+
+    median_lsl_dt = float(np.nanmedian(dt_lsl[valid_dt]))
+    median_clock_dt = float(np.nanmedian(dt_clock[valid_dt]))
+    lsl_rate_hz = 1.0 / median_lsl_dt if median_lsl_dt > 0 else float("nan")
+    clock_rate_hz = 1.0 / median_clock_dt if median_clock_dt > 0 else float("nan")
+    median_dt_error_ms = (median_clock_dt - median_lsl_dt) * 1000.0
+    span_error_ms = ((clock_s[-1] - clock_s[0]) - (ts[-1] - ts[0])) * 1000.0
+    median_clock_minus_lsl_s = float(np.nanmedian(clock_s - ts))
+    return {
+        "lsl_rate_hz": lsl_rate_hz,
+        "clock_rate_hz": clock_rate_hz,
+        "median_dt_error_ms": median_dt_error_ms,
+        "clock_vs_lsl_span_error_ms": span_error_ms,
+        "median_clock_minus_lsl_s": median_clock_minus_lsl_s,
+    }
+
+
 def _latest_finite_timestamp(values: np.ndarray) -> float:
     arr = np.asarray(values, dtype=np.float64)
     finite = arr[np.isfinite(arr)]
@@ -483,52 +542,78 @@ def _compute_xy_reference_time_shift_s(
 ) -> tuple[float, str]:
     """Return the display-only reference time shift used by the live XY plot.
 
-    The raw streams are never modified. This shift is applied only inside the
-    XY visualization before reference->target interpolation. It compensates for
-    online stream-tail latency introduced by batching/IPC/polling differences,
-    which otherwise makes the XY plot update only over the older common overlap
-    even while each time-series panel already shows its latest samples.
+    The native streams remain untouched. This function only chooses the timebase
+    used by the *live* XY visualization.
+
+    The important correction versus the previous implementation is that
+    tail-aligned mode is allowed to correct multi-second stream-tail offsets and
+    can snap immediately when the measured offset is large. A 500 Hz reference
+    and a ~100 Hz target are still paired by interpolation, not by 1:1 indexing.
     """
-    mode = str(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.mode", default="auto_tail")).strip().lower()
+    mode = str(
+        OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.mode", default="tail_aligned_lsl")
+    ).strip().lower()
     if mode in {"off", "none", "raw_lsl"}:
         handles.state["xy_reference_time_shift_s"] = 0.0
+        handles.state["xy_reference_tail_delta_s"] = 0.0
         return 0.0, "raw_lsl"
 
     if mode == "manual":
         shift = float(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.manual_reference_shift_s", default=0.0))
         handles.state["xy_reference_time_shift_s"] = shift
+        handles.state["xy_reference_tail_delta_s"] = shift
         return shift, "manual"
 
-    if mode != "auto_tail":
+    if mode not in {"tail_aligned_lsl", "auto_tail", "auto"}:
         LOGGER.warning("Unsupported viewer.xy_correlation.time_alignment.mode=%r; using raw_lsl", mode)
         handles.state["xy_reference_time_shift_s"] = 0.0
+        handles.state["xy_reference_tail_delta_s"] = 0.0
         return 0.0, "raw_lsl"
 
     if target is None or reference is None or target.timestamps_s.size == 0 or reference.timestamps_s.size == 0:
         previous = float(handles.state.get("xy_reference_time_shift_s", 0.0))
-        return previous, "auto_tail_hold"
+        return previous, "tail_aligned_hold"
 
     target_tail = _latest_finite_timestamp(target.timestamps_s)
     reference_tail = _latest_finite_timestamp(reference.timestamps_s)
     if not np.isfinite(target_tail) or not np.isfinite(reference_tail):
         previous = float(handles.state.get("xy_reference_time_shift_s", 0.0))
-        return previous, "auto_tail_hold"
+        return previous, "tail_aligned_hold"
 
-    measured_shift = target_tail - reference_tail
-    max_shift = abs(float(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.max_auto_shift_s", default=1.0)))
+    measured_shift = float(target_tail - reference_tail)
+    handles.state["xy_reference_tail_delta_s"] = measured_shift
+
+    max_shift_cfg = OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.max_auto_shift_s", default=None)
+    if max_shift_cfg is None:
+        max_shift = float(OmegaConf.select(cfg, "viewer.window_seconds", default=10.0))
+    else:
+        max_shift = abs(float(max_shift_cfg))
+    if max_shift > 0 and abs(measured_shift) > max_shift:
+        clipped_shift = float(np.clip(measured_shift, -max_shift, max_shift))
+        handles.state["xy_reference_shift_clipped"] = True
+    else:
+        clipped_shift = measured_shift
+        handles.state["xy_reference_shift_clipped"] = False
+
     min_shift = abs(float(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.min_auto_shift_s", default=0.0)))
-    measured_shift = float(np.clip(measured_shift, -max_shift, max_shift))
-    if abs(measured_shift) < min_shift:
-        measured_shift = 0.0
+    if abs(clipped_shift) < min_shift:
+        clipped_shift = 0.0
 
-    previous = float(handles.state.get("xy_reference_time_shift_s", measured_shift))
-    smoothing = float(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.smoothing_alpha", default=0.25))
-    smoothing = float(np.clip(smoothing, 0.0, 1.0))
-    shift = previous + smoothing * (measured_shift - previous)
-    handles.state["xy_reference_time_shift_s"] = shift
-    handles.state["xy_reference_tail_delta_s"] = target_tail - reference_tail
-    return shift, "auto_tail"
+    previous = float(handles.state.get("xy_reference_time_shift_s", clipped_shift))
+    snap_threshold = abs(float(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.snap_threshold_s", default=0.250)))
+    if abs(clipped_shift - previous) >= snap_threshold:
+        # Large shifts are almost always clock-domain/tail-offset corrections.
+        # Smoothing them is exactly what makes the XY plot look seconds late.
+        shift = clipped_shift
+        mode_label = "tail_aligned_snap"
+    else:
+        smoothing = float(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.smoothing_alpha", default=1.0))
+        smoothing = float(np.clip(smoothing, 0.0, 1.0))
+        shift = previous + smoothing * (clipped_shift - previous)
+        mode_label = "tail_aligned_lsl"
 
+    handles.state["xy_reference_time_shift_s"] = float(shift)
+    return float(shift), mode_label
 
 def _interpolate_reference_to_target(
     target: TargetWindow | None,
@@ -734,6 +819,7 @@ def init_figure(cfg: DictConfig) -> FigureHandles:
         "reference_live_cutoff_timestamp_s": None,
         "xy_reference_time_shift_s": 0.0,
         "xy_reference_tail_delta_s": 0.0,
+        "xy_reference_shift_clipped": False,
     }
     handles = FigureHandles(fig=fig, axes=axes, artists=artists, state=state)
 
@@ -830,6 +916,17 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         y = np.concatenate(overlay_y)
         update_axis(handles.axes["overlay"], x, y)
 
+    target_clock_metrics = (
+        _clock_validation_metrics(target.timestamps_s, target.device_clock_us, clock_scale_to_s=1e-6)
+        if target is not None and target.timestamps_s.size and target.device_clock_us.size
+        else {}
+    )
+    reference_clock_metrics = (
+        _clock_validation_metrics(reference.timestamps_s, reference.rs485_clock, clock_scale_to_s=1.0)
+        if reference is not None and reference.timestamps_s.size and reference.rs485_clock.size
+        else {}
+    )
+
     xy_reference_shift_s, xy_alignment_mode = _compute_xy_reference_time_shift_s(handles, target, reference, cfg)
     xy_x, xy_y, xy_t = _interpolate_reference_to_target(
         target,
@@ -852,9 +949,10 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
     xy_mode = "max-span lock" if xy_lock_max_span else "adaptive"
     xy_toggle_key = str(handles.state.get("xy_lock_toggle_key", "")).strip()
     xy_toggle_hint = f" | press '{xy_toggle_key}' to toggle" if xy_toggle_key else ""
+    clipped_suffix = "; clipped" if bool(handles.state.get("xy_reference_shift_clipped", False)) else ""
     handles.axes["xy"].set_title(
         f"XY correlation: reference raw vs target raw "
-        f"[{xy_mode}; align={xy_alignment_mode}; ref_shift={xy_reference_shift_s:+.3f}s{xy_toggle_hint}]"
+        f"[{xy_mode}; align={xy_alignment_mode}{clipped_suffix}; ref_shift={xy_reference_shift_s:+.3f}s{xy_toggle_hint}]"
     )
     if xy_x.size:
         if xy_lock_max_span:
@@ -877,21 +975,24 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         f"mode   : {mode}\n"
         f"state  : {live_state}\n"
         "sync   : native streams + LSL timestamps"
+        "XY     : ref→target interpolation"
     )
     col_target = (
         f"TARGET ({force_unit})\n"
         f"raw    : {_format_latest(latest_target_raw)}\n"
         f"filt   : {_format_latest(latest_target_filtered)}\n"
         f"clock  : {_format_latest(latest_target_clock, ' us', 0)}\n"
-        f"rate   : {_format_latest(target_rate_hz, ' Hz', 2)}\n"
-        f"dt     : {_format_latest(target_mean_dt_ms, ' ms', 2)}"
+        f"LSL Hz : {_format_latest(target_rate_hz, ' Hz', 2)}\n"
+        f"dev Hz : {_format_latest(float(target_clock_metrics.get('clock_rate_hz', float('nan'))), ' Hz', 2)}\n"
+        f"dt err : {_format_latest(float(target_clock_metrics.get('median_dt_error_ms', float('nan'))), ' ms', 3)}"
     )
     col_reference = (
         f"REFERENCE ({force_unit})\n"
         f"raw    : {_format_latest(latest_reference_raw)}\n"
         f"clock  : {_format_latest(latest_reference_clock, ' s', 6)}\n"
-        f"rate   : {_format_latest(reference_rate_hz, ' Hz', 2)}\n"
-        f"dt     : {_format_latest(reference_mean_dt_ms, ' ms', 2)}\n"
+        f"LSL Hz : {_format_latest(reference_rate_hz, ' Hz', 2)}\n"
+        f"clk Hz : {_format_latest(float(reference_clock_metrics.get('clock_rate_hz', float('nan'))), ' Hz', 2)}\n"
+        f"clk-LSL: {_format_latest(float(reference_clock_metrics.get('median_clock_minus_lsl_s', float('nan'))), ' s', 4)}\n"
         f"pairs  : {xy_x.size}"
     )
     col_metrics = "METRICS\n"
@@ -903,6 +1004,7 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         f"window : {float(cfg.viewer.window_seconds):.1f} s\n"
         f"xy sh. : {xy_reference_shift_s:+.3f} s\n"
         f"tail Δ : {float(handles.state.get('xy_reference_tail_delta_s', 0.0)):+.3f} s\n"
+        f"clip   : {bool(handles.state.get('xy_reference_shift_clipped', False))}\n"
         f"keys   : clean={handles.state.get('clear_plots_key') or 'off'} "
         f"pause={handles.state.get('pause_live_key') or 'off'} "
         f"xy={handles.state.get('xy_lock_toggle_key') or 'off'}"
