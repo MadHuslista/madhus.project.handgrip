@@ -1,51 +1,62 @@
 defaults:
   - _self_
 
-stream:
-  name: UnifiedHandgripRS485
-  type: Force
-  source_id: null
-  manufacturer: Arduino+RS485
-  device_name: Handgrip+AcquisitionBoard
+# Two-native-stream architecture:
+# - target stream: Arduino/HX711 handgrip, native irregular ~93-100 Hz
+# - reference stream: RS485 acquisition board, native regular 500 Hz
+streams:
+  target:
+    enabled: true
+    name: HandgripTarget
+    type: Force
+    source_id: null
+    manufacturer: Arduino/HX711
+    device_name: HandgripTarget
+    nominal_srate: 0.0
+    channels:
+      device_clock_us:
+        label: device_clock_us
+        type: Time
+        unit: us
+      raw:
+        label: grip_force_raw
+        type: Force
+        unit: N
+      filtered:
+        label: grip_force_filtered
+        type: Force
+        unit: N
 
-  # Arduino / handgrip channels
-  value_unit: N
-  clock_unit: us
-  clock_channel_label: device_clock_us
-  raw_channel_label: grip_force_raw
-  filtered_channel_label: grip_force_filtered
-  clock_channel_type: Time
-  raw_channel_type: Force
-  filtered_channel_type: Force
+  reference:
+    enabled: true
+    name: HandgripReference
+    type: Force
+    source_id: rs485-acquisition-board-1
+    manufacturer: RS485 Acquisition Board
+    device_name: HighSpeedAcquisitionInstrument
+    nominal_srate: 500.0
+    channels:
+      clock:
+        label: rs485_clock
+        type: Time
+        unit: s
+      raw:
+        label: rs485_raw
+        type: Force
+        unit: N
 
-  # RS485 acquisition-board channels
-  rs485_value_unit: N
-  rs485_clock_unit: s
-  rs485_raw_channel_label: rs485_raw
-  rs485_clock_channel_label: rs485_clock
-  rs485_raw_channel_type: Force
-  rs485_clock_channel_type: Time
+# Optional compatibility stream is intentionally disabled. Calibration and the
+# viewer should use the two native streams above, not a fused 5-channel stream.
+legacy_unified_stream:
+  enabled: false
+  name: UnifiedHandgripRS485_DERIVED_LEGACY
 
 rs485_ipc:
   enabled: true
   transport: zmq_sub
   connect: tcp://127.0.0.1:5557
   topic: rs485.measurement.v1
-
   receive_hwm: 5000
-  buffer_max_frames: 5000
-
-  # Fusion rule: bridge publishes one unified LSL sample per Arduino sample.
-  # It selects the closest RS485 frame inside [Arduino timestamp - max_age_s,
-  # Arduino timestamp + max_future_s]. Active-Send is delivered in short bursts,
-  # so this window must tolerate the burst interval plus OS scheduling jitter.
-  max_age_s: 0.200
-  max_future_s: 0.050
-
-  # nan makes missing/stale RS485 data explicit without crashing Arduino acquisition.
-  missing_policy: nan       # nan | hold_last
-  stale_policy: nan         # nan | hold_last
-
   log_status_every_s: 5.0
 
 serial:
@@ -55,7 +66,16 @@ serial:
   reconnect_backoff_s: 2.0
   startup_settle_s: 2.0
   max_line_bytes: 256
+  # Constant correction for known serial transport delay. Keep 0 unless measured.
   transport_latency_s: 0.0
+
+# LSL sample timestamps are the synchronization authority. Device timestamps are
+# kept as diagnostic channels. Recommended first implementation uses Arduino
+# device-clock deltas anchored to the first host LSL receive time.
+target_timestamping:
+  policy: device_clock_anchor    # host_receive | device_clock_anchor | device_clock_affine
+  reset_on_nonmonotonic: true
+  max_gap_s: 1.0
 
 protocol:
   mode: auto            # auto | tagged_csv | simple_csv | legacy_pair_lines
@@ -77,9 +97,16 @@ processing:
       min_dt_s: 0.000001
 
 csv:
-  path: ./data/handgrip_samples.csv
-  append: true
-  flush_every_n_rows: 1
+  target:
+    enabled: true
+    path: ./data/target_handgrip_samples.csv
+    append: true
+    flush_every_n_rows: 1
+  reference:
+    enabled: true
+    path: ./data/reference_rs485_samples.csv
+    append: true
+    flush_every_n_rows: 25
 
 logging:
   level: INFO

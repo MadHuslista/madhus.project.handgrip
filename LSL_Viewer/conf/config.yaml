@@ -1,58 +1,71 @@
 mode: live
 
-stream:
-  name: UnifiedHandgripRS485
-  stype: Force
-  source_id: null
-  buffer_samples: 1600
-  acquisition_delay: 0.01
-  timeout: 5.0
+# Two-native-stream viewer. It subscribes independently to the target and
+# reference streams and aligns them only by their LSL sample timestamps.
+streams:
+  target:
+    name: HandgripTarget
+    stype: Force
+    source_id: null
+    buffer_samples: 1600
+    acquisition_delay: 0.01
+    timeout: 5.0
+  reference:
+    name: HandgripReference
+    stype: Force
+    source_id: rs485-acquisition-board-1
+    buffer_seconds: 12.0
+    acquisition_delay: 0.01
+    timeout: 5.0
+    expected_rate_hz: 500.0
 
 channels:
-  clock_label: device_clock_us
-  raw_label: grip_force_raw
-  filtered_label: grip_force_filtered
-  rs485_raw_label: rs485_raw
-  rs485_clock_label: rs485_clock
+  target:
+    clock_label: device_clock_us
+    raw_label: grip_force_raw
+    filtered_label: grip_force_filtered
+  reference:
+    clock_label: rs485_clock
+    raw_label: rs485_raw
 
 viewer:
-  window_samples: null
   window_seconds: 10.0
-  expected_rate_hz: 100.0
+  target_window_samples: 1600
+  reference_window_extra_s: 1.0
+  expected_target_rate_hz: 100.0
   refresh_s: 0.05
   force_unit_label: N
-  raw_unit_label: N
-  filtered_unit_label: N
-  rs485_unit_label: N
   dt_unit_label: ms
   xy_correlation:
-    # false = current behavior: fully adaptive autoscale on every refresh.
+    # false = adaptive autoscale on every refresh.
     # true  = only zoom out: preserve the largest observed XY axis span.
     lock_max_span: false
-    # Runtime toggle key in the Matplotlib window. Set to "" to disable.
     toggle_key: x
   controls:
-    # Press this key in the Matplotlib window to clear all traces and restart
-    # live rendering from samples acquired after the keypress. Set to "" to disable.
     clear_key: c
-    # Press this key to pause/resume live rendering. While paused, incoming
-    # samples are not rendered. On resume, buffered paused samples are dropped,
-    # all graphs are cleared, and live rendering restarts from new samples.
-    # Set to "" to disable.
     pause_key: p
 
+# Alignment policy used only for visualization/calibration views. The raw LSL
+# streams remain native-rate; reference samples are interpolated to target sample
+# timestamps only inside the viewer.
+alignment:
+  interpolation: linear
+  max_reference_gap_s: 0.020
+  allow_extrapolation: false
+
 reference:
-  csv_path: null
+  # Preferred replay inputs after bridge refactor.
+  target_csv_path: ./data/target_handgrip_samples.csv
+  reference_csv_path: ./data/reference_rs485_samples.csv
   xdf_path: null
-  inspect_in_replay_modes: false
+
+  # Legacy fused CSV compatibility fallback.
+  csv_path: null
 
 replay:
   speed: 1.0
   loop: false
   start_offset_s: 0.0
-  time_column: auto
-  time_column_unit: auto
-  allow_index_fallback: true
 
 logging:
   level: INFO

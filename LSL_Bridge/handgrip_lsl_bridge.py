@@ -10,10 +10,9 @@ import re
 import sys
 import threading
 import time
-from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Deque, Optional, Protocol
+from typing import Any, Optional, Protocol
 
 import hydra
 from hydra.utils import to_absolute_path
@@ -57,31 +56,19 @@ class RS485IpcSample:
     host_unix_ts: float
     received_lsl_ts: float
     clock_source: str
+    unit_label: str
+    status_word: Any
+    timestamp_source: str
+    configured_frequency_hz: float
 
 
-@dataclass(slots=True)
-class RS485Selection:
-    sample: Optional[RS485IpcSample]
-    age_s: float
-    missing_reason: str
-
-
-class CsvSink:
+class TargetCsvSink:
     FIELDNAMES = [
         "host_unix_time_ns",
         "lsl_timestamp_s",
         "device_clock_us",
         "value_raw",
         "value_filtered",
-        "rs485_raw",
-        "rs485_clock",
-        "rs485_mode",
-        "rs485_seq",
-        "rs485_signal_key",
-        "rs485_host_lsl_ts",
-        "rs485_clock_source",
-        "rs485_age_s",
-        "rs485_missing_reason",
         "sequence",
         "parser_mode",
         "raw_line",
@@ -99,8 +86,7 @@ class CsvSink:
         self._flush_every_n_rows = max(1, int(flush_every_n_rows))
         self._rows_since_flush = 0
 
-    def write(self, sample: ParsedSample, filtered_value: float, rs485_selection: Optional[RS485Selection] = None) -> None:
-        rs485 = rs485_selection.sample if rs485_selection is not None else None
+    def write(self, sample: ParsedSample, filtered_value: float) -> None:
         self._writer.writerow(
             {
                 "host_unix_time_ns": sample.host_unix_time_ns,
@@ -108,18 +94,68 @@ class CsvSink:
                 "device_clock_us": sample.device_clock_us,
                 "value_raw": repr(sample.value),
                 "value_filtered": repr(filtered_value),
-                "rs485_raw": "" if rs485 is None else repr(rs485.rs485_raw),
-                "rs485_clock": "" if rs485 is None else repr(rs485.rs485_clock),
-                "rs485_mode": "" if rs485 is None else rs485.mode,
-                "rs485_seq": "" if rs485 is None or rs485.seq is None else rs485.seq,
-                "rs485_signal_key": "" if rs485 is None else rs485.signal_key,
-                "rs485_host_lsl_ts": "" if rs485 is None else f"{rs485.host_lsl_ts:.9f}",
-                "rs485_clock_source": "" if rs485 is None else rs485.clock_source,
-                "rs485_age_s": "" if rs485_selection is None else f"{rs485_selection.age_s:.9f}",
-                "rs485_missing_reason": "" if rs485_selection is None else rs485_selection.missing_reason,
                 "sequence": "" if sample.sequence is None else sample.sequence,
                 "parser_mode": sample.parser_mode,
                 "raw_line": sample.raw_line,
+            }
+        )
+        self._rows_since_flush += 1
+        if self._rows_since_flush >= self._flush_every_n_rows:
+            self._fh.flush()
+            self._rows_since_flush = 0
+
+    def close(self) -> None:
+        try:
+            self._fh.flush()
+        finally:
+            self._fh.close()
+
+
+class ReferenceCsvSink:
+    FIELDNAMES = [
+        "host_unix_ts",
+        "received_lsl_ts",
+        "lsl_timestamp_s",
+        "rs485_clock",
+        "rs485_raw",
+        "rs485_mode",
+        "rs485_seq",
+        "rs485_signal_key",
+        "rs485_clock_source",
+        "unit_label",
+        "status_word",
+        "timestamp_source",
+        "configured_frequency_hz",
+    ]
+
+    def __init__(self, path: Path, append: bool, flush_every_n_rows: int) -> None:
+        self._path = path
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        mode = "a" if append else "w"
+        self._fh = self._path.open(mode, newline="", encoding="utf-8")
+        self._writer = csv.DictWriter(self._fh, fieldnames=self.FIELDNAMES)
+        if (not append) or self._path.stat().st_size == 0:
+            self._writer.writeheader()
+            self._fh.flush()
+        self._flush_every_n_rows = max(1, int(flush_every_n_rows))
+        self._rows_since_flush = 0
+
+    def write(self, sample: RS485IpcSample, lsl_timestamp_s: float) -> None:
+        self._writer.writerow(
+            {
+                "host_unix_ts": repr(sample.host_unix_ts),
+                "received_lsl_ts": f"{sample.received_lsl_ts:.9f}",
+                "lsl_timestamp_s": f"{lsl_timestamp_s:.9f}",
+                "rs485_clock": repr(sample.rs485_clock),
+                "rs485_raw": repr(sample.rs485_raw),
+                "rs485_mode": sample.mode,
+                "rs485_seq": "" if sample.seq is None else sample.seq,
+                "rs485_signal_key": sample.signal_key,
+                "rs485_clock_source": sample.clock_source,
+                "unit_label": sample.unit_label,
+                "status_word": "" if sample.status_word is None else sample.status_word,
+                "timestamp_source": sample.timestamp_source,
+                "configured_frequency_hz": "" if not math.isfinite(sample.configured_frequency_hz) else repr(sample.configured_frequency_hz),
             }
         )
         self._rows_since_flush += 1
@@ -220,7 +256,7 @@ class LineParser:
                 return None
 
         if self._last_seq is not None and seq != (self._last_seq + 1):
-            LOGGER.warning("Sequence discontinuity detected: last=%d current=%d", self._last_seq, seq)
+            LOGGER.warning("Target sequence discontinuity detected: last=%d current=%d", self._last_seq, seq)
         self._last_seq = seq
 
         return ParsedSample(
@@ -288,7 +324,7 @@ class SampleTimeResolver:
         if delta_us <= 0:
             if delta_us < 0:
                 LOGGER.warning(
-                    "Non-monotonic device clock detected: previous=%d current=%d. Resetting processor time base.",
+                    "Non-monotonic target device clock detected: previous=%d current=%d. Resetting processor time base.",
                     self._last_device_clock_us,
                     sample.device_clock_us,
                 )
@@ -303,30 +339,89 @@ class SampleTimeResolver:
         return self._last_resolved_time_s
 
 
+class TargetTimestampResolver:
+    """Map target device timestamps into the LSL clock domain.
 
-class RS485IpcSubscriber:
-    """Best-effort local IPC subscriber for RS485 MeasurementFrame data."""
+    The Arduino/device timestamp remains a diagnostic channel. The returned value
+    is passed as the LSL sample timestamp and is therefore the synchronization
+    authority used by the viewer/XDF layer.
+    """
 
     def __init__(self, cfg: DictConfig) -> None:
+        self._policy = str(cfg.target_timestamping.policy)
+        self._max_gap_s = float(cfg.target_timestamping.max_gap_s)
+        self._reset_on_nonmonotonic = bool(cfg.target_timestamping.reset_on_nonmonotonic)
+        self._anchor_device_us: int | None = None
+        self._anchor_lsl_s: float | None = None
+        self._last_device_us: int | None = None
+
+    def resolve(self, sample: ParsedSample, arrival_lsl_time: float) -> float:
+        if self._policy == "host_receive":
+            return arrival_lsl_time
+        if self._policy not in {"device_clock_anchor", "device_clock_affine"}:
+            raise ValueError(f"Unsupported target_timestamping.policy={self._policy!r}")
+        if self._policy == "device_clock_affine":
+            # Reserved for a later, explicitly validated timestamp-quality upgrade.
+            # The anchor model preserves native device timing without adding a hidden
+            # estimator to the calibration path.
+            LOGGER.debug("device_clock_affine requested; using device_clock_anchor behavior in this implementation")
+
+        if self._anchor_device_us is None or self._anchor_lsl_s is None:
+            self._reset_anchor(sample.device_clock_us, arrival_lsl_time)
+            return arrival_lsl_time
+
+        if self._last_device_us is not None:
+            delta_s = (sample.device_clock_us - self._last_device_us) / 1_000_000.0
+            if sample.device_clock_us < self._last_device_us and self._reset_on_nonmonotonic:
+                LOGGER.warning(
+                    "Target device clock reset/non-monotonic event: previous=%d current=%d. Re-anchoring to host receive time.",
+                    self._last_device_us,
+                    sample.device_clock_us,
+                )
+                self._reset_anchor(sample.device_clock_us, arrival_lsl_time)
+                return arrival_lsl_time
+            if delta_s > self._max_gap_s:
+                LOGGER.warning(
+                    "Target device clock gap %.3fs exceeds max_gap_s=%.3fs. Re-anchoring to host receive time.",
+                    delta_s,
+                    self._max_gap_s,
+                )
+                self._reset_anchor(sample.device_clock_us, arrival_lsl_time)
+                return arrival_lsl_time
+
+        self._last_device_us = sample.device_clock_us
+        return self._anchor_lsl_s + (sample.device_clock_us - self._anchor_device_us) / 1_000_000.0
+
+    def _reset_anchor(self, device_clock_us: int, arrival_lsl_time: float) -> None:
+        self._anchor_device_us = int(device_clock_us)
+        self._anchor_lsl_s = float(arrival_lsl_time)
+        self._last_device_us = int(device_clock_us)
+
+
+class RS485IpcReferencePublisher:
+    """Publishes RS485 IPC samples as their own native-rate/reference LSL stream."""
+
+    def __init__(self, cfg: DictConfig, outlet: StreamOutlet | None, sink: ReferenceCsvSink | None) -> None:
         self.cfg = cfg
-        self.enabled = bool(cfg.rs485_ipc.enabled)
-        self._buffer: Deque[RS485IpcSample] = deque(maxlen=max(1, int(cfg.rs485_ipc.buffer_max_frames)))
-        self._lock = threading.Lock()
+        self.enabled = bool(cfg.rs485_ipc.enabled) and bool(cfg.streams.reference.enabled)
+        self._outlet = outlet
+        self._sink = sink
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._context: Any = None
         self._socket: Any = None
         self._last_status_log_monotonic = 0.0
-        self._received_count = 0
+        self._published_count = 0
         self._malformed_count = 0
         self._gap_count = 0
         self._last_seq: Optional[int] = None
-        self._last_valid: Optional[RS485IpcSample] = None
 
     def start(self) -> None:
         if not self.enabled:
-            LOGGER.info("RS485 IPC subscriber disabled")
+            LOGGER.info("Reference RS485 IPC publisher disabled")
             return
+        if self._outlet is None:
+            raise RuntimeError("Reference stream is enabled but no StreamOutlet was provided")
         if zmq is None:
             raise RuntimeError("rs485_ipc.enabled=true requires pyzmq. Install with: uv add pyzmq")
         self._context = zmq.Context.instance()
@@ -336,9 +431,9 @@ class RS485IpcSubscriber:
         topic = str(self.cfg.rs485_ipc.topic).encode("utf-8")
         self._socket.setsockopt(zmq.SUBSCRIBE, topic)
         self._socket.connect(str(self.cfg.rs485_ipc.connect))
-        self._thread = threading.Thread(target=self._run, name="rs485-ipc-subscriber", daemon=True)
+        self._thread = threading.Thread(target=self._run, name="rs485-reference-lsl-publisher", daemon=True)
         self._thread.start()
-        LOGGER.info("RS485 IPC subscriber connected to %s topic=%s", self.cfg.rs485_ipc.connect, self.cfg.rs485_ipc.topic)
+        LOGGER.info("Reference IPC publisher connected to %s topic=%s", self.cfg.rs485_ipc.connect, self.cfg.rs485_ipc.topic)
 
     def stop(self) -> None:
         self._stop_event.set()
@@ -354,14 +449,15 @@ class RS485IpcSubscriber:
 
     def _run(self) -> None:
         assert self._socket is not None
+        assert self._outlet is not None
         while not self._stop_event.is_set():
             try:
                 parts = self._socket.recv_multipart(flags=zmq.NOBLOCK)
             except zmq.Again:
-                time.sleep(0.002)
+                time.sleep(0.001)
                 continue
             except Exception as exc:
-                LOGGER.warning("RS485 IPC receive warning: %s", exc)
+                LOGGER.warning("Reference IPC receive warning: %s", exc)
                 time.sleep(0.05)
                 continue
 
@@ -375,16 +471,23 @@ class RS485IpcSubscriber:
                     LOGGER.warning("Dropped malformed RS485 IPC message #%d: %s", self._malformed_count, exc)
                 continue
 
-            with self._lock:
-                if sample.seq is not None:
-                    if self._last_seq is not None and sample.seq != self._last_seq + 1:
-                        self._gap_count += 1
-                        if self._gap_count == 1 or self._gap_count % 20 == 0:
-                            LOGGER.warning("RS485 IPC sequence gap #%d: last=%s current=%s", self._gap_count, self._last_seq, sample.seq)
-                    self._last_seq = sample.seq
-                self._buffer.append(sample)
-                self._last_valid = sample
-                self._received_count += 1
+            if sample.seq is not None:
+                if self._last_seq is not None and sample.seq != self._last_seq + 1:
+                    self._gap_count += 1
+                    if self._gap_count == 1 or self._gap_count % 20 == 0:
+                        LOGGER.warning("Reference RS485 sequence gap #%d: last=%s current=%s", self._gap_count, self._last_seq, sample.seq)
+                self._last_seq = sample.seq
+
+            timestamp = sample.host_lsl_ts if math.isfinite(sample.host_lsl_ts) else sample.received_lsl_ts
+            self._outlet.push_sample(
+                [float(sample.rs485_clock), float(sample.rs485_raw)],
+                timestamp=timestamp,
+                pushthrough=True,
+            )
+            if self._sink is not None:
+                self._sink.write(sample, timestamp)
+            self._published_count += 1
+            self._log_status_if_due(sample, timestamp)
 
     def _decode_record(self, record: dict[str, Any]) -> RS485IpcSample:
         schema = str(record.get("schema", ""))
@@ -397,6 +500,7 @@ class RS485IpcSubscriber:
             raise ValueError("missing one of rs485_raw, rs485_clock, host_lsl_ts")
         seq_raw = record.get("seq")
         seq = None if seq_raw is None else int(seq_raw)
+        configured_frequency_hz = record.get("configured_frequency_hz", math.nan)
         return RS485IpcSample(
             seq=seq,
             mode=str(record.get("mode", "unknown")),
@@ -407,100 +511,29 @@ class RS485IpcSubscriber:
             host_unix_ts=float(record.get("host_unix_ts", math.nan)),
             received_lsl_ts=local_clock(),
             clock_source=str(record.get("rs485_clock_source", "unknown")),
+            unit_label=str(record.get("unit_label", "")),
+            status_word=record.get("status_word"),
+            timestamp_source=str(record.get("timestamp_source", "host_lsl_ts")),
+            configured_frequency_hz=float(configured_frequency_hz) if configured_frequency_hz is not None else math.nan,
         )
 
-    def select(self, target_lsl_ts: float) -> RS485Selection:
-        if not self.enabled:
-            return RS485Selection(sample=None, age_s=math.nan, missing_reason="disabled")
-
-        max_age_s = max(0.0, float(self.cfg.rs485_ipc.max_age_s))
-        max_future_s = max(0.0, float(self.cfg.rs485_ipc.max_future_s))
-        missing_policy = str(self.cfg.rs485_ipc.missing_policy)
-        stale_policy = str(self.cfg.rs485_ipc.stale_policy)
-        now_monotonic = time.monotonic()
-
-        with self._lock:
-            buffer_snapshot = list(self._buffer)
-            last_valid = self._last_valid
-            received_count = self._received_count
-            malformed_count = self._malformed_count
-            gap_count = self._gap_count
-
-        # Select the closest RS485 sample in the allowed fusion window.
-        # Active-Send timestamp re-anchors after CRC/resync recovery can make
-        # arrival order differ from reconstructed timestamp order. Therefore we
-        # scan the whole bounded ring buffer instead of early-breaking on append
-        # order.
-        chosen: Optional[RS485IpcSample] = None
-        best_abs_age = math.inf
-        lower_bound = target_lsl_ts - max_age_s
-        upper_bound = target_lsl_ts + max_future_s
-        latest_ts = math.nan
-        latest_age = math.nan
-        oldest_ts = math.nan
-        if buffer_snapshot:
-            latest_ts = buffer_snapshot[-1].host_lsl_ts
-            latest_age = target_lsl_ts - latest_ts
-            oldest_ts = buffer_snapshot[0].host_lsl_ts
-        for candidate in buffer_snapshot:
-            candidate_ts = candidate.host_lsl_ts
-            if candidate_ts < lower_bound or candidate_ts > upper_bound:
-                continue
-            abs_age = abs(target_lsl_ts - candidate_ts)
-            if abs_age < best_abs_age:
-                chosen = candidate
-                best_abs_age = abs_age
-
-        if chosen is None:
-            if missing_policy == "hold_last" and last_valid is not None:
-                age = target_lsl_ts - last_valid.host_lsl_ts
-                return RS485Selection(sample=last_valid, age_s=age, missing_reason="hold_last_missing")
-            if not buffer_snapshot:
-                reason = "empty_buffer"
-            else:
-                reason = (
-                    f"no_candidate target={target_lsl_ts:.6f} window=[{lower_bound:.6f},{upper_bound:.6f}] "
-                    f"oldest_ts={oldest_ts:.6f} latest_ts={latest_ts:.6f} latest_age={latest_age:.6f}"
-                )
-            self._log_status_if_due(received_count, malformed_count, gap_count, reason=reason)
-            return RS485Selection(sample=None, age_s=math.nan, missing_reason="missing")
-
-        age_s = target_lsl_ts - chosen.host_lsl_ts
-        if abs(age_s) > max_age_s:
-            if stale_policy == "hold_last":
-                return RS485Selection(sample=chosen, age_s=age_s, missing_reason="hold_last_stale")
-            self._log_status_if_due(
-                received_count,
-                malformed_count,
-                gap_count,
-                reason=f"stale age={age_s:.6f}s window=[-{max_age_s:.3f},+{max_future_s:.3f}]",
-            )
-            return RS485Selection(sample=None, age_s=age_s, missing_reason="stale")
-
-        if now_monotonic - self._last_status_log_monotonic >= float(self.cfg.rs485_ipc.log_status_every_s):
-            self._last_status_log_monotonic = now_monotonic
-            LOGGER.info(
-                "RS485 IPC status: received=%d malformed=%d gaps=%d latest_mode=%s latest_age_s=%.6f",
-                received_count,
-                malformed_count,
-                gap_count,
-                chosen.mode,
-                age_s,
-            )
-        return RS485Selection(sample=chosen, age_s=age_s, missing_reason="")
-
-    def _log_status_if_due(self, received_count: int, malformed_count: int, gap_count: int, reason: str) -> None:
+    def _log_status_if_due(self, sample: RS485IpcSample, timestamp: float) -> None:
         now = time.monotonic()
-        if now - self._last_status_log_monotonic < float(self.cfg.rs485_ipc.log_status_every_s):
-            return
-        self._last_status_log_monotonic = now
-        LOGGER.warning(
-            "RS485 IPC unavailable/stale (%s); publishing NaN. received=%d malformed=%d gaps=%d",
-            reason,
-            received_count,
-            malformed_count,
-            gap_count,
-        )
+        if self._published_count == 1 or now - self._last_status_log_monotonic >= float(self.cfg.rs485_ipc.log_status_every_s):
+            self._last_status_log_monotonic = now
+            age_s = local_clock() - timestamp
+            LOGGER.info(
+                "Reference LSL status: published=%d malformed=%d gaps=%d latest_seq=%s raw=%s clock=%s timestamp_age_s=%.6f mode=%s clock_source=%s",
+                self._published_count,
+                self._malformed_count,
+                self._gap_count,
+                sample.seq,
+                sample.rs485_raw,
+                sample.rs485_clock,
+                age_s,
+                sample.mode,
+                sample.clock_source,
+            )
 
 
 def configure_logging(level_name: str) -> None:
@@ -509,6 +542,7 @@ def configure_logging(level_name: str) -> None:
         level=level,
         format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
+        force=True,
     )
 
 
@@ -526,8 +560,8 @@ def find_port_metadata(port_name: str) -> dict[str, Any]:
     return {"device": port_name}
 
 
-def build_source_id(cfg: DictConfig, port_meta: dict[str, Any]) -> str:
-    explicit = cfg.stream.get("source_id")
+def build_target_source_id(cfg: DictConfig, port_meta: dict[str, Any]) -> str:
+    explicit = cfg.streams.target.get("source_id")
     if explicit:
         return str(explicit)
 
@@ -543,39 +577,59 @@ def build_source_id(cfg: DictConfig, port_meta: dict[str, Any]) -> str:
     return f"arduino-handgrip-{device}"
 
 
-def build_outlet(cfg: DictConfig, source_id: str) -> StreamOutlet:
+def _append_channel(channels: Any, label: str, channel_type: str, unit: str) -> None:
+    channel = channels.append_child("channel")
+    channel.append_child_value("label", str(label))
+    channel.append_child_value("type", str(channel_type))
+    channel.append_child_value("unit", str(unit))
+
+
+def build_target_outlet(cfg: DictConfig, source_id: str) -> StreamOutlet:
+    stream_cfg = cfg.streams.target
     info = StreamInfo(
-        str(cfg.stream.name),
-        str(cfg.stream.type),
-        5,
+        str(stream_cfg.name),
+        str(stream_cfg.type),
+        3,
         IRREGULAR_RATE,
         cf_double64,
         source_id,
     )
-
     desc = info.desc()
-    desc.append_child_value("manufacturer", str(cfg.stream.manufacturer))
-    desc.append_child_value("device_name", str(cfg.stream.device_name))
-    desc.append_child_value("protocol", "arduino_serial_plus_rs485_ipc_to_lsl")
-    desc.append_child_value("sampling_model", "irregular_fused")
+    desc.append_child_value("manufacturer", str(stream_cfg.manufacturer))
+    desc.append_child_value("device_name", str(stream_cfg.device_name))
+    desc.append_child_value("protocol", "arduino_serial_to_lsl")
+    desc.append_child_value("sampling_model", "target_native_irregular")
+    desc.append_child_value("timestamp_policy", str(cfg.target_timestamping.policy))
+    desc.append_child_value("clock_semantics", "LSL sample timestamp is sync authority; device_clock_us channel is diagnostic")
+    channels = desc.append_child("channels")
+    _append_channel(channels, stream_cfg.channels.device_clock_us.label, stream_cfg.channels.device_clock_us.type, stream_cfg.channels.device_clock_us.unit)
+    _append_channel(channels, stream_cfg.channels.raw.label, stream_cfg.channels.raw.type, stream_cfg.channels.raw.unit)
+    _append_channel(channels, stream_cfg.channels.filtered.label, stream_cfg.channels.filtered.type, stream_cfg.channels.filtered.unit)
+    return StreamOutlet(info, chunk_size=1)
+
+
+def build_reference_outlet(cfg: DictConfig) -> StreamOutlet:
+    stream_cfg = cfg.streams.reference
+    source_id = "rs485-reference" if stream_cfg.source_id is None else str(stream_cfg.source_id)
+    info = StreamInfo(
+        str(stream_cfg.name),
+        str(stream_cfg.type),
+        2,
+        float(stream_cfg.nominal_srate),
+        cf_double64,
+        source_id,
+    )
+    desc = info.desc()
+    desc.append_child_value("manufacturer", str(stream_cfg.manufacturer))
+    desc.append_child_value("device_name", str(stream_cfg.device_name))
+    desc.append_child_value("protocol", "rs485_ipc_to_lsl")
+    desc.append_child_value("sampling_model", "reference_native_regular")
     desc.append_child_value("rs485_ipc_enabled", str(bool(cfg.rs485_ipc.enabled)))
     desc.append_child_value("rs485_ipc_endpoint", str(cfg.rs485_ipc.connect))
-
+    desc.append_child_value("clock_semantics", "LSL sample timestamp is sync authority; rs485_clock channel is diagnostic")
     channels = desc.append_child("channels")
-
-    channel_specs = [
-        (cfg.stream.clock_channel_label, cfg.stream.clock_channel_type, cfg.stream.clock_unit),
-        (cfg.stream.raw_channel_label, cfg.stream.raw_channel_type, cfg.stream.value_unit),
-        (cfg.stream.filtered_channel_label, cfg.stream.filtered_channel_type, cfg.stream.value_unit),
-        (cfg.stream.rs485_raw_channel_label, cfg.stream.rs485_raw_channel_type, cfg.stream.rs485_value_unit),
-        (cfg.stream.rs485_clock_channel_label, cfg.stream.rs485_clock_channel_type, cfg.stream.rs485_clock_unit),
-    ]
-    for label, channel_type, unit in channel_specs:
-        channel = channels.append_child("channel")
-        channel.append_child_value("label", str(label))
-        channel.append_child_value("type", str(channel_type))
-        channel.append_child_value("unit", str(unit))
-
+    _append_channel(channels, stream_cfg.channels.clock.label, stream_cfg.channels.clock.type, stream_cfg.channels.clock.unit)
+    _append_channel(channels, stream_cfg.channels.raw.label, stream_cfg.channels.raw.type, stream_cfg.channels.raw.unit)
     return StreamOutlet(info, chunk_size=1)
 
 
@@ -596,27 +650,48 @@ def settle_serial_input(ser: Serial, startup_settle_s: float) -> None:
     ser.reset_input_buffer()
 
 
+def _open_target_sink(cfg: DictConfig) -> TargetCsvSink | None:
+    if not bool(cfg.csv.target.enabled):
+        return None
+    return TargetCsvSink(
+        path=Path(to_absolute_path(str(cfg.csv.target.path))),
+        append=bool(cfg.csv.target.append),
+        flush_every_n_rows=int(cfg.csv.target.flush_every_n_rows),
+    )
+
+
+def _open_reference_sink(cfg: DictConfig) -> ReferenceCsvSink | None:
+    if not bool(cfg.csv.reference.enabled):
+        return None
+    return ReferenceCsvSink(
+        path=Path(to_absolute_path(str(cfg.csv.reference.path))),
+        append=bool(cfg.csv.reference.append),
+        flush_every_n_rows=int(cfg.csv.reference.flush_every_n_rows),
+    )
+
+
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def app(cfg: DictConfig) -> None:
     configure_logging(str(cfg.logging.level))
-    LOGGER.info("Starting bridge with config:\n%s", OmegaConf.to_yaml(cfg))
+    LOGGER.info("Starting two-native-stream bridge with config:\n%s", OmegaConf.to_yaml(cfg))
 
-    csv_path = Path(to_absolute_path(str(cfg.csv.path)))
-    sink = CsvSink(
-        path=csv_path,
-        append=bool(cfg.csv.append),
-        flush_every_n_rows=int(cfg.csv.flush_every_n_rows),
-    )
+    target_sink = _open_target_sink(cfg)
+    reference_sink = _open_reference_sink(cfg)
+    reference_outlet = build_reference_outlet(cfg) if bool(cfg.streams.reference.enabled) else None
+    reference_publisher = RS485IpcReferencePublisher(cfg, reference_outlet, reference_sink)
+    reference_publisher.start()
+
     parser = LineParser(cfg)
-
-    rs485_subscriber = RS485IpcSubscriber(cfg)
-    rs485_subscriber.start()
+    processor = build_processor(cfg)
+    processor_time_resolver = SampleTimeResolver(cfg)
+    target_timestamp_resolver = TargetTimestampResolver(cfg)
 
     sample_count = 0
+    target_outlet: StreamOutlet | None = None
     try:
         while True:
             try:
-                LOGGER.info("Opening serial port %s @ %s baud", cfg.serial.port, cfg.serial.baudrate)
+                LOGGER.info("Opening target serial port %s @ %s baud", cfg.serial.port, cfg.serial.baudrate)
                 with Serial(
                     port=str(cfg.serial.port),
                     baudrate=int(cfg.serial.baudrate),
@@ -624,24 +699,31 @@ def app(cfg: DictConfig) -> None:
                 ) as ser:
                     settle_serial_input(ser, float(cfg.serial.startup_settle_s))
                     port_meta = find_port_metadata(str(cfg.serial.port))
-                    source_id = build_source_id(cfg, port_meta)
-                    outlet = build_outlet(cfg, source_id)
-                    processor = build_processor(cfg)
-                    time_resolver = SampleTimeResolver(cfg)
+                    source_id = build_target_source_id(cfg, port_meta)
+                    target_outlet = build_target_outlet(cfg, source_id)
                     LOGGER.info(
-                        "LSL outlet ready: name=%s type=%s source_id=%s csv=%s",
-                        cfg.stream.name,
-                        cfg.stream.type,
+                        "Target LSL outlet ready: name=%s type=%s source_id=%s csv=%s",
+                        cfg.streams.target.name,
+                        cfg.streams.target.type,
                         source_id,
-                        csv_path,
+                        None if target_sink is None else cfg.csv.target.path,
                     )
+                    if reference_outlet is not None:
+                        LOGGER.info(
+                            "Reference LSL outlet ready: name=%s type=%s source_id=%s nominal_srate=%s csv=%s",
+                            cfg.streams.reference.name,
+                            cfg.streams.reference.type,
+                            cfg.streams.reference.source_id,
+                            cfg.streams.reference.nominal_srate,
+                            None if reference_sink is None else cfg.csv.reference.path,
+                        )
 
                     while True:
                         raw_line = ser.readline(int(cfg.serial.max_line_bytes) + 1)
                         if not raw_line:
                             continue
                         if len(raw_line) > int(cfg.serial.max_line_bytes) and not raw_line.endswith(b"\n"):
-                            LOGGER.warning("Dropped overlong serial line; flushing input buffer")
+                            LOGGER.warning("Dropped overlong target serial line; flushing input buffer")
                             ser.reset_input_buffer()
                             continue
 
@@ -651,51 +733,43 @@ def app(cfg: DictConfig) -> None:
                         if sample is None:
                             continue
 
-                        sample_time_s = time_resolver.resolve(sample)
+                        sample.lsl_timestamp = target_timestamp_resolver.resolve(sample, arrival_lsl_time)
+                        sample_time_s = processor_time_resolver.resolve(sample)
                         filtered_value = float(processor.process(sample.value, sample_time_s))
 
-                        rs485_selection = rs485_subscriber.select(sample.lsl_timestamp)
-                        rs485_sample = rs485_selection.sample
-                        rs485_raw = math.nan if rs485_sample is None else rs485_sample.rs485_raw
-                        rs485_clock = math.nan if rs485_sample is None else rs485_sample.rs485_clock
-
-                        outlet.push_sample(
-                            [
-                                float(sample.device_clock_us),
-                                float(sample.value),
-                                filtered_value,
-                                float(rs485_raw),
-                                float(rs485_clock),
-                            ],
+                        target_outlet.push_sample(
+                            [float(sample.device_clock_us), float(sample.value), filtered_value],
                             timestamp=sample.lsl_timestamp,
                             pushthrough=True,
                         )
-                        sink.write(sample, filtered_value, rs485_selection)
+                        if target_sink is not None:
+                            target_sink.write(sample, filtered_value)
                         sample_count += 1
 
                         if sample_count == 1 or sample_count % int(cfg.logging.log_every_n_samples) == 0:
                             LOGGER.info(
-                                "Published samples=%d latest_clock_us=%d raw=%s filtered=%s rs485_raw=%s rs485_clock=%s rs485_missing=%s parser=%s",
+                                "Target LSL status: published=%d latest_clock_us=%d raw=%s filtered=%s parser=%s timestamp=%.6f",
                                 sample_count,
                                 sample.device_clock_us,
                                 sample.value,
                                 filtered_value,
-                                rs485_raw,
-                                rs485_clock,
-                                rs485_selection.missing_reason or "ok",
                                 sample.parser_mode,
+                                sample.lsl_timestamp,
                             )
 
             except SerialException as exc:
-                LOGGER.exception("Serial port failure: %s", exc)
+                LOGGER.exception("Target serial port failure: %s", exc)
                 LOGGER.info("Retrying in %.2f s", float(cfg.serial.reconnect_backoff_s))
                 time.sleep(float(cfg.serial.reconnect_backoff_s))
 
     except KeyboardInterrupt:
         LOGGER.info("Stopping on user request")
     finally:
-        rs485_subscriber.stop()
-        sink.close()
+        reference_publisher.stop()
+        if target_sink is not None:
+            target_sink.close()
+        if reference_sink is not None:
+            reference_sink.close()
 
 
 def main() -> int:
