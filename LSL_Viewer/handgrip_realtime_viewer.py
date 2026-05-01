@@ -165,6 +165,14 @@ def _xy_lock_toggle_key(cfg: DictConfig) -> str:
     return _cfg_str_path(cfg, "viewer.xy_correlation.toggle_key", "x").strip()
 
 
+def _clear_plots_key(cfg: DictConfig) -> str:
+    return _cfg_str_path(cfg, "viewer.controls.clear_key", "c").strip()
+
+
+def _pause_live_key(cfg: DictConfig) -> str:
+    return _cfg_str_path(cfg, "viewer.controls.pause_key", "p").strip()
+
+
 def _first_scalar(value: Any):
     if isinstance(value, list) and value:
         return _first_scalar(value[0])
@@ -432,6 +440,91 @@ def update_axis_expand_only(
     axis_limits[state_key] = locked
     ax.set_xlim(locked["xmin"], locked["xmax"])
     ax.set_ylim(locked["ymin"], locked["ymax"])
+
+
+def clear_plot_artists(
+    axes: dict[str, Any],
+    artists: dict[str, Any],
+    state: dict[str, Any],
+    *,
+    fig: Any | None = None,
+    reset_axes: bool = True,
+) -> None:
+    """Clear all plotted traces and reset transient viewer state.
+
+    This intentionally clears only plot artists, not axis titles/labels/legends.
+    It is used by the manual clean key and by live resume so the viewer can
+    restart visually without retaining samples acquired while the stream was
+    paused.
+    """
+    for artist in artists.values():
+        if isinstance(artist, LineCollection):
+            artist.set_segments([])
+            artist.set_colors([])
+        elif hasattr(artist, "set_data"):
+            artist.set_data([], [])
+
+    state.setdefault("axis_expand_only_limits", {}).clear()
+
+    if reset_axes:
+        for key, ax in axes.items():
+            if key == "info":
+                continue
+            # A deterministic blank view is preferable after a manual clean or
+            # live resume. The normal autoscaling path will take over on the
+            # first rendered post-reset window.
+            ax.set_xlim(0.0, 1.0)
+            ax.set_ylim(-1.0, 1.0)
+
+    if fig is not None and hasattr(fig, "canvas"):
+        fig.canvas.draw_idle()
+
+
+def _slice_window_after_timestamp(window: LiveWindow, cutoff_s: float | None) -> LiveWindow | None:
+    """Return only live samples newer than cutoff_s.
+
+    Used after manual clean and pause/resume. The LSL buffer may still contain
+    samples acquired while the viewer was paused or immediately before the
+    clean key was pressed. Filtering by timestamp makes those samples
+    intentionally non-renderable.
+    """
+    if cutoff_s is None:
+        return window
+
+    mask = np.asarray(window.timestamps_s, dtype=np.float64) > float(cutoff_s)
+    if not np.any(mask):
+        return None
+
+    rs485_raw = window.rs485_raw[mask] if window.rs485_raw is not None else None
+    rs485_clock = window.rs485_clock[mask] if window.rs485_clock is not None else None
+    return LiveWindow(
+        timestamps_s=window.timestamps_s[mask],
+        device_clock_us=window.device_clock_us[mask],
+        raw=window.raw[mask],
+        filtered=window.filtered[mask],
+        rs485_raw=rs485_raw,
+        rs485_clock=rs485_clock,
+    )
+
+
+def _establish_live_cutoff_from_latest_window(
+    stream,
+    cfg: DictConfig,
+    window_samples: int,
+    layout: ChannelLayout,
+    handles: FigureHandles,
+) -> None:
+    """Drop the currently buffered live window and restart rendering from after it."""
+    latest = fetch_live_window(stream, cfg, window_samples, layout)
+    if latest is not None and latest.timestamps_s.size:
+        handles.state["live_cutoff_timestamp_s"] = float(np.nanmax(latest.timestamps_s))
+        LOGGER.info(
+            "Live render cutoff reset to %.6f; buffered/pre-reset samples will be dropped.",
+            handles.state["live_cutoff_timestamp_s"],
+        )
+    else:
+        handles.state["live_cutoff_timestamp_s"] = None
+    handles.state["live_reset_from_latest_window"] = False
 
 
 def _candidate_columns(preferred: str, fallbacks: list[str]) -> list[str]:
@@ -750,7 +843,12 @@ def init_figure(cfg: DictConfig, has_rs485: bool) -> FigureHandles:
     state: dict[str, Any] = {
         "xy_lock_max_span": _xy_lock_max_span_enabled(cfg),
         "xy_lock_toggle_key": _xy_lock_toggle_key(cfg),
+        "clear_plots_key": _clear_plots_key(cfg),
+        "pause_live_key": _pause_live_key(cfg),
         "axis_expand_only_limits": {},
+        "live_paused": False,
+        "live_reset_from_latest_window": False,
+        "live_cutoff_timestamp_s": None,
     }
 
     if has_rs485:
@@ -840,21 +938,44 @@ def init_figure(cfg: DictConfig, has_rs485: bool) -> FigureHandles:
             axes[key].grid(True, alpha=GRID_ALPHA)
             axes[key].legend(loc="upper right")
 
-    if has_rs485:
-        toggle_key = str(state.get("xy_lock_toggle_key", "")).strip()
-        if toggle_key:
-            def _toggle_xy_lock(event) -> None:
-                if event.key != toggle_key:
-                    return
-                state["xy_lock_max_span"] = not bool(state.get("xy_lock_max_span", False))
-                state.setdefault("axis_expand_only_limits", {}).pop("xy", None)
-                LOGGER.info(
-                    "XY correlation max-span lock toggled %s with key '%s'.",
-                    "ON" if state["xy_lock_max_span"] else "OFF",
-                    toggle_key,
-                )
+    def _on_key_press(event) -> None:
+        key = event.key
+        xy_toggle_key = str(state.get("xy_lock_toggle_key", "")).strip()
+        clear_key = str(state.get("clear_plots_key", "")).strip()
+        pause_key = str(state.get("pause_live_key", "")).strip()
 
-            fig.canvas.mpl_connect("key_press_event", _toggle_xy_lock)
+        if has_rs485 and xy_toggle_key and key == xy_toggle_key:
+            state["xy_lock_max_span"] = not bool(state.get("xy_lock_max_span", False))
+            state.setdefault("axis_expand_only_limits", {}).pop("xy", None)
+            LOGGER.info(
+                "XY correlation max-span lock toggled %s with key '%s'.",
+                "ON" if state["xy_lock_max_span"] else "OFF",
+                xy_toggle_key,
+            )
+            return
+
+        if clear_key and key == clear_key:
+            clear_plot_artists(axes, artists, state, fig=fig, reset_axes=True)
+            # In live mode, the next loop iteration will fetch the latest buffer
+            # only to establish a cutoff, then render strictly newer samples.
+            state["live_reset_from_latest_window"] = True
+            LOGGER.info("Plot clean requested with key '%s'.", clear_key)
+            return
+
+        if pause_key and key == pause_key:
+            state["live_paused"] = not bool(state.get("live_paused", False))
+            if state["live_paused"]:
+                LOGGER.info("Live rendering paused with key '%s'. Incoming data will not be rendered.", pause_key)
+            else:
+                clear_plot_artists(axes, artists, state, fig=fig, reset_axes=True)
+                state["live_reset_from_latest_window"] = True
+                LOGGER.info(
+                    "Live rendering resumed with key '%s'. Buffered paused samples will be dropped.",
+                    pause_key,
+                )
+            return
+
+    fig.canvas.mpl_connect("key_press_event", _on_key_press)
 
     axes["info"].axis("off")
     axes["info"].set_xlim(0, 1)
@@ -1091,13 +1212,15 @@ def update_plots(
     if channel_names:
         channels_text = "- " + "\n- ".join(channel_names)
 
+    live_state = "paused" if bool(handles.state.get("live_paused", False)) else "running"
     col_source = (
         "SOURCE/MODE\n"
         f"name   : {source_name}\n"
         f"type   : {source_type}\n"
         f"id     : {source_id}\n"
         f"mode   : {mode}\n"
-        f"schema : {schema_name}"
+        f"schema : {schema_name}\n"
+        f"state  : {live_state}"
     )
     col_hg = (
         f"HANDGRIP ({force_unit})\n"
@@ -1126,9 +1249,14 @@ def update_plots(
     if new_samples is not None:
         col_metrics += f"new    : {new_samples}\n"
     if replay_progress_text:
-        col_metrics += replay_progress_text
+        col_metrics += replay_progress_text + "\n"
     else:
-        col_metrics += f"window : {window.timestamps_s.size} samples"
+        col_metrics += f"window : {window.timestamps_s.size} samples\n"
+    col_metrics += (
+        f"keys   : clean={handles.state.get('clear_plots_key') or 'off'} "
+        f"pause={handles.state.get('pause_live_key') or 'off'} "
+        f"xy={handles.state.get('xy_lock_toggle_key') or 'off'}"
+    )
 
     col_channels = f"CHANNELS\n{channels_text}"
     font_size = 8 if window.has_rs485 else 10
@@ -1154,7 +1282,24 @@ def run_live_mode(cfg: DictConfig, reference: OfflineReference, validate_referen
 
     try:
         while plt.fignum_exists(handles.fig.number):
+            if bool(handles.state.get("live_paused", False)):
+                # Do not fetch/render while paused. The buffered samples acquired
+                # during the pause are intentionally discarded after resume by
+                # establishing a fresh timestamp cutoff.
+                plt.pause(float(cfg.viewer.refresh_s))
+                continue
+
+            if bool(handles.state.get("live_reset_from_latest_window", False)):
+                _establish_live_cutoff_from_latest_window(stream, cfg, window_samples, layout, handles)
+                plt.pause(float(cfg.viewer.refresh_s))
+                continue
+
             live = fetch_live_window(stream, cfg, window_samples, layout)
+            if live is None:
+                plt.pause(float(cfg.viewer.refresh_s))
+                continue
+
+            live = _slice_window_after_timestamp(live, handles.state.get("live_cutoff_timestamp_s"))
             if live is None:
                 plt.pause(float(cfg.viewer.refresh_s))
                 continue

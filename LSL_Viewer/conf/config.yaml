@@ -31,6 +31,15 @@ viewer:
     lock_max_span: false
     # Runtime toggle key in the Matplotlib window. Set to "" to disable.
     toggle_key: x
+  controls:
+    # Press this key in the Matplotlib window to clear all traces and restart
+    # live rendering from samples acquired after the keypress. Set to "" to disable.
+    clear_key: c
+    # Press this key to pause/resume live rendering. While paused, incoming
+    # samples are not rendered. On resume, buffered paused samples are dropped,
+    # all graphs are cleared, and live rendering restarts from new samples.
+    # Set to "" to disable.
+    pause_key: p
 
 reference:
   csv_path: null
