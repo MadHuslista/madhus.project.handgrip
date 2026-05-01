@@ -469,17 +469,83 @@ def _lsl_interval_ms(timestamps_s: np.ndarray) -> tuple[np.ndarray, np.ndarray, 
     return out_idx, out_dt, rate_hz, mean_dt_ms
 
 
+def _latest_finite_timestamp(values: np.ndarray) -> float:
+    arr = np.asarray(values, dtype=np.float64)
+    finite = arr[np.isfinite(arr)]
+    return float(finite[-1]) if finite.size else float("nan")
+
+
+def _compute_xy_reference_time_shift_s(
+    handles: FigureHandles,
+    target: TargetWindow | None,
+    reference: ReferenceWindow | None,
+    cfg: DictConfig,
+) -> tuple[float, str]:
+    """Return the display-only reference time shift used by the live XY plot.
+
+    The raw streams are never modified. This shift is applied only inside the
+    XY visualization before reference->target interpolation. It compensates for
+    online stream-tail latency introduced by batching/IPC/polling differences,
+    which otherwise makes the XY plot update only over the older common overlap
+    even while each time-series panel already shows its latest samples.
+    """
+    mode = str(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.mode", default="auto_tail")).strip().lower()
+    if mode in {"off", "none", "raw_lsl"}:
+        handles.state["xy_reference_time_shift_s"] = 0.0
+        return 0.0, "raw_lsl"
+
+    if mode == "manual":
+        shift = float(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.manual_reference_shift_s", default=0.0))
+        handles.state["xy_reference_time_shift_s"] = shift
+        return shift, "manual"
+
+    if mode != "auto_tail":
+        LOGGER.warning("Unsupported viewer.xy_correlation.time_alignment.mode=%r; using raw_lsl", mode)
+        handles.state["xy_reference_time_shift_s"] = 0.0
+        return 0.0, "raw_lsl"
+
+    if target is None or reference is None or target.timestamps_s.size == 0 or reference.timestamps_s.size == 0:
+        previous = float(handles.state.get("xy_reference_time_shift_s", 0.0))
+        return previous, "auto_tail_hold"
+
+    target_tail = _latest_finite_timestamp(target.timestamps_s)
+    reference_tail = _latest_finite_timestamp(reference.timestamps_s)
+    if not np.isfinite(target_tail) or not np.isfinite(reference_tail):
+        previous = float(handles.state.get("xy_reference_time_shift_s", 0.0))
+        return previous, "auto_tail_hold"
+
+    measured_shift = target_tail - reference_tail
+    max_shift = abs(float(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.max_auto_shift_s", default=1.0)))
+    min_shift = abs(float(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.min_auto_shift_s", default=0.0)))
+    measured_shift = float(np.clip(measured_shift, -max_shift, max_shift))
+    if abs(measured_shift) < min_shift:
+        measured_shift = 0.0
+
+    previous = float(handles.state.get("xy_reference_time_shift_s", measured_shift))
+    smoothing = float(OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.smoothing_alpha", default=0.25))
+    smoothing = float(np.clip(smoothing, 0.0, 1.0))
+    shift = previous + smoothing * (measured_shift - previous)
+    handles.state["xy_reference_time_shift_s"] = shift
+    handles.state["xy_reference_tail_delta_s"] = target_tail - reference_tail
+    return shift, "auto_tail"
+
+
 def _interpolate_reference_to_target(
     target: TargetWindow | None,
     reference: ReferenceWindow | None,
     max_reference_gap_s: float,
+    *,
+    reference_time_shift_s: float = 0.0,
+    target_signal: str = "raw",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return XY samples using reference interpolated onto real target timestamps.
+    """Return XY samples using reference interpolated onto target timestamps.
 
-    Output orientation intentionally follows the original viewer layout:
-    x = reference/RS485 raw at target timestamps; y = target/handgrip raw.
-    The third output is the target LSL timestamp for each XY pair and is used
-    to fade the LineCollection over the active rolling window.
+    Output orientation follows the original viewer layout:
+    x = reference/RS485 raw at target timestamps; y = target handgrip signal.
+
+    ``reference_time_shift_s`` is display-only. It shifts the reference LSL
+    timestamps used for XY pairing without touching the native stream buffers or
+    replay/calibration files.
     """
     empty = (
         np.array([], dtype=np.float64),
@@ -491,10 +557,13 @@ def _interpolate_reference_to_target(
     if target.timestamps_s.size == 0 or reference.timestamps_s.size < 2:
         return empty
 
-    ref_t = np.asarray(reference.timestamps_s, dtype=np.float64)
+    ref_t = np.asarray(reference.timestamps_s, dtype=np.float64) + float(reference_time_shift_s)
     ref_y = np.asarray(reference.raw, dtype=np.float64)
     target_t = np.asarray(target.timestamps_s, dtype=np.float64)
-    target_y = np.asarray(target.raw, dtype=np.float64)
+    if str(target_signal).strip().lower() == "filtered":
+        target_y = np.asarray(target.filtered, dtype=np.float64)
+    else:
+        target_y = np.asarray(target.raw, dtype=np.float64)
 
     valid_ref = np.isfinite(ref_t) & np.isfinite(ref_y)
     ref_t = ref_t[valid_ref]
@@ -530,7 +599,6 @@ def _interpolate_reference_to_target(
     ref_at_target = np.interp(selected_t, ref_t, ref_y)
     finite = np.isfinite(ref_at_target) & np.isfinite(selected_target_y) & np.isfinite(selected_t)
     return ref_at_target[finite], selected_target_y[finite], selected_t[finite]
-
 
 def _update_xy_line_collection(
     line_collection: LineCollection,
@@ -664,6 +732,8 @@ def init_figure(cfg: DictConfig) -> FigureHandles:
         "live_reset_from_latest_window": False,
         "target_live_cutoff_timestamp_s": None,
         "reference_live_cutoff_timestamp_s": None,
+        "xy_reference_time_shift_s": 0.0,
+        "xy_reference_tail_delta_s": 0.0,
     }
     handles = FigureHandles(fig=fig, axes=axes, artists=artists, state=state)
 
@@ -760,10 +830,13 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         y = np.concatenate(overlay_y)
         update_axis(handles.axes["overlay"], x, y)
 
+    xy_reference_shift_s, xy_alignment_mode = _compute_xy_reference_time_shift_s(handles, target, reference, cfg)
     xy_x, xy_y, xy_t = _interpolate_reference_to_target(
         target,
         reference,
         max_reference_gap_s=float(cfg.alignment.max_reference_gap_s),
+        reference_time_shift_s=xy_reference_shift_s,
+        target_signal=str(OmegaConf.select(cfg, "viewer.xy_correlation.target_signal", default="raw")),
     )
     _update_xy_line_collection(
         handles.artists["xy"],
@@ -779,7 +852,10 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
     xy_mode = "max-span lock" if xy_lock_max_span else "adaptive"
     xy_toggle_key = str(handles.state.get("xy_lock_toggle_key", "")).strip()
     xy_toggle_hint = f" | press '{xy_toggle_key}' to toggle" if xy_toggle_key else ""
-    handles.axes["xy"].set_title(f"XY correlation: reference raw vs target raw [{xy_mode}{xy_toggle_hint}]")
+    handles.axes["xy"].set_title(
+        f"XY correlation: reference raw vs target raw "
+        f"[{xy_mode}; align={xy_alignment_mode}; ref_shift={xy_reference_shift_s:+.3f}s{xy_toggle_hint}]"
+    )
     if xy_x.size:
         if xy_lock_max_span:
             update_axis_expand_only(handles.axes["xy"], xy_x, xy_y, handles.state, "xy")
@@ -825,6 +901,8 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         col_metrics += replay_progress_text + "\n"
     col_metrics += (
         f"window : {float(cfg.viewer.window_seconds):.1f} s\n"
+        f"xy sh. : {xy_reference_shift_s:+.3f} s\n"
+        f"tail Δ : {float(handles.state.get('xy_reference_tail_delta_s', 0.0)):+.3f} s\n"
         f"keys   : clean={handles.state.get('clear_plots_key') or 'off'} "
         f"pause={handles.state.get('pause_live_key') or 'off'} "
         f"xy={handles.state.get('xy_lock_toggle_key') or 'off'}"

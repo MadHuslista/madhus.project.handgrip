@@ -48,6 +48,20 @@ viewer:
     color: red
     alpha_old: 0.12
     alpha_new: 0.92
+    # raw is recommended for calibration visualization; filtered remains
+    # available for display-only experiments.
+    target_signal: raw
+    # Display-only alignment for the XY graph. The native stream buffers and
+    # saved calibration data are not modified. auto_tail shifts the reference
+    # timestamps inside the XY plot so the latest target and reference tails
+    # pair over the freshest common live window instead of waiting for a lagging
+    # stream timestamp tail.
+    time_alignment:
+      mode: auto_tail       # auto_tail | manual | raw_lsl
+      manual_reference_shift_s: 0.0
+      max_auto_shift_s: 1.0
+      min_auto_shift_s: 0.002
+      smoothing_alpha: 0.35
   controls:
     clear_key: c
     pause_key: p
