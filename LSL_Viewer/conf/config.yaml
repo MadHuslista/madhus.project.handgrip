@@ -54,13 +54,12 @@ viewer:
     # Display-only alignment for the XY graph. The native stream buffers,
     # LSL/XDF timestamps, and calibration data are not modified.
     #
-    # tail_aligned_lsl keeps the DSP-correct reference→target interpolation but
-    # first removes any live stream-tail offset between the two inlets. This is
-    # the correct live-view behavior when the time-series panels are responsive
-    # but the XY graph appears delayed by a fixed transport/timestamp offset.
-    # Use raw_lsl for strict timestamp inspection.
+    # raw_lsl is now the default because the upstream RS485 timestamp policy was
+    # fixed to avoid synthetic clock drift. If ref_shift grows in raw_lsl mode,
+    # that is a real timestamping/backlog diagnostic and should not be hidden by
+    # viewer-side correction. Use tail_aligned_lsl only as a temporary display aid.
     time_alignment:
-      mode: tail_aligned_lsl       # tail_aligned_lsl | manual | raw_lsl
+      mode: raw_lsl                # raw_lsl | tail_aligned_lsl | manual
       manual_reference_shift_s: 0.0
       # null means "use viewer.window_seconds" as the max allowed shift.
       # This avoids the previous 1 s cap that could not correct an observed ~5 s lag.

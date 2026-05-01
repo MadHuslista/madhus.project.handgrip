@@ -119,6 +119,13 @@ device:
   error_backoff_s: 0.25
 
 active_send:
+  # Timestamp policy for Active-Send batches.
+  # batch_end_anchored is the calibration-safe default: each parsed batch is
+  # anchored to current pylsl.local_clock() and frame times are reconstructed
+  # only inside that batch. This prevents ref_shift drift when effective RS485
+  # rate is not exactly the configured 500 Hz.
+  # Alternatives: continuous_rate (legacy), host_receive (debug fallback).
+  timestamp_policy: batch_end_anchored
   default_parser_profile: modbus_rtu_response_11regs  # preferred for this board; alternatives: line_ascii_auto | line_ascii_float | line_ascii_csv | hex_s32
   default_numeric_index: 0
   default_hex_word_endianness: big
@@ -131,9 +138,10 @@ active_send:
   # max_frames_per_delivery before returning each batch.
   read_chunk_bytes: 1024
   max_read_bytes_per_cycle: 8192
-  # Re-anchor only on large reconstruction drift. Normal burst scheduling jitter is
-  # not an error and should not produce warning/recovery cascades.
-  clock_reanchor_max_drift_s: 0.250
+  # Used only by timestamp_policy=continuous_rate. Keep small if you intentionally
+  # use the legacy free-running timestamp reconstruction. Ignored by the default
+  # batch_end_anchored policy.
+  clock_reanchor_max_drift_s: 0.050
   # If the active-send parser enters a CRC/resync cascade, discard stale
   # buffered bytes and recover from the current live byte stream.
   recovery_enabled: true

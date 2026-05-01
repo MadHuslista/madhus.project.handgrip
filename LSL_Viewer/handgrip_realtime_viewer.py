@@ -974,7 +974,7 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         f"type   : {source_type}\n"
         f"mode   : {mode}\n"
         f"state  : {live_state}\n"
-        "sync   : native streams + LSL timestamps"
+        "sync   : native streams + LSL timestamps\n"
         "XY     : ref→target interpolation"
     )
     col_target = (
@@ -993,6 +993,7 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         f"LSL Hz : {_format_latest(reference_rate_hz, ' Hz', 2)}\n"
         f"clk Hz : {_format_latest(float(reference_clock_metrics.get('clock_rate_hz', float('nan'))), ' Hz', 2)}\n"
         f"clk-LSL: {_format_latest(float(reference_clock_metrics.get('median_clock_minus_lsl_s', float('nan'))), ' s', 4)}\n"
+        f"spanerr: {_format_latest(float(reference_clock_metrics.get('clock_vs_lsl_span_error_ms', float('nan'))), ' ms', 2)}\n"
         f"pairs  : {xy_x.size}"
     )
     col_metrics = "METRICS\n"

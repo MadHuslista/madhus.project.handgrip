@@ -1905,39 +1905,90 @@ class ActiveSendBoardTransport(BoardTransport):
             frames: List[MeasurementFrame] = []
             if freq_hz > 0:
                 dt = 1.0 / float(freq_hz)
-                clock_reanchor_max_drift_s = float(getattr(self.app_state.cfg.active_send, 'clock_reanchor_max_drift_s', 0.12))
-                should_reanchor = self._last_assigned_sample_ts is None or self._force_timestamp_reanchor
+                timestamp_policy = str(
+                    getattr(self.app_state.cfg.active_send, 'timestamp_policy', 'batch_end_anchored')
+                ).strip().lower()
 
-                if not should_reanchor and self._last_assigned_sample_lsl_ts is not None:
-                    continuous_last_lsl_ts = self._last_assigned_sample_lsl_ts + dt * len(frame_bytes_batch)
-                    reconstruction_drift_s = batch_end_lsl_ts - continuous_last_lsl_ts
-                    if clock_reanchor_max_drift_s > 0 and abs(reconstruction_drift_s) > clock_reanchor_max_drift_s:
-                        should_reanchor = True
-                        self.app_state.active_send_stats.timestamp_drift_reanchors += 1
-                        LOGGER.info(
-                            'Active-send timestamp re-anchor due to reconstruction drift: '
-                            'drift=%.6fs threshold=%.6fs batch_size=%d',
-                            reconstruction_drift_s,
-                            clock_reanchor_max_drift_s,
-                            len(frame_bytes_batch),
-                        )
-
-                if should_reanchor:
+                if timestamp_policy in {'batch_end_anchored', 'batch_end', 'anchored'}:
+                    # Calibration/viewer-safe default: never let the synthetic RS485
+                    # clock free-run across batches at the configured rate. The prior
+                    # continuous-rate policy assumed the board really delivered exactly
+                    # 500 Hz forever; if the effective stream was 485-499 Hz, the LSL
+                    # timestamps slowly drifted behind live time and the XY viewer's
+                    # ref_shift grew continuously. Anchoring every batch to the current
+                    # host LSL receive time bounds the timestamp error to the batch
+                    # duration instead of accumulating it over the whole run.
                     batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
                     batch_start_lsl_ts = batch_end_lsl_ts - dt * (len(frame_bytes_batch) - 1)
-                    if self._last_assigned_sample_ts is None:
-                        timestamp_source = 'reconstructed_from_active_send_rate_batch_start'
-                    elif self._force_timestamp_reanchor:
-                        timestamp_source = 'reconstructed_from_active_send_rate_reanchored_after_parser_resync'
-                        self.app_state.active_send_stats.timestamp_parser_reanchors += 1
-                    else:
-                        timestamp_source = 'reconstructed_from_active_send_rate_reanchored_after_drift'
-                    self.app_state.active_send_stats.timestamp_reanchors += 1
+                    timestamp_source = 'reconstructed_from_active_send_rate_batch_end_anchored'
                     self._force_timestamp_reanchor = False
+
+                    # Guard against non-monotonic timestamps if the serial parser drains
+                    # a backlog faster than real time. If this appears in logs often,
+                    # lower max_frames_per_delivery or fix the serial backlog instead of
+                    # hiding it downstream in the XY viewer.
+                    if self._last_assigned_sample_lsl_ts is not None:
+                        min_next_lsl_ts = self._last_assigned_sample_lsl_ts + dt
+                        if batch_start_lsl_ts < min_next_lsl_ts:
+                            adjust_s = min_next_lsl_ts - batch_start_lsl_ts
+                            batch_start_lsl_ts += adjust_s
+                            batch_start_ts += adjust_s
+                            timestamp_source += '_monotonic_adjusted'
+
+                elif timestamp_policy in {'continuous_rate', 'continuous'}:
+                    # Legacy behavior: useful only if the RS485 device is proven to emit
+                    # exactly at configured_frequency_hz and no samples are dropped.
+                    clock_reanchor_max_drift_s = float(getattr(self.app_state.cfg.active_send, 'clock_reanchor_max_drift_s', 0.12))
+                    should_reanchor = self._last_assigned_sample_ts is None or self._force_timestamp_reanchor
+
+                    if not should_reanchor and self._last_assigned_sample_lsl_ts is not None:
+                        continuous_last_lsl_ts = self._last_assigned_sample_lsl_ts + dt * len(frame_bytes_batch)
+                        reconstruction_drift_s = batch_end_lsl_ts - continuous_last_lsl_ts
+                        if clock_reanchor_max_drift_s > 0 and abs(reconstruction_drift_s) > clock_reanchor_max_drift_s:
+                            should_reanchor = True
+                            self.app_state.active_send_stats.timestamp_drift_reanchors += 1
+                            LOGGER.info(
+                                'Active-send timestamp re-anchor due to reconstruction drift: '
+                                'drift=%.6fs threshold=%.6fs batch_size=%d',
+                                reconstruction_drift_s,
+                                clock_reanchor_max_drift_s,
+                                len(frame_bytes_batch),
+                            )
+
+                    if should_reanchor:
+                        batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
+                        batch_start_lsl_ts = batch_end_lsl_ts - dt * (len(frame_bytes_batch) - 1)
+                        if self._last_assigned_sample_ts is None:
+                            timestamp_source = 'reconstructed_from_active_send_rate_batch_start'
+                        elif self._force_timestamp_reanchor:
+                            timestamp_source = 'reconstructed_from_active_send_rate_reanchored_after_parser_resync'
+                            self.app_state.active_send_stats.timestamp_parser_reanchors += 1
+                        else:
+                            timestamp_source = 'reconstructed_from_active_send_rate_reanchored_after_drift'
+                        self.app_state.active_send_stats.timestamp_reanchors += 1
+                        self._force_timestamp_reanchor = False
+                    else:
+                        batch_start_ts = self._last_assigned_sample_ts + dt
+                        batch_start_lsl_ts = (self._last_assigned_sample_lsl_ts or batch_end_lsl_ts) + dt
+                        timestamp_source = 'reconstructed_from_active_send_rate_continuous'
+
+                elif timestamp_policy in {'host_receive', 'host'}:
+                    # Lowest-assumption fallback: all frames in a delivery batch receive
+                    # the host receive timestamp. This preserves live alignment but loses
+                    # within-batch timing resolution, so it is not the preferred mode.
+                    dt = 0.0
+                    batch_start_ts = batch_end_ts
+                    batch_start_lsl_ts = batch_end_lsl_ts
+                    timestamp_source = 'active_send_host_receive_lsl_clock'
                 else:
-                    batch_start_ts = self._last_assigned_sample_ts + dt
-                    batch_start_lsl_ts = (self._last_assigned_sample_lsl_ts or batch_end_lsl_ts) + dt
-                    timestamp_source = 'reconstructed_from_active_send_rate_continuous'
+                    LOGGER.warning(
+                        'Unsupported active_send.timestamp_policy=%r; using batch_end_anchored',
+                        timestamp_policy,
+                    )
+                    batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
+                    batch_start_lsl_ts = batch_end_lsl_ts - dt * (len(frame_bytes_batch) - 1)
+                    timestamp_source = 'reconstructed_from_active_send_rate_batch_end_anchored'
+                    self._force_timestamp_reanchor = False
             else:
                 dt = 0.0
                 batch_start_ts = batch_end_ts
