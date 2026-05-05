@@ -2,9 +2,20 @@
  ******************************************************************************
  * @file    main.cpp
  * @author  Nicolas Schiappacasse <nicolaschiappacase@gmail.com>
- * @date    03/2026
- * @brief   Main file for the project.
+ * @date    05/2026
+ * @brief   Calibration-ready Arduino Nano + HX711 acquisition firmware.
  *
+ * Breaking schema upgrade:
+ *   - Legacy `D,<seq>,<timestamp_us>,<value>` output was removed.
+ *   - The firmware now emits explicit D2 frames with raw counts, interpreted
+ *     units, sequence number, device timestamp, and status bits.
+ *   - A metadata M2 line is emitted at boot so the LSL bridge/session manifest
+ *     can capture firmware schema, constants, and expected HX711 rate.
+ *
+ * The firmware remains deliberately simple: acquire deterministic raw samples,
+ * timestamp them with micros(), and send them over UART. Calibration session
+ * ownership, markers, segmentation, fitting, and reports belong to the host-side
+ * Handgrip_Calibration module.
  ******************************************************************************
  */
 
@@ -52,15 +63,9 @@
 #define GPIO_DATA_PIN    2U
 #define GPIO_CLOCK_PIN   3U
 
-/** Baud rate for the serial monitor */
-#define SERIAL_BAUD_RATE 115200U
+/** FIFO depth for interrupt-to-loop handoff. */
+#define MAX_FIFO_SIZE                  80U
 
-/** Size of the FIFO buffer */
-#define MAX_FIFO_SIZE    80U 
-
-/** Calibration mode values */
-#define CALIBRATE_SCALE_SCALE       1.0F
-#define CALIBRATE_SCALE_OFFSET      0.0F
 
 /** @} */
 /*----------------------------------------------------------------------------*/
@@ -85,9 +90,11 @@
  */
 typedef struct
 {
-    float    value_gr;      /**< Sensor value */
-    uint32_t timestamp_us;  /**< Timestamp in microseconds */
-    int32_t  seq;           /**< Sequence number; <-1> if error */
+    int32_t  raw_count;       /**< HX711 raw ADC count, before scale/offset. */
+    float    current_units;   /**< Convenience engineering value from config constants. */
+    uint32_t timestamp_us;    /**< Device-local micros() timestamp. */
+    uint32_t seq;             /**< Monotonic sequence number. */
+    uint16_t status;          /**< HANDGRIP_STATUS_* bitfield. */
 } SensorSample;
 
 /** @} */
@@ -99,6 +106,11 @@ typedef struct
 /** Prototype for the interrupt handler */
 void sample_scale(void);
 
+/** Prototypes for utility functions */
+static float _raw_to_units(int32_t raw_count);
+static void _emit_metadata(void);
+static void _emit_sample(const SensorSample &sample);
+
 /** @} */
 /*----------------------------------------------------------------------------*/
 /** @addtogroup PRIVATE_Data                                                  */
@@ -109,12 +121,9 @@ void sample_scale(void);
 HX711 _scale;
 
 /** Sensor sample FIFO buffer */
-FIFObuf<SensorSample>   _sensor_fifo(MAX_FIFO_SIZE);
-uint8_t                 _sensor_fifo_status = 0;
-uint32_t                _seq = 0;
-
-/** Calibration mode */
-bool                    _calibrate_mode = CALIBRATE_SCALE_MODE;
+FIFObuf<SensorSample>  _sensor_fifo(MAX_FIFO_SIZE);
+volatile uint32_t _seq = 0;
+volatile uint16_t _sticky_status = HANDGRIP_STATUS_OK;
 
 /** @} */
 /*----------------------------------------------------------------------------*/
@@ -127,26 +136,22 @@ bool                    _calibrate_mode = CALIBRATE_SCALE_MODE;
  */
 void setup()
 {
-    //  Serial port
+    /* Serial port */
     Serial.begin(SERIAL_BAUD_RATE);
 
-    // HX711 scale
+    /* HX711 scale object */
     _scale.begin(GPIO_DATA_PIN, GPIO_CLOCK_PIN);
 
-    if (_calibrate_mode) 
-    {   
-        /* Set measured scale factor and offset */
-        _scale.set_scale(SCALE_FACTOR);
-        _scale.set_offset(SCALE_OFFSET);
-    } else
-    {
-        /* Set identity values to capture raw values */
-        _scale.set_scale(CALIBRATE_SCALE_SCALE);
-        _scale.set_offset(CALIBRATE_SCALE_OFFSET);
-    }
+    /* Keep HX711 offset/scale configured for operator sanity, but never rely on
+     * get_units() for calibration. D2 always carries raw_count explicitly. */
+    _scale.set_scale(SCALE_FACTOR);
+    _scale.set_offset(SCALE_OFFSET);
 
+    /* Emit metadata (M2) at boot so the LSL_Bridge/Handgrip_Calibration can
+     * capture firmware schema, constants, and expected HX711 rate. */
+    _emit_metadata();
 
-    // Set Timer based Interrupt for sampling
+    /* Set Timer based Interrupt for sampling */
     Timer1.initialize(SAMPLING_PERIOD_US);
     Timer1.attachInterrupt(sample_scale);
 
@@ -159,21 +164,13 @@ void setup()
  */
 void loop()
 {
-    SensorSample read_sample;
-    read_sample = _sensor_fifo.pop();
-    /* If timestamp is 0 => fifo is empty */
-    if (read_sample.timestamp_us != 0) 
+    SensorSample sample = _sensor_fifo.pop();
+    if (sample.timestamp_us == 0U)
     {
-        int32_t seq = _sensor_fifo_status ? read_sample.seq : -1;
-        /* Format for LSL Bridge: D,<seq>,<timestamp_us>,<value>\n */
-        Serial.print("D,");
-        Serial.print(seq);
-        Serial.print(",");
-        Serial.print(read_sample.timestamp_us);
-        Serial.print(",");
-        Serial.print(read_sample.value_gr);
-        Serial.print("\n");
+        /* Arduino equivalent of "continue" for the main loop(). */
+        return;  
     }
+    _emit_sample(sample);
 }
 
 /** @} */
@@ -188,23 +185,110 @@ void loop()
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
+/** ====================== Interrupt Service Routine ======================== */
+
 /**
- * @brief Interrupt handler for the HX711 scale.
- * @note Reads one raw sample from the scale and pushes it to the FIFO buffer.
+ * @brief Timer ISR: non-blocking HX711 sample capture.
+ * @note The ISR never waits for the ADC. 
+ * It records a status bit when the HX711 is not ready and returns immediately. 
+ * This keeps loop latency predictable and makes timing irregularity visible 
+ * instead of hidden by blocking reads.
  */
 void sample_scale(void)
 {
-    if(!_scale.is_ready())
+    if (!_scale.is_ready())
     {
+        _sticky_status |= HANDGRIP_STATUS_HX711_NOTREADY;
         return;
     }
-    SensorSample save_sample;
-    save_sample.timestamp_us = micros();
-    save_sample.value_gr = _scale.get_units(1);
-    save_sample.seq = _seq;
-    _seq++;
-    _sensor_fifo_status = _sensor_fifo.push(save_sample);
+
+    SensorSample sample;
+    sample.timestamp_us = micros();
+    sample.raw_count = _scale.read();
+    sample.current_units = _raw_to_units(sample.raw_count);
+    sample.seq = _seq++;
+    sample.status = _sticky_status;
+
+    if (isnan(sample.current_units))
+    {
+        sample.status |= HANDGRIP_STATUS_SCALE_INVALID;
+    }
+
+    uint8_t ok = _sensor_fifo.push(sample);
+    if (!ok)
+    {
+        _sticky_status |= HANDGRIP_STATUS_FIFO_OVERFLOW;
+    }
+    else
+    {
+        _sticky_status = HANDGRIP_STATUS_OK;
+    }
 }
+
+/** ====================== Utility Functions ================================ */
+
+/** 
+ * @brief Emit boot/build metadata consumed by LSL_Bridge. 
+ */
+static void _emit_metadata(void)
+{
+    Serial.print("M2,");
+    Serial.print(HANDGRIP_PAYLOAD_SCHEMA);
+    Serial.print(",");
+    Serial.print(HANDGRIP_FIRMWARE_VERSION);
+    Serial.print(",");
+    Serial.print(HANDGRIP_FIRMWARE_GIT_SHA);
+    Serial.print(",");
+    Serial.print(HX711_EXPECTED_OUTPUT_RATE_HZ, 3);
+    Serial.print(",");
+    Serial.print(SCALE_FACTOR, 9);
+    Serial.print(",");
+    Serial.print(SCALE_OFFSET, 3);
+    Serial.print(",");
+    Serial.print(HANDGRIP_FORCE_UNIT);
+    Serial.print("\n");
+}
+
+/** 
+ * @brief Emit one strict D2 data record. 
+ * @param sample Sample to emit.
+ */
+static void _emit_sample(const SensorSample &sample)
+{
+    Serial.print("D2,");
+    Serial.print(sample.seq);
+    Serial.print(",");
+    Serial.print(sample.timestamp_us);
+    Serial.print(",");
+    Serial.print(sample.raw_count);
+    Serial.print(",");
+    if (isnan(sample.current_units))
+    {
+        Serial.print("nan");
+    }
+    else
+    {
+        Serial.print(sample.current_units, 6);
+    }
+    Serial.print(",");
+    Serial.print(sample.status);
+    Serial.print("\n");
+}
+
+/** 
+ * @brief Convert raw HX711 counts to current engineering units for sanity display. 
+ * @param raw_count Raw HX711 count.
+ * @return Calibrated units.
+*/
+static float _raw_to_units(int32_t raw_count)
+{
+    if (SCALE_FACTOR == 0.0F)
+    {
+        return NAN;
+    }
+    return ((float)raw_count - SCALE_OFFSET) / SCALE_FACTOR;
+}
+
 
 
 /** @} */
