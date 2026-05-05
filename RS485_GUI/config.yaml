@@ -1,3 +1,8 @@
+session:
+  # Optional. Handgrip_Calibration is authoritative; set this when you want
+  # GUI logs/IPC to carry the active calibration session id.
+  session_id: null
+
 hydra:
   run:
     dir: .
@@ -67,9 +72,12 @@ ipc:
   transport: zmq_pub
   bind: tcp://127.0.0.1:5557
   topic: rs485.measurement.v1
+  event_topic: rs485.event.v1
 
   # Which MeasurementFrame interpreted value becomes LSL channel 3.
   # net_value is the recommended calibrated force signal for the reference board.
+  # Published IPC records now also include canonical aliases:
+  #   reference_force_N, reference_clock_s, reference_status, board_profile, session_id
   signal_key: net_value
 
   send_hwm: 2000
@@ -124,9 +132,9 @@ active_send:
   # anchored to current pylsl.local_clock() and frame times are reconstructed
   # only inside that batch. This prevents ref_shift drift when effective RS485
   # rate is not exactly the configured 500 Hz.
-  # Alternatives: continuous_rate (legacy), host_receive (debug fallback).
+  # Alternatives: host_receive (debug fallback).
   timestamp_policy: batch_end_anchored
-  default_parser_profile: modbus_rtu_response_11regs  # preferred for this board; alternatives: line_ascii_auto | line_ascii_float | line_ascii_csv | hex_s32
+  default_parser_profile: modbus_rtu_response_11regs  # calibration v2 requires the documented 11-register payload
   default_numeric_index: 0
   default_hex_word_endianness: big
   read_timeout_s: 0.5
@@ -139,7 +147,7 @@ active_send:
   read_chunk_bytes: 1024
   max_read_bytes_per_cycle: 8192
   # Used only by timestamp_policy=continuous_rate. Keep small if you intentionally
-  # use the legacy free-running timestamp reconstruction. Ignored by the default
+  # use a non-default free-running timestamp reconstruction. Ignored by the default
   # batch_end_anchored policy.
   clock_reanchor_max_drift_s: 0.050
   # If the active-send parser enters a CRC/resync cascade, discard stale
