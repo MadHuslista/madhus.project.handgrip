@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import math
 import time
@@ -780,13 +781,13 @@ def init_figure(cfg: DictConfig) -> FigureHandles:
 
     force_unit = _force_unit_label(cfg)
     dt_unit = str(OmegaConf.select(cfg, "viewer.dt_unit_label", default="ms"))
-    axes["target_raw"].set_title("Target raw signal - native samples")
-    axes["reference_raw"].set_title("Reference RS485 raw signal - native 500 Hz samples")
-    axes["target_filtered"].set_title("Target filtered signal - native samples")
-    axes["overlay"].set_title("Time-synchronized raw overlay on common LSL time axis")
+    axes["target_raw"].set_title("Target raw ADC counts - native irregular samples")
+    axes["reference_raw"].set_title("Reference force - native RS485 samples")
+    axes["target_filtered"].set_title("Target filtered/current units - display only")
+    axes["overlay"].set_title("Time-synchronized engineering-unit overlay on common LSL time axis")
     axes["target_dt"].set_title("Target LSL sample interval")
     axes["reference_dt"].set_title("Reference LSL sample interval")
-    axes["xy"].set_title("XY correlation: reference raw vs target raw")
+    axes["xy"].set_title("Sensor curve: reference force vs target raw count")
 
     for key in ["target_raw", "reference_raw", "target_filtered", "overlay"]:
         axes[key].set_ylabel(f"Force ({force_unit})")
@@ -798,8 +799,8 @@ def init_figure(cfg: DictConfig) -> FigureHandles:
     axes["overlay"].set_xlabel("Relative LSL time (s)")
     axes["target_dt"].set_xlabel("Relative LSL time (s)")
     axes["reference_dt"].set_xlabel("Relative LSL time (s)")
-    axes["xy"].set_xlabel(f"Reference raw force at target timestamps ({force_unit})")
-    axes["xy"].set_ylabel(f"Target raw force ({force_unit})")
+    axes["xy"].set_xlabel(f"Reference force at target timestamps ({force_unit})")
+    axes["xy"].set_ylabel(str(OmegaConf.select(cfg, "viewer.target_raw_unit_label", default="target raw count")))
 
     for key, ax in axes.items():
         if key == "info":
@@ -853,6 +854,68 @@ def _render_info_panel(handles: FigureHandles, text: str) -> None:
     ax.text(0.02, 0.94, text, va="top", ha="left", family="monospace", fontsize=8, transform=ax.transAxes)
 
 
+def _load_marker_events_from_ndjson(cfg: DictConfig) -> list[dict[str, Any]]:
+    """Load optional calibration marker events for replay overlays.
+
+    Handgrip_Calibration writes events.ndjson as the authoritative trial-marker
+    log. The viewer treats this as a read-only overlay aid; it never owns or
+    edits calibration decisions. Missing/disabled marker files are ignored.
+    """
+    if not bool(OmegaConf.select(cfg, "calibration_markers.enabled", default=False)):
+        return []
+    raw_path = OmegaConf.select(cfg, "calibration_markers.events_ndjson_path", default=None)
+    if not raw_path:
+        return []
+    path = Path(to_absolute_path(str(raw_path)))
+    if not path.exists():
+        return []
+    allowed = set(OmegaConf.select(cfg, "calibration_markers.draw_events", default=[]))
+    events: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        payload = record.get("payload", record)
+        event = payload.get("event", record.get("event"))
+        if allowed and event not in allowed:
+            continue
+        ts = record.get("lsl_timestamp", record.get("lsl_ts", payload.get("lsl_ts")))
+        if ts is None:
+            continue
+        try:
+            events.append({"event": str(event), "lsl_ts": float(ts), "payload": payload})
+        except (TypeError, ValueError):
+            continue
+    return events
+
+
+def _draw_marker_overlays(handles: FigureHandles, cfg: DictConfig, t_end: float) -> int:
+    """Draw optional vertical calibration-event markers on time-domain axes."""
+    for artist in handles.state.get("marker_artists", []):
+        try:
+            artist.remove()
+        except Exception:
+            pass
+    handles.state["marker_artists"] = []
+    marker_events = _load_marker_events_from_ndjson(cfg)
+    if not marker_events:
+        return 0
+    window_s = float(cfg.viewer.window_seconds)
+    axes = [handles.axes[k] for k in ["target_raw", "reference_raw", "target_filtered", "overlay"]]
+    count = 0
+    for item in marker_events:
+        x = float(item["lsl_ts"]) - t_end
+        if x < -window_s or x > 0.5:
+            continue
+        for ax in axes:
+            handles.state["marker_artists"].append(ax.axvline(x, linestyle=":", linewidth=0.8, alpha=0.45))
+        count += 1
+    return count
+
+
 def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *, mode: str, source_name: str, source_type: str, target_new_samples: int | None = None, reference_new_samples: int | None = None, replay_progress_text: str | None = None) -> None:
     target = window.target
     reference = window.reference
@@ -870,7 +933,9 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         target_t_rel = target.timestamps_s - t_end
         handles.artists["target_raw"].set_data(target_t_rel, target.raw)
         handles.artists["target_filtered"].set_data(target_t_rel, target.filtered)
-        handles.artists["overlay_target"].set_data(target_t_rel, target.raw)
+        # Overlay compares engineering-unit target trace against reference force;
+        # XY below still uses raw counts for calibration-fit intuition.
+        handles.artists["overlay_target"].set_data(target_t_rel, target.filtered)
         update_axis(handles.axes["target_raw"], target_t_rel, target.raw)
         update_axis(handles.axes["target_filtered"], target_t_rel, target.filtered)
         target_dt_indices, target_dt_ms, target_rate_hz, target_mean_dt_ms = _lsl_interval_ms(target.timestamps_s)
@@ -905,7 +970,7 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         target_t_rel = target.timestamps_s - t_end
         valid_target_overlay = np.isfinite(target_t_rel) & np.isfinite(target.raw)
         overlay_x.append(target_t_rel[valid_target_overlay])
-        overlay_y.append(target.raw[valid_target_overlay])
+        overlay_y.append(target.filtered[valid_target_overlay])
     if reference is not None and reference.timestamps_s.size:
         ref_t_rel = reference.timestamps_s - t_end
         valid_reference_overlay = np.isfinite(ref_t_rel) & np.isfinite(reference.raw)
@@ -951,7 +1016,7 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
     xy_toggle_hint = f" | press '{xy_toggle_key}' to toggle" if xy_toggle_key else ""
     clipped_suffix = "; clipped" if bool(handles.state.get("xy_reference_shift_clipped", False)) else ""
     handles.axes["xy"].set_title(
-        f"XY correlation: reference raw vs target raw "
+        f"Sensor curve: reference force vs target raw count "
         f"[{xy_mode}; align={xy_alignment_mode}{clipped_suffix}; ref_shift={xy_reference_shift_s:+.3f}s{xy_toggle_hint}]"
     )
     if xy_x.size:
@@ -960,6 +1025,8 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         else:
             handles.state.setdefault("axis_expand_only_limits", {}).pop("xy", None)
             update_axis(handles.axes["xy"], xy_x, xy_y)
+
+    marker_count = _draw_marker_overlays(handles, cfg, t_end)
 
     live_state = "paused" if bool(handles.state.get("live_paused", False)) else "running"
     latest_target_raw = float(target.raw[-1]) if target is not None and target.raw.size else float("nan")
@@ -978,7 +1045,7 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         "XY     : ref→target interpolation"
     )
     col_target = (
-        f"TARGET ({force_unit})\n"
+        f"TARGET (raw=count, filt={force_unit})\n"
         f"raw    : {_format_latest(latest_target_raw)}\n"
         f"filt   : {_format_latest(latest_target_filtered)}\n"
         f"clock  : {_format_latest(latest_target_clock, ' us', 0)}\n"
@@ -1006,6 +1073,7 @@ def update_plots(handles: FigureHandles, window: DualWindow, cfg: DictConfig, *,
         f"xy sh. : {xy_reference_shift_s:+.3f} s\n"
         f"tail Δ : {float(handles.state.get('xy_reference_tail_delta_s', 0.0)):+.3f} s\n"
         f"clip   : {bool(handles.state.get('xy_reference_shift_clipped', False))}\n"
+        f"marks  : {marker_count}\n"
         f"keys   : clean={handles.state.get('clear_plots_key') or 'off'} "
         f"pause={handles.state.get('pause_live_key') or 'off'} "
         f"xy={handles.state.get('xy_lock_toggle_key') or 'off'}"
@@ -1057,64 +1125,40 @@ def _time_from_df(df: pd.DataFrame, preferred: list[str], expected_rate_hz: floa
 
 
 def load_csv_replay(cfg: DictConfig) -> DualReplayData:
+    """Load dual native CSV replay files produced by LSL_Bridge v2.
+
+    Legacy fused CSV replay was removed in the calibration-schema upgrade. The
+    viewer should inspect the same two-stream architecture used live and by XDF.
+    """
     target_path = _optional_path(OmegaConf.select(cfg, "reference.target_csv_path", default=None))
     reference_path = _optional_path(OmegaConf.select(cfg, "reference.reference_csv_path", default=None))
-    legacy_path = _optional_path(OmegaConf.select(cfg, "reference.csv_path", default=None))
+    if target_path is None or reference_path is None:
+        raise RuntimeError("mode=csv_replay requires reference.target_csv_path and reference.reference_csv_path")
 
-    if target_path is not None and reference_path is not None:
-        target_df = pd.read_csv(target_path)
-        reference_df = pd.read_csv(reference_path)
-        if target_df.empty or reference_df.empty:
-            raise RuntimeError("CSV replay source is empty")
-        target_cols = list(target_df.columns)
-        reference_cols = list(reference_df.columns)
-        target_clock = _pick_existing_column(target_cols, _candidate_columns(str(cfg.channels.target.clock_label), ["device_clock_us", "clock_us"]), "target clock")
-        target_raw = _pick_existing_column(target_cols, _candidate_columns(str(cfg.channels.target.raw_label), ["value_raw", "raw", "raw_value"]), "target raw")
-        target_filtered = _pick_existing_column(target_cols, _candidate_columns(str(cfg.channels.target.filtered_label), ["value_filtered", "filtered", "filtered_value"]), "target filtered")
-        ref_clock = _pick_existing_column(reference_cols, _candidate_columns(str(cfg.channels.reference.clock_label), ["reference_clock_s", "rs485_time_s"]), "reference clock")
-        ref_raw = _pick_existing_column(reference_cols, _candidate_columns(str(cfg.channels.reference.raw_label), ["reference_raw", "rs485_value"]), "reference raw")
-        target_ts = _time_from_df(target_df, ["lsl_timestamp_s", "timestamp_s", "host_lsl_ts"], float(cfg.viewer.expected_target_rate_hz))
-        reference_ts = _time_from_df(reference_df, ["lsl_timestamp_s", "host_lsl_ts", "received_lsl_ts"], float(cfg.streams.reference.expected_rate_hz))
-        target_ts, reference_ts = _normalize_common_timebases(target_ts, reference_ts)
-        return DualReplayData(
-            target_timestamps_s=target_ts,
-            target_device_clock_us=_extract_numeric(target_df, target_clock),
-            target_raw=_extract_numeric(target_df, target_raw),
-            target_filtered=_extract_numeric(target_df, target_filtered),
-            reference_timestamps_s=reference_ts,
-            reference_clock_s=_extract_numeric(reference_df, ref_clock),
-            reference_raw=_extract_numeric(reference_df, ref_raw),
-            source_name=f"{target_path.name} + {reference_path.name}",
-            source_type="csv_replay_dual_native",
-            target_labels=[target_clock, target_raw, target_filtered],
-            reference_labels=[ref_clock, ref_raw],
-        )
-
-    if legacy_path is None:
-        raise RuntimeError("mode=csv_replay requires reference.target_csv_path + reference.reference_csv_path, or legacy reference.csv_path")
-
-    # Legacy fused CSV compatibility path.
-    df = pd.read_csv(legacy_path)
-    if df.empty:
-        raise RuntimeError(f"CSV replay source is empty: {legacy_path}")
-    cols = list(df.columns)
-    target_clock = _pick_existing_column(cols, ["device_clock_us", str(cfg.channels.target.clock_label)], "target clock")
-    target_raw = _pick_existing_column(cols, ["value_raw", str(cfg.channels.target.raw_label), "raw"], "target raw")
-    target_filtered = _pick_existing_column(cols, ["value_filtered", str(cfg.channels.target.filtered_label), "filtered"], "target filtered")
-    ref_clock = _pick_existing_column(cols, ["rs485_clock", str(cfg.channels.reference.clock_label)], "reference clock")
-    ref_raw = _pick_existing_column(cols, ["rs485_raw", str(cfg.channels.reference.raw_label)], "reference raw")
-    ts = _time_from_df(df, ["lsl_timestamp_s", "host_lsl_ts", "device_clock_us"], float(cfg.viewer.expected_target_rate_hz))
-    ts = ts - float(ts[0])
+    target_df = pd.read_csv(target_path)
+    reference_df = pd.read_csv(reference_path)
+    if target_df.empty or reference_df.empty:
+        raise RuntimeError("CSV replay source is empty")
+    target_cols = list(target_df.columns)
+    reference_cols = list(reference_df.columns)
+    target_clock = _pick_existing_column(target_cols, [str(cfg.channels.target.clock_label)], "target clock")
+    target_raw = _pick_existing_column(target_cols, [str(cfg.channels.target.raw_label)], "target raw")
+    target_filtered = _pick_existing_column(target_cols, [str(cfg.channels.target.filtered_label)], "target filtered")
+    ref_clock = _pick_existing_column(reference_cols, [str(cfg.channels.reference.clock_label)], "reference clock")
+    ref_raw = _pick_existing_column(reference_cols, [str(cfg.channels.reference.raw_label)], "reference force")
+    target_ts = _time_from_df(target_df, ["lsl_timestamp_s"], float(cfg.viewer.expected_target_rate_hz))
+    reference_ts = _time_from_df(reference_df, ["lsl_timestamp_s"], float(cfg.streams.reference.expected_rate_hz))
+    target_ts, reference_ts = _normalize_common_timebases(target_ts, reference_ts)
     return DualReplayData(
-        target_timestamps_s=ts,
-        target_device_clock_us=_extract_numeric(df, target_clock),
-        target_raw=_extract_numeric(df, target_raw),
-        target_filtered=_extract_numeric(df, target_filtered),
-        reference_timestamps_s=ts,
-        reference_clock_s=_extract_numeric(df, ref_clock),
-        reference_raw=_extract_numeric(df, ref_raw),
-        source_name=legacy_path.name,
-        source_type="csv_replay_legacy_fused",
+        target_timestamps_s=target_ts,
+        target_device_clock_us=_extract_numeric(target_df, target_clock),
+        target_raw=_extract_numeric(target_df, target_raw),
+        target_filtered=_extract_numeric(target_df, target_filtered),
+        reference_timestamps_s=reference_ts,
+        reference_clock_s=_extract_numeric(reference_df, ref_clock),
+        reference_raw=_extract_numeric(reference_df, ref_raw),
+        source_name=f"{target_path.name} + {reference_path.name}",
+        source_type="csv_replay_dual_native_v2",
         target_labels=[target_clock, target_raw, target_filtered],
         reference_labels=[ref_clock, ref_raw],
     )

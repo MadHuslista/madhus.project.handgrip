@@ -22,11 +22,11 @@ streams:
 channels:
   target:
     clock_label: device_clock_us
-    raw_label: grip_force_raw
-    filtered_label: grip_force_filtered
+    raw_label: target_raw_count
+    filtered_label: target_filtered_units
   reference:
-    clock_label: rs485_clock
-    raw_label: rs485_raw
+    clock_label: reference_clock_s
+    raw_label: reference_force_N
 
 viewer:
   window_seconds: 10.0
@@ -35,6 +35,7 @@ viewer:
   expected_target_rate_hz: 100.0
   refresh_s: 0.05
   force_unit_label: N
+  target_raw_unit_label: count
   dt_unit_label: ms
   xy_correlation:
     # false = adaptive autoscale on every refresh.
@@ -72,6 +73,13 @@ viewer:
     clear_key: c
     pause_key: p
 
+calibration_markers:
+  # Optional marker overlay from Handgrip_Calibration events.ndjson for replay/analysis.
+  # Live calibration markers remain owned by the Handgrip_Calibration recorder.
+  enabled: false
+  events_ndjson_path: null
+  draw_events: [hold_start, stable_window_start, hold_end, trial_accept, trial_reject]
+
 # Alignment policy used only for visualization/calibration views. The raw LSL
 # streams remain native-rate; reference samples are interpolated to target sample
 # timestamps only inside the viewer.
@@ -84,12 +92,9 @@ alignment:
 
 reference:
   # Preferred replay inputs after bridge refactor.
-  target_csv_path: ./data/target_handgrip_samples.csv
-  reference_csv_path: ./data/reference_rs485_samples.csv
+  target_csv_path: ./data/target_handgrip_samples_v2.csv
+  reference_csv_path: ./data/reference_rs485_samples_v2.csv
   xdf_path: null
-
-  # Legacy fused CSV compatibility fallback.
-  csv_path: null
 
 replay:
   speed: 1.0
