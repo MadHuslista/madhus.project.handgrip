@@ -18,6 +18,7 @@ dependencies = [
   "rs485-gui",
   "numpy>=2.4.3",
   "pyzmq",
+  "handgrip-calibration"
 ]
 
 [tool.uv]
@@ -26,3 +27,4 @@ package = false
 [tool.uv.sources]
 "handgrip-analysis"  = {path = "Handgrip_Analysis", editable = true }
 "rs485-gui"          = {path = "RS485_GUI", editable = true }
+"handgrip-calibration"  = {path = "Handgrip_Calibration", editable = true }

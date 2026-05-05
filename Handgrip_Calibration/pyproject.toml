@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "handgrip-calibration"
+version = "0.1.0"
+description = "Calibration session recorder, QA, fitting, and report tooling for dual-device handgrip calibration."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "Nicolás Schiappacasse", email = "nicolaschiappacase@gmail.com"}]
+dependencies = [
+  "numpy>=1.23",
+  "pandas>=1.5",
+  "PyYAML>=6.0",
+  "matplotlib>=3.6",
+  "pylsl>=1.16",
+  "pyxdf>=1.16",
+  "pytest>=7.0",
+  "tabulate",
+]
+
+[project.scripts]
+handgrip-cal = "handgrip_calibration.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["handgrip_calibration*"]
+
+[tool.setuptools.package-data]
+handgrip_calibration = ["py.typed"]
