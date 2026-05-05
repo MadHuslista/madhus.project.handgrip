@@ -82,9 +82,9 @@ def resolve_stream(config: StreamConfig) -> tuple[Any, ResolvedStream]:
     """Resolve one LSL stream based on name/type/source constraints."""
 
     pylsl = _import_pylsl()
-    streams = pylsl.resolve_stream("name", config.name, timeout=config.timeout_s)
+    streams = pylsl.resolve_byprop("name", config.name, timeout=config.timeout_s)
     if not streams and config.stream_type:
-        streams = pylsl.resolve_stream("type", config.stream_type, timeout=config.timeout_s)
+        streams = pylsl.resolve_byprop("type", config.stream_type, timeout=config.timeout_s)
     if not streams:
         raise TimeoutError(f"Could not resolve LSL stream {config.name!r} within {config.timeout_s:.1f}s")
     # Prefer exact source_id if configured; otherwise use the first matching stream.
