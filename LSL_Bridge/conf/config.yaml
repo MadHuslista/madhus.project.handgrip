@@ -1,6 +1,16 @@
 defaults:
   - _self_
 
+schema:
+  version: handgrip_lsl_bridge.v2
+  description: >-
+    Publishes two native LSL streams with canonical channel labels expected by Handgrip_Calibration. 
+
+session:
+  # Optional operator/session identifier propagated into LSL stream metadata.
+  session_id: null
+  component_id: LSL_Bridge
+
 # Two-native-stream architecture:
 # - target stream: Arduino/HX711 handgrip, native irregular ~93-100 Hz
 # - reference stream: RS485 acquisition board, native regular 500 Hz
@@ -13,19 +23,32 @@ streams:
     manufacturer: Arduino/HX711
     device_name: HandgripTarget
     nominal_srate: 0.0
+    payload_schema: D2
     channels:
+      seq:
+        label: seq
+        type: Sequence
+        unit: count
       device_clock_us:
         label: device_clock_us
         type: Time
         unit: us
-      raw:
-        label: grip_force_raw
+      raw_count:
+        label: target_raw_count
+        type: ADCCount
+        unit: count
+      current_units:
+        label: target_current_units
         type: Force
         unit: N
-      filtered:
-        label: grip_force_filtered
+      filtered_units:
+        label: target_filtered_units
         type: Force
         unit: N
+      status:
+        label: target_status
+        type: Status
+        unit: bitfield
 
   reference:
     enabled: true
@@ -36,20 +59,28 @@ streams:
     device_name: HighSpeedAcquisitionInstrument
     nominal_srate: 500.0
     channels:
+      seq:
+        label: seq
+        type: Sequence
+        unit: count
       clock:
-        label: rs485_clock
+        label: reference_clock_s
         type: Time
         unit: s
-      raw:
-        label: rs485_raw
+      force:
+        label: reference_force_N
         type: Force
         unit: N
+      status:
+        label: reference_status
+        type: Status
+        unit: bitfield
 
-# Optional compatibility stream is intentionally disabled. Calibration and the
-# viewer should use the two native streams above, not a fused 5-channel stream.
-legacy_unified_stream:
-  enabled: false
-  name: UnifiedHandgripRS485_DERIVED_LEGACY
+component_events:
+  enabled: true
+  name: HandgripComponentEvents
+  type: Markers
+  source_id: handgrip-lsl-bridge-events
 
 rs485_ipc:
   enabled: true
@@ -73,20 +104,22 @@ serial:
 # kept as diagnostic channels. Recommended first implementation uses Arduino
 # device-clock deltas anchored to the first host LSL receive time.
 target_timestamping:
-  policy: device_clock_anchor    # host_receive | device_clock_anchor | device_clock_affine
+  # host_receive is lower-risk when firmware micros() quality is unknown.
+  # device_clock_anchor preserves native device cadence and is recommended after bench validation.
+  policy: device_clock_anchor
   reset_on_nonmonotonic: true
   max_gap_s: 1.0
 
 protocol:
-  mode: auto            # auto | tagged_csv | simple_csv | legacy_pair_lines
   delimiter: ","
-  tagged_prefix: D
-  expect_crc16: false
-  accepted_numeric_regex: '[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?'
+  data_prefix: D2
+  metadata_prefix: M2
+  accepted_numeric_regex: '[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?|nan|NaN|inf|-inf|INF|-INF'
 
 processing:
+  # Filter target_current_units for display/QA only. Do not fit calibration on this channel.
   module: filter
-  timestamp_source: device_clock_us   # device_clock_us | lsl
+  timestamp_source: device_clock_us
   filters:
     - type: butterworth_lowpass_2nd
       name: characterization_lowpass_15hz
@@ -99,13 +132,13 @@ processing:
 csv:
   target:
     enabled: true
-    path: ./data/target_handgrip_samples.csv
-    append: true
+    path: ./data/target_handgrip_samples_v2.csv
+    append: false
     flush_every_n_rows: 1
   reference:
     enabled: true
-    path: ./data/reference_rs485_samples.csv
-    append: true
+    path: ./data/reference_rs485_samples_v2.csv
+    append: false
     flush_every_n_rows: 25
 
 logging:
@@ -116,5 +149,6 @@ logging:
 hydra:
   run:
     dir: .
+  output_subdir: null
   job:
     chdir: false
