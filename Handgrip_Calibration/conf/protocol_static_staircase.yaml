@@ -1,16 +1,13 @@
-# Live static-staircase calibration protocol.
-# Copy this file and edit operator/session notes before running a real calibration.
-
 session:
   root_dir: data/calibration
   operator: Nicolas
-  purpose: affine_handgrip_calibration
-  notes: "Static staircase calibration: PM58/acquisition-board reference + Arduino/HX711 target in series."
+  purpose: model_selection_handgrip_calibration
+  notes: 'Static staircase calibration: PM58/acquisition-board reference + Arduino/HX711
+    target in series.'
   copy_component_configs:
-    - ../LSL_Bridge/conf/config.yaml
-    - ../LSL_Viewer/conf/config.yaml
-    - ../RS485_GUI/config.yaml
-
+  - ../LSL_Bridge/conf/config.yaml
+  - ../LSL_Viewer/conf/config.yaml
+  - ../RS485_GUI/config.yaml
 streams:
   target:
     name: HandgripTarget
@@ -24,7 +21,6 @@ streams:
       filtered: target_filtered_units
       current_units: target_current_units
       status: target_status
-
   reference:
     name: HandgripReference
     type: Force
@@ -35,64 +31,108 @@ streams:
       clock: reference_clock_s
       raw: reference_force_N
       status: reference_status
-
 markers:
   stream_name: HandgripCalibrationMarkers
   stream_type: Markers
   source_id_prefix: handgrip-calibration
   emit_lsl: true
   write_ndjson: true
-
 protocol:
-  name: static_staircase_affine_v1
-  # Set nonzero only when you want the recorder to enforce a pre-run wait.
+  name: static_staircase_model_selection_v2
   warmup_s: 0
   prompt_operator: true
-
   baseline:
     duration_s: 10
     require_stable: true
-
   preload:
     enabled: true
     cycles: 3
     max_force_N: 100
-
   holds:
-    # Edit this to match the force levels you can repeat safely and consistently.
-    # The descending half is included to expose hysteresis.
-    levels_N: [0, 10, 20, 40, 60, 80, 100, 80, 60, 40, 20, 10, 0]
+    levels_N:
+    - 0
+    - 10
+    - 20
+    - 40
+    - 60
+    - 80
+    - 100
+    - 80
+    - 60
+    - 40
+    - 20
+    - 10
+    - 0
     hold_duration_s: 5
     stable_window_s: 3
     repeats: 2
     auto_accept: false
-
   dynamic_validation:
-    # These validation markers are kept separate from the static fit dataset.
     slow_ramps: 2
     fast_squeezes: 5
-
 quality:
   reference_expected_hz: 500
   reference_min_hz: 495
-  reference_max_gap_s: 0.020
+  reference_max_gap_s: 0.02
   target_expected_hz_min: 85
   target_expected_hz_max: 105
-  target_max_gap_s: 0.100
+  target_max_gap_s: 0.1
   max_hold_reference_std_N: 0.5
   max_hold_reference_slope_N_per_s: 0.2
   max_baseline_drift_N_per_min: 0.5
   min_hold_target_samples: 20
   min_hold_reference_samples: 100
   quality_emit_period_s: 1.0
-
 fit:
-  primary_model: affine
+  primary_model: auto
+  candidate_models:
+  - affine_ols
+  - affine_wls
+  - affine_huber
+  - quadratic_wls
+  - piecewise_linear_monotone
+  - odr_affine
+  - hysteresis_affine_diagnostic
+  - drift_affine_diagnostic
   target_signal: raw
   reference_signal: raw
   reference_scale: 1.0
   reference_offset: 0.0
   operating_range_N: 100.0
   residual_threshold_percent_operating_range: 0.5
-  weighted_by_reference_noise: false
+  weighted_by_reference_noise: true
+  reference_noise_floor_N: 0.05
+  target_raw_noise_floor: 1.0
   export_firmware_constants: true
+  selection:
+    primary_metric: cv_rmse_N
+    max_error_metric: max_abs_error_percent_range
+    prefer_simpler_within_cv_rmse_se: true
+    require_monotonic: true
+    allow_diagnostics_as_primary: false
+    cv_group_by: target_force_nominal_N
+    max_cv_folds: 12
+    alpha_cv_rmse: 40.0
+    beta_max_error: 60.0
+    lambda_complexity: 0.15
+    monotonicity_violation_penalty: 10.0
+    diagnostic_model_penalty: 2.0
+    min_cv_coverage_fraction: 0.5
+  robust:
+    huber_epsilon: 1.35
+    huber_delta_N: null
+    max_iter: 50
+    convergence_tol: 1.0e-09
+    min_weight: 0.05
+  multipoint:
+    min_points: 5
+    interpolation: piecewise_linear
+    extrapolation: reject
+    aggregate_by: target_force_nominal_N
+    max_knots: 12
+  diagnostics:
+    enable_odr_affine: true
+    enable_hysteresis: true
+    enable_drift: true
+    hysteresis_direction_column: direction
+    drift_time_column: t_mid_lsl

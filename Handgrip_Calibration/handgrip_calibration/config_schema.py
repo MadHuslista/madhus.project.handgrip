@@ -2,9 +2,10 @@
 
 The project intentionally uses lightweight dataclasses instead of a heavy schema
 framework. The calibration module is meant to be portable for lab PCs, and YAML
-configuration is validated just enough to fail early on the mistakes that would
+configuration is validated just enough to fail early on mistakes that would
 corrupt a calibration session: missing stream names, missing channel mappings,
-invalid hold durations, or impossible quality thresholds.
+invalid hold durations, impossible quality thresholds, or an unsupported fit
+candidate name.
 """
 
 from __future__ import annotations
@@ -95,7 +96,7 @@ class MarkerConfig:
 class ProtocolConfig:
     """Static-staircase calibration protocol definition."""
 
-    name: str = "static_staircase_affine_v1"
+    name: str = "static_staircase_model_selection_v2"
     warmup_s: float = 0.0
     baseline_duration_s: float = 10.0
     preload_enabled: bool = True
@@ -182,32 +183,234 @@ class QualityConfig:
             raise ConfigError("quality stability thresholds must be non-negative")
 
 
-@dataclass(frozen=True)
-class FitConfig:
-    """Model-fitting and unit-conversion configuration."""
+SUPPORTED_FIT_CANDIDATES = {
+    "affine_ols",
+    "affine_wls",
+    "affine_huber",
+    "quadratic_wls",
+    "piecewise_linear_monotone",
+    "odr_affine",
+    "hysteresis_affine_diagnostic",
+    "drift_affine_diagnostic",
+}
 
-    primary_model: str = "affine"
-    target_signal: str = "raw"
-    reference_signal: str = "raw"
-    reference_scale: float = 1.0
-    reference_offset: float = 0.0
-    residual_threshold_percent_operating_range: float = 0.5
-    operating_range_N: float = 100.0
-    weighted_by_reference_noise: bool = False
-    export_firmware_constants: bool = True
+
+@dataclass(frozen=True)
+class FitSelectionConfig:
+    """Model-selection policy for candidate calibration models.
+
+    The selector ranks models by cross-validated physical force error, maximum
+    absolute error, and a small complexity penalty. This keeps the library from
+    promoting nonlinear corrections unless they provide material improvement.
+    """
+
+    primary_metric: str = "cv_rmse_N"
+    max_error_metric: str = "max_abs_error_percent_range"
+    prefer_simpler_within_cv_rmse_se: bool = True
+    require_monotonic: bool = True
+    allow_diagnostics_as_primary: bool = False
+    cv_group_by: str = "target_force_nominal_N"
+    max_cv_folds: int = 12
+    alpha_cv_rmse: float = 40.0
+    beta_max_error: float = 60.0
+    lambda_complexity: float = 0.15
+    monotonicity_violation_penalty: float = 10.0
+    diagnostic_model_penalty: float = 2.0
+    min_cv_coverage_fraction: float = 0.50
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "FitConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> "FitSelectionConfig":
         data = data or {}
         cfg = cls(**{k: data.get(k, getattr(cls, k)) for k in cls.__dataclass_fields__})  # type: ignore[arg-type]
         cfg.validate()
         return cfg
 
     def validate(self) -> None:
-        if self.primary_model != "affine":
-            raise ConfigError("Only primary_model='affine' is implemented in this release")
+        if self.max_cv_folds < 2:
+            raise ConfigError("fit.selection.max_cv_folds must be >= 2")
+        if not 0 <= self.min_cv_coverage_fraction <= 1:
+            raise ConfigError("fit.selection.min_cv_coverage_fraction must be between 0 and 1")
+
+
+@dataclass(frozen=True)
+class FitRobustConfig:
+    """Robust-fit parameters.
+
+    If ``huber_delta_N`` is null, the fitter estimates a residual scale from the
+    median absolute deviation of the initial affine residuals and multiplies it
+    by ``huber_epsilon``.
+    """
+
+    huber_epsilon: float = 1.35
+    huber_delta_N: float | None = None
+    max_iter: int = 50
+    convergence_tol: float = 1e-9
+    min_weight: float = 0.05
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> "FitRobustConfig":
+        data = data or {}
+        cfg = cls(
+            huber_epsilon=float(data.get("huber_epsilon", 1.35)),
+            huber_delta_N=(None if data.get("huber_delta_N") is None else float(data["huber_delta_N"])),
+            max_iter=int(data.get("max_iter", 50)),
+            convergence_tol=float(data.get("convergence_tol", 1e-9)),
+            min_weight=float(data.get("min_weight", 0.05)),
+        )
+        cfg.validate()
+        return cfg
+
+    def validate(self) -> None:
+        if self.huber_epsilon <= 0:
+            raise ConfigError("fit.robust.huber_epsilon must be > 0")
+        if self.max_iter < 1:
+            raise ConfigError("fit.robust.max_iter must be >= 1")
+        if not 0 < self.min_weight <= 1:
+            raise ConfigError("fit.robust.min_weight must be in (0, 1]")
+
+
+@dataclass(frozen=True)
+class FitMultipointConfig:
+    """Monotone multipoint correction settings."""
+
+    min_points: int = 5
+    interpolation: str = "piecewise_linear"
+    extrapolation: str = "reject"
+    aggregate_by: str = "target_force_nominal_N"
+    max_knots: int = 12
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> "FitMultipointConfig":
+        data = data or {}
+        cfg = cls(
+            min_points=int(data.get("min_points", 5)),
+            interpolation=str(data.get("interpolation", "piecewise_linear")),
+            extrapolation=str(data.get("extrapolation", "reject")),
+            aggregate_by=str(data.get("aggregate_by", "target_force_nominal_N")),
+            max_knots=int(data.get("max_knots", 12)),
+        )
+        cfg.validate()
+        return cfg
+
+    def validate(self) -> None:
+        if self.min_points < 3:
+            raise ConfigError("fit.multipoint.min_points must be >= 3")
+        if self.interpolation not in {"piecewise_linear"}:
+            raise ConfigError("Only fit.multipoint.interpolation='piecewise_linear' is implemented")
+        if self.extrapolation not in {"reject", "clip"}:
+            raise ConfigError("fit.multipoint.extrapolation must be 'reject' or 'clip'")
+        if self.max_knots < self.min_points:
+            raise ConfigError("fit.multipoint.max_knots must be >= min_points")
+
+
+@dataclass(frozen=True)
+class FitDiagnosticsConfig:
+    """Diagnostic model settings.
+
+    Diagnostic models are evaluated and reported but are not automatically
+    selected unless ``selection.allow_diagnostics_as_primary`` is true.
+    """
+
+    enable_odr_affine: bool = True
+    enable_hysteresis: bool = True
+    enable_drift: bool = True
+    hysteresis_direction_column: str = "direction"
+    drift_time_column: str = "t_mid_lsl"
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> "FitDiagnosticsConfig":
+        data = data or {}
+        return cls(
+            enable_odr_affine=bool(data.get("enable_odr_affine", True)),
+            enable_hysteresis=bool(data.get("enable_hysteresis", True)),
+            enable_drift=bool(data.get("enable_drift", True)),
+            hysteresis_direction_column=str(data.get("hysteresis_direction_column", "direction")),
+            drift_time_column=str(data.get("drift_time_column", "t_mid_lsl")),
+        )
+
+
+@dataclass(frozen=True)
+class FitConfig:
+    """Model-fitting and unit-conversion configuration."""
+
+    primary_model: str = "auto"
+    candidate_models: list[str] = field(default_factory=lambda: [
+        "affine_ols",
+        "affine_wls",
+        "affine_huber",
+        "quadratic_wls",
+        "piecewise_linear_monotone",
+        "odr_affine",
+        "hysteresis_affine_diagnostic",
+        "drift_affine_diagnostic",
+    ])
+    target_signal: str = "raw"
+    reference_signal: str = "raw"
+    reference_scale: float = 1.0
+    reference_offset: float = 0.0
+    residual_threshold_percent_operating_range: float = 0.5
+    operating_range_N: float = 100.0
+    weighted_by_reference_noise: bool = True
+    reference_noise_floor_N: float = 0.05
+    target_raw_noise_floor: float = 1.0
+    export_firmware_constants: bool = True
+    selection: FitSelectionConfig = field(default_factory=FitSelectionConfig)
+    robust: FitRobustConfig = field(default_factory=FitRobustConfig)
+    multipoint: FitMultipointConfig = field(default_factory=FitMultipointConfig)
+    diagnostics: FitDiagnosticsConfig = field(default_factory=FitDiagnosticsConfig)
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> "FitConfig":
+        data = data or {}
+        raw_candidates = data.get("candidate_models")
+        if raw_candidates is None:
+            # Legacy configs that only had weighted_by_reference_noise still get
+            # the full recommended candidate set.
+            candidates = cls().candidate_models
+        else:
+            if not isinstance(raw_candidates, list):
+                raise ConfigError("fit.candidate_models must be a list")
+            candidates = [str(x) for x in raw_candidates]
+
+        primary_model = str(data.get("primary_model", "auto"))
+        if primary_model == "affine":
+            # Backward-compatible alias for the original implementation.
+            primary_model = "affine_wls" if bool(data.get("weighted_by_reference_noise", True)) else "affine_ols"
+
+        cfg = cls(
+            primary_model=primary_model,
+            candidate_models=candidates,
+            target_signal=str(data.get("target_signal", "raw")),
+            reference_signal=str(data.get("reference_signal", "raw")),
+            reference_scale=float(data.get("reference_scale", 1.0)),
+            reference_offset=float(data.get("reference_offset", 0.0)),
+            residual_threshold_percent_operating_range=float(data.get("residual_threshold_percent_operating_range", 0.5)),
+            operating_range_N=float(data.get("operating_range_N", 100.0)),
+            weighted_by_reference_noise=bool(data.get("weighted_by_reference_noise", True)),
+            reference_noise_floor_N=float(data.get("reference_noise_floor_N", 0.05)),
+            target_raw_noise_floor=float(data.get("target_raw_noise_floor", 1.0)),
+            export_firmware_constants=bool(data.get("export_firmware_constants", True)),
+            selection=FitSelectionConfig.from_mapping(data.get("selection")),
+            robust=FitRobustConfig.from_mapping(data.get("robust")),
+            multipoint=FitMultipointConfig.from_mapping(data.get("multipoint")),
+            diagnostics=FitDiagnosticsConfig.from_mapping(data.get("diagnostics")),
+        )
+        cfg.validate()
+        return cfg
+
+    def validate(self) -> None:
+        allowed_primary = {"auto", *SUPPORTED_FIT_CANDIDATES}
+        if self.primary_model not in allowed_primary:
+            raise ConfigError(f"fit.primary_model must be 'auto' or one of {sorted(SUPPORTED_FIT_CANDIDATES)}")
+        unknown = sorted(set(self.candidate_models) - SUPPORTED_FIT_CANDIDATES)
+        if unknown:
+            raise ConfigError(f"Unsupported fit.candidate_models entries: {', '.join(unknown)}")
         if self.operating_range_N <= 0:
             raise ConfigError("fit.operating_range_N must be > 0")
+        if self.residual_threshold_percent_operating_range < 0:
+            raise ConfigError("fit.residual_threshold_percent_operating_range must be non-negative")
+        if self.reference_noise_floor_N <= 0 or self.target_raw_noise_floor <= 0:
+            raise ConfigError("fit noise floors must be > 0")
 
 
 @dataclass(frozen=True)
@@ -216,7 +419,7 @@ class SessionConfig:
 
     root_dir: Path = Path("data/calibration")
     operator: str = "unknown"
-    purpose: str = "affine_handgrip_calibration"
+    purpose: str = "model_selection_handgrip_calibration"
     notes: str = ""
     copy_component_configs: list[Path] = field(default_factory=list)
 
@@ -226,7 +429,7 @@ class SessionConfig:
         return cls(
             root_dir=Path(str(data.get("root_dir", "data/calibration"))).expanduser(),
             operator=str(data.get("operator", "unknown")),
-            purpose=str(data.get("purpose", "affine_handgrip_calibration")),
+            purpose=str(data.get("purpose", "model_selection_handgrip_calibration")),
             notes=str(data.get("notes", "")),
             copy_component_configs=[Path(str(p)).expanduser() for p in data.get("copy_component_configs", [])],
         )

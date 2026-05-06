@@ -50,9 +50,17 @@ def _cmd_fit(args: argparse.Namespace) -> int:
     cfg = load_config(args.config)
     dataset, result = fit_session(args.session_dir, cfg)
     print(f"Fit complete using {result.metrics.n_points} points")
-    print(f"force_N = {result.force_N_a:.12g} * raw + {result.force_N_b:.12g}")
+    print(f"selected_model={result.selected_model_id} ({result.selected_model_family})")
+    if result.force_N_a is not None and result.force_N_b is not None:
+        print(f"affine-compatible force_N = {result.force_N_a:.12g} * raw + {result.force_N_b:.12g}")
     print(f"RMSE={result.metrics.rmse_N:.6g} N, max_abs={result.metrics.max_abs_error_N:.6g} N")
+    cv_rmse = result.cv_metrics.get('cv_rmse_N')
+    if cv_rmse is not None:
+        print(f"CV_RMSE={float(cv_rmse):.6g} N")
+    print(f"model_likelihood={result.selection_likelihood:.3f}")
     print(f"Wrote {Path(args.session_dir) / 'fit_result.json'}")
+    print(f"Wrote {Path(args.session_dir) / 'fit_candidates.json'}")
+    print(f"Wrote {Path(args.session_dir) / 'model_selection_report.json'}")
     return 0
 
 
@@ -100,7 +108,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--config", default="conf/default.yaml")
     p.set_defaults(func=_cmd_segment)
 
-    p = sub.add_parser("fit", help="Segment accepted holds and fit the affine calibration model.")
+    p = sub.add_parser("fit", help="Segment accepted holds, fit candidate models, and select the calibration model.")
     p.add_argument("session_dir")
     p.add_argument("--config", default="conf/default.yaml")
     p.set_defaults(func=_cmd_fit)
