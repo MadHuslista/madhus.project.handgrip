@@ -12,6 +12,14 @@ import pandas as pd
 import yaml
 
 from .export import ensure_dir, read_ndjson
+from .protocol_analysis import (
+    creep_zero_return_summary,
+    dynamic_summary,
+    event_count_table,
+    hold_quality_summary,
+    hysteresis_summary,
+    stream_health_table,
+)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -313,24 +321,59 @@ def _candidate_table(candidates: list[dict[str, Any]]) -> str:
     return pd.DataFrame(rows).to_markdown(index=False) + "\n"
 
 
+def _dict_table(data: dict[str, Any]) -> str:
+    if not data:
+        return "_No data available._\n"
+    return pd.DataFrame([{"metric": k, "value": v} for k, v in data.items()]).to_markdown(index=False) + "\n"
+
+
+def _safe_json_excerpt(data: Any, limit: int = 6000) -> str:
+    try:
+        return json.dumps(data, indent=2, ensure_ascii=False)[:limit]
+    except Exception:
+        return str(data)[:limit]
+
+
 def generate_report(session_dir: str | Path) -> Path:
-    """Generate Markdown and HTML calibration reports."""
+    """Generate Markdown and HTML calibration reports.
+
+    The report is intentionally protocol-aware. Some sections will be marked as
+    not available when a session did not run that protocol layer; this lets the
+    same command summarize reference verification, primary calibration, creep,
+    dynamic validation, and holdout sessions without branching the user workflow.
+    """
 
     session_dir = Path(session_dir)
     manifest = _load_yaml(session_dir / "session_manifest.yaml")
     fit = _load_json(session_dir / "fit_result.json") or {}
+    validation = _load_json(session_dir / "holdout_validation.json") or {}
     candidates_raw = _load_json(session_dir / "fit_candidates.json") if (session_dir / "fit_candidates.json").exists() else []
     candidates = candidates_raw if isinstance(candidates_raw, list) else []
     events = read_ndjson(session_dir / "events.ndjson")
     dataset = pd.read_csv(session_dir / "calibration_dataset.csv") if (session_dir / "calibration_dataset.csv").exists() else pd.DataFrame()
+    holdout_predictions = pd.read_csv(session_dir / "holdout_predictions.csv") if (session_dir / "holdout_predictions.csv").exists() else pd.DataFrame()
     plots = generate_plots(session_dir)
 
     session = manifest.get("session", {})
+    protocol = manifest.get("protocol", {})
     metrics = fit.get("metrics", {}) if isinstance(fit, dict) else {}
     coeff = fit.get("force_N", {}) if isinstance(fit, dict) else {}
     selected_model = fit.get("selected_model_id", fit.get("model", "unknown")) if isinstance(fit, dict) else "unknown"
     model_family = fit.get("selected_model_family", "unknown") if isinstance(fit, dict) else "unknown"
     firmware = fit.get("recommended_firmware_constants", {}) if isinstance(fit, dict) else {}
+    stream_table = stream_health_table(session_dir)
+    counts_table = event_count_table(session_dir)
+    hold_summary = hold_quality_summary(dataset)
+    hyst = hysteresis_summary(dataset)
+    creep = creep_zero_return_summary(session_dir)
+    dyn = dynamic_summary(session_dir)
+
+    deployment_recommendation = "insufficient_evidence"
+    if validation:
+        deployment_recommendation = validation.get("firmware_deployment_recommendation", deployment_recommendation)
+    elif fit:
+        deployment_recommendation = "fit_available_but_holdout_validation_missing"
+
     lines = [
         "# Handgrip Calibration Report",
         "",
@@ -339,14 +382,81 @@ def generate_report(session_dir: str | Path) -> Path:
         f"- **Session ID:** `{session.get('session_id', session_dir.name)}`",
         f"- **Operator:** {session.get('operator', 'unknown')}",
         f"- **Purpose:** {session.get('purpose', 'unknown')}",
-        f"- **Selected model:** `{selected_model}` ({model_family})",
+        f"- **Protocol:** `{protocol.get('name', 'unknown')}` / type `{protocol.get('protocol_type', 'unknown')}`",
+        f"- **Selected model:** `{selected_model}` ({model_family})" if fit else "- **Selected model:** not fitted in this session",
         f"- **Model-selection likelihood:** {fit.get('selection_likelihood', float('nan')):.3f}" if isinstance(fit.get("selection_likelihood"), (int, float)) else "- **Model-selection likelihood:** not available",
         f"- **Affine-compatible equation:** `force_N = {coeff.get('a', float('nan')):.12g} * raw + {coeff.get('b', float('nan')):.12g}`" if coeff else "- **Affine-compatible equation:** not available",
         f"- **RMSE:** {metrics.get('rmse_N', float('nan')):.6g} N" if metrics else "- **RMSE:** not available",
-        f"- **CV RMSE:** {fit.get('cv_metrics', {}).get('cv_rmse_N', float('nan')):.6g} N" if isinstance(fit.get("cv_metrics", {}).get("cv_rmse_N"), (int, float)) else "- **CV RMSE:** not available",
         f"- **Max abs error:** {metrics.get('max_abs_error_N', float('nan')):.6g} N" if metrics else "- **Max abs error:** not available",
-        f"- **Max abs error / range:** {metrics.get('max_abs_error_percent_range', float('nan')):.6g} %" if metrics else "- **Max abs error / range:** not available",
-        f"- **Residual threshold pass:** {fit.get('passes_residual_threshold', 'unknown')}",
+        f"- **Residual threshold pass:** {fit.get('passes_residual_threshold', 'unknown') if fit else 'not evaluated'}",
+        f"- **Firmware deployment recommendation:** `{deployment_recommendation}`",
+        "",
+        "## 1. Reference-chain verification summary",
+        "",
+        "This section verifies acquisition integrity before treating the RS485 reference as ground truth.",
+        "",
+        _table(stream_table, ["stream", "n_samples", "duration_s", "sample_rate_hz", "max_gap_s", "value_col", "mean", "std", "min", "max"]),
+        "",
+        "### Event counts",
+        "",
+        _table(counts_table, ["event", "count"]),
+        "",
+        "## 2. Static fit summary",
+        "",
+        _dict_table(hold_summary),
+        "",
+        "### Accepted hold dataset",
+        "",
+        _table(dataset, [
+            "trial_id", "target_force_nominal_N", "direction", "target_raw_median",
+            "reference_force_median_N", "reference_force_std_N", "reference_slope_N_s",
+            "accepted_by_quality", "quality_rejection_reason",
+        ]),
+        "",
+        "## 3. Holdout accuracy summary",
+        "",
+        "Use this section only for an independent holdout session validated with `handgrip-cal validate-holdout`.",
+        "",
+        "### Holdout validation result",
+        "",
+        "```json",
+        _safe_json_excerpt(validation, 4000),
+        "```",
+        "",
+        "### Holdout predictions",
+        "",
+        _table(holdout_predictions, [
+            "trial_id", "target_force_nominal_N", "direction", "reference_force_median_N",
+            "predicted_force_N", "holdout_residual_N", "accepted_by_quality",
+        ]),
+        "",
+        "## 4. Hysteresis / reversibility summary",
+        "",
+        _table(hyst, ["force_N", "n_ascending", "n_descending", "target_raw_delta_desc_minus_asc", "reference_force_delta_desc_minus_asc_N"]),
+        "",
+        "## 5. Creep / zero-return summary",
+        "",
+        _table(creep, ["phase", "target_force_N", "duration_s", "n_reference_samples", "reference_start_mean_N", "reference_end_mean_N", "delta_end_minus_start_N", "slope_N_per_s"]),
+        "",
+        "## 6. Dynamic validation summary",
+        "",
+        _table(dyn, ["trial_type", "label", "index", "duration_s", "peak_force_N", "speed_N_per_s"]),
+        "",
+        "## 7. Previous calibration comparison",
+        "",
+        "Not computed automatically in this report. Compare sessions by running the same holdout protocol against the old and new `fit_result.json` files, then compare `holdout_validation.json` metrics: RMSE, max absolute error, bias, zero return, and hysteresis.",
+        "",
+        "## 8. Firmware deployment recommendation",
+        "",
+        f"**Recommendation:** `{deployment_recommendation}`",
+        "",
+        "Deploy constants only when the selected model passes residual gates and an independent holdout session passes its holdout gate. If this report has no `holdout_validation.json`, treat the firmware constants as provisional.",
+        "",
+        "### Firmware export",
+        "",
+        "```json",
+        _safe_json_excerpt(firmware, 4000),
+        "```",
         "",
         "## Model candidate ranking",
         "",
@@ -355,22 +465,8 @@ def generate_report(session_dir: str | Path) -> Path:
         "## Selected fit result JSON excerpt",
         "",
         "```json",
-        json.dumps(fit, indent=2, ensure_ascii=False)[:6000],
+        _safe_json_excerpt(fit, 6000),
         "```",
-        "",
-        "## Firmware export",
-        "",
-        "```json",
-        json.dumps(firmware, indent=2, ensure_ascii=False)[:4000],
-        "```",
-        "",
-        "## Accepted hold dataset",
-        "",
-        _table(dataset, [
-            "trial_id", "target_force_nominal_N", "direction", "target_raw_median",
-            "reference_force_median_N", "reference_force_std_N", "reference_slope_N_s",
-            "accepted_by_quality", "quality_rejection_reason",
-        ]),
         "",
         "## Event summary",
         "",
@@ -386,6 +482,9 @@ def generate_report(session_dir: str | Path) -> Path:
     lines.extend([
         "## Interpretation guidance",
         "",
+        "- Use static staircase holds for primary model fitting.",
+        "- Use low-force refinement only if low-force residuals are systematic and reference noise is acceptable.",
+        "- Use creep/zero-return and dynamic protocols as validation/diagnostic layers, not as primary coefficient estimators.",
         "- Prefer the selected model only inside the calibrated raw-count and force range.",
         "- Treat `odr_affine`, `hysteresis_affine_diagnostic`, and `drift_affine_diagnostic` as diagnostics unless explicitly configured otherwise.",
         "- If a nonlinear model wins by only a tiny margin, prefer the affine model and improve the calibration protocol before increasing firmware complexity.",

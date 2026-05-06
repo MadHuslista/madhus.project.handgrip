@@ -13,6 +13,7 @@ from .recorder import CalibrationRecorder
 from .report import generate_report
 from .segmentation import segment_accepted_holds
 from .synthetic import generate_demo_session
+from .validation import validate_session_against_model
 from .xdf_import import import_xdf
 
 
@@ -34,7 +35,7 @@ def _cmd_preflight(args: argparse.Namespace) -> int:
 def _cmd_record(args: argparse.Namespace) -> int:
     cfg = load_config(args.config)
     recorder = CalibrationRecorder(cfg, session_id=args.session_id)
-    paths = recorder.run_static_staircase()
+    paths = recorder.run_protocol()
     print(f"Session recorded: {paths.root}")
     return 0
 
@@ -63,6 +64,18 @@ def _cmd_fit(args: argparse.Namespace) -> int:
     print(f"Wrote {Path(args.session_dir) / 'model_selection_report.json'}")
     return 0
 
+
+
+def _cmd_validate_holdout(args: argparse.Namespace) -> int:
+    cfg = load_config(args.config)
+    result = validate_session_against_model(args.session_dir, args.model, cfg)
+    metrics = result.get("metrics", {})
+    print(f"Holdout validation complete: {Path(args.session_dir) / 'holdout_validation.json'}")
+    print(f"selected_model={result.get('selected_model_id')}")
+    print(f"passes_holdout_gate={result.get('passes_holdout_gate')}")
+    print(f"RMSE={metrics.get('rmse_N')} N, max_abs={metrics.get('max_abs_error_N')} N, bias={metrics.get('bias_N')} N")
+    print(f"recommendation={result.get('firmware_deployment_recommendation')}")
+    return 0
 
 def _cmd_report(args: argparse.Namespace) -> int:
     path = generate_report(args.session_dir)
@@ -112,6 +125,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("session_dir")
     p.add_argument("--config", default="conf/default.yaml")
     p.set_defaults(func=_cmd_fit)
+
+    p = sub.add_parser("validate-holdout", help="Validate an independent holdout session against an existing fit_result.json without refitting.")
+    p.add_argument("session_dir")
+    p.add_argument("--model", required=True, help="Path to the fit_result.json produced by the primary calibration session.")
+    p.add_argument("--config", default="conf/protocol_holdout_verification.yaml")
+    p.set_defaults(func=_cmd_validate_holdout)
 
     p = sub.add_parser("report", help="Generate Markdown/HTML reports and diagnostic plots.")
     p.add_argument("session_dir")

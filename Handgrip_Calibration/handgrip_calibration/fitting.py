@@ -29,7 +29,7 @@ import numpy as np
 import pandas as pd
 
 from .config_schema import AppConfig, FitConfig
-from .export import write_json
+from .export import append_ndjson, write_json
 from .segmentation import segment_accepted_holds
 
 
@@ -987,4 +987,28 @@ def fit_session(session_dir: str | Path, config: AppConfig) -> tuple[pd.DataFram
         "residual_threshold_percent_range": result.residual_threshold_percent_range,
         "ranking": result.model_ranking,
     })
+    # Persist fit-stage events into the same event log used by the recorder. This
+    # makes the full lifecycle auditable even when fitting/reporting are run
+    # after the live acquisition process has stopped.
+    append_ndjson(session_dir / "events.ndjson", [
+        {
+            "event": "calibration_candidate_selected",
+            "session_id": session_dir.name,
+            "host_time_unix": __import__("time").time(),
+            "phase": "fit",
+            "payload": {
+                "selected_model_id": result.selected_model_id,
+                "selected_model_family": result.selected_model_family,
+                "selection_likelihood": result.selection_likelihood,
+                "passes_residual_threshold": result.passes_residual_threshold,
+            },
+        },
+        {
+            "event": "firmware_constants_exported",
+            "session_id": session_dir.name,
+            "host_time_unix": __import__("time").time(),
+            "phase": "fit",
+            "payload": result.recommended_firmware_constants,
+        },
+    ])
     return dataset, result

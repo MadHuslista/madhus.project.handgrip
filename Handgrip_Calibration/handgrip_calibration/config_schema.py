@@ -94,14 +94,32 @@ class MarkerConfig:
 
 @dataclass(frozen=True)
 class ProtocolConfig:
-    """Static-staircase calibration protocol definition."""
+    """Calibration protocol definition.
+
+    The schema remains intentionally lightweight, but it now supports the full
+    protocol campaign used by this project:
+
+    - ``reference_verification``: prove the reference path before fitting.
+    - ``static_staircase``: primary reversible static-hold calibration.
+    - ``low_force_refinement``: optional low-force static ladder.
+    - ``creep_zero_return``: stability/drift characterization.
+    - ``dynamic_validation``: ramps and squeeze/release stress tests.
+    - ``holdout_verification``: independent validation of an existing model.
+
+    Static-style protocols still use ``holds.levels_N`` and are therefore fully
+    compatible with the existing segmenter/fitter. Dynamic and creep protocols
+    emit explicit markers for post-hoc reporting and do not feed the primary fit.
+    """
 
     name: str = "static_staircase_model_selection_v2"
+    protocol_type: str = "static_staircase"
     warmup_s: float = 0.0
     baseline_duration_s: float = 10.0
     preload_enabled: bool = True
     preload_cycles: int = 3
     preload_max_force_N: float = 100.0
+    preload_hold_duration_s: float = 0.0
+    preload_recovery_duration_s: float = 0.0
     levels_N: list[float] = field(default_factory=lambda: [0, 10, 20, 40, 60, 80, 100, 80, 60, 40, 20, 10, 0])
     hold_duration_s: float = 5.0
     stable_window_s: float = 3.0
@@ -110,6 +128,7 @@ class ProtocolConfig:
     auto_accept_holds: bool = False
     dynamic_slow_ramps: int = 2
     dynamic_fast_squeezes: int = 5
+    validate_existing_only: bool = False
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any] | None) -> "ProtocolConfig":
@@ -118,26 +137,57 @@ class ProtocolConfig:
         preload = data.get("preload", {}) or {}
         holds = data.get("holds", {}) or {}
         dynamic = data.get("dynamic_validation", {}) or {}
+        name = str(data.get("name", cls.name))
+        protocol_type = str(data.get("type", data.get("protocol_type", "")) or "").strip()
+        if not protocol_type:
+            # Durable inference for older and protocol-specific config names.
+            lowered = name.lower()
+            if "reference" in lowered and "verification" in lowered:
+                protocol_type = "reference_verification"
+            elif "low_force" in lowered:
+                protocol_type = "low_force_refinement"
+            elif "creep" in lowered or "zero_return" in lowered:
+                protocol_type = "creep_zero_return"
+            elif "dynamic" in lowered or "ramp" in lowered or "squeeze" in lowered:
+                protocol_type = "dynamic_validation"
+            elif "holdout" in lowered or "verification" in lowered:
+                protocol_type = "holdout_verification"
+            else:
+                protocol_type = "static_staircase"
         cfg = cls(
-            name=str(data.get("name", cls.name)),
+            name=name,
+            protocol_type=protocol_type,
             warmup_s=float(data.get("warmup_s", 0.0)),
             baseline_duration_s=float(baseline.get("duration_s", 10.0)),
             preload_enabled=bool(preload.get("enabled", True)),
             preload_cycles=int(preload.get("cycles", 3)),
             preload_max_force_N=float(preload.get("max_force_N", 100.0)),
+            preload_hold_duration_s=float(preload.get("hold_duration_s", 0.0)),
+            preload_recovery_duration_s=float(preload.get("recovery_duration_s", 0.0)),
             levels_N=[float(x) for x in holds.get("levels_N", cls().levels_N)],
             hold_duration_s=float(holds.get("hold_duration_s", 5.0)),
             stable_window_s=float(holds.get("stable_window_s", 3.0)),
             repeats=int(holds.get("repeats", 2)),
             prompt_operator=bool(data.get("prompt_operator", True)),
             auto_accept_holds=bool(holds.get("auto_accept", False)),
-            dynamic_slow_ramps=int(dynamic.get("slow_ramps", 2)),
-            dynamic_fast_squeezes=int(dynamic.get("fast_squeezes", 5)),
+            dynamic_slow_ramps=int(dynamic.get("slow_ramps", dynamic.get("slow_ramp_count", 2))),
+            dynamic_fast_squeezes=int(dynamic.get("fast_squeezes", dynamic.get("squeeze_count", 5))),
+            validate_existing_only=bool(data.get("validate_existing_only", False) or data.get("mode", "") == "validate_existing_only"),
         )
         cfg.validate()
         return cfg
 
     def validate(self) -> None:
+        allowed_types = {
+            "reference_verification",
+            "static_staircase",
+            "low_force_refinement",
+            "creep_zero_return",
+            "dynamic_validation",
+            "holdout_verification",
+        }
+        if self.protocol_type not in allowed_types:
+            raise ConfigError(f"protocol.type must be one of {sorted(allowed_types)}")
         if not self.levels_N:
             raise ConfigError("protocol.holds.levels_N must contain at least one level")
         if self.hold_duration_s <= 0:
@@ -148,6 +198,12 @@ class ProtocolConfig:
             raise ConfigError("protocol.holds.repeats must be >= 1")
         if self.baseline_duration_s <= 0:
             raise ConfigError("protocol.baseline.duration_s must be > 0")
+        if self.preload_cycles < 0:
+            raise ConfigError("protocol.preload.cycles must be >= 0")
+        if self.preload_hold_duration_s < 0 or self.preload_recovery_duration_s < 0:
+            raise ConfigError("protocol.preload hold/recovery durations must be >= 0")
+        if self.dynamic_slow_ramps < 0 or self.dynamic_fast_squeezes < 0:
+            raise ConfigError("protocol.dynamic_validation counts must be >= 0")
 
 
 @dataclass(frozen=True)
