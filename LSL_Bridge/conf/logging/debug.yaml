@@ -1,0 +1,7 @@
+# @package _global_
+# Debug logging configuration: verbose format with function name and line number.
+# Usage: python -m lsl_bridge logging=debug
+logging:
+  level: DEBUG
+  file: ./lsl_bridge_debug.log
+  format: "[%(asctime)s][%(name)s][%(levelname)s][%(funcName)s:%(lineno)d] - %(message)s"

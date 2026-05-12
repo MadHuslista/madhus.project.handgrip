@@ -4,7 +4,7 @@ defaults:
 schema:
   version: handgrip_lsl_bridge.v2
   description: >-
-    Publishes two native LSL streams with canonical channel labels expected by Handgrip_Calibration. 
+    Publishes two native LSL streams with canonical channel labels expected by Handgrip_Calibration.
 
 session:
   # Optional operator/session identifier propagated into LSL stream metadata.
@@ -24,6 +24,8 @@ streams:
     device_name: HandgripTarget
     nominal_srate: 0.0
     payload_schema: D2
+    chunk_size: 1              # LSL StreamOutlet chunk_size for target outlet
+    schema: handgrip_target_stream.v2   # LSL stream schema version string
     channels:
       seq:
         label: seq
@@ -58,6 +60,8 @@ streams:
     manufacturer: RS485 Acquisition Board
     device_name: HighSpeedAcquisitionInstrument
     nominal_srate: 500.0
+    chunk_size: 1              # LSL StreamOutlet chunk_size for reference outlet
+    schema: handgrip_reference_stream.v2  # LSL stream schema version string
     channels:
       seq:
         label: seq
@@ -81,6 +85,7 @@ component_events:
   name: HandgripComponentEvents
   type: Markers
   source_id: handgrip-lsl-bridge-events
+  schema: handgrip_component_event.v1   # LSL marker payload schema version string
 
 rs485_ipc:
   enabled: true
@@ -89,6 +94,10 @@ rs485_ipc:
   topic: rs485.measurement.v1
   receive_hwm: 5000
   log_status_every_s: 5.0
+  expected_schema: rs485.measurement.v1  # Schema string enforced on every IPC message
+  poll_interval_s: 0.001                 # Sleep duration when ZMQ queue is empty
+  error_backoff_s: 0.05                  # Sleep duration after a ZMQError
+  log_malformed_every_n: 100            # Log dropped malformed IPC messages every N occurrences
 
 serial:
   port: /dev/ttyUSB1
@@ -114,11 +123,11 @@ protocol:
   delimiter: ","
   data_prefix: D2
   metadata_prefix: M2
-  accepted_numeric_regex: '[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?|nan|NaN|inf|-inf|INF|-INF'
+  accepted_numeric_regex: '[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]\d+)?|nan|NaN|inf|-inf|INF|-INF'
 
 processing:
   # Filter target_current_units for display/QA only. Do not fit calibration on this channel.
-  module: filter
+  module: lsl_bridge.core.filter
   timestamp_source: device_clock_us
   filters:
     - type: butterworth_lowpass_2nd
@@ -132,17 +141,19 @@ processing:
 csv:
   target:
     enabled: true
-    path: ./data/target_handgrip_samples_v2.csv
+    path: LSL_Bridge/data/target_handgrip_samples_v2.csv
     append: false
     flush_every_n_rows: 1
   reference:
     enabled: true
-    path: ./data/reference_rs485_samples_v2.csv
+    path: LSL_Bridge/data/reference_rs485_samples_v2.csv
     append: false
     flush_every_n_rows: 25
 
 logging:
   level: INFO
+  file: LSL_Bridge/logs/lsl_bridge.log          # Path for FileHandler; set to null to disable file logging
+  format: "[%(asctime)s][%(name)s][%(levelname)s] - %(message)s"
   log_every_n_samples: 200
   log_parse_errors_every_n: 20
 
