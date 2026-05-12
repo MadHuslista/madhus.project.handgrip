@@ -61,7 +61,7 @@ The tool is a pure **visualization consumer**. Its ideal shape follows the **Fun
 
 | Dimension | Current State | Ideal State | Debt Level |
 |---|---|---|---|
-| **Layout** | Flat single file (1 412 lines) | `src/handgrip_viewer/` package | 🔴 Critical |
+| **Layout** | Flat single file (1 412 lines) | `src/lsl_viewer/` package | 🔴 Critical |
 | **Module boundaries** | None — all logic co-located | `core/`, `viz/`, `runners/` sub-packages | 🔴 Critical |
 | **Logger scope** | Single `LOGGER` at module level, `basicConfig(force=True)` | `logging.getLogger(__name__)` per module, Hydra-aware setup | 🟡 Major |
 | **Log file output** | Absent (empty `.log` file in repo) | Tee to rotating `FileHandler` via `configure_logging()` | 🟡 Major |
@@ -87,9 +87,9 @@ handgrip_realtime_viewer/                   ← project root (rename from LSL_Vi
 │   └── viewer/
 │       └── style.yaml                      ← NEW: visual style constants
 ├── src/
-│   └── handgrip_viewer/                    ← installable package
+│   └── lsl_viewer/                    ← installable package
 │       ├── __init__.py
-│       ├── __main__.py                     ← `python -m handgrip_viewer`
+│       ├── __main__.py                     ← `python -m lsl_viewer`
 │       ├── cli.py                          ← @hydra.main entry point
 │       ├── config.py                       ← Structured config dataclasses (OmegaConf)
 │       ├── types.py                        ← StreamLayout, TargetWindow, ReferenceWindow,
@@ -144,7 +144,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "handgrip-realtime-viewer"
+name = "lsl-viewer"
 version = "0.2.0"
 description = "Dual-native-stream LSL handgrip force viewer with live, CSV, and XDF replay modes"
 requires-python = ">=3.11"
@@ -171,10 +171,10 @@ dev = [
 ]
 
 [project.scripts]
-handgrip-viewer = "handgrip_viewer.cli:app"
+lsl-viewer = "lsl_viewer.cli:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/handgrip_viewer"]
+packages = ["src/lsl_viewer"]
 
 [tool.uv]
 dev-dependencies = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.4"]
@@ -188,9 +188,9 @@ uv venv
 uv pip install -e ".[live,xdf,dev]"
 
 # Run
-python -m handgrip_viewer           # uses __main__.py
-handgrip-viewer                     # via entry point
-handgrip-viewer mode=csv_replay     # Hydra CLI override
+python -m lsl_viewer           # uses __main__.py
+lsl-viewer                     # via entry point
+lsl-viewer mode=csv_replay     # Hydra CLI override
 
 # Test
 uv run pytest tests/
@@ -205,7 +205,7 @@ uv lock
 
 Replace the 20+ scattered `OmegaConf.select(cfg, "viewer.xy_correlation.time_alignment.mode", default="tail_aligned_lsl")` call sites with a typed `@dataclass` config tree registered via `hydra.core.config_store`.
 
-**`src/handgrip_viewer/config.py`**
+**`src/lsl_viewer/config.py`**
 
 ```python
 from __future__ import annotations
@@ -359,7 +359,7 @@ Hydra installs its own log handler at startup. Calling `basicConfig(force=True)`
 #### 2.4.2 Solution: `logging_setup.py`
 
 ```python
-# src/handgrip_viewer/logging_setup.py
+# src/lsl_viewer/logging_setup.py
 from __future__ import annotations
 
 import logging
@@ -416,12 +416,12 @@ def configure_logging(
 import logging
 log = logging.getLogger(__name__)
 
-# e.g., in core/stream.py:   handgrip_viewer.core.stream
-# e.g., in viz/figure.py:    handgrip_viewer.viz.figure
-# e.g., in runners/live.py:  handgrip_viewer.runners.live
+# e.g., in core/stream.py:   lsl_viewer.core.stream
+# e.g., in viz/figure.py:    lsl_viewer.viz.figure
+# e.g., in runners/live.py:  lsl_viewer.runners.live
 ```
 
-This enables log filtering per subsystem (e.g., suppress `handgrip_viewer.viz.*` in CI while keeping `handgrip_viewer.core.*`).
+This enables log filtering per subsystem (e.g., suppress `lsl_viewer.viz.*` in CI while keeping `lsl_viewer.core.*`).
 
 #### 2.4.4 Call Site in `cli.py`
 
@@ -589,10 +589,10 @@ if role == "target":
 
 ### Phase 1 — Structural Setup
 
-- [ ] Create `src/handgrip_viewer/` package skeleton with `__init__.py` in all directories
+- [ ] Create `src/lsl_viewer/` package skeleton with `__init__.py` in all directories
 - [ ] Add `pyproject.toml` per §2.2
 - [ ] Run `uv venv && uv pip install -e ".[live,xdf,dev]"` and verify import succeeds
-- [ ] Verify `handgrip-viewer --help` resolves via entry point
+- [ ] Verify `lsl-viewer --help` resolves via entry point
 
 ### Phase 2 — Configuration Schema
 
@@ -600,7 +600,7 @@ if role == "target":
 - [ ] Call `register_config()` in `cli.py` before `@hydra.main`
 - [ ] Update `conf/config.yaml` with new keys from §2.5 migration map
 - [ ] Add `conf/viewer/style.yaml` config group
-- [ ] Run `handgrip-viewer --cfg job` and confirm all keys resolve without `MISSING` errors
+- [ ] Run `lsl-viewer --cfg job` and confirm all keys resolve without `MISSING` errors
 
 ### Phase 3 — Logging
 
@@ -663,7 +663,7 @@ if role == "target":
 | **Logging** | Single logger, `force=True`, empty log file | Module-scoped `__name__` loggers, rotating `FileHandler`, file populated |
 | **Dead code** | `_candidate_columns`, `_cfg_str_path`, `_cfg_bool_path` | Deleted |
 | **Testable surface** | 0% (all logic colocated with I/O) | `core/` modules are pure; unit-testable without mocks |
-| **Entry point** | `python handgrip_realtime_viewer.py` | `python -m handgrip_viewer` and `handgrip-viewer` CLI |
+| **Entry point** | `python handgrip_realtime_viewer.py` | `python -m lsl_viewer` and `lsl-viewer` CLI |
 | **Feature completeness** | All 4 modes | All 4 modes preserved; backward-compatible config |
 
 ---
