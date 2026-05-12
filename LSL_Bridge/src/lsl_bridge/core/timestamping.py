@@ -16,9 +16,14 @@ Two resolvers are provided:
     * ``host_receive``        — use the raw LSL arrival time (lower risk,
                                 works even with poor firmware clock quality).
     * ``device_clock_anchor`` — anchor the first sample to the LSL arrival
-                                time then advance via device-clock deltas
-                                (preserves native cadence; recommended after
-                                bench-validation of the firmware clock).
+                                time then advance via device-clock deltas.
+                                A bounded drift guard compares the predicted
+                                timestamp against host-arrival time and
+                                re-anchors when the device-derived clock drifts
+                                too far from real time.  This preserves native
+                                cadence for normal jitter while preventing the
+                                live XY viewer from accumulating seconds of
+                                apparent reference lag.
 """
 
 from __future__ import annotations
@@ -85,9 +90,16 @@ class TargetTimestampResolver:
         self._policy = str(cfg.target_timestamping.policy)
         self._max_gap_s = float(cfg.target_timestamping.max_gap_s)
         self._reset_on_nonmonotonic = bool(cfg.target_timestamping.reset_on_nonmonotonic)
+        self._max_anchor_drift_s = float(
+            cfg.target_timestamping.get("max_anchor_drift_s", 0.0)
+        )
+        self._monotonic_epsilon_s = float(
+            cfg.target_timestamping.get("monotonic_epsilon_s", 1e-9)
+        )
         self._anchor_device_us: int | None = None
         self._anchor_lsl_s: float | None = None
         self._last_device_us: int | None = None
+        self._last_resolved_lsl_s: float | None = None
         self._events = events
 
     def resolve(self, sample: ParsedTargetSample, arrival_lsl_time: float) -> float:
@@ -101,7 +113,7 @@ class TargetTimestampResolver:
             LSL timestamp (seconds, LSL epoch) to be used for this sample.
         """
         if self._policy == "host_receive":
-            return arrival_lsl_time
+            return self._monotonic_lsl(float(arrival_lsl_time))
 
         if self._policy != "device_clock_anchor":
             raise ValueError(
@@ -115,7 +127,7 @@ class TargetTimestampResolver:
                 arrival_lsl_time,
                 reason="initial_anchor",
             )
-            return arrival_lsl_time
+            return self._monotonic_lsl(float(arrival_lsl_time))
 
         if self._last_device_us is not None:
             delta_s = (sample.device_clock_us - self._last_device_us) / 1_000_000.0
@@ -126,7 +138,7 @@ class TargetTimestampResolver:
                     arrival_lsl_time,
                     reason="nonmonotonic_device_clock",
                 )
-                return arrival_lsl_time
+                return self._monotonic_lsl(float(arrival_lsl_time))
 
             if delta_s > self._max_gap_s:
                 self._reset_anchor(
@@ -135,12 +147,33 @@ class TargetTimestampResolver:
                     reason="device_clock_gap",
                     gap_s=delta_s,
                 )
-                return arrival_lsl_time
+                return self._monotonic_lsl(float(arrival_lsl_time))
 
         self._last_device_us = sample.device_clock_us
-        return self._anchor_lsl_s + (
+        predicted_lsl_s = self._anchor_lsl_s + (
             sample.device_clock_us - self._anchor_device_us
         ) / 1_000_000.0
+
+        # Firmware clocks are useful for cadence, but they are not guaranteed to
+        # be metrology-grade clocks.  If the anchored device-clock prediction
+        # walks away from the actual host arrival time, the LSL timestamp tail
+        # becomes stale.  The time-series plots can still look live, but the XY
+        # plot pairs the latest target sample with an old reference value because
+        # reference->target interpolation uses these timestamps.  Re-anchoring
+        # bounds that live-display and synchronization error.
+        if self._max_anchor_drift_s > 0:
+            drift_s = float(arrival_lsl_time) - float(predicted_lsl_s)
+            if abs(drift_s) > self._max_anchor_drift_s:
+                self._reset_anchor(
+                    sample.device_clock_us,
+                    arrival_lsl_time,
+                    reason="device_clock_anchor_drift",
+                    drift_s=drift_s,
+                    threshold_s=self._max_anchor_drift_s,
+                )
+                predicted_lsl_s = float(arrival_lsl_time)
+
+        return self._monotonic_lsl(float(predicted_lsl_s))
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -163,3 +196,18 @@ class TargetTimestampResolver:
             device_clock_us=device_clock_us,
             **payload,
         )
+
+    def _monotonic_lsl(self, candidate_lsl_s: float) -> float:
+        """Return a non-decreasing LSL timestamp.
+
+        LSL accepts explicit timestamps, but downstream consumers should never
+        receive a backward jump.  This guard is intentionally tiny: it does not
+        smooth or resample; it only prevents pathological non-monotonic output
+        after a re-anchor or host-clock jitter event.
+        """
+        if self._last_resolved_lsl_s is not None:
+            min_next = self._last_resolved_lsl_s + max(0.0, self._monotonic_epsilon_s)
+            if candidate_lsl_s < min_next:
+                candidate_lsl_s = min_next
+        self._last_resolved_lsl_s = float(candidate_lsl_s)
+        return float(candidate_lsl_s)

@@ -41,6 +41,8 @@ def _cfg_timestamping(
     policy: str = "device_clock_anchor",
     max_gap_s: float = 1.0,
     reset_on_nonmonotonic: bool = True,
+    max_anchor_drift_s: float = 0.0,
+    monotonic_epsilon_s: float = 1e-9,
 ) -> object:
     return OmegaConf.create(
         {
@@ -48,6 +50,8 @@ def _cfg_timestamping(
                 "policy": policy,
                 "max_gap_s": max_gap_s,
                 "reset_on_nonmonotonic": reset_on_nonmonotonic,
+                "max_anchor_drift_s": max_anchor_drift_s,
+                "monotonic_epsilon_s": monotonic_epsilon_s,
             }
         }
     )
@@ -129,6 +133,27 @@ class TestTargetTimestampResolver:
         r.resolve(_sample(device_clock_us=0), arrival_lsl_time=100.0)  # anchor at t=100
         ts = r.resolve(_sample(device_clock_us=10_000), arrival_lsl_time=100.011)
         assert abs(ts - 100.01) < 1e-6  # 10_000 µs = 0.01 s
+
+    def test_anchor_reanchors_when_device_clock_drifts_from_host_time(self):
+        r, events = self._make(policy="device_clock_anchor", max_anchor_drift_s=0.05)
+        r.resolve(_sample(device_clock_us=0), arrival_lsl_time=100.0)
+        events.emit.reset_mock()
+
+        # Device clock predicts 100.010 s, but the sample arrived at 100.080 s.
+        # Without the drift guard, the live XY plot would pair this fresh target
+        # sample with a reference value from ~70 ms in the past.
+        ts = r.resolve(_sample(device_clock_us=10_000), arrival_lsl_time=100.080)
+
+        assert abs(ts - 100.080) < 1e-9
+        events.emit.assert_called_once()
+        assert events.emit.call_args[1]["reason"] == "device_clock_anchor_drift"
+        assert abs(events.emit.call_args[1]["drift_s"] - 0.070) < 1e-9
+
+    def test_host_receive_policy_never_moves_timestamps_backwards(self):
+        r, _ = self._make(policy="host_receive", monotonic_epsilon_s=1e-6)
+        assert r.resolve(_sample(device_clock_us=0), arrival_lsl_time=10.0) == 10.0
+        ts = r.resolve(_sample(device_clock_us=10_000), arrival_lsl_time=9.5)
+        assert abs(ts - 10.000001) < 1e-9
 
     # Nonmonotonic reset
 
