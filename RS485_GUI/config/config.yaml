@@ -55,7 +55,7 @@ ui:
 
 logger:
   enabled: true
-  directory: ./logs
+  directory: RS485_GUI/logs
   write_mode: overwrite
   raw_signal_filename: raw_signal.ndjson
   interpreted_signal_filename: interpreted_signal.ndjson
@@ -125,6 +125,10 @@ device:
   active_send_frequency_code: 8  # 500 Hz
   poll_interval_s: 0.001  # 1 kHz target cadence; actual RTU rate remains transaction-limited
   error_backoff_s: 0.25
+  # Promoted register-map constants (v0.2): allows alternate firmware variants
+  read_start_register: 0    # Modbus 0x0000 / PLC 40001
+  read_register_count: 11   # consecutive holding registers per poll
+  command_register: 11      # 0x000B / PLC 40012
 
 active_send:
   # Timestamp policy for Active-Send batches.
@@ -166,3 +170,11 @@ active_send:
   log_bad_frame_hex_bytes: 64
   warning_emit_interval_s: 5.0
   detailed_warning_limit: 2
+
+# ---------------------------------------------------------------------------
+# Per-module log level overrides (new in v0.2 refactor)
+# Uncomment and adjust as needed.
+# ---------------------------------------------------------------------------
+logging:
+  root_level: INFO   # alias for app.log_level
+  module_levels: {}  # e.g. rs485_gui.transport.active_send: DEBUG

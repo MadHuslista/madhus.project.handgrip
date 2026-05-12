@@ -1,15 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "rs485-gui"
 version = "0.1.0"
-description = "Add your description here"
+description = "High-speed RS485 acquisition board GUI with ZeroMQ IPC and LSL bridge integration"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "hydra-core",
-    "nicegui",
-    "plotly",
-    "pyserial",
-    "pyzmq",
-    "pylsl",
+    "hydra-core>=1.3",
+    "nicegui>=1.4",
+    "plotly>=5.0",
+    "pyserial>=3.5",
+    "pyzmq>=25.0",
+    "pylsl>=1.16",
+    "numpy>=1.24"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+rs485-gui = "rs485_gui.app:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rs485_gui"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/",
+    "config/",
+    "pyproject.toml",
+    "README.md",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
