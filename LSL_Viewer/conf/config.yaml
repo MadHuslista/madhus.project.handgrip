@@ -1,6 +1,6 @@
 mode: live
 
-# Two-native-stream viewer. It subscribes independently to the target and
+# Two-native-stream viewer. Subscribes independently to the target and
 # reference streams and aligns them only by their LSL sample timestamps.
 streams:
   target:
@@ -37,38 +37,50 @@ viewer:
   force_unit_label: N
   target_raw_unit_label: count
   dt_unit_label: ms
+
+  # Visual style (replaces module-level color globals in the original code)
+  style:
+    raw_color: "red"
+    filtered_color: "green"
+    reference_color: "purple"
+    timing_color: "blue"
+    grid_alpha: 0.3
+    xy_color: "red"
+    xy_alpha_old: 0.12
+    xy_alpha_new: 0.92
+    xy_line_width: 1.6
+
   xy_correlation:
     # false = adaptive autoscale on every refresh.
     # true  = only zoom out: preserve the largest observed XY axis span.
     lock_max_span: false
     toggle_key: x
+
     # XY uses a connected LineCollection instead of point markers. Alpha is
     # computed from sample age across viewer.window_seconds, so the oldest
     # segments fade out while the newest segments remain prominent.
-    line_width: 1.6
-    color: red
-    alpha_old: 0.12
-    alpha_new: 0.92
-    # raw is recommended for calibration visualization; filtered remains
+
+    # raw is recommended for calibration visualisation; filtered remains
     # available for display-only experiments.
     target_signal: raw
+
     # Display-only alignment for the XY graph. The native stream buffers,
     # LSL/XDF timestamps, and calibration data are not modified.
     #
-    # raw_lsl is now the default because the upstream RS485 timestamp policy was
+    # raw_lsl is the default because the upstream RS485 timestamp policy was
     # fixed to avoid synthetic clock drift. If ref_shift grows in raw_lsl mode,
     # that is a real timestamping/backlog diagnostic and should not be hidden by
     # viewer-side correction. Use tail_aligned_lsl only as a temporary display aid.
     time_alignment:
-      mode: raw_lsl                # raw_lsl | tail_aligned_lsl | manual
+      mode: raw_lsl                 # raw_lsl | tail_aligned_lsl | manual
       manual_reference_shift_s: 0.0
       # null means "use viewer.window_seconds" as the max allowed shift.
-      # This avoids the previous 1 s cap that could not correct an observed ~5 s lag.
       max_auto_shift_s: null
       min_auto_shift_s: 0.0
       # Large changes snap immediately; small residual jitter can be smoothed.
       snap_threshold_s: 0.250
       smoothing_alpha: 1.0
+
   controls:
     clear_key: c
     pause_key: p
@@ -80,7 +92,7 @@ calibration_markers:
   events_ndjson_path: null
   draw_events: [hold_start, stable_window_start, hold_end, trial_accept, trial_reject]
 
-# Alignment policy used only for visualization/calibration views. The raw LSL
+# Alignment policy used only for visualisation/calibration views. The raw LSL
 # streams remain native-rate; reference samples are interpolated to target sample
 # timestamps only inside the viewer.
 alignment:
@@ -103,6 +115,9 @@ replay:
 
 logging:
   level: INFO
+  log_file: handgrip_realtime_viewer.log  # Explicit path; previously absent (caused empty log)
+  max_bytes: 10485760                      # 10 MB per file
+  backup_count: 3
 
 hydra:
   run:

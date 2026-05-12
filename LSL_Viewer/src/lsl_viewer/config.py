@@ -1,0 +1,233 @@
+"""Structured Hydra configuration schema for the handgrip realtime viewer.
+
+Each @dataclass here corresponds to a section of conf/config.yaml.
+Registering these with ConfigStore gives Hydra full type awareness:
+attribute access is IDE-navigable, defaults are declared once, and
+no OmegaConf.select() calls with inline defaults are needed.
+
+Usage
+-----
+Call ``register_config()`` once at module import time in cli.py,
+before the ``@hydra.main`` decorator is evaluated.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from hydra.core.config_store import ConfigStore
+from omegaconf import MISSING
+
+# ---------------------------------------------------------------------------
+# Stream configuration
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class TargetStreamCfg:
+    name: str = MISSING
+    stype: str = MISSING
+    source_id: str | None = None
+    buffer_samples: int = 1600
+    acquisition_delay: float = 0.01
+    timeout: float = 5.0
+
+
+@dataclass
+class ReferenceStreamCfg:
+    name: str = MISSING
+    stype: str = MISSING
+    source_id: str | None = None
+    buffer_seconds: float = 12.0
+    acquisition_delay: float = 0.01
+    timeout: float = 5.0
+    expected_rate_hz: float = 500.0
+
+
+@dataclass
+class StreamsCfg:
+    target: TargetStreamCfg = field(default_factory=TargetStreamCfg)
+    reference: ReferenceStreamCfg = field(default_factory=ReferenceStreamCfg)
+
+
+# ---------------------------------------------------------------------------
+# Channel label configuration
+# ---------------------------------------------------------------------------
+
+@dataclass
+class TargetChannelCfg:
+    clock_label: str = "device_clock_us"
+    raw_label: str = "target_raw_count"
+    filtered_label: str = "target_filtered_units"
+
+
+@dataclass
+class ReferenceChannelCfg:
+    clock_label: str = "reference_clock_s"
+    raw_label: str = "reference_force_N"
+
+
+@dataclass
+class ChannelsCfg:
+    target: TargetChannelCfg = field(default_factory=TargetChannelCfg)
+    reference: ReferenceChannelCfg = field(default_factory=ReferenceChannelCfg)
+
+
+# ---------------------------------------------------------------------------
+# Visual style (replaces module-level color globals)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class StyleCfg:
+    """Visual constants previously hardcoded as module-level globals."""
+
+    raw_color: str = "red"
+    filtered_color: str = "green"
+    reference_color: str = "purple"
+    timing_color: str = "blue"
+    grid_alpha: float = 0.3
+    xy_color: str = "red"
+    xy_alpha_old: float = 0.12
+    xy_alpha_new: float = 0.92
+    xy_line_width: float = 1.6
+
+
+# ---------------------------------------------------------------------------
+# XY correlation / time alignment
+# ---------------------------------------------------------------------------
+
+@dataclass
+class TimeAlignmentCfg:
+    mode: str = "raw_lsl"              # raw_lsl | tail_aligned_lsl | manual
+    manual_reference_shift_s: float = 0.0
+    max_auto_shift_s: float | None = None
+    min_auto_shift_s: float = 0.0
+    snap_threshold_s: float = 0.250
+    smoothing_alpha: float = 1.0
+
+
+@dataclass
+class XYCorrelationCfg:
+    lock_max_span: bool = False
+    toggle_key: str = "x"
+    target_signal: str = "raw"         # raw | filtered
+    time_alignment: TimeAlignmentCfg = field(default_factory=TimeAlignmentCfg)
+
+
+# ---------------------------------------------------------------------------
+# Interactive controls
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ControlsCfg:
+    clear_key: str = "c"
+    pause_key: str = "p"
+
+
+# ---------------------------------------------------------------------------
+# Viewer / display
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ViewerCfg:
+    window_seconds: float = 10.0
+    target_window_samples: int = 1600
+    reference_window_extra_s: float = 1.0
+    expected_target_rate_hz: float = 100.0
+    refresh_s: float = 0.05
+    force_unit_label: str = "N"
+    target_raw_unit_label: str = "count"
+    dt_unit_label: str = "ms"
+    xy_correlation: XYCorrelationCfg = field(default_factory=XYCorrelationCfg)
+    style: StyleCfg = field(default_factory=StyleCfg)
+    controls: ControlsCfg = field(default_factory=ControlsCfg)
+
+
+# ---------------------------------------------------------------------------
+# Interpolation / alignment policy
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AlignmentCfg:
+    interpolation: str = "linear"
+    max_reference_gap_s: float = 0.020
+    allow_extrapolation: bool = False
+
+
+# ---------------------------------------------------------------------------
+# Calibration marker overlays
+# ---------------------------------------------------------------------------
+
+@dataclass
+class CalibrationMarkersCfg:
+    enabled: bool = False
+    events_ndjson_path: str | None = None
+    draw_events: list[str] = field(
+        default_factory=lambda: [
+            "hold_start",
+            "stable_window_start",
+            "hold_end",
+            "trial_accept",
+            "trial_reject",
+        ]
+    )
+
+
+# ---------------------------------------------------------------------------
+# Replay file paths
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ReferenceCfg:
+    target_csv_path: str = "./data/target_handgrip_samples_v2.csv"
+    reference_csv_path: str = "./data/reference_rs485_samples_v2.csv"
+    xdf_path: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Replay playback settings
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ReplayCfg:
+    speed: float = 1.0
+    loop: bool = False
+    start_offset_s: float = 0.0
+
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+
+@dataclass
+class LoggingCfg:
+    level: str = "INFO"
+    log_file: str = "handgrip_realtime_viewer.log"
+    max_bytes: int = 10_485_760   # 10 MB per file
+    backup_count: int = 3
+
+
+# ---------------------------------------------------------------------------
+# Root application config
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AppConfig:
+    mode: str = "live"
+    streams: StreamsCfg = field(default_factory=StreamsCfg)
+    channels: ChannelsCfg = field(default_factory=ChannelsCfg)
+    viewer: ViewerCfg = field(default_factory=ViewerCfg)
+    alignment: AlignmentCfg = field(default_factory=AlignmentCfg)
+    calibration_markers: CalibrationMarkersCfg = field(default_factory=CalibrationMarkersCfg)
+    reference: ReferenceCfg = field(default_factory=ReferenceCfg)
+    replay: ReplayCfg = field(default_factory=ReplayCfg)
+    logging: LoggingCfg = field(default_factory=LoggingCfg)
+
+
+def register_config() -> None:
+    """Register the structured config schema with Hydra's ConfigStore.
+
+    Must be called before the ``@hydra.main`` decorator is evaluated.
+    """
+    cs = ConfigStore.instance()
+    cs.store(name="app_config", node=AppConfig)
