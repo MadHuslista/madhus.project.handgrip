@@ -8,17 +8,16 @@ from __future__ import annotations
 import logging
 
 import numpy as np
+from matplotlib import pyplot as plt
+from omegaconf import DictConfig
+
 from lsl_viewer.core.stream import (
-    _slice_reference_window,
-    _slice_target_window,
     build_streams,
     fetch_live_window,
 )
 from lsl_viewer.types import DualWindow, FigureHandles, ReferenceWindow, TargetWindow
-from lsl_viewer.viz.figure import clear_plot_artists, init_figure
+from lsl_viewer.viz.figure import init_figure
 from lsl_viewer.viz.plots import update_plots
-from matplotlib import pyplot as plt
-from omegaconf import DictConfig
 
 log = logging.getLogger(__name__)
 

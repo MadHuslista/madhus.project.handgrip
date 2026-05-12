@@ -16,7 +16,7 @@ from pathlib import Path
 import hydra
 from omegaconf import DictConfig
 
-from lsl_viewer.config import AppConfig, register_config
+from lsl_viewer.config import register_config
 from lsl_viewer.logging_setup import configure_logging
 
 log = logging.getLogger(__name__)

@@ -11,10 +11,11 @@ import math
 from typing import Any
 
 import numpy as np
-from lsl_viewer.types import FigureHandles
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
 from omegaconf import DictConfig
+
+from lsl_viewer.types import FigureHandles
 
 log = logging.getLogger(__name__)
 

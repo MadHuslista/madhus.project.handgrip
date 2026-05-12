@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 
 import numpy as np
+
 from lsl_viewer.types import FigureHandles, ReferenceWindow, TargetWindow
 
 log = logging.getLogger(__name__)

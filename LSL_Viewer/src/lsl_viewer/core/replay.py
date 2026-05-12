@@ -21,8 +21,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from hydra.utils import to_absolute_path
-from lsl_viewer.types import DualReplayData, DualWindow, ReferenceWindow, TargetWindow
 from omegaconf import DictConfig
+
+from lsl_viewer.types import DualReplayData, DualWindow, ReferenceWindow, TargetWindow
 
 log = logging.getLogger(__name__)
 

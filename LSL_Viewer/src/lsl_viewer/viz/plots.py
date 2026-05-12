@@ -7,9 +7,12 @@ cycle.  It delegates to helpers in :mod:`lsl_viewer.core.timing`,
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import numpy as np
+from matplotlib import colors as mcolors
+from matplotlib.collections import LineCollection
+from omegaconf import DictConfig
+
 from lsl_viewer.core.alignment import (
     compute_xy_reference_time_shift_s,
     interpolate_reference_to_target,
@@ -18,9 +21,6 @@ from lsl_viewer.core.timing import clock_validation_metrics, lsl_interval_ms
 from lsl_viewer.types import DualWindow, FigureHandles, ReferenceWindow, TargetWindow
 from lsl_viewer.viz.figure import update_axis, update_axis_expand_only
 from lsl_viewer.viz.markers import draw_marker_overlays
-from matplotlib import colors as mcolors
-from matplotlib.collections import LineCollection
-from omegaconf import DictConfig
 
 log = logging.getLogger(__name__)
 

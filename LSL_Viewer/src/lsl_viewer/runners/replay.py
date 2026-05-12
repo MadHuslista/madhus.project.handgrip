@@ -9,12 +9,13 @@ from __future__ import annotations
 import logging
 import time
 
+from matplotlib import pyplot as plt
+from omegaconf import DictConfig
+
 from lsl_viewer.core.replay import window_from_replay
 from lsl_viewer.types import DualReplayData
 from lsl_viewer.viz.figure import init_figure
 from lsl_viewer.viz.plots import update_plots
-from matplotlib import pyplot as plt
-from omegaconf import DictConfig
 
 log = logging.getLogger(__name__)
 

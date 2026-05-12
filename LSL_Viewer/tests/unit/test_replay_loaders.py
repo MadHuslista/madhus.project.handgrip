@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
-import pytest
+
 from lsl_viewer.core.replay import (
     normalize_common_timebases,
     window_from_replay,

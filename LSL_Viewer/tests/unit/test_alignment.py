@@ -1,10 +1,8 @@
 """Unit tests for core.alignment — pure functions, zero mocking."""
 from __future__ import annotations
 
-import math
-
 import numpy as np
-import pytest
+
 from lsl_viewer.core.alignment import interpolate_reference_to_target
 from lsl_viewer.types import FigureHandles, ReferenceWindow, TargetWindow
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
-import pytest
+
 from lsl_viewer.core.timing import (
     clock_interval_ms,
     clock_validation_metrics,

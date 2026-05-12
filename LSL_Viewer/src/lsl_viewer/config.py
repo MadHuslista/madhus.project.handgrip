@@ -13,7 +13,6 @@ before the ``@hydra.main`` decorator is evaluated.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING

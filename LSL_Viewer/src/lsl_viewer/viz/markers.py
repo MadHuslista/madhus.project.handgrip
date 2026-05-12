@@ -12,8 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from hydra.utils import to_absolute_path
-from lsl_viewer.types import FigureHandles
 from omegaconf import DictConfig
+
+from lsl_viewer.types import FigureHandles
 
 log = logging.getLogger(__name__)
 
