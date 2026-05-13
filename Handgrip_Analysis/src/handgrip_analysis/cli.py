@@ -1,4 +1,5 @@
-"""Package-native command-line interface for handgrip-analysis.
+"""
+Package-native command-line interface for handgrip-analysis.
 
 The CLI intentionally keeps side effects at the boundary:
 
@@ -154,10 +155,21 @@ def _stage_config_from_cli(stage: str, args: argparse.Namespace, overrides: dict
         merged["channels"] = tuple(ch.strip() for ch in args.channels.split(",") if ch.strip())
     if args.filter_config is not None:
         merged["filter_config"] = args.filter_config
+    elif "filter_config" in overrides:
+        merged["filter_config"] = overrides["filter_config"]
     elif stage == "stage6" and "filter_config" not in merged:
         default_filter = Path("conf/filters/candidates.yaml")
         if default_filter.exists():
             merged["filter_config"] = str(default_filter)
+
+    if getattr(args, "lsl_bridge_root", None) is not None:
+        merged["lsl_bridge_root"] = args.lsl_bridge_root
+    elif "lsl_bridge_root" in overrides:
+        merged["lsl_bridge_root"] = overrides["lsl_bridge_root"]
+    if getattr(args, "lsl_bridge_config", None) is not None:
+        merged["lsl_bridge_config"] = args.lsl_bridge_config
+    elif "lsl_bridge_config" in overrides:
+        merged["lsl_bridge_config"] = overrides["lsl_bridge_config"]
 
     if "composite_weights" in merged and "filter_weights" not in merged:
         merged["filter_weights"] = merged.pop("composite_weights")
@@ -187,6 +199,8 @@ def build_stage_parser() -> argparse.ArgumentParser:
     parser.add_argument("--channel", default=None)
     parser.add_argument("--channels", default=None, help="Comma-separated channel list for stages that support multiple channels")
     parser.add_argument("--filter-config", dest="filter_config", default=None)
+    parser.add_argument("--lsl-bridge-root", dest="lsl_bridge_root", default=None)
+    parser.add_argument("--lsl-bridge-config", dest="lsl_bridge_config", default=None)
     parser.add_argument("--log-level", default=None)
     return parser
 
@@ -243,6 +257,8 @@ def build_run_all_parser() -> argparse.ArgumentParser:
     parser.add_argument("--channel", default=None)
     parser.add_argument("--channels", default=None)
     parser.add_argument("--filter-config", dest="filter_config", default=None)
+    parser.add_argument("--lsl-bridge-root", dest="lsl_bridge_root", default=None)
+    parser.add_argument("--lsl-bridge-config", dest="lsl_bridge_config", default=None)
     parser.add_argument("--log-level", default=None)
     return parser
 

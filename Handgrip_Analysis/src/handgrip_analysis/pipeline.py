@@ -76,7 +76,6 @@ def _ensure_phase3_directories(outdir: Path) -> dict[str, Path]:
         "figures_aggregate": ensure_dir(outdir / "figures" / "aggregate"),
         "tables": ensure_dir(outdir / "tables"),
     }
-    # Keep empty directories visible in zip handoffs and git worktrees.
     for key in ("figures_per_trial", "figures_aggregate"):
         readme = dirs[key] / "README.md"
         if not readme.exists():
@@ -89,27 +88,28 @@ def _ensure_phase3_directories(outdir: Path) -> dict[str, Path]:
     return dirs
 
 
-def _write_stage6_outputs(
+def _write_stage6_tables(
     outdir: Path,
     cfg: StageConfig,
     results: Sequence[TrialResult],
     paths: dict[str, Path],
-) -> None:
-    """Write Stage 6-specific Phase 3 artifacts."""
+) -> dict[str, pd.DataFrame]:
+    """Write Stage 6-specific CSV artifacts and return the in-memory tables."""
     if not results:
-        return
+        return {}
     from .stages.stage6_filters import filter_acceptance_markdown, stage6_artifact_tables
 
     tables = stage6_artifact_tables(list(results), cfg)
-    for name in ["filter_per_trial_metrics", "filter_validation_scores", "filter_ranking_summary"]:
+    for name, table in tables.items():
         table_path = outdir / f"{name}.csv"
-        save_csv(table_path, tables.get(name, pd.DataFrame()))
+        save_csv(table_path, table)
         paths[name] = table_path
 
     ranking = tables.get("filter_ranking_summary", pd.DataFrame())
     report_path = outdir / "filter_acceptance_report.md"
     report_path.write_text(filter_acceptance_markdown(ranking, cfg), encoding="utf-8")
     paths["filter_acceptance_report"] = report_path
+    return tables
 
 
 def write_stage_outputs(
@@ -117,21 +117,10 @@ def write_stage_outputs(
     cfg: StageConfig,
     results: Sequence[TrialResult],
     summaries: Sequence[ConditionSummary],
+    *,
+    all_trials: Sequence[TrialSpec] | None = None,
 ) -> dict[str, Path]:
-    """
-    Write standard Phase 3 artifacts for a completed stage plan.
-
-    Required artifact family for every stage:
-
-    - ``plan.json``
-    - ``per_trial_metrics.csv``
-    - ``condition_summary.csv``
-    - ``summary.json``
-    - ``figures/per_trial/``
-    - ``figures/aggregate/``
-
-    Stage 6 additionally writes the filter-review contract files.
-    """
+    """Write standard Phase 3 artifacts for a completed stage plan."""
     outdir = ensure_dir(plan.outdir)
     dirs = _ensure_phase3_directories(outdir)
     paths: dict[str, Path] = {}
@@ -156,12 +145,25 @@ def write_stage_outputs(
         save_csv(table_path, df)
         paths[f"table_{name}"] = table_path
 
+    stage6_tables: dict[str, pd.DataFrame] = {}
     if plan.stage.startswith("stage6"):
-        _write_stage6_outputs(outdir, cfg, results, paths)
+        stage6_tables = _write_stage6_tables(outdir, cfg, results, paths)
 
     figure_paths = generate_stage_figures(plan, cfg, results, summaries, dirs)
     for key, figure_path in figure_paths.items():
         paths[key] = figure_path
+
+    if plan.stage.startswith("stage6"):
+        from .stage6_report import write_stage6_report
+
+        extra_paths = write_stage6_report(
+            outdir=outdir,
+            cfg=cfg,
+            all_trials=tuple(all_trials or plan.trials),
+            artifact_tables=stage6_tables,
+            figure_paths=figure_paths,
+        )
+        paths.update(extra_paths)
 
     summary = {
         "stage": plan.stage,
@@ -193,4 +195,4 @@ def run_manifest_analysis(
     plan = build_analysis_plan(trials, stage=stage, condition=condition, trial_type=trial_type, outdir=outdir)
     stage_cfg = cfg or StageConfig(stage=stage)
     results, summaries = execute_plan(plan, stage_cfg)
-    return write_stage_outputs(plan, stage_cfg, results, summaries)
+    return write_stage_outputs(plan, stage_cfg, results, summaries, all_trials=trials)

@@ -39,7 +39,8 @@ def summarize_default(results: Sequence[TrialResult], cfg: StageConfig) -> list[
 
 
 def numeric_table_to_metrics(prefix: str, df: pd.DataFrame, value_col: str | None = None) -> dict[str, float]:
-    """Return compact numeric metrics from a table.
+    """
+    Return compact numeric metrics from a table.
 
     Used for tables whose full content is stored separately but where a summary
     scalar is useful in the per-trial metrics table.

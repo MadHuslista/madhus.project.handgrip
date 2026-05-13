@@ -23,6 +23,7 @@ import pandas as pd  # noqa: E402
 from .domain import AnalysisPlan, ConditionSummary, StageConfig, TrialResult, TrialSpec
 from .dsp import apply_filter_spec, load_filter_specs, rolling_mean_std_slope, welch_psd
 from .io import FILTERED_COLUMN, CaptureData, load_capture
+from .stages.stage6_filters import choose_representative_dynamic_trial
 
 log = logging.getLogger(__name__)
 
@@ -404,6 +405,41 @@ def _plot_stage6_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
     _save(fig, outdir / f"{_trial_slug(spec)}_input_signal.png", paths, f"figure_{_trial_slug(spec)}_input_signal")
 
 
+def _plot_stage6_design_overlay(
+    results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path], ranking: pd.DataFrame
+) -> None:
+    representative = choose_representative_dynamic_trial(list(results))
+    if representative is None or ranking.empty or cfg.filter_config is None:
+        return
+    try:
+        spec_map = {str(s["name"]): s for s in load_filter_specs(cfg.filter_config)}
+    except Exception as exc:  # noqa: BLE001
+        log.warning("plotting: could not load Stage 6 filter specs for design overlay: %s", exc)
+        return
+    cap = load_capture(representative.spec.path, time_source=cfg.time_source)
+    y = _series(cap, representative.spec.channel or cfg.channel)
+    fig, ax = plt.subplots(figsize=(12, 5))
+    x, yp = _downsample_xy(cap.time_s, y)
+    ax.plot(x, yp, label="raw", linewidth=1.5)
+    for name in ranking["filter"].astype(str).head(min(3, len(ranking))):
+        spec = spec_map.get(name)
+        if spec is None:
+            continue
+        y_f = apply_filter_spec(y, cap.fs_estimate_hz, spec)
+        xf, yf = _downsample_xy(cap.time_s, y_f)
+        ax.plot(xf, yf, label=name, alpha=0.9)
+    ax.set_title(
+        f"Stage 6 — representative dynamic overlay — {representative.spec.condition} — {representative.spec.session_id} {representative.spec.trial_id}"
+    )
+    ax.set_xlabel("Time [s]")
+    ax.set_ylabel("Signal")
+    ax.grid(True)
+    ax.legend(fontsize=8)
+    _save(
+        fig, outdir / "stage6_design_representative_overlay.png", paths, "figure_stage6_design_representative_overlay"
+    )
+
+
 def _plot_stage6_aggregate(results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path]) -> None:
     filter_df = _stage6_filter_tables(results)
     ranking = _score_from_filter_table(filter_df, cfg)
@@ -416,6 +452,8 @@ def _plot_stage6_aggregate(results: Sequence[TrialResult], cfg: StageConfig, out
         ax.tick_params(axis="x", rotation=45)
         ax.grid(True, axis="y")
         _save(fig, outdir / "stage6_composite_score.png", paths, "figure_stage6_composite_score")
+
+        _plot_stage6_design_overlay(results, cfg, outdir, paths, ranking)
 
     # Raw rest PSD vs top-ranked candidates using the first available rest trial.
     if cfg.filter_config is None or ranking.empty:

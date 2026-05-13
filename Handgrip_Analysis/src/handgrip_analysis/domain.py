@@ -1,10 +1,12 @@
-"""Domain models for trial-aware handgrip analysis.
+"""
+Domain models for trial-aware handgrip analysis.
 
 This module defines the small, immutable data contracts used by the Phase 1
 multi-trial refactor.  The intent is to make the statistical unit explicit:
 analysis operates on *trials*, and trial results are later aggregated into
 conditions/stages.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -19,7 +21,8 @@ Metrics = dict[str, MetricValue]
 
 @dataclass(frozen=True, slots=True)
 class TrialSpec:
-    """Validated manifest row describing one capture trial.
+    """
+    Validated manifest row describing one capture trial.
 
     Parameters
     ----------
@@ -49,6 +52,7 @@ class TrialSpec:
         Optional known load for static loaded trials.
     notes:
         Free-form operator notes.
+
     """
 
     stage: str
@@ -85,7 +89,8 @@ class TrialSpec:
 
 @dataclass(frozen=True, slots=True)
 class StageConfig:
-    """Typed configuration used by stage analyzers.
+    """
+    Typed configuration used by stage analyzers.
 
     The class intentionally contains the common knobs needed by all stages plus
     stage-specific fields that are harmless when unused.  Construction happens
@@ -113,6 +118,8 @@ class StageConfig:
         (30.0, 49.0),
     )
     filter_config: Path | None = None
+    lsl_bridge_root: Path | None = None
+    lsl_bridge_config: Path | None = None
     hf_noise_band_hz: tuple[float, float] = (30.0, 49.0)
     filter_weights: Mapping[str, float] = field(
         default_factory=lambda: {
@@ -139,6 +146,10 @@ class StageConfig:
             data["channels"] = tuple(str(ch) for ch in data["channels"])
         if "filter_config" in data and data["filter_config"] is not None:
             data["filter_config"] = Path(data["filter_config"])
+        if "lsl_bridge_root" in data and data["lsl_bridge_root"] is not None:
+            data["lsl_bridge_root"] = Path(data["lsl_bridge_root"])
+        if "lsl_bridge_config" in data and data["lsl_bridge_config"] is not None:
+            data["lsl_bridge_config"] = Path(data["lsl_bridge_config"])
         if "hf_noise_band_hz" in data:
             lo, hi = data["hf_noise_band_hz"]
             data["hf_noise_band_hz"] = (float(lo), float(hi))
