@@ -32,6 +32,7 @@ ha-stage5        = "handgrip_analysis._cli.stage5:main"
 ha-stage6-design = "handgrip_analysis._cli.stage6_design:main"
 ha-stage6-review = "handgrip_analysis._cli.stage6_review:main"
 ha-run-all       = "handgrip_analysis._cli.run_all:main"
+ha-run-manifest  = "handgrip_analysis._cli.manifest:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/handgrip_analysis"]

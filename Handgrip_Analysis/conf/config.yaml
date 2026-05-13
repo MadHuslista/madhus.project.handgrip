@@ -24,3 +24,39 @@ rest_input: null
 dynamic_inputs: []
 manifest: null
 base_outdir: null
+
+
+# Phase 1 multi-trial analysis defaults.
+trials:
+  manifest: null
+  min_trials_recommended: 5
+  min_trials_allowed: 2
+  exclude_invalid: true
+
+aggregation:
+  statistic: median
+  confidence_level: 0.95
+  bootstrap_resamples: 5000
+  random_seed: 42
+
+stage1:
+  ready_time_policy: p90_plus_margin
+  guard_margin_s: 30.0
+
+stage2:
+  psd_average: median
+  spectral_peak_min_trial_fraction: 0.60
+
+stage4:
+  align_dynamic_trials_by: onset_10pct
+  normalize_dynamic_amplitude: false
+
+stage6:
+  validation:
+    split_by: session_id
+    fallback: leave_one_trial_out
+  constraints:
+    max_peak_relative_error: 0.03
+    max_peak_time_shift_s: 0.025
+    max_rise_relative_error: 0.10
+    min_dfdt_ratio: 0.80

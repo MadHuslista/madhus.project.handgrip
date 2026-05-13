@@ -1,5 +1,12 @@
+"""Handgrip sensor signal analysis pipeline."""
+
 __all__ = [
-    "io",
+    "aggregation",
+    "domain",
     "dsp",
+    "io",
+    "manifest",
+    "pipeline",
     "report",
+    "uncertainty",
 ]

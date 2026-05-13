@@ -240,6 +240,7 @@ def detect_events(
     min_duration_s:  Minimum event duration; shorter blobs are discarded.
     merge_gap_s:     Gaps shorter than this are merged into a single event.
     pad_s:           Symmetric padding added around each detected event boundary.
+
     """
     y = np.asarray(y, dtype=float)
     if y.size < 8:
