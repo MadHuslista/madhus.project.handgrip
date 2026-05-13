@@ -84,3 +84,4 @@ uv.lock
 LabRecorder/Data/
 **/data/
 **/logs/
+**/.coverage

@@ -14,17 +14,23 @@ dependencies = [
   "pandas>=3.0.2",
   "pyqt5>=5.15.11",
   "pyxdf>=1.17.4",
-  "handgrip-analysis",
-  "rs485-gui",
   "numpy>=2.4.3",
   "pyzmq",
-  "handgrip-calibration"
+  "rs485-gui",
+  "lsl-bridge",
+  "lsl-viewer",
+  "handgrip-analysis",
+  "handgrip-calibration",
+  "pytest>=9.0.3",
+  "pytest-cov>=7.1.0",
 ]
 
 [tool.uv]
 package = false
 
 [tool.uv.sources]
-"handgrip-analysis"  = {path = "Handgrip_Analysis", editable = true }
-"rs485-gui"          = {path = "RS485_GUI", editable = true }
-"handgrip-calibration"  = {path = "Handgrip_Calibration", editable = true }
+"handgrip-analysis"     = {path = "Handgrip_Analysis",    editable = true }
+"rs485-gui"             = {path = "RS485_GUI",            editable = true }
+"handgrip_calibration"  = {path = "Handgrip_Calibration", editable = true }
+"lsl-bridge"            = {path = "LSL_Bridge",           editable = true }
+"lsl-viewer"            = {path = "LSL_Viewer",           editable = true }
