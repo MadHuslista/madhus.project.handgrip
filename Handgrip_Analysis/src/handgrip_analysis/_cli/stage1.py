@@ -1,4 +1,4 @@
-"""Backward-compatible entry point: ha-stage1."""
+"""Entry point for ha-stage1: runs Stage 1 (startup warm-up) analysis via the package-native pipeline."""
 from __future__ import annotations
 
 import sys

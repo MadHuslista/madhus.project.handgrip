@@ -54,7 +54,7 @@ def main(cfg: DictConfig) -> None:
     outdir = ensure_dir(outdir_path)
     ev_cfg = cfg.dsp.event_detection
     hf_lo, hf_hi = list(cfg.analysis.hf_noise_band_hz)
-    w = cfg.analysis.composite_weights
+    w = cfg.analysis.filter_weights
     dpi = cfg.dsp.plot.dpi
 
     # Load rest capture

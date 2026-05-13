@@ -84,11 +84,30 @@ def _infer_from_path(path: Path) -> dict[str, str]:
 def normalize_manifest_frame(df: pd.DataFrame, base_dir: str | Path | None = None) -> pd.DataFrame:
     """Normalize current or legacy manifest schemas into the Phase 1 schema.
 
-    Legacy support is intentional to avoid destabilizing the existing library:
-    a manifest with ``label`` and ``path`` can still be upgraded by inferring
-    stage/session/trial metadata from filenames.
+    Legacy support is intentional to allow manifests created before the Phase 1
+    multi-trial schema to be loaded without manual migration.  A manifest that
+    lacks the required Phase 1 columns (``stage``, ``trial_id``, ``session_id``,
+    etc.) but contains a ``label`` column will have its metadata inferred from
+    the ``label`` value and the capture filename.
+
+    .. deprecated::
+        The legacy ``label``-column schema is deprecated and will be removed in
+        v1.0.  Please migrate manifests to the Phase 1 schema.  A deprecation
+        warning is emitted at runtime when the legacy path is taken.
     """
     base = Path(base_dir).resolve() if base_dir is not None else Path.cwd().resolve()
+    _legacy_detected = (
+        "label" in df.columns
+        and not {"stage", "trial_id", "session_id"}.issubset(df.columns)
+    )
+    if _legacy_detected:
+        log.warning(
+            "normalize_manifest_frame: legacy manifest schema detected "
+            "(no 'stage'/'trial_id'/'session_id' columns; inferring from "
+            "'label' and filename). "
+            "Please migrate to the Phase 1 schema. "
+            "Legacy support will be removed in v1.0."
+        )
     rows: list[dict[str, object]] = []
     for idx, row in df.iterrows():
         raw_path = Path(_clean(row.get("path")))

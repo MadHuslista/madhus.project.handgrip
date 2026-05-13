@@ -117,3 +117,21 @@ def test_phase3_pipeline_writes_standard_directories(tmp_path):
     assert list((outdir / "figures" / "per_trial").glob("*.png"))
     assert list((outdir / "figures" / "aggregate").glob("*.png"))
     assert (outdir / "summary.json").exists()
+
+
+def test_normalize_manifest_emits_warning_for_legacy_schema(tmp_path, caplog):
+    """Legacy manifests (label column, no stage/trial_id/session_id) should emit a WARNING."""
+    import logging
+    capture = tmp_path / "20260512_stage2_rest_after_warmup_trial02.csv"
+    _write_capture(capture)
+    # Legacy format: only 'path' and 'label', no Phase 1 columns
+    raw = pd.DataFrame({"path": [str(capture)], "label": ["rest_warmup"]})
+    with caplog.at_level(logging.WARNING, logger="handgrip_analysis.manifest"):
+        frame = normalize_manifest_frame(raw, base_dir=tmp_path)
+    # Warning must be present
+    assert any("legacy manifest schema" in record.message for record in caplog.records), (
+        f"Expected legacy warning; got: {[r.message for r in caplog.records]}"
+    )
+    # Normalisation still succeeds
+    assert not frame.empty
+    assert frame.loc[0, "stage"] == "stage2"

@@ -10,12 +10,34 @@ import numpy as np
 import pandas as pd
 
 from ..aggregation import aggregate_condition_results
+from ..config import DSPConfig
+from ..config.schema import Stage6ScoringConfig
 from ..domain import ConditionSummary, StageConfig, TrialResult, TrialSpec
-from ..dsp import apply_filter_spec, bandpower, best_event_metrics, load_filter_specs, welch_psd
+from ..dsp import (
+    PSD_FLOOR_LINEAR,
+    apply_filter_spec,
+    bandpower,
+    best_event_metrics,
+    load_filter_specs,
+    welch_psd,
+)
 from ..io import load_capture, sampling_summary
 from .common import base_metrics, flatten_sampling
 
 log = logging.getLogger(__name__)
+
+
+def _get_dsp_cfg(cfg: StageConfig) -> DSPConfig:
+    if hasattr(cfg, "dsp") and isinstance(cfg.dsp, DSPConfig):
+        return cfg.dsp
+    return DSPConfig()
+
+
+def _get_scoring_cfg(cfg: StageConfig) -> Stage6ScoringConfig:
+    """Extract Stage6ScoringConfig from StageConfig, or use defaults."""
+    if hasattr(cfg, "stage6_scoring") and isinstance(cfg.stage6_scoring, Stage6ScoringConfig):
+        return cfg.stage6_scoring
+    return Stage6ScoringConfig()
 
 
 def _filter_specs(cfg: StageConfig) -> list[dict[str, Any]]:
@@ -87,8 +109,14 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
         if trial_kind == "dynamic"
         else {}
     )
+    dsp = _get_dsp_cfg(cfg)
     raw_std = float(pd.Series(y).std())
-    f_raw, p_raw = welch_psd(y, fs)
+    f_raw, p_raw = welch_psd(
+        y, fs,
+        max_nperseg=dsp.welch.max_nperseg,
+        min_nperseg=dsp.welch.min_nperseg,
+        window=dsp.welch.window,
+    )
     raw_hf = bandpower(f_raw, p_raw, hf_lo, hf_hi)
 
     rows: list[dict[str, object]] = []
@@ -105,14 +133,19 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
             "trial_kind": trial_kind,
         }
         if trial_kind == "rest":
-            f_f, p_f = welch_psd(y_f, fs)
+            f_f, p_f = welch_psd(
+                y_f, fs,
+                max_nperseg=dsp.welch.max_nperseg,
+                min_nperseg=dsp.welch.min_nperseg,
+                window=dsp.welch.window,
+            )
             hf = bandpower(f_f, p_f, hf_lo, hf_hi)
             row.update(
                 {
                     "rest_std": float(pd.Series(y_f).std()),
                     "rest_std_norm": float(pd.Series(y_f).std()) / max(raw_std, 1e-12),
                     "rest_hf_bandpower": hf,
-                    "rest_hf_bandpower_norm": hf / max(raw_hf, 1e-30) if np.isfinite(raw_hf) else float("nan"),
+                    "rest_hf_bandpower_norm": hf / max(raw_hf, PSD_FLOOR_LINEAR) if np.isfinite(raw_hf) else float("nan"),
                 }
             )
         else:
@@ -308,7 +341,11 @@ def build_stage6_decision_table(review_ranking: pd.DataFrame, design_assessment:
     )
     review_component = pd.to_numeric(merged.get("review_score_norm"), errors="coerce")
     design_component = pd.to_numeric(merged.get("design_score_norm"), errors="coerce")
-    merged["combined_score"] = 0.7 * review_component.fillna(0.0) + 0.3 * design_component.fillna(0.0)
+    scoring = Stage6ScoringConfig()  # default weights; caller can pass via cfg if needed
+    merged["combined_score"] = (
+        scoring.review_weight * review_component.fillna(0.0)
+        + scoring.design_weight * design_component.fillna(0.0)
+    )
     # Penalize rows missing one side of the decision.
     merged.loc[review_component.isna() | design_component.isna(), "combined_score"] += 0.25
     merged = merged.sort_values(

@@ -1,4 +1,4 @@
-"""Backward-compatible entry point: ha-run-all."""
+"""Entry point for ha-run-all: runs all stages in a manifest via the package-native pipeline."""
 from __future__ import annotations
 
 from handgrip_analysis.cli import run_all_main

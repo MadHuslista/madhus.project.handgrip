@@ -1,4 +1,4 @@
-"""Backward-compatible entry point: ha-stage5."""
+"""Entry point for ha-stage5: runs Stage 5 (interference comparison) analysis via the package-native pipeline."""
 from __future__ import annotations
 
 import sys

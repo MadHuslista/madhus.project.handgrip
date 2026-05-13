@@ -3,13 +3,21 @@ from __future__ import annotations
 
 import pandas as pd
 
+from ..config import DSPConfig
 from ..domain import ConditionSummary, StageConfig, TrialResult, TrialSpec
 from ..dsp import detect_events, event_metrics, welch_psd
 from ..io import load_capture, sampling_summary
 from .common import base_metrics, flatten_sampling, summarize_default
 
 
+def _get_dsp_cfg(cfg: StageConfig) -> DSPConfig:
+    if hasattr(cfg, "dsp") and isinstance(cfg.dsp, DSPConfig):
+        return cfg.dsp
+    return DSPConfig()
+
+
 def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
+    dsp = _get_dsp_cfg(cfg)
     cap = load_capture(spec.path, time_source=cfg.time_source)
     channel = spec.channel or cfg.channel
     y = cap.series(channel)  # type: ignore[arg-type]
@@ -47,7 +55,12 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
             seg_y = y[ev.start_idx : ev.end_idx + 1]
             if len(seg_y) > int(2 * cap.fs_estimate_hz):
                 hold_slice = seg_y[int(0.5 * len(seg_y)) :]
-                f, pxx = welch_psd(hold_slice, cap.fs_estimate_hz)
+                f, pxx = welch_psd(
+                    hold_slice, cap.fs_estimate_hz,
+                    max_nperseg=dsp.welch.max_nperseg,
+                    min_nperseg=dsp.welch.min_nperseg,
+                    window=dsp.welch.window,
+                )
                 for freq, psd in zip(f, pxx, strict=False):
                     hold_rows.append({"event_index": i, "frequency_hz": float(freq), "psd": float(psd)})
         tables["hold_psd"] = pd.DataFrame(hold_rows)

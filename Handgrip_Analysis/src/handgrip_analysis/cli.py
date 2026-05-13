@@ -19,7 +19,8 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-import yaml
+
+from omegaconf import OmegaConf
 
 from ._logging import setup_logging
 from .domain import HandgripAnalysisError, StageConfig
@@ -55,52 +56,26 @@ def normalize_stage(stage: str) -> str:
     return lowered
 
 
-def _parse_scalar(raw: str) -> Any:
-    text = raw.strip()
-    lowered = text.lower()
-    if lowered in {"null", "none"}:
-        return None
-    if lowered == "true":
-        return True
-    if lowered == "false":
-        return False
-    if text.startswith("[") and text.endswith("]"):
-        try:
-            return yaml.safe_load(text)
-        except Exception:
-            inner = text[1:-1].strip()
-            return [] if not inner else [_parse_scalar(part) for part in inner.split(",")]
-    try:
-        if any(ch in text for ch in (".", "e", "E")):
-            return float(text)
-        return int(text)
-    except ValueError:
-        return text
-
-
-def _set_nested(target: dict[str, Any], dotted_key: str, value: Any) -> None:
-    cursor = target
-    parts = dotted_key.split(".")
-    for part in parts[:-1]:
-        nested = cursor.setdefault(part, {})
-        if not isinstance(nested, dict):
-            nested = {}
-            cursor[part] = nested
-        cursor = nested
-    cursor[parts[-1]] = value
-
-
 def parse_key_value_args(items: Iterable[str]) -> dict[str, Any]:
-    """Parse Hydra-style ``key=value`` overrides into a nested mapping."""
-    parsed: dict[str, Any] = {}
-    for item in items:
+    """Parse Hydra-style ``key=value`` overrides into a nested mapping.
+
+    Delegates to ``OmegaConf.from_dotlist`` so that type coercion and nested
+    key expansion are handled by the same library used throughout the config
+    hierarchy.  Returns a plain Python dict for downstream compatibility.
+    """
+    item_list = list(items)
+    if not item_list:
+        return {}
+    for item in item_list:
         if "=" not in item:
             raise argparse.ArgumentTypeError(f"Expected key=value override, got {item!r}")
-        key, raw_value = item.split("=", 1)
-        if not key:
+        if not item.split("=", 1)[0]:
             raise argparse.ArgumentTypeError(f"Expected non-empty key in override {item!r}")
-        _set_nested(parsed, key, _parse_scalar(raw_value))
-    return parsed
+    try:
+        oc = OmegaConf.from_dotlist(item_list)
+        return dict(OmegaConf.to_container(oc, resolve=True))  # type: ignore[arg-type]
+    except Exception as exc:
+        raise argparse.ArgumentTypeError(f"Failed to parse overrides: {exc}") from exc
 
 
 def _pop_value(name: str, namespace: argparse.Namespace, overrides: dict[str, Any], default: Any = None) -> Any:
@@ -162,21 +137,18 @@ def _stage_config_from_cli(stage: str, args: argparse.Namespace, overrides: dict
         if default_filter.exists():
             merged["filter_config"] = str(default_filter)
 
-    if getattr(args, "lsl_bridge_root", None) is not None:
+    if args.lsl_bridge_root is not None:
         merged["lsl_bridge_root"] = args.lsl_bridge_root
     elif "lsl_bridge_root" in overrides:
         merged["lsl_bridge_root"] = overrides["lsl_bridge_root"]
-    if getattr(args, "lsl_bridge_config", None) is not None:
+    if args.lsl_bridge_config is not None:
         merged["lsl_bridge_config"] = args.lsl_bridge_config
     elif "lsl_bridge_config" in overrides:
         merged["lsl_bridge_config"] = overrides["lsl_bridge_config"]
-    if getattr(args, "stage_context_manifest", None) is not None:
+    if args.stage_context_manifest is not None:
         merged["stage_context_manifest"] = args.stage_context_manifest
     elif "stage_context_manifest" in overrides:
         merged["stage_context_manifest"] = overrides["stage_context_manifest"]
-
-    if "composite_weights" in merged and "filter_weights" not in merged:
-        merged["filter_weights"] = merged.pop("composite_weights")
 
     return StageConfig.from_mapping(stage=stage, data=merged)
 
@@ -227,7 +199,8 @@ def stage_main(argv: list[str] | None = None) -> int:
         parser.error("Missing required argument(s): " + ", ".join(missing))
 
     stage = normalize_stage(str(stage))
-    setup_logging(level=str(log_level))
+    log_file = _nested_get(overrides, ("logging", "file"))
+    setup_logging(level=str(log_level), log_file=log_file if log_file else None)
     try:
         cfg = _stage_config_from_cli(stage, args, overrides)
         paths = run_manifest_analysis(
@@ -288,7 +261,8 @@ def run_all_main(argv: list[str] | None = None) -> int:
     if manifest in (None, ""):
         parser.error("Missing required argument: manifest")
 
-    setup_logging(level=str(log_level))
+    log_file = _nested_get(overrides, ("logging", "file"))
+    setup_logging(level=str(log_level), log_file=log_file if log_file else None)
     try:
         if stages_raw:
             stages = [normalize_stage(part.strip()) for part in str(stages_raw).split(",") if part.strip()]

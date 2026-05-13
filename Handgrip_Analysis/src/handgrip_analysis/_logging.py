@@ -56,5 +56,5 @@ def setup_logging(
         fh = logging.FileHandler(log_path, encoding="utf-8")
         fh.setFormatter(fmt)
         root.addHandler(fh)
-        # Use print here since the root logger may not yet be fully wired
-        print(f"Logging to file: {log_path}", flush=True)
+        # Emit via the module logger now that the file handler is installed.
+        logging.getLogger(__name__).info("Logging to file: %s", log_path)

@@ -4,18 +4,35 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from ..config import DSPConfig
 from ..domain import ConditionSummary, StageConfig, TrialResult, TrialSpec
 from ..dsp import bandpower, dominant_psd_peaks, robust_std, welch_psd
 from ..io import load_capture, sampling_summary
 from .common import base_metrics, flatten_sampling, summarize_default
 
 
+def _get_dsp_cfg(cfg: StageConfig) -> DSPConfig:
+    if hasattr(cfg, "dsp") and isinstance(cfg.dsp, DSPConfig):
+        return cfg.dsp
+    return DSPConfig()
+
+
 def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
+    dsp = _get_dsp_cfg(cfg)
     cap = load_capture(spec.path, time_source=cfg.time_source)
     channel = spec.channel or cfg.channel
     y = cap.series(channel)  # type: ignore[arg-type]
-    f, pxx = welch_psd(y, cap.fs_estimate_hz)
-    peaks = dominant_psd_peaks(f, pxx, cap.fs_estimate_hz)
+    f, pxx = welch_psd(
+        y, cap.fs_estimate_hz,
+        max_nperseg=dsp.welch.max_nperseg,
+        min_nperseg=dsp.welch.min_nperseg,
+        window=dsp.welch.window,
+    )
+    peaks = dominant_psd_peaks(
+        f, pxx, cap.fs_estimate_hz,
+        prominence_db=dsp.psd_peaks.prominence_db,
+        max_peaks=dsp.psd_peaks.max_peaks,
+    )
     bp = {}
     for lo, hi in cfg.bandpower_bands[:4]:
         key = f"bandpower_{str(lo).replace('.', 'p')}_{str(hi).replace('.', 'p')}_hz"

@@ -1,13 +1,21 @@
-"""Stage 2 — stationary rest noise characterization."""
+"""Stage 2 — stationary rest noise characterisation."""
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 
+from ..config import DSPConfig
 from ..domain import ConditionSummary, StageConfig, TrialResult, TrialSpec
 from ..dsp import allan_deviation, bandpower, dominant_psd_peaks, robust_std, welch_psd
 from ..io import FILTERED_COLUMN, load_capture, sampling_summary
 from .common import base_metrics, flatten_sampling, summarize_default
+
+
+def _get_dsp_cfg(cfg: StageConfig) -> DSPConfig:
+    """Extract or build DSPConfig from StageConfig."""
+    if hasattr(cfg, "dsp") and isinstance(cfg.dsp, DSPConfig):
+        return cfg.dsp
+    return DSPConfig()
 
 
 def _bandpower_metrics(f: np.ndarray, pxx: np.ndarray, bands: tuple[tuple[float, float], ...]) -> dict[str, float]:
@@ -19,9 +27,19 @@ def _bandpower_metrics(f: np.ndarray, pxx: np.ndarray, bands: tuple[tuple[float,
 
 
 def _channel_metrics(y: np.ndarray, fs: float, cfg: StageConfig, prefix: str) -> tuple[dict[str, float], dict[str, pd.DataFrame]]:
-    f, pxx = welch_psd(y, fs)
+    dsp = _get_dsp_cfg(cfg)
+    f, pxx = welch_psd(
+        y, fs,
+        max_nperseg=dsp.welch.max_nperseg,
+        min_nperseg=dsp.welch.min_nperseg,
+        window=dsp.welch.window,
+    )
     tau, adev = allan_deviation(y, fs)
-    peaks = dominant_psd_peaks(f, pxx, fs)
+    peaks = dominant_psd_peaks(
+        f, pxx, fs,
+        prominence_db=dsp.psd_peaks.prominence_db,
+        max_peaks=dsp.psd_peaks.max_peaks,
+    )
     metrics = {
         f"{prefix}_mean": float(np.mean(y)),
         f"{prefix}_std": float(np.std(y, ddof=1)),

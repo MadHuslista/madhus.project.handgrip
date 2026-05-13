@@ -1,1 +1,1 @@
-"""Backward-compatible console entry points built on the package-native CLI."""
+"""Per-stage console entry points for the handgrip-analysis package."""

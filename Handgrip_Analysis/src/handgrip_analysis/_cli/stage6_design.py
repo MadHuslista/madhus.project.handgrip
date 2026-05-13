@@ -1,4 +1,4 @@
-"""Backward-compatible entry point: ha-stage6-design."""
+"""Entry point for ha-stage6-design: runs the Stage 6 filter design pass via the package-native pipeline."""
 from __future__ import annotations
 
 import sys

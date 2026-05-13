@@ -1,4 +1,4 @@
-"""Backward-compatible entry point: ha-stage2."""
+"""Entry point for ha-stage2: runs Stage 2 (static noise) analysis via the package-native pipeline."""
 from __future__ import annotations
 
 import sys

@@ -15,7 +15,16 @@ logging:
   # Leave null to log to console only.
   file: null
 
-# Runtime CLI overrides consumed by stage scripts and run_all.
+# ---------------------------------------------------------------------------
+# Script-interface override keys
+#
+# These top-level keys are consumed exclusively by the legacy Hydra-based
+# scripts/ entry points (stage1_startup_warmup.py, stage4_grip_dynamics.py,
+# etc.) and have no effect on the package-native CLI (ha-stage, ha-run-all).
+#
+# Deprecation notice: these keys will be removed once the scripts/ entry
+# points are fully superseded by the package-native CLI in a future version.
+# ---------------------------------------------------------------------------
 input: null
 inputs: []
 labels: []
@@ -24,7 +33,6 @@ rest_input: null
 dynamic_inputs: []
 manifest: null
 base_outdir: null
-
 
 # Phase 1 multi-trial analysis defaults.
 trials:

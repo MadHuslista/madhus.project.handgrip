@@ -1,4 +1,4 @@
-"""Backward-compatible entry point for manifest-driven analysis."""
+"""Entry point for ha-run-manifest: runs manifest-driven analysis via the package-native pipeline."""
 from __future__ import annotations
 
 from handgrip_analysis.cli import stage_main

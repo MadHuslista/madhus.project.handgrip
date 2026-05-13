@@ -1,3 +1,35 @@
+"""DSP functions for handgrip sensor signal analysis.
+
+All functions in this module are **pure** — they have no file I/O or
+side effects and can be tested without mocking.
+
+Named Constants
+---------------
+The following module-level constants replace anonymous inline literals.
+They serve as fallback defaults when callers do not supply a
+:class:`~handgrip_analysis.config.DSPConfig`.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Constant
+     - Value
+     - Meaning
+   * - ``MAD_CONSISTENCY_CONSTANT``
+     - 1.4826
+     - Scales MAD to a consistent standard-deviation estimator (Gaussian)
+   * - ``READY_TIME_THRESHOLD_MULTIPLIER``
+     - 1.5
+     - Multiplier applied to the tail median to set the std/slope thresholds
+       used by :func:`suggest_ready_time`
+   * - ``PSD_FLOOR_LINEAR``
+     - 1e-30
+     - Avoids ``log10(0)`` when converting PSD to dB
+   * - ``TAIL_FRACTION``
+     - 0.80
+     - Fraction of the signal treated as the "settled tail" by
+       :func:`suggest_ready_time`
+"""
 from __future__ import annotations
 
 import logging
@@ -12,6 +44,26 @@ from scipy import signal
 
 log = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Module-level named constants (fallback defaults; prefer DSPConfig values)
+# ---------------------------------------------------------------------------
+
+#: Scaling factor that converts MAD to a consistent σ estimator (Gaussian).
+MAD_CONSISTENCY_CONSTANT: float = 1.4826
+
+#: Multiplier applied to the tail median std/slope for ready-time thresholds.
+READY_TIME_THRESHOLD_MULTIPLIER: float = 1.5
+
+#: Linear PSD floor used before log10 conversion to prevent log(0).
+PSD_FLOOR_LINEAR: float = 1e-30
+
+#: Default fraction of signal length treated as the "settled tail".
+TAIL_FRACTION: float = 0.80
+
+
+# ---------------------------------------------------------------------------
+# Data structures
+# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class PeakInfo:
@@ -33,11 +85,15 @@ class EventWindow:
 # ---------------------------------------------------------------------------
 
 def robust_std(x: np.ndarray) -> float:
-    """MAD-based outlier-robust standard deviation (consistent estimator)."""
+    """MAD-based outlier-robust standard deviation (consistent estimator).
+
+    Uses :data:`MAD_CONSISTENCY_CONSTANT` (1.4826) to scale MAD so that the
+    result is a consistent estimator of σ for Gaussian data.
+    """
     x = np.asarray(x, dtype=float)
     med = np.median(x)
     mad = np.median(np.abs(x - med))
-    return float(1.4826 * mad)
+    return float(MAD_CONSISTENCY_CONSTANT * mad)
 
 
 def rolling_mean_std_slope(
@@ -74,21 +130,41 @@ def suggest_ready_time(
     time_s: np.ndarray,
     stds: np.ndarray,
     slopes: np.ndarray,
+    *,
+    tail_fraction: float = TAIL_FRACTION,
+    threshold_multiplier: float = READY_TIME_THRESHOLD_MULTIPLIER,
 ) -> dict[str, float | None]:
-    """Suggest the earliest time at which the signal has stabilised."""
+    """Suggest the earliest time at which the signal has stabilised.
+
+    Parameters
+    ----------
+    time_s:
+        Time vector (seconds, zero-based).
+    stds:
+        Rolling standard deviation array (same length as ``time_s``).
+    slopes:
+        Rolling linear slope array (same length as ``time_s``).
+    tail_fraction:
+        Fraction of the signal to treat as the "settled tail".
+        Defaults to :data:`TAIL_FRACTION` (0.80).
+        Set via ``EventDetectionConfig.tail_fraction``.
+    threshold_multiplier:
+        Multiplier applied to the tail median for threshold derivation.
+        Defaults to :data:`READY_TIME_THRESHOLD_MULTIPLIER` (1.5).
+    """
     valid = np.isfinite(stds) & np.isfinite(slopes)
     if not np.any(valid):
         log.warning("suggest_ready_time: no valid (finite) std/slope values")
         return {"suggested_ready_time_s": None, "std_threshold": None, "slope_threshold": None}
     tail_mask = valid.copy()
-    tail_start = int(0.8 * len(time_s))
+    tail_start = int(tail_fraction * len(time_s))
     tail_mask[:tail_start] = False
     if not np.any(tail_mask):
         tail_mask = valid
     tail_std = stds[tail_mask]
     tail_slope = np.abs(slopes[tail_mask])
-    std_thr = float(np.nanmedian(tail_std) * 1.5)
-    slope_thr = float(np.nanmedian(tail_slope) * 1.5)
+    std_thr = float(np.nanmedian(tail_std) * threshold_multiplier)
+    slope_thr = float(np.nanmedian(tail_slope) * threshold_multiplier)
     candidates = np.where(valid & (stds <= std_thr) & (np.abs(slopes) <= slope_thr))[0]
     suggested = None if candidates.size == 0 else float(time_s[candidates[0]])
     log.debug(
@@ -106,26 +182,50 @@ def suggest_ready_time(
 # Spectral analysis
 # ---------------------------------------------------------------------------
 
-def welch_psd(y: np.ndarray, fs: float) -> tuple[np.ndarray, np.ndarray]:
-    """Compute Welch PSD with adaptive segment length."""
+def welch_psd(
+    y: np.ndarray,
+    fs: float,
+    *,
+    max_nperseg: int = 2048,
+    min_nperseg: int = 256,
+    window: str = "hann",
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute Welch PSD with adaptive segment length.
+
+    Parameters
+    ----------
+    y:
+        Input signal.
+    fs:
+        Sampling frequency in Hz.
+    max_nperseg:
+        Upper bound on the FFT segment length (samples).
+        Defaults to 2048; override via ``WelchConfig.max_nperseg``.
+    min_nperseg:
+        Lower bound on the FFT segment length (samples).
+        Defaults to 256; override via ``WelchConfig.min_nperseg``.
+    window:
+        Window function name.  Defaults to ``"hann"``; override via
+        ``WelchConfig.window``.
+    """
     y = np.asarray(y, dtype=float)
     if y.size < 8:
         log.warning("welch_psd: signal too short (%d samples) — returning empty", y.size)
         return np.array([]), np.array([])
     y = signal.detrend(y, type="linear")
-    nperseg = min(2048, max(256, y.size // 8))
+    nperseg = min(max_nperseg, max(min_nperseg, y.size // 8))
     if nperseg >= y.size:
         nperseg = max(64, y.size // 2)
     noverlap = nperseg // 2
     f, pxx = signal.welch(
-        y, fs=fs, window="hann", nperseg=nperseg, noverlap=noverlap, scaling="density"
+        y, fs=fs, window=window, nperseg=nperseg, noverlap=noverlap, scaling="density"
     )
     log.debug("welch_psd: n=%d, nperseg=%d, freq_bins=%d", y.size, nperseg, f.size)
     return f, pxx
 
 
 def alias_hint(fs: float, peak_hz: float) -> str | None:
-    """Flag if a PSD peak is a plausible mains alias (50 or 60 Hz) at the output rate."""
+    """Flag if a PSD peak is a plausible mains alias (50 or 60 Hz)."""
     if not np.isfinite(fs) or fs <= 0:
         return None
     hints = []
@@ -140,13 +240,31 @@ def dominant_psd_peaks(
     f: np.ndarray,
     pxx: np.ndarray,
     fs: float,
+    *,
+    prominence_db: float = 3.0,
     max_peaks: int = 8,
 ) -> list[PeakInfo]:
-    """Return up to *max_peaks* most prominent spectral peaks as PeakInfo objects."""
+    """Return the most prominent spectral peaks as :class:`PeakInfo` objects.
+
+    Parameters
+    ----------
+    f:
+        Frequency vector (Hz).
+    pxx:
+        Power spectral density vector (same length as ``f``).
+    fs:
+        Sampling frequency — used only for alias detection.
+    prominence_db:
+        Minimum peak prominence in dB.
+        Defaults to 3.0; override via ``PsdPeaksConfig.prominence_db``.
+    max_peaks:
+        Maximum number of peaks to return (sorted by PSD, descending).
+        Defaults to 8; override via ``PsdPeaksConfig.max_peaks``.
+    """
     if f.size == 0 or pxx.size == 0:
         return []
-    log_psd = 10.0 * np.log10(np.maximum(pxx, 1e-30))
-    peaks, props = signal.find_peaks(log_psd, prominence=3.0)
+    log_psd = 10.0 * np.log10(np.maximum(pxx, PSD_FLOOR_LINEAR))
+    peaks, props = signal.find_peaks(log_psd, prominence=prominence_db)
     order = np.argsort(log_psd[peaks])[::-1]
     selected = peaks[order[:max_peaks]]
     info = []
@@ -228,43 +346,59 @@ def detect_events(
     merge_gap_s: float = 0.15,
     pad_s: float = 0.25,
 ) -> list[EventWindow]:
-    """
-    Detect above-threshold transient events using a robust baseline estimate.
+    """Detect above-threshold transient events using a robust baseline estimate.
 
-    Parameters
-    ----------
-    y:               Signal array.
-    fs:              Sampling frequency [Hz].
-    baseline_s:      Duration of the initial baseline window.
-    threshold_sigma: Threshold in units of robust-std above the baseline centre.
-    min_duration_s:  Minimum event duration; shorter blobs are discarded.
-    merge_gap_s:     Gaps shorter than this are merged into a single event.
-    pad_s:           Symmetric padding added around each detected event boundary.
+    Parameters default to :class:`~handgrip_analysis.config.EventDetectionConfig`
+    field values; callers should pass config values explicitly::
+
+        events = detect_events(
+            y, fs,
+            baseline_s=dsp_cfg.event_detection.baseline_s,
+            threshold_sigma=dsp_cfg.event_detection.threshold_sigma,
+            min_duration_s=dsp_cfg.event_detection.min_duration_s,
+            merge_gap_s=dsp_cfg.event_detection.merge_gap_s,
+            pad_s=dsp_cfg.event_detection.pad_s,
+        )
     """
     y = np.asarray(y, dtype=float)
-    if y.size < 8:
-        log.warning("detect_events: signal too short (%d samples)", y.size)
+    n = len(y)
+    if n < 4:
+        log.warning("detect_events: signal too short (%d samples)", n)
         return []
-    n_base = min(len(y), max(8, int(round(baseline_s * fs))))
-    base = y[:n_base]
-    center = np.median(base)
-    spread = max(robust_std(base), np.std(base) * 0.5, 1e-12)
+
+    baseline_n = max(2, int(baseline_s * fs))
+    baseline_seg = y[:baseline_n]
+    center = float(np.median(baseline_seg))
+    spread = robust_std(baseline_seg)
+    if spread == 0:
+        spread = float(np.std(baseline_seg)) or 1.0
     threshold = center + threshold_sigma * spread
-    active = y > threshold
-    if not np.any(active):
-        log.info("detect_events: no events detected (threshold=%.4g)", threshold)
-        return []
-    idx = np.flatnonzero(active)
-    groups: list[list[int]] = [[int(idx[0])]]
-    max_gap = max(1, int(round(merge_gap_s * fs)))
-    for i in idx[1:]:
-        if i - groups[-1][-1] <= max_gap:
-            groups[-1].append(int(i))
-        else:
-            groups.append([int(i)])
-    min_len = max(1, int(round(min_duration_s * fs)))
-    pad = max(1, int(round(pad_s * fs)))
+
+    above = y > threshold
+    merge_n = max(1, int(merge_gap_s * fs))
+    for gap_start in range(1, n - 1):
+        if not above[gap_start]:
+            gap_end = gap_start
+            while gap_end < n and not above[gap_end]:
+                gap_end += 1
+            if 0 < gap_end - gap_start <= merge_n:
+                above[gap_start:gap_end] = True
+
+    min_len = max(1, int(min_duration_s * fs))
+    pad = max(0, int(pad_s * fs))
+
     windows: list[EventWindow] = []
+    groups: list[list[int]] = []
+    current: list[int] = []
+    for i, val in enumerate(above):
+        if val:
+            current.append(i)
+        elif current:
+            groups.append(current)
+            current = []
+    if current:
+        groups.append(current)
+
     for group in groups:
         start = group[0]
         end = group[-1]
@@ -303,6 +437,8 @@ def event_metrics(
         if cross90.size:
             t90 = float(seg_t[cross90[0]])
         dy = np.gradient(seg_y, seg_t)
+        # TAIL_FRACTION (0.80) defines the hold-stability plateau window boundary.
+        tail_start = int(TAIL_FRACTION * len(seg_y))
         rows.append(
             {
                 "event_index": i,
@@ -314,7 +450,7 @@ def event_metrics(
                 "baseline_value": onset_val,
                 "rise_10_90_s": float(t90 - t10) if np.isfinite(t10) and np.isfinite(t90) else np.nan,
                 "max_dfdt": float(np.max(dy)),
-                "hold_std_last_20pct": float(np.std(seg_y[int(0.8 * len(seg_y)) :])),
+                "hold_std_last_20pct": float(np.std(seg_y[tail_start:])),
             }
         )
     return pd.DataFrame(rows)
@@ -330,15 +466,15 @@ def best_event_metrics(
     merge_gap_s: float = 0.15,
     pad_s: float = 0.25,
 ) -> dict[str, float]:
-    """
-    Summarise the dominant grip event in a capture.
+    """Summarise the dominant grip event in a capture.
 
     Selects the event with the largest baseline-to-peak excursion and returns a
     flat dict of scalar metrics.  Suitable for filter benchmarking (stage 6).
 
-    Keys
-    ----
-    n_events, peak_value, peak_time_s, rise_10_90_s, max_dfdt,
+    Parameters default to :class:`~handgrip_analysis.config.EventDetectionConfig`
+    field values; callers should pass config values explicitly.
+
+    Keys: n_events, peak_value, peak_time_s, rise_10_90_s, max_dfdt,
     plateau_std_last20pct, event_start_s, event_end_s
     """
     _nan: dict[str, float] = {
@@ -384,7 +520,8 @@ def best_event_metrics(
     )
 
     dy = np.gradient(seg_y, seg_t)
-    tail = seg_y[int(0.8 * len(seg_y)):]
+    # TAIL_FRACTION (0.80) defines the plateau window boundary.
+    tail = seg_y[int(TAIL_FRACTION * len(seg_y)):]
     plateau_std = float(np.std(tail)) if len(tail) > 1 else float("nan")
 
     log.debug(
@@ -409,8 +546,7 @@ def best_event_metrics(
 # ---------------------------------------------------------------------------
 
 def apply_filter_spec(y: np.ndarray, fs: float, spec: dict[str, Any]) -> np.ndarray:
-    """
-    Apply a filter specified as a dict to signal *y*.
+    """Apply a filter specified as a dict to signal *y*.
 
     Supported types
     ---------------

@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from .config import DSPConfig, PlotConfig
 from .domain import AnalysisPlan, ConditionSummary, StageConfig, TrialResult, TrialSpec
 from .dsp import apply_filter_spec, load_filter_specs, rolling_mean_std_slope, welch_psd
 from .io import FILTERED_COLUMN, CaptureData, load_capture
@@ -27,8 +28,39 @@ from .stages.stage6_filters import choose_representative_dynamic_trial
 
 log = logging.getLogger(__name__)
 
-PLOT_DPI = 150
+# ---------------------------------------------------------------------------
+# Named figure size constants
+#
+# These map to the archetypes defined in conf/dsp/defaults.yaml (plot.*) and
+# PlotConfig.  They are centralised here rather than scattered as inline
+# literals to ensure consistent sizing across all stage plot functions.
+#
+# Override via PlotConfig when calling generate_stage_figures().
+# ---------------------------------------------------------------------------
+
+#: Wide time-series plots.  Matches ``PlotConfig.figsize_wide`` default.
+FIGSIZE_WIDE: tuple[float, float] = (12.0, 5.0)
+
+#: PSD / histogram comparison plots.  Matches ``PlotConfig.figsize_square`` default.
+FIGSIZE_SQUARE: tuple[float, float] = (10.0, 5.0)
+
+#: Multi-panel stacked plots (e.g. Stage 1 four-panel warmup overview).
+FIGSIZE_TALL: tuple[float, float] = (12.0, 10.0)
+
+#: Compact event-overlay plots.
+FIGSIZE_COMPACT: tuple[float, float] = (8.0, 5.0)
+
+#: Default DPI for saved figures.  Matches ``PlotConfig.dpi`` default.
+PLOT_DPI: int = 150
+
 MAX_POINTS = 8_000
+
+
+def _resolve_plot_cfg(cfg: StageConfig) -> PlotConfig:
+    """Extract PlotConfig from StageConfig if available, else return defaults."""
+    if hasattr(cfg, "dsp") and isinstance(cfg.dsp, DSPConfig):
+        return cfg.dsp.plot
+    return PlotConfig()
 
 
 def _slug(text: str) -> str:
@@ -55,10 +87,10 @@ def _series(cap: CaptureData, channel: str) -> np.ndarray:
     return cap.series(channel)  # type: ignore[arg-type]
 
 
-def _save(fig: plt.Figure, path: Path, paths: dict[str, Path], key_prefix: str) -> None:
+def _save(fig: plt.Figure, path: Path, paths: dict[str, Path], key_prefix: str, dpi: int = PLOT_DPI) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
-    fig.savefig(path, dpi=PLOT_DPI)
+    fig.savefig(path, dpi=dpi)
     plt.close(fig)
     paths[key_prefix] = path
     log.info("plotting: wrote %s", path)
@@ -71,7 +103,7 @@ def _plot_stage1_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
     y = _series(cap, channel)
     means, stds, slopes = rolling_mean_std_slope(y, cap.fs_estimate_hz, cfg.warmup_window_s)
 
-    fig, axes = plt.subplots(4, 1, figsize=(12, 10), sharex=True)
+    fig, axes = plt.subplots(4, 1, figsize=FIGSIZE_TALL, sharex=True)
     x_plot, y_plot = _downsample_xy(cap.time_s, y)
     axes[0].plot(x_plot, y_plot, label=channel)
     axes[0].set_ylabel("Signal")
@@ -113,7 +145,7 @@ def _plot_stage1_aggregate(results: Sequence[TrialResult], outdir: Path, paths: 
     df = pd.DataFrame(rows)
     if df.empty:
         return
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
     ax.scatter(np.arange(len(df)), df["ready_s"].astype(float))
     ax.set_xticks(np.arange(len(df)))
     ax.set_xticklabels(df["trial"], rotation=45, ha="right")
@@ -122,7 +154,7 @@ def _plot_stage1_aggregate(results: Sequence[TrialResult], outdir: Path, paths: 
     ax.grid(True, axis="y")
     _save(fig, outdir / "stage1_ready_time_by_trial.png", paths, "figure_stage1_ready_time_by_trial")
 
-    fig2, ax2 = plt.subplots(figsize=(10, 5))
+    fig2, ax2 = plt.subplots(figsize=FIGSIZE_SQUARE)
     ax2.scatter(np.arange(len(df)), df["final_std"].astype(float))
     ax2.set_xticks(np.arange(len(df)))
     ax2.set_xticklabels(df["trial"], rotation=45, ha="right")
@@ -153,8 +185,8 @@ def _plot_time_hist_trial(result: TrialResult, cfg: StageConfig, outdir: Path, p
     cap = load_capture(spec.path, time_source=cfg.time_source)
     channels = cfg.channels or (spec.channel or cfg.channel,)
 
-    fig_time, ax_time = plt.subplots(figsize=(12, 4))
-    fig_hist, ax_hist = plt.subplots(figsize=(7, 5))
+    fig_time, ax_time = plt.subplots(figsize=FIGSIZE_WIDE)
+    fig_hist, ax_hist = plt.subplots(figsize=FIGSIZE_COMPACT)
     plotted = False
     for channel in channels:
         if channel == "filtered" and FILTERED_COLUMN not in cap.df.columns:
@@ -188,7 +220,7 @@ def _plot_psd_allan_trial(result: TrialResult, outdir: Path, paths: dict[str, Pa
     spec = result.spec
     psd_items = _psd_tables(result)
     if psd_items:
-        fig, ax = plt.subplots(figsize=(7, 5))
+        fig, ax = plt.subplots(figsize=FIGSIZE_COMPACT)
         for name, df in psd_items:
             ax.semilogy(df["frequency_hz"].to_numpy(float), df["psd"].to_numpy(float), label=name.replace("_psd", ""))
         ax.set_title(f"{stage_title} — Welch PSD — {spec.session_id} {spec.trial_id}")
@@ -200,7 +232,7 @@ def _plot_psd_allan_trial(result: TrialResult, outdir: Path, paths: dict[str, Pa
 
     allan_items = _allan_tables(result)
     if allan_items:
-        fig, ax = plt.subplots(figsize=(7, 5))
+        fig, ax = plt.subplots(figsize=FIGSIZE_COMPACT)
         for name, df in allan_items:
             ax.loglog(df["tau_s"].to_numpy(float), df["allan_deviation"].to_numpy(float), label=name.replace("_allan", ""))
         ax.set_title(f"{stage_title} — Allan deviation — {spec.session_id} {spec.trial_id}")
@@ -224,7 +256,7 @@ def _plot_psd_aggregate(results: Sequence[TrialResult], outdir: Path, paths: dic
             continue
         grid = np.linspace(0.0, f_max, 512)
         values = []
-        fig, ax = plt.subplots(figsize=(8, 5))
+        fig, ax = plt.subplots(figsize=FIGSIZE_COMPACT)
         for table in tables:
             f = table["frequency_hz"].to_numpy(float)
             p = table["psd"].to_numpy(float)
@@ -251,7 +283,7 @@ def _plot_stage3_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
     trend = slope * cap.time_s + intercept if np.isfinite(slope) and np.isfinite(intercept) else np.full_like(y, np.nan)
     detrended = y - trend
 
-    fig, axes = plt.subplots(2, 1, figsize=(12, 7), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=FIGSIZE_TALL, sharex=True)
     x, yp = _downsample_xy(cap.time_s, y)
     axes[0].plot(x, yp, label=channel)
     if np.all(np.isfinite(trend)):
@@ -278,7 +310,7 @@ def _plot_metric_scatter(results: Sequence[TrialResult], outdir: Path, paths: di
     df = pd.DataFrame(rows)
     if df.empty:
         return
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
     ax.scatter(np.arange(len(df)), pd.to_numeric(df["value"], errors="coerce"))
     ax.set_xticks(np.arange(len(df)))
     ax.set_xticklabels(df["trial"], rotation=45, ha="right")
@@ -295,7 +327,7 @@ def _plot_stage4_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
     y = _series(cap, channel)
     events = result.tables.get("event_metrics", pd.DataFrame())
 
-    fig, ax = plt.subplots(figsize=(12, 4))
+    fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
     x, yp = _downsample_xy(cap.time_s, y)
     ax.plot(x, yp, label=channel)
     if not events.empty:
@@ -317,7 +349,7 @@ def _plot_stage4_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
 
 def _plot_stage4_aggregate(results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path]) -> None:
     # Event-aligned overlay for the first event of each dynamic trial.
-    fig, ax = plt.subplots(figsize=(12, 5))
+    fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
     plotted = False
     for result in results:
         events = result.tables.get("event_metrics", pd.DataFrame())
@@ -394,7 +426,7 @@ def _plot_stage6_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
     spec = result.spec
     cap = load_capture(spec.path, time_source=cfg.time_source)
     y = _series(cap, spec.channel or cfg.channel)
-    fig, ax = plt.subplots(figsize=(12, 4))
+    fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
     x, yp = _downsample_xy(cap.time_s, y)
     ax.plot(x, yp, label="raw")
     ax.set_title(f"Stage 6 input trial — {spec.condition} — {spec.session_id} {spec.trial_id}")
@@ -418,7 +450,7 @@ def _plot_stage6_design_overlay(
         return
     cap = load_capture(representative.spec.path, time_source=cfg.time_source)
     y = _series(cap, representative.spec.channel or cfg.channel)
-    fig, ax = plt.subplots(figsize=(12, 5))
+    fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
     x, yp = _downsample_xy(cap.time_s, y)
     ax.plot(x, yp, label="raw", linewidth=1.5)
     for name in ranking["filter"].astype(str).head(min(3, len(ranking))):
@@ -444,7 +476,7 @@ def _plot_stage6_aggregate(results: Sequence[TrialResult], cfg: StageConfig, out
     filter_df = _stage6_filter_tables(results)
     ranking = _score_from_filter_table(filter_df, cfg)
     if not ranking.empty:
-        fig, ax = plt.subplots(figsize=(11, 6))
+        fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
         ax.bar(ranking["filter"].astype(str), ranking["composite_score"].astype(float))
         ax.set_title("Stage 6 — composite filter score (lower is better)")
         ax.set_xlabel("Candidate")
@@ -470,7 +502,7 @@ def _plot_stage6_aggregate(results: Sequence[TrialResult], cfg: StageConfig, out
     cap = load_capture(rest_result.spec.path, time_source=cfg.time_source)
     y = _series(cap, rest_result.spec.channel or cfg.channel)
     f_raw, p_raw = welch_psd(y, cap.fs_estimate_hz)
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=FIGSIZE_COMPACT)
     ax.semilogy(f_raw, p_raw, label="raw rest")
     for name in ranking["filter"].astype(str).head(min(4, len(ranking))):
         if name not in spec_map:
@@ -498,6 +530,7 @@ def generate_stage_figures(
     results: Sequence[TrialResult],
     summaries: Sequence[ConditionSummary],
     directories: Mapping[str, Path],
+    plot_cfg: PlotConfig | None = None,
 ) -> dict[str, Path]:
     """
     Generate standard per-trial and aggregate PNG figures for a stage.
@@ -505,8 +538,16 @@ def generate_stage_figures(
     Figure generation is best-effort but intentionally logs and continues on a
     per-figure basis.  Analysis CSV/JSON artifacts remain authoritative even if
     a plot cannot be generated for a malformed trial.
+
+    Parameters
+    ----------
+    plot_cfg:
+        Optional :class:`~handgrip_analysis.config.PlotConfig` controlling
+        figure DPI and default sizes.  Falls back to ``cfg.dsp.plot`` if
+        ``cfg`` carries a ``DSPConfig``, or to module-level defaults otherwise.
     """
     del summaries  # summaries are kept in the signature for future aggregate plots.
+    _plot = plot_cfg or _resolve_plot_cfg(cfg)
     paths: dict[str, Path] = {}
     per_trial = directories["figures_per_trial"]
     aggregate = directories["figures_aggregate"]
