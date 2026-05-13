@@ -1,0 +1,3 @@
+stage,condition,trial_type,trial_id,session_id,path,channel,load_nominal_n,include,notes
+stage3,constant_load_4500g,constant_load_4500g,trial01,20260402,../calibration_signals/20260402_stage3_constant_load_4500g_trial01.csv,raw,44.13,True,existing capture trial
+stage3,constant_load_4500g,constant_load_4500g,trial02,20260512,../calibration_signals/20260512_stage3_constant_load_4500g_trial02.csv,raw,44.13,True,existing capture trial

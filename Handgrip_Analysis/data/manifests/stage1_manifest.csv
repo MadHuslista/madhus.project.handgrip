@@ -1,0 +1,3 @@
+stage,condition,trial_type,trial_id,session_id,path,channel,load_nominal_n,include,notes
+stage1,cold_start,cold_start,trial01,20260402,../calibration_signals/20260402_stage1_cold_start_trial01.csv,raw,,True,existing capture trial
+stage1,cold_start,cold_start,trial02,20260512,../calibration_signals/20260512_stage1_cold_start_trial02.csv,raw,,True,existing capture trial

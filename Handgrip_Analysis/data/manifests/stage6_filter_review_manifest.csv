@@ -1,0 +1,9 @@
+stage,condition,trial_type,trial_id,session_id,path,channel,load_nominal_n,include,notes
+stage6,rest_after_warmup,rest,trial01,20260402,../calibration_signals/20260402_stage2_rest_after_warmup_trial01.csv,raw,,True,stage6 rest/noise source reused from stage2 existing rest capture
+stage6,fast_max,dynamic,trial01,20260402,../calibration_signals/20260402_stage4_fast_max_trial01.csv,raw,,True,stage6 dynamic source reused from stage4 fast_max capture
+stage6,ramp_hold,dynamic,trial01,20260402,../calibration_signals/20260402_stage4_ramp_hold_trial01.csv,raw,,True,stage6 dynamic source reused from stage4 ramp_hold capture
+stage6,sustained_hold,dynamic,trial01,20260402,../calibration_signals/20260402_stage4_sustained_hold_trial01.csv,raw,,True,stage6 dynamic source reused from stage4 sustained_hold capture
+stage6,rest_after_warmup,rest,trial02,20260512,../calibration_signals/20260512_stage2_rest_after_warmup_trial02.csv,raw,,True,stage6 rest/noise source reused from stage2 existing rest capture
+stage6,fast_max,dynamic,trial02,20260512,../calibration_signals/20260512_stage4_fast_max_trial02.csv,raw,,True,stage6 dynamic source reused from stage4 fast_max capture
+stage6,ramp_hold,dynamic,trial02,20260512,../calibration_signals/20260512_stage4_ramp_hold_trial02.csv,raw,,True,stage6 dynamic source reused from stage4 ramp_hold capture
+stage6,sustained_hold,dynamic,trial02,20260512,../calibration_signals/20260512_stage4_sustained_hold_trial02.csv,raw,,True,stage6 dynamic source reused from stage4 sustained_hold capture

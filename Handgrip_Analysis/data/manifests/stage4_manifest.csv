@@ -1,0 +1,7 @@
+stage,condition,trial_type,trial_id,session_id,path,channel,load_nominal_n,include,notes
+stage4,fast_max,fast_max,trial01,20260402,../calibration_signals/20260402_stage4_fast_max_trial01.csv,raw,,True,existing capture trial
+stage4,ramp_hold,ramp_hold,trial01,20260402,../calibration_signals/20260402_stage4_ramp_hold_trial01.csv,raw,,True,existing capture trial
+stage4,sustained_hold,sustained_hold,trial01,20260402,../calibration_signals/20260402_stage4_sustained_hold_trial01.csv,raw,,True,existing capture trial
+stage4,fast_max,fast_max,trial02,20260512,../calibration_signals/20260512_stage4_fast_max_trial02.csv,raw,,True,existing capture trial
+stage4,ramp_hold,ramp_hold,trial02,20260512,../calibration_signals/20260512_stage4_ramp_hold_trial02.csv,raw,,True,existing capture trial
+stage4,sustained_hold,sustained_hold,trial02,20260512,../calibration_signals/20260512_stage4_sustained_hold_trial02.csv,raw,,True,existing capture trial
