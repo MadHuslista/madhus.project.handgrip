@@ -7,7 +7,7 @@ from handgrip_calibration.synthetic import generate_demo_session
 
 def test_affine_fit_on_synthetic_session(tmp_path: Path) -> None:
     session = generate_demo_session(tmp_path)
-    cfg = load_config(Path(__file__).parents[1] / "conf" / "default.yaml")
+    cfg = load_config(Path(__file__).parents[2] / "conf" / "default.yaml")
     _, result = fit_session(session, cfg)
     assert result.metrics.n_points >= 10
     assert abs(result.force_N_a - 0.0125) < 0.001

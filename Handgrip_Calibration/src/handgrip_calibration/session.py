@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import socket
@@ -15,6 +16,8 @@ import yaml
 
 from .config_schema import AppConfig
 from .export import ensure_dir
+
+log = logging.getLogger(__name__)
 
 
 def _safe_git_sha(path: Path) -> str | None:
@@ -53,6 +56,7 @@ class SessionPaths:
     report_html: Path
     plots_dir: Path
     component_configs_dir: Path
+    session_log: Path
 
 
 class SessionManager:
@@ -80,6 +84,7 @@ class SessionManager:
             report_html=root / "calibration_report.html",
             plots_dir=root / "plots",
             component_configs_dir=root / "component_configs",
+            session_log=root / "session.log",
         )
 
     @staticmethod
@@ -96,6 +101,7 @@ class SessionManager:
         ensure_dir(self.paths.component_configs_dir)
         self.copy_component_configs()
         self.write_manifest(extra_manifest=extra_manifest or {})
+        log.info("Session directory created: %s", self.paths.root)
         return self.paths
 
     def manifest_dict(self, *, extra_manifest: dict[str, Any] | None = None) -> dict[str, Any]:

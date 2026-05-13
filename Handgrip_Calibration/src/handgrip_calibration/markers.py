@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
@@ -11,6 +12,8 @@ from typing import Any
 
 from .config_schema import MarkerConfig
 from .export import append_ndjson
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -108,6 +111,7 @@ class MarkerLogger:
         """Create, emit, and persist a marker event."""
 
         marker = MarkerEvent(event=event, session_id=self.session_id, **kwargs)
+        log.debug("Marker: %s (trial=%s, force=%.4g N)", event, kwargs.get("trial_id"), kwargs.get("target_force_N") or 0.0)
         if self.outlet is not None:
             marker = self.outlet.push(marker)
         if self.config.write_ndjson:

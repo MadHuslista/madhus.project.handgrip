@@ -141,3 +141,26 @@ fit:
     enable_drift: true
     hysteresis_direction_column: direction
     drift_time_column: t_mid_lsl
+
+# ── New top-level validated sub-configs ──────────────────────────────────────
+creep:
+  force_levels_N: [0.0, 80.0, 0.0]
+  durations_s: [120.0, 300.0, 300.0]
+  read_times_s: [30.0, 300.0]
+
+dynamic:
+  ramps:
+    - label: slow
+      count: 0
+      peak_force_N: 100.0
+      speed_N_per_s: 5.0
+  squeezes:
+    - label: fast_squeeze
+      count: 0
+      peak_force_N: 100.0
+      rest_s: 3.0
+
+holdout_thresholds:
+  max_rmse_N: null
+  max_abs_error_N: null
+  max_bias_N: null

@@ -20,6 +20,9 @@ Implemented candidate models
 
 from __future__ import annotations
 
+import logging
+import time
+
 import math
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
@@ -31,6 +34,9 @@ import pandas as pd
 from .config_schema import AppConfig, FitConfig
 from .export import append_ndjson, write_json
 from .segmentation import segment_accepted_holds
+from ._utils import finite_or_none as _finite_or_none
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -105,8 +111,34 @@ class CalibrationFitResult:
         return data
 
 
-# Backward-compatible alias for external imports from the original release.
-AffineFitResult = CalibrationFitResult
+# Backward-compatible alias — emits DeprecationWarning on use.
+import warnings as _warnings
+
+
+class AffineFitResult(CalibrationFitResult):  # type: ignore[misc]
+    """Deprecated alias for CalibrationFitResult. Will be removed in v0.3.0."""
+
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        super().__init_subclass__(**kwargs)
+
+    def __class_getitem__(cls, item: object) -> object:  # type: ignore[override]
+        return super().__class_getitem__(item)  # type: ignore[misc]
+
+
+_original_AffineFitResult = AffineFitResult
+
+
+def _make_affine_fit_result(*args: object, **kwargs: object) -> CalibrationFitResult:
+    _warnings.warn(
+        "AffineFitResult is deprecated. Use CalibrationFitResult instead. "
+        "Will be removed in v0.3.0.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return CalibrationFitResult(*args, **kwargs)  # type: ignore[arg-type]
+
+
+AffineFitResult = _make_affine_fit_result  # type: ignore[assignment,misc]
 
 
 @dataclass(frozen=True)
@@ -130,14 +162,6 @@ class _ModelSpec:
     firmware_export: dict[str, Any] | None
     notes: list[str] = field(default_factory=list)
 
-
-def _finite_or_none(value: float | int | None) -> float | int | None:
-    if value is None:
-        return None
-    if isinstance(value, (int, np.integer)):
-        return int(value)
-    value = float(value)
-    return value if math.isfinite(value) else None
 
 
 def _r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -843,6 +867,7 @@ def fit_candidates_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> tup
             spec = _FITTERS[model_id](data, config.fit)
             candidates.append(_candidate_from_spec(spec, data, config.fit))
         except Exception as exc:
+            log.debug("Candidate fitter [%s] failed: %s", model_id, exc)
             # Failed candidates are still surfaced in fit_candidates.json so the
             # report can explain why they were unavailable for a given session.
             failed_metrics = FitMetrics(
@@ -952,13 +977,17 @@ def fit_model_selection_from_dataset(dataset: pd.DataFrame, config: AppConfig) -
 
 
 def fit_affine_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> CalibrationFitResult:
-    """Backward-compatible wrapper returning the selected fit result.
+    """Deprecated. Use ``fit_model_selection_from_dataset()`` instead.
 
-    Older callers imported this function expecting an affine result. It now runs
-    the configured model-selection strategy and returns the selected model while
-    preserving affine-style ``force_N_a`` / ``force_N_b`` fields when available.
+    Will be removed in v0.3.0.
     """
-
+    import warnings
+    warnings.warn(
+        "fit_affine_from_dataset() is deprecated. "
+        "Use fit_model_selection_from_dataset() instead. Will be removed in v0.3.0.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     _, result, _ = fit_model_selection_from_dataset(dataset, config)
     return result
 
@@ -994,7 +1023,7 @@ def fit_session(session_dir: str | Path, config: AppConfig) -> tuple[pd.DataFram
         {
             "event": "calibration_candidate_selected",
             "session_id": session_dir.name,
-            "host_time_unix": __import__("time").time(),
+            "host_time_unix": time.time(),
             "phase": "fit",
             "payload": {
                 "selected_model_id": result.selected_model_id,
@@ -1006,7 +1035,7 @@ def fit_session(session_dir: str | Path, config: AppConfig) -> tuple[pd.DataFram
         {
             "event": "firmware_constants_exported",
             "session_id": session_dir.name,
-            "host_time_unix": __import__("time").time(),
+            "host_time_unix": time.time(),
             "phase": "fit",
             "payload": result.recommended_firmware_constants,
         },

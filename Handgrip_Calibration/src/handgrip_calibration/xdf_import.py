@@ -9,6 +9,7 @@ session files used by the offline fitting pipeline.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,8 @@ import pandas as pd
 from .config_schema import AppConfig
 from .export import append_ndjson, ensure_dir
 from .lsl_io import resolve_channel_indices
+
+log = logging.getLogger(__name__)
 
 
 class XDFImportError(RuntimeError):
@@ -113,4 +116,5 @@ def import_xdf(xdf_path: str | Path, session_dir: str | Path, config: AppConfig,
     _write_numeric_stream(reference_stream, session_dir / "reference.csv", config.streams["reference"].channel_map)
     if marker_stream is not None:
         _write_marker_stream(marker_stream, session_dir / "events.ndjson", session_id=session_id or session_dir.name)
+    log.info("XDF import complete: %s", session_dir)
     return session_dir

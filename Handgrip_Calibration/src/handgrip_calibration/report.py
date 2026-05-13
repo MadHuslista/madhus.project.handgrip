@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,8 @@ from .protocol_analysis import (
     hysteresis_summary,
     stream_health_table,
 )
+
+log = logging.getLogger(__name__)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -501,6 +504,7 @@ def generate_report(session_dir: str | Path) -> Path:
     ])
     md_path = session_dir / "calibration_report.md"
     md_path.write_text("\n".join(lines), encoding="utf-8")
+    log.info("Report written: %s", md_path)
 
     html = "<html><head><meta charset='utf-8'><title>Handgrip Calibration Report</title></head><body><pre>" + md_path.read_text(encoding="utf-8").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") + "</pre></body></html>"
     (session_dir / "calibration_report.html").write_text(html, encoding="utf-8")

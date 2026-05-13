@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,8 @@ import yaml
 from .config_schema import AppConfig
 from .export import read_ndjson
 from .quality import compute_window_quality, detect_sequence_gaps, interpolate_reference_to_target
+
+log = logging.getLogger(__name__)
 
 
 class SegmentationError(RuntimeError):
@@ -192,4 +195,5 @@ def segment_accepted_holds(session_dir: str | Path, config: AppConfig | None = N
         raise SegmentationError("Accepted markers were found, but no valid hold windows could be segmented")
     dataset = pd.DataFrame(rows)
     dataset.to_csv(session_dir / "calibration_dataset.csv", index=False)
+    log.info("Segmented %d accepted holds -> %s", len(dataset), session_dir / "calibration_dataset.csv")
     return dataset

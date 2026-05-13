@@ -7,7 +7,7 @@ from handgrip_calibration.synthetic import generate_demo_session
 
 def test_segment_demo_session(tmp_path: Path) -> None:
     session = generate_demo_session(tmp_path)
-    cfg = load_config(Path(__file__).parents[1] / "conf" / "default.yaml")
+    cfg = load_config(Path(__file__).parents[2] / "conf" / "default.yaml")
     dataset = segment_accepted_holds(session, cfg)
     assert len(dataset) == 13
     assert dataset["accepted_by_operator"].all()

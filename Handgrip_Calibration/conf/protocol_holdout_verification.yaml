@@ -146,3 +146,26 @@ validation:
     max_rmse_N: 1.0
     max_abs_error_N: 2.0
     max_bias_N: 0.5
+
+# ── New top-level validated sub-configs ──────────────────────────────────────
+creep:
+  force_levels_N: [0.0, 80.0, 0.0]
+  durations_s: [120.0, 300.0, 300.0]
+  read_times_s: [30.0, 300.0]
+
+dynamic:
+  ramps:
+    - label: slow
+      count: 0
+      peak_force_N: 100.0
+      speed_N_per_s: 5.0
+  squeezes:
+    - label: fast_squeeze
+      count: 0
+      peak_force_N: 100.0
+      rest_s: 3.0
+
+holdout_thresholds:
+  max_rmse_N: null
+  max_abs_error_N: null
+  max_bias_N: null

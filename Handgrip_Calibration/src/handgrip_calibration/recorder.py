@@ -13,24 +13,30 @@ verification. Static-style protocols continue to emit the same ``hold_*`` and
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
+import warnings
 from dataclasses import asdict
 from typing import Any
 
 from .config_schema import AppConfig
 from .export import append_ndjson
 from .lsl_io import CsvStreamRecorder, summarize_stats
+from .logging_setup import configure_logging
 from .markers import MarkerLogger
 from .protocol import Trial, generate_static_trials
 from .session import SessionManager, SessionPaths
+
+log = logging.getLogger(__name__)
 
 
 class CalibrationRecorder:
     """Orchestrate one live calibration recording session."""
 
-    def __init__(self, config: AppConfig, *, session_id: str | None = None) -> None:
+    def __init__(self, config: AppConfig, *, session_id: str | None = None, yes: bool = False) -> None:
         self.config = config
+        self.yes = yes
         self.manager = SessionManager(config, session_id=session_id)
         self.stop_event = threading.Event()
         self.recorders: list[CsvStreamRecorder] = []
@@ -64,14 +70,13 @@ class CalibrationRecorder:
         self._quality_thread.start()
 
     def _operator_continue(self, message: str) -> None:  # pragma: no cover - interactive/live workflow
-        if self.config.protocol.prompt_operator:
+        log.info("Operator prompt: %s", message)
+        if self.config.protocol.prompt_operator and not self.yes:
             input(message)
-        else:
-            print(message)
 
     def _timed_wait(self, duration_s: float, *, message: str | None = None) -> None:  # pragma: no cover - interactive/live workflow
         if message:
-            print(message)
+            log.info("%s", message)
         if duration_s > 0:
             time.sleep(duration_s)
 
@@ -154,13 +159,12 @@ class CalibrationRecorder:
             )
 
     def _run_creep_zero_return(self, markers: MarkerLogger) -> None:  # pragma: no cover - interactive/live workflow
-        raw_protocol = self.config.raw.get("protocol", {}) or {}
-        cfg = raw_protocol.get("creep_zero_return", {}) or {}
-        force_levels = cfg.get("force_levels_N") or [0.0, 0.8 * self.config.fit.operating_range_N, 0.0]
-        durations = cfg.get("durations_s") or [120.0, 300.0, 300.0]
-        read_times = sorted(float(x) for x in (cfg.get("read_times_s") or [30.0, 300.0]) if float(x) >= 0)
+        creep_cfg = self.config.creep
+        force_levels = creep_cfg.force_levels_N
+        durations = list(creep_cfg.durations_s)
+        read_times = creep_cfg.read_times_s
         if len(durations) < len(force_levels):
-            durations = list(durations) + [float(durations[-1])] * (len(force_levels) - len(durations))
+            durations = durations + [float(durations[-1])] * (len(force_levels) - len(durations))
 
         for idx, force in enumerate(float(x) for x in force_levels):
             duration_s = float(durations[idx])
@@ -186,51 +190,46 @@ class CalibrationRecorder:
             markers.emit(end_event, phase=phase, target_force_N=force, payload={"stage_index": idx + 1, "duration_s": duration_s})
 
     def _run_dynamic_validation(self, markers: MarkerLogger) -> None:  # pragma: no cover - interactive/live workflow
-        raw_protocol = self.config.raw.get("protocol", {}) or {}
-        dyn = raw_protocol.get("dynamic_validation", {}) or {}
-        ramps = dyn.get("ramps")
-        if not ramps:
-            ramps = [
-                {"label": "slow", "count": self.config.protocol.dynamic_slow_ramps, "peak_force_N": self.config.fit.operating_range_N, "speed_N_per_s": 5.0},
-                {"label": "medium", "count": 0, "peak_force_N": self.config.fit.operating_range_N, "speed_N_per_s": 20.0},
-            ]
-        squeezes = dyn.get("squeezes")
-        if not squeezes:
-            squeezes = [{"label": "fast_squeeze", "count": self.config.protocol.dynamic_fast_squeezes, "peak_force_N": self.config.fit.operating_range_N, "rest_s": 3.0}]
+        dyn_cfg = self.config.dynamic
 
-        for ramp in ramps:
-            count = int(ramp.get("count", 0))
-            if count <= 0:
+        for ramp in dyn_cfg.ramps:
+            if ramp.count <= 0:
                 continue
-            for idx in range(1, count + 1):
-                label = str(ramp.get("label", "ramp"))
+            ramp_dict = {"label": ramp.label, "count": ramp.count, "peak_force_N": ramp.peak_force_N, "speed_N_per_s": ramp.speed_N_per_s}
+            for idx in range(1, ramp.count + 1):
                 self._operator_continue(
-                    f"Prepare ramp {label} {idx}/{count}: 0 -> {float(ramp.get('peak_force_N', self.config.fit.operating_range_N)):g} N -> 0, "
-                    f"about {float(ramp.get('speed_N_per_s', 5.0)):g} N/s. Press ENTER at ramp start..."
+                    f"Prepare ramp {ramp.label} {idx}/{ramp.count}: 0 -> {ramp.peak_force_N:g} N -> 0, "
+                    f"about {ramp.speed_N_per_s:g} N/s. Press ENTER at ramp start..."
                 )
-                markers.emit("ramp_start", phase="dynamic_ramp", payload={**ramp, "index": idx})
+                markers.emit("ramp_start", phase="dynamic_ramp", payload={**ramp_dict, "index": idx})
                 self._operator_continue("Press ENTER when this ramp is complete...")
-                markers.emit("ramp_end", phase="dynamic_ramp", payload={**ramp, "index": idx})
+                markers.emit("ramp_end", phase="dynamic_ramp", payload={**ramp_dict, "index": idx})
 
-        for squeeze in squeezes:
-            count = int(squeeze.get("count", 0))
-            if count <= 0:
+        for squeeze in dyn_cfg.squeezes:
+            if squeeze.count <= 0:
                 continue
-            for idx in range(1, count + 1):
-                label = str(squeeze.get("label", "squeeze"))
-                self._operator_continue(f"Prepare squeeze {label} {idx}/{count}; press ENTER at squeeze start...")
-                markers.emit("squeeze_start", phase="dynamic_squeeze", payload={**squeeze, "index": idx})
+            squeeze_dict = {"label": squeeze.label, "count": squeeze.count, "peak_force_N": squeeze.peak_force_N, "rest_s": squeeze.rest_s}
+            for idx in range(1, squeeze.count + 1):
+                self._operator_continue(
+                    f"Prepare squeeze {squeeze.label} {idx}/{squeeze.count}; press ENTER at squeeze start..."
+                )
+                markers.emit("squeeze_start", phase="dynamic_squeeze", payload={**squeeze_dict, "index": idx})
                 self._operator_continue("Press ENTER when this squeeze/release is complete...")
-                markers.emit("squeeze_end", phase="dynamic_squeeze", payload={**squeeze, "index": idx})
-                rest_s = float(squeeze.get("rest_s", 0.0))
-                if rest_s > 0 and idx < count:
-                    self._timed_wait(rest_s, message=f"Resting {rest_s:g}s before next squeeze...")
+                markers.emit("squeeze_end", phase="dynamic_squeeze", payload={**squeeze_dict, "index": idx})
+                if squeeze.rest_s > 0 and idx < squeeze.count:
+                    self._timed_wait(squeeze.rest_s, message=f"Resting {squeeze.rest_s:g}s before next squeeze...")
 
     def run_protocol(self) -> SessionPaths:  # pragma: no cover - interactive/live workflow
         """Run the configured live recording protocol."""
 
         protocol = self.config.protocol
         paths = self.manager.create(extra_manifest={"protocol_type": protocol.protocol_type})
+        configure_logging(level="DEBUG", log_file=paths.session_log)
+        log.info(
+            "Session started: %s (protocol=%s)",
+            self.manager.session_id,
+            protocol.protocol_type,
+        )
         markers = MarkerLogger(paths.events, self.config.markers, session_id=self.manager.session_id)
         self._start_recorders(paths)
         self._start_quality_logging(paths)
@@ -249,7 +248,7 @@ class CalibrationRecorder:
                 markers.emit(start_event_by_type[protocol.protocol_type], phase=protocol.protocol_type, payload={"protocol": protocol.name})
 
             if protocol.warmup_s > 0:
-                print(f"Warmup: wait {protocol.warmup_s:.1f}s")
+                log.info("Warmup: waiting %.1f s", protocol.warmup_s)
                 time.sleep(protocol.warmup_s)
 
             if protocol.protocol_type in {"reference_verification", "static_staircase", "low_force_refinement", "holdout_verification"}:
@@ -277,6 +276,11 @@ class CalibrationRecorder:
         return paths
 
     def run_static_staircase(self) -> SessionPaths:  # pragma: no cover - compatibility wrapper
-        """Backward-compatible wrapper for older CLI/scripts."""
-
+        """Deprecated. Use ``run_protocol()`` instead. Will be removed in v0.3.0."""
+        warnings.warn(
+            "run_static_staircase() is deprecated. Use run_protocol() instead. "
+            "Will be removed in v0.3.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.run_protocol()

@@ -7,6 +7,7 @@ lazy so offline analysis can run without LSL installed.
 from __future__ import annotations
 
 import csv
+import logging
 import threading
 import time
 from dataclasses import dataclass, field
@@ -16,6 +17,8 @@ from typing import Any, Iterable
 from .config_schema import StreamConfig
 from .export import ensure_dir
 from .quality import RateMonitor
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -71,7 +74,8 @@ def _labels_from_info(info: Any) -> list[str]:
             label = channels.child_value("label") or channels.child_value("name")
             labels.append(label if label else f"ch{len(labels)}")
             channels = channels.next_sibling()
-    except Exception:
+    except Exception as _exc:
+        log.debug("Could not parse LSL channel labels (%s); using ch0..chN fallback", _exc)
         labels = []
     if not labels or len(labels) != info.channel_count():
         labels = [f"ch{i}" for i in range(info.channel_count())]
@@ -202,6 +206,7 @@ class CsvStreamRecorder(threading.Thread):
                     rate.add(timestamp)
                     self.stats.rate_hz = rate.rate_hz
         except Exception as exc:
+            log.error("Stream recorder [%s] failed: %s", self.key, exc)
             self.stats.errors.append(str(exc))
 
 

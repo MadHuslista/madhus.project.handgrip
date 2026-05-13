@@ -9,6 +9,7 @@ constants are deployed.
 from __future__ import annotations
 
 import json
+import logging
 import math
 from pathlib import Path
 from typing import Any
@@ -16,19 +17,14 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from ._utils import finite_or_none as _finite_or_none
 from .config_schema import AppConfig
 from .export import write_json
 from .report import _candidate_predict
 from .segmentation import segment_accepted_holds
 
+log = logging.getLogger(__name__)
 
-def _finite_or_none(value: float | int | None) -> float | int | None:
-    if value is None:
-        return None
-    if isinstance(value, (int, np.integer)):
-        return int(value)
-    value = float(value)
-    return value if math.isfinite(value) else None
 
 
 def _metrics(y_true: np.ndarray, y_pred: np.ndarray, *, operating_range_N: float) -> dict[str, Any]:
@@ -76,13 +72,13 @@ def _candidate_from_fit_result(fit: dict[str, Any]) -> dict[str, Any]:
 
 
 def _thresholds(config: AppConfig) -> dict[str, float]:
-    raw = config.raw.get("validation", {}) if isinstance(config.raw, dict) else {}
-    holdout = raw.get("holdout", {}) if isinstance(raw, dict) else {}
+    """Derive release-gate thresholds from typed config or operating_range_N defaults."""
+    ht = config.holdout_thresholds
     operating_range = float(config.fit.operating_range_N)
     return {
-        "max_rmse_N": float(holdout.get("max_rmse_N", max(1.0, 0.01 * operating_range))),
-        "max_abs_error_N": float(holdout.get("max_abs_error_N", max(2.0, 0.02 * operating_range))),
-        "max_bias_N": float(holdout.get("max_bias_N", max(0.5, 0.005 * operating_range))),
+        "max_rmse_N": ht.max_rmse_N if ht.max_rmse_N is not None else max(1.0, 0.01 * operating_range),
+        "max_abs_error_N": ht.max_abs_error_N if ht.max_abs_error_N is not None else max(2.0, 0.02 * operating_range),
+        "max_bias_N": ht.max_bias_N if ht.max_bias_N is not None else max(0.5, 0.005 * operating_range),
     }
 
 
@@ -143,4 +139,10 @@ def validate_session_against_model(holdout_session_dir: str | Path, model_fit_re
         ],
     }
     write_json(holdout_session_dir / "holdout_validation.json", result)
+    log.info(
+        "Holdout validation complete: passes_gate=%s, RMSE=%.4g N, model=%s",
+        passes,
+        metrics.get("rmse_N"),
+        candidate.get("model_id"),
+    )
     return result
