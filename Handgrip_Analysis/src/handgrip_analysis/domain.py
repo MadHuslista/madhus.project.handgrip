@@ -120,6 +120,7 @@ class StageConfig:
     filter_config: Path | None = None
     lsl_bridge_root: Path | None = None
     lsl_bridge_config: Path | None = None
+    stage_context_manifest: Path | None = None
     hf_noise_band_hz: tuple[float, float] = (30.0, 49.0)
     filter_weights: Mapping[str, float] = field(
         default_factory=lambda: {
@@ -150,6 +151,8 @@ class StageConfig:
             data["lsl_bridge_root"] = Path(data["lsl_bridge_root"])
         if "lsl_bridge_config" in data and data["lsl_bridge_config"] is not None:
             data["lsl_bridge_config"] = Path(data["lsl_bridge_config"])
+        if "stage_context_manifest" in data and data["stage_context_manifest"] is not None:
+            data["stage_context_manifest"] = Path(data["stage_context_manifest"])
         if "hf_noise_band_hz" in data:
             lo, hi = data["hf_noise_band_hz"]
             data["hf_noise_band_hz"] = (float(lo), float(hi))

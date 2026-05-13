@@ -170,6 +170,10 @@ def _stage_config_from_cli(stage: str, args: argparse.Namespace, overrides: dict
         merged["lsl_bridge_config"] = args.lsl_bridge_config
     elif "lsl_bridge_config" in overrides:
         merged["lsl_bridge_config"] = overrides["lsl_bridge_config"]
+    if getattr(args, "stage_context_manifest", None) is not None:
+        merged["stage_context_manifest"] = args.stage_context_manifest
+    elif "stage_context_manifest" in overrides:
+        merged["stage_context_manifest"] = overrides["stage_context_manifest"]
 
     if "composite_weights" in merged and "filter_weights" not in merged:
         merged["filter_weights"] = merged.pop("composite_weights")
@@ -201,6 +205,7 @@ def build_stage_parser() -> argparse.ArgumentParser:
     parser.add_argument("--filter-config", dest="filter_config", default=None)
     parser.add_argument("--lsl-bridge-root", dest="lsl_bridge_root", default=None)
     parser.add_argument("--lsl-bridge-config", dest="lsl_bridge_config", default=None)
+    parser.add_argument("--stage-context-manifest", dest="stage_context_manifest", default=None)
     parser.add_argument("--log-level", default=None)
     return parser
 
@@ -259,6 +264,7 @@ def build_run_all_parser() -> argparse.ArgumentParser:
     parser.add_argument("--filter-config", dest="filter_config", default=None)
     parser.add_argument("--lsl-bridge-root", dest="lsl_bridge_root", default=None)
     parser.add_argument("--lsl-bridge-config", dest="lsl_bridge_config", default=None)
+    parser.add_argument("--stage-context-manifest", dest="stage_context_manifest", default=None)
     parser.add_argument("--log-level", default=None)
     return parser
 

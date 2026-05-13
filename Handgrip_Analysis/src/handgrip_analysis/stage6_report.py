@@ -1,6 +1,8 @@
 """Markdown reporting for the Stage 6 review + design decision."""
 from __future__ import annotations
 
+import logging
+import re
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -9,10 +11,17 @@ import pandas as pd
 import yaml
 
 from .domain import StageConfig, TrialSpec
-from .manifest import filter_trials
+from .manifest import filter_trials, load_manifest
 from .report import to_jsonable
 from .stages import get_stage_module
 from .stages.stage6_filters import lsl_bridge_processing_snippet, select_final_filter
+
+log = logging.getLogger(__name__)
+
+_STAGE_CONTEXT_STAGES = ("stage1", "stage2", "stage3", "stage4", "stage5")
+_STAGE_RE = re.compile(r"stage(?P<num>[1-5])")
+_TRIAL_RE = re.compile(r"trial(?P<num>\d+)")
+_SESSION_RE = re.compile(r"(?P<session>20\d{6})")
 
 
 def _median(values: Iterable[float]) -> float | None:
@@ -39,18 +48,191 @@ def _safe_rel(path: Path | None, base: Path) -> str | None:
         return str(path)
 
 
+def _trial_identity_key(trial: TrialSpec) -> tuple[str, str, str, str, str, str]:
+    """Return a stable dedupe key for merged manifest/context trials."""
+    return (
+        trial.stage,
+        trial.condition,
+        trial.trial_type,
+        trial.session_id,
+        trial.trial_id,
+        str(trial.path.resolve()),
+    )
+
+
+def _has_context_rows(trials: Sequence[TrialSpec]) -> bool:
+    return any(trial.stage in _STAGE_CONTEXT_STAGES for trial in trials)
+
+
+def _candidate_context_manifest_paths(all_trials: Sequence[TrialSpec], cfg: StageConfig) -> list[Path]:
+    """
+    Return likely manifests containing Stage 1–5 context rows.
+
+    Stage 6 is commonly run from ``stage6_filter_review_manifest.csv``. That
+    manifest is intentionally Stage 6-only because its rows re-use Stage 2 rest
+    and Stage 4 dynamic captures as filter-review inputs. The report, however,
+    needs the original Stage 1–5 manifest context. This resolver first honors an
+    explicit ``stage_context_manifest`` override and then searches sibling
+    project manifest locations inferred from the capture file paths.
+    """
+    candidates: list[Path] = []
+    explicit = getattr(cfg, "stage_context_manifest", None)
+    if explicit is not None:
+        candidates.append(Path(explicit))
+
+    names = [
+        "all_runnable_manifest.csv",
+        "analysis_stages_1_4_manifest.csv",
+        "calibration_manifest.csv",
+    ]
+    for trial in all_trials:
+        try:
+            resolved = trial.path.resolve()
+        except OSError:
+            resolved = trial.path
+        for ancestor in [resolved.parent, *resolved.parents]:
+            for name in names:
+                candidates.extend(
+                    [
+                        ancestor / "data" / "manifests" / name,
+                        ancestor / "manifests" / name,
+                        ancestor / "data" / name,
+                        ancestor / name,
+                    ]
+                )
+
+    cwd = Path.cwd().resolve()
+    for name in names:
+        candidates.extend(
+            [
+                cwd / "data" / "manifests" / name,
+                cwd / "data" / name,
+                cwd / "manifests" / name,
+                cwd / name,
+            ]
+        )
+
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for path in candidates:
+        key = str(path.expanduser().resolve()) if path.exists() else str(path.expanduser())
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(path.expanduser())
+    return unique
+
+
+def _infer_original_stage_trial(trial: TrialSpec) -> TrialSpec | None:
+    """
+    Infer the original Stage 1–5 identity from a reused Stage 6 capture path.
+
+    This is a fallback for portable handoffs where only the Stage 6 manifest was
+    copied but the capture filenames still include their original stage labels,
+    e.g. ``20260402_stage2_rest_after_warmup_trial01.csv``.
+    """
+    stem = trial.path.stem
+    stage_match = _STAGE_RE.search(stem)
+    if stage_match is None:
+        return None
+    stage = f"stage{stage_match.group('num')}"
+    if stage == "stage6":
+        return None
+    trial_match = _TRIAL_RE.search(stem)
+    session_match = _SESSION_RE.search(stem)
+    parts = stem.split("_")
+    condition = trial.condition
+    trial_type = trial.trial_type
+    try:
+        stage_idx = parts.index(stage)
+        trial_idx = next((idx for idx, part in enumerate(parts) if _TRIAL_RE.fullmatch(part)), len(parts))
+        inferred_condition = "_".join(parts[stage_idx + 1 : trial_idx])
+        if inferred_condition:
+            condition = inferred_condition
+            trial_type = inferred_condition
+    except ValueError:
+        pass
+    return TrialSpec(
+        stage=stage,
+        condition=condition,
+        trial_type=trial_type,
+        trial_id=f"trial{trial_match.group('num')}" if trial_match else trial.trial_id,
+        session_id=session_match.group("session") if session_match else trial.session_id,
+        path=trial.path,
+        channel=trial.channel,
+        include=trial.include,
+        load_nominal_n=trial.load_nominal_n,
+        notes=f"Inferred original {stage} context from Stage 6 reused capture path.",
+    )
+
+
+def resolve_stage_context_trials(
+    all_trials: Sequence[TrialSpec], cfg: StageConfig
+) -> tuple[list[TrialSpec], list[Path]]:
+    """Merge current manifest rows with discovered original Stage 1–5 context."""
+    merged: list[TrialSpec] = list(all_trials)
+    loaded_sources: list[Path] = []
+    seen = {_trial_identity_key(trial) for trial in merged}
+
+    for path in _candidate_context_manifest_paths(all_trials, cfg):
+        if not path.exists() or not path.is_file():
+            continue
+        try:
+            loaded = load_manifest(path)
+        except Exception as exc:  # noqa: BLE001 - report context must degrade gracefully
+            log.debug("stage6_report: skipped context manifest %s: %s", path, exc)
+            continue
+        context_rows = [trial for trial in loaded if trial.stage in _STAGE_CONTEXT_STAGES]
+        if not context_rows:
+            continue
+        for trial in context_rows:
+            key = _trial_identity_key(trial)
+            if key not in seen:
+                merged.append(trial)
+                seen.add(key)
+        loaded_sources.append(path)
+
+    # Fallback: recover Stage 2/4 context from Stage 6 rows that reuse earlier
+    # stage capture filenames. This is intentionally secondary to manifest
+    # loading because a full manifest is the richer source of truth.
+    for trial in all_trials:
+        inferred = _infer_original_stage_trial(trial)
+        if inferred is None:
+            continue
+        key = _trial_identity_key(inferred)
+        if key not in seen:
+            merged.append(inferred)
+            seen.add(key)
+
+    return merged, loaded_sources
+
+
 def collect_stage_context(all_trials: Sequence[TrialSpec], cfg: StageConfig) -> dict[str, dict[str, Any]]:
     """
-    Compute concise Stage 1–5 insights from the manifest context.
+    Compute concise Stage 1–5 insights from manifest or discovered context.
 
-    The report uses the same analyzers that power the main stages. If a stage is
-    absent from the manifest, the insight block explicitly marks it as missing.
+    The report uses the same analyzers that power the main stages. If Stage 6 is
+    run from a Stage 6-only manifest, sibling/full manifests are auto-discovered
+    from the capture-path layout before falling back to filename-based stage
+    inference.
     """
-    context: dict[str, dict[str, Any]] = {}
+    context_trials, loaded_sources = resolve_stage_context_trials(all_trials, cfg)
+    context: dict[str, dict[str, Any]] = {
+        "__sources__": {
+            "available": True,
+            "loaded_manifest_paths": [str(path) for path in loaded_sources],
+            "used_filename_inference": _has_context_rows(context_trials)
+            and not loaded_sources
+            and not _has_context_rows(all_trials),
+        }
+    }
     for stage in ["stage1", "stage2", "stage3", "stage4", "stage5"]:
-        selected = filter_trials(all_trials, stage=stage)
+        selected = filter_trials(context_trials, stage=stage)
         if not selected:
-            context[stage] = {"available": False, "reason": "No trials for this stage were present in the manifest context."}
+            context[stage] = {
+                "available": False,
+                "reason": "No trials for this stage were found in the active manifest or discovered context manifests.",
+            }
             continue
         module = get_stage_module(stage)
         results = [module.analyze_trial(spec, cfg) for spec in selected]
@@ -227,6 +409,24 @@ def write_stage6_report(
         "## Key insights from earlier stages and how they informed Stage 6",
         "",
     ])
+    source_info = stage_context.get("__sources__", {})
+    loaded_paths = source_info.get("loaded_manifest_paths") or []
+    if loaded_paths:
+        lines.extend(
+            [
+                "Context source: Stage 6 was run with a Stage 6-focused manifest, so the report loaded the following sibling/full manifest(s) for Stage 1–5 context:",
+                "",
+                *[f"- `{path}`" for path in loaded_paths],
+                "",
+            ]
+        )
+    elif source_info.get("used_filename_inference"):
+        lines.extend(
+            [
+                "Context source: no sibling/full Stage 1–5 manifest was found, so available context was inferred from original stage labels embedded in the reused capture filenames.",
+                "",
+            ]
+        )
     lines.extend(_insight_lines(stage_context))
 
     lines.extend([
