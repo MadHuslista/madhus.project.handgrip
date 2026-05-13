@@ -11,7 +11,10 @@ import pandas as pd
 log = logging.getLogger(__name__)
 
 TimeSource = Literal["auto", "device", "lsl", "host"]
-ChannelName = Literal["raw", "filtered", "value_raw", "value_filtered"]
+ChannelName = Literal["raw", "filtered"]
+
+RAW_COLUMN = "target_raw_count"
+FILTERED_COLUMN = "target_filtered_units"
 
 
 @dataclass(slots=True)
@@ -23,16 +26,16 @@ class CaptureData:
     time_source: str
 
     def series(self, channel: ChannelName) -> np.ndarray:
-        if channel in {"raw", "value_raw"}:
-            return self.df["value_raw"].to_numpy(dtype=float)
-        if channel in {"filtered", "value_filtered"}:
-            if "value_filtered" not in self.df.columns:
-                raise KeyError("CSV has no value_filtered column")
-            return self.df["value_filtered"].to_numpy(dtype=float)
+        if channel == "raw":
+            return self.df[RAW_COLUMN].to_numpy(dtype=float)
+        if channel == "filtered":
+            if FILTERED_COLUMN not in self.df.columns:
+                raise KeyError(f"CSV has no {FILTERED_COLUMN} column")
+            return self.df[FILTERED_COLUMN].to_numpy(dtype=float)
         raise KeyError(f"Unsupported channel: {channel}")
 
 
-REQUIRED_COLUMNS = {"value_raw"}
+REQUIRED_COLUMNS = {RAW_COLUMN}
 TIME_PRIORITY = {
     "device": ["device_clock_us"],
     "lsl": ["lsl_timestamp_s"],
@@ -76,6 +79,10 @@ def load_capture(path: str | Path, time_source: TimeSource = "auto") -> CaptureD
     """
     Load a CSV sensor capture and select the best monotonic time column.
 
+    Expected signal columns follow the current TargetCsvSink naming standard.
+    Required: target_raw_count
+    Optional: target_filtered_units
+
     The *time_source* parameter controls which column(s) are tried:
     - ``"auto"``   — try device_clock_us → lsl_timestamp_s → host_unix_time_ns
     - ``"device"`` — require device_clock_us
@@ -87,7 +94,9 @@ def load_capture(path: str | Path, time_source: TimeSource = "auto") -> CaptureD
     df = pd.read_csv(path)
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
-        raise ValueError(f"Missing required columns in {path}: {sorted(missing)}")
+        raise ValueError(
+            f"Missing required signal columns in {path}: {sorted(missing)}. Expected at least {RAW_COLUMN}."
+        )
 
     selected_col = None
     for col in TIME_PRIORITY[time_source]:
@@ -97,8 +106,7 @@ def load_capture(path: str | Path, time_source: TimeSource = "auto") -> CaptureD
                 selected_col = col
                 log.debug("load_capture: selected time column %r", col)
                 break
-            else:
-                log.warning("load_capture: column %r is not monotonic — skipping", col)
+            log.warning("load_capture: column %r is not monotonic — skipping", col)
     if selected_col is None:
         raise ValueError(
             f"Could not select a monotonic time source from "

@@ -23,9 +23,9 @@ def _make_csv(
     """Create a minimal in-memory CSV string."""
     t_us = (np.arange(n) / fs * 1e6).astype(int)
     y = np.random.default_rng(0).normal(size=n)
-    data: dict = {time_col: t_us, "value_raw": y}
+    data: dict = {time_col: t_us, "target_raw_count": y}
     if with_filtered:
-        data["value_filtered"] = y * 0.9
+        data["target_filtered_units"] = y * 0.9
     return pd.DataFrame(data).to_csv(index=False)
 
 
@@ -92,7 +92,6 @@ def test_load_capture_series_raw(tmp_path):
     cap = load_capture(str(p))
     y = cap.series("raw")
     assert y.shape == (100,)
-    np.testing.assert_array_equal(y, cap.series("value_raw"))
 
 
 def test_load_capture_series_filtered(tmp_path):
@@ -109,7 +108,7 @@ def test_load_capture_no_filtered_column_raises(tmp_path):
     p = tmp_path / "cap.csv"
     p.write_text(csv_content)
     cap = load_capture(str(p))
-    with pytest.raises(KeyError, match="value_filtered"):
+    with pytest.raises(KeyError, match="target_filtered_units"):
         cap.series("filtered")
 
 
@@ -117,14 +116,14 @@ def test_load_capture_missing_column_raises(tmp_path):
     df = pd.DataFrame({"device_clock_us": [0, 10000], "some_other_col": [1, 2]})
     p = tmp_path / "bad.csv"
     p.write_text(df.to_csv(index=False))
-    with pytest.raises(ValueError, match="Missing required columns"):
+    with pytest.raises(ValueError, match="Missing required signal columns"):
         load_capture(str(p))
 
 
 def test_load_capture_lsl_timestamp(tmp_path):
     n = 200
     t_s = np.arange(n) / 100.0 + 1_700_000_000.0  # Unix-like LSL timestamps
-    df = pd.DataFrame({"lsl_timestamp_s": t_s, "value_raw": np.ones(n)})
+    df = pd.DataFrame({"lsl_timestamp_s": t_s, "target_raw_count": np.ones(n)})
     p = tmp_path / "lsl.csv"
     p.write_text(df.to_csv(index=False))
     cap = load_capture(str(p), time_source="lsl")
@@ -135,7 +134,7 @@ def test_load_capture_lsl_timestamp(tmp_path):
 def test_load_capture_host_unix_ns(tmp_path):
     n = 150
     t_ns = (np.arange(n) / 50.0 * 1e9).astype(int)
-    df = pd.DataFrame({"host_unix_time_ns": t_ns, "value_raw": np.zeros(n)})
+    df = pd.DataFrame({"host_unix_time_ns": t_ns, "target_raw_count": np.zeros(n)})
     p = tmp_path / "host.csv"
     p.write_text(df.to_csv(index=False))
     cap = load_capture(str(p), time_source="host")

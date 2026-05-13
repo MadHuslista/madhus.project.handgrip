@@ -15,7 +15,7 @@ def _write_capture_csv(path: Path, fs: float = 100.0, n: int = 1200) -> None:
     t_us = (np.arange(n) / fs * 1e6).astype(int)
     y = rng.normal(scale=0.3, size=n)
     y[200:500] += 20.0
-    df = pd.DataFrame({"device_clock_us": t_us, "value_raw": y})
+    df = pd.DataFrame({"device_clock_us": t_us, "target_raw_count": y})
     path.write_text(df.to_csv(index=False), encoding="utf-8")
 
 

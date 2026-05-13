@@ -92,8 +92,8 @@ def main(cfg: DictConfig) -> None:
     fig_allan, ax_allan = plt.subplots(figsize=tuple(cfg.dsp.plot.figsize_square))
 
     for channel in list(cfg.analysis.channels):
-        if channel == "filtered" and "value_filtered" not in cap.df.columns:
-            log.warning("Stage 2: no value_filtered column — skipping channel")
+        if channel == "filtered" and "target_filtered_units" not in cap.df.columns:
+            log.warning("Stage 2: no target_filtered_units column — skipping channel")
             continue
         y = cap.series(channel)
         ch_summary, peak_df, f, pxx, tau, adev = channel_summary(y, cap.fs_estimate_hz, bands)

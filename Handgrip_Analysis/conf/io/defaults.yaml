@@ -11,4 +11,4 @@ channel: raw
 
 # Columns that MUST be present in every capture CSV.
 required_columns:
-  - value_raw
+  - target_raw_count

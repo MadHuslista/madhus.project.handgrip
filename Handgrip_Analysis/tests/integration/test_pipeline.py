@@ -7,6 +7,8 @@ verifying that all components compose correctly without file I/O
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -29,10 +31,24 @@ def _make_grip_csv(tmp_path, n: int = N, fs: float = FS) -> str:
     y = rng.normal(scale=0.5, size=n)
     # Add a grip event at samples 500–1000
     y[500:1000] += 30.0
-    df = pd.DataFrame({"device_clock_us": t_us, "value_raw": y})
+    df = pd.DataFrame({"device_clock_us": t_us, "target_raw_count": y})
     p = tmp_path / "grip.csv"
     p.write_text(df.to_csv(index=False))
     return str(p)
+
+
+def test_load_real_new_standard_sample():
+    project_root = Path(__file__).resolve().parents[2]
+    sample = project_root / "data" / "calibration_signals" / "20260512_stage1_cold_start_trial02.csv"
+    if not sample.exists():
+        pytest.skip("Real 20260512 sample not available in this workspace")
+
+    cap = load_capture(sample, time_source="auto")
+    y = cap.series("raw")
+
+    assert cap.time_source == "device_clock_us"
+    assert y.size > 0
+    assert np.all(np.isfinite(y))
 
 
 def test_full_load_and_event_detection(tmp_path):
