@@ -11,3 +11,9 @@ stage3,constant_load_4500g,constant_load_4500g,trial02,20260512,../calibration_s
 stage4,fast_max,fast_max,trial02,20260512,../calibration_signals/20260512_stage4_fast_max_trial02.csv,raw,,True,existing capture trial
 stage4,ramp_hold,ramp_hold,trial02,20260512,../calibration_signals/20260512_stage4_ramp_hold_trial02.csv,raw,,True,existing capture trial
 stage4,sustained_hold,sustained_hold,trial02,20260512,../calibration_signals/20260512_stage4_sustained_hold_trial02.csv,raw,,True,existing capture trial
+stage1,cold_start,cold_start,trial03,20260512,../calibration_signals/20260512_stage1_cold_start_trial03.csv,raw,,True,existing capture trial
+stage2,rest_after_warmup,rest_after_warmup,trial03,20260512,../calibration_signals/20260512_stage2_rest_after_warmup_trial03.csv,raw,,True,existing capture trial
+stage3,constant_load_4500g,constant_load_4500g,trial03,20260512,../calibration_signals/20260512_stage3_constant_load_4500g_trial03.csv,raw,44.13,True,existing capture trial
+stage4,fast_max,fast_max,trial03,20260512,../calibration_signals/20260512_stage4_fast_max_trial03.csv,raw,,True,existing capture trial
+stage4,ramp_hold,ramp_hold,trial03,20260512,../calibration_signals/20260512_stage4_ramp_hold_trial03.csv,raw,,True,existing capture trial
+stage4,sustained_hold,sustained_hold,trial03,20260512,../calibration_signals/20260512_stage4_sustained_hold_trial03.csv,raw,,True,existing capture trial
