@@ -9,8 +9,6 @@ import hydra
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-from omegaconf import DictConfig
-
 from handgrip_analysis._logging import setup_logging
 from handgrip_analysis.dsp import (
     apply_filter_spec,
@@ -21,9 +19,27 @@ from handgrip_analysis.dsp import (
 )
 from handgrip_analysis.io import ensure_dir, load_capture
 from handgrip_analysis.report import save_json
+from omegaconf import DictConfig
 
 matplotlib.use("Agg")
 log = logging.getLogger(__name__)
+
+
+def _require_str(cfg: DictConfig, key: str) -> str:
+    value = cfg.get(key)
+    if value is None or not str(value).strip():
+        raise ValueError(f"Missing required argument: {key}=<value>")
+    return str(value)
+
+
+def _require_list(cfg: DictConfig, key: str) -> list[str]:
+    raw = cfg.get(key)
+    if raw is None:
+        raise ValueError(f"Missing required argument: {key}=[...]")
+    values = [str(v) for v in list(raw) if str(v).strip()]
+    if not values:
+        raise ValueError(f"Missing required argument: {key}=[...]")
+    return values
 
 
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
@@ -31,14 +47,18 @@ def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)
     log.info("Stage 6b — filter family review")
 
-    outdir = ensure_dir(cfg.outdir)
+    rest_input = _require_str(cfg, "rest_input")
+    dynamic_inputs = _require_list(cfg, "dynamic_inputs")
+    outdir_path = _require_str(cfg, "outdir")
+
+    outdir = ensure_dir(outdir_path)
     ev_cfg = cfg.dsp.event_detection
     hf_lo, hf_hi = list(cfg.analysis.hf_noise_band_hz)
     w = cfg.analysis.composite_weights
     dpi = cfg.dsp.plot.dpi
 
     # Load rest capture
-    cap_rest = load_capture(cfg.rest_input, time_source=cfg.io.time_source)
+    cap_rest = load_capture(rest_input, time_source=cfg.io.time_source)
     y_rest, fs_rest = cap_rest.series("raw"), cap_rest.fs_estimate_hz
     f_rest_raw, p_rest_raw = welch_psd(y_rest, fs_rest)
 
@@ -53,7 +73,7 @@ def main(cfg: DictConfig) -> None:
 
     # Load all dynamic captures and compute raw metrics
     raw_dynamic: dict[str, tuple] = {}
-    for path in list(cfg.dynamic_inputs):
+    for path in dynamic_inputs:
         cap = load_capture(path, time_source=cfg.io.time_source)
         t, y, fs = cap.time_s, cap.series("raw"), cap.fs_estimate_hz
         raw_m = best_event_metrics(
@@ -131,13 +151,16 @@ def main(cfg: DictConfig) -> None:
     df = df.sort_values("composite_score", ascending=True)
     df.to_csv(outdir / "filter_family_assessment.csv", index=False)
 
-    save_json(outdir / "summary.json", {
-        "rest_input": str(Path(cfg.rest_input).resolve()),
-        "dynamic_inputs": [str(Path(p).resolve()) for p in list(cfg.dynamic_inputs)],
-        "n_candidates": len(specs),
-        "rest_psd_top_peaks_hz": peak_df["frequency_hz"].tolist() if not peak_df.empty else [],
-        "top_ranked_filter": str(df.iloc[0]["filter"]) if not df.empty else None,
-    })
+    save_json(
+        outdir / "summary.json",
+        {
+            "rest_input": str(Path(rest_input).resolve()),
+            "dynamic_inputs": [str(Path(p).resolve()) for p in dynamic_inputs],
+            "n_candidates": len(specs),
+            "rest_psd_top_peaks_hz": peak_df["frequency_hz"].tolist() if not peak_df.empty else [],
+            "top_ranked_filter": str(df.iloc[0]["filter"]) if not df.empty else None,
+        },
+    )
 
     # Bar chart of composite scores
     fig, ax = plt.subplots(figsize=(11, 6))

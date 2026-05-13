@@ -25,13 +25,23 @@ matplotlib.use("Agg")
 log = logging.getLogger(__name__)
 
 
+def _require_str(cfg: DictConfig, key: str) -> str:
+    value = cfg.get(key)
+    if value is None or not str(value).strip():
+        raise ValueError(f"Missing required argument: {key}=<value>")
+    return str(value)
+
+
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)
     log.info("Stage 6a — filter design benchmark")
 
-    outdir = ensure_dir(cfg.outdir)
-    cap = load_capture(cfg.input, time_source=cfg.io.time_source)
+    input_path = _require_str(cfg, "input")
+    outdir_path = _require_str(cfg, "outdir")
+
+    outdir = ensure_dir(outdir_path)
+    cap = load_capture(input_path, time_source=cfg.io.time_source)
     t, y, fs = cap.time_s, cap.series("raw"), cap.fs_estimate_hz
 
     ev_cfg = cfg.dsp.event_detection
@@ -107,7 +117,7 @@ def main(cfg: DictConfig) -> None:
     df.to_csv(outdir / "filter_comparison.csv", index=False)
 
     save_json(outdir / "summary.json", {
-        "input": str(Path(cfg.input).resolve()),
+        "input": str(Path(input_path).resolve()),
         "rest_input": str(Path(cfg.rest_input).resolve()) if cfg.get("rest_input") else None,
         "fs_hz": fs,
         "selected_event_raw_metrics": raw_metrics,

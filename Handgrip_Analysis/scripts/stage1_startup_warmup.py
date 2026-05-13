@@ -20,6 +20,13 @@ matplotlib.use("Agg")
 log = logging.getLogger(__name__)
 
 
+def _require_str(cfg: DictConfig, key: str) -> str:
+    value = cfg.get(key)
+    if value is None or not str(value).strip():
+        raise ValueError(f"Missing required argument: {key}=<value>")
+    return str(value)
+
+
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(
@@ -28,8 +35,11 @@ def main(cfg: DictConfig) -> None:
     )
     log.info("Stage 1 — startup warm-up analysis")
 
-    outdir = ensure_dir(cfg.outdir)
-    cap = load_capture(cfg.input, time_source=cfg.io.time_source)
+    input_path = _require_str(cfg, "input")
+    outdir_path = _require_str(cfg, "outdir")
+
+    outdir = ensure_dir(outdir_path)
+    cap = load_capture(input_path, time_source=cfg.io.time_source)
     y = cap.series(cfg.analysis.channel)
 
     means, stds, slopes = rolling_mean_std_slope(
@@ -39,7 +49,7 @@ def main(cfg: DictConfig) -> None:
 
     n_tail = max(10, len(means) // 10)
     summary = {
-        "input": str(Path(cfg.input).resolve()),
+        "input": str(Path(input_path).resolve()),
         "channel": cfg.analysis.channel,
         "time_source": cap.time_source,
         "sampling": sampling_summary(cap.time_s),

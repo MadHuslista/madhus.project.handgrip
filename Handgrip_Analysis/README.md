@@ -96,7 +96,7 @@ All commands below assume you run them from the library root.
 
 The project uses Hydra overrides, so arguments are passed as `name=value` (not `--name value`).
 
-Important: for keys not declared in `conf/config.yaml` (for example `input`, `outdir`, `inputs`, `labels`, `rest_input`, `dynamic_inputs`), use Hydra's `+` prefix (for example `+input=...`).
+Input/output arguments are standard Hydra overrides in this project, so use `input=...`, `outdir=...`, `inputs=[...]`, `labels=[...]`, and related keys without a `+` prefix.
 
 You can run each stage either with installed entry points (recommended) or via scripts:
 
@@ -168,8 +168,8 @@ Run:
 
 ```bash
 python scripts/stage1_startup_warmup.py analysis=stage1 \
-  +input=data/calibration_signals/20260402_stage1_cold_start_trial01.csv \
-  +outdir=data/analysis_results/stage_1 \
+  input=data/calibration_signals/20260402_stage1_cold_start_trial01.csv \
+  outdir=data/analysis_results/stage_1 \
   analysis.channel=raw
 ```
 
@@ -192,8 +192,8 @@ Run:
 
 ```bash
 python scripts/stage2_static_noise.py analysis=stage2 \
-  +input=data/calibration_signals/20260402_stage2_rest_after_warmup_trial01.csv \
-  +outdir=data/analysis_results/stage_2
+  input=data/calibration_signals/20260402_stage2_rest_after_warmup_trial01.csv \
+  outdir=data/analysis_results/stage_2
 ```
 
 What it produces:
@@ -217,8 +217,8 @@ Run:
 
 ```bash
 python scripts/stage3_loaded_drift.py analysis=stage3 \
-  +input=data/calibration_signals/20260402_stage3_constant_load_4500g_trial01.csv \
-  +outdir=data/analysis_results/stage_3 \
+  input=data/calibration_signals/20260402_stage3_constant_load_4500g_trial01.csv \
+  outdir=data/analysis_results/stage_3 \
   analysis.channel=raw
 ```
 
@@ -246,8 +246,8 @@ Run:
 
 ```bash
 python scripts/stage4_grip_dynamics.py analysis=stage4 \
-  '+inputs=[data/calibration_signals/20260402_stage4_fast_max_trial01.csv,data/calibration_signals/20260402_stage4_ramp_hold_trial01.csv,data/calibration_signals/20260402_stage4_sustained_hold_trial01.csv]' \
-  +outdir=data/analysis_results/stage_4 \
+  'inputs=[data/calibration_signals/20260402_stage4_fast_max_trial01.csv,data/calibration_signals/20260402_stage4_ramp_hold_trial01.csv,data/calibration_signals/20260402_stage4_sustained_hold_trial01.csv]' \
+  outdir=data/analysis_results/stage_4 \
   analysis.channel=raw
 ```
 
@@ -277,9 +277,9 @@ Run:
 
 ```bash
 python scripts/stage5_interference_compare.py analysis=stage5 \
-  '+inputs=[data/calibration_signals/20260402_stage4_fast_max_trial01.csv,data/calibration_signals/20260402_stage4_ramp_hold_trial01.csv,data/calibration_signals/20260402_stage4_sustained_hold_trial01.csv]' \
-  '+labels=[fast_max,ramp_hold,sustained_hold]' \
-  +outdir=data/analysis_results/stage_5 \
+  'inputs=[data/calibration_signals/20260402_stage4_fast_max_trial01.csv,data/calibration_signals/20260402_stage4_ramp_hold_trial01.csv,data/calibration_signals/20260402_stage4_sustained_hold_trial01.csv]' \
+  'labels=[fast_max,ramp_hold,sustained_hold]' \
+  outdir=data/analysis_results/stage_5 \
   analysis.channel=raw
 ```
 
@@ -296,9 +296,9 @@ Run:
 
 ```bash
 python scripts/stage6_filter_design.py analysis=stage6 \
-  +input=data/calibration_signals/20260402_stage4_fast_max_trial01.csv \
-  +rest_input=data/calibration_signals/20260402_stage2_rest_after_warmup_trial01.csv \
-  +outdir=data/analysis_results/stage_6/design \
+  input=data/calibration_signals/20260402_stage4_fast_max_trial01.csv \
+  rest_input=data/calibration_signals/20260402_stage2_rest_after_warmup_trial01.csv \
+  outdir=data/analysis_results/stage_6/design \
   analysis.filter_config=conf/filters/candidates.yaml
 ```
 
@@ -316,9 +316,9 @@ Run:
 
 ```bash
 python scripts/stage6_filter_family_review.py analysis=stage6 \
-  +rest_input=data/calibration_signals/20260402_stage2_rest_after_warmup_trial01.csv \
-  '+dynamic_inputs=[data/calibration_signals/20260402_stage4_fast_max_trial01.csv,data/calibration_signals/20260402_stage4_ramp_hold_trial01.csv,data/calibration_signals/20260402_stage4_sustained_hold_trial01.csv]' \
-  +outdir=data/analysis_results/stage_6/review \
+  rest_input=data/calibration_signals/20260402_stage2_rest_after_warmup_trial01.csv \
+  'dynamic_inputs=[data/calibration_signals/20260402_stage4_fast_max_trial01.csv,data/calibration_signals/20260402_stage4_ramp_hold_trial01.csv,data/calibration_signals/20260402_stage4_sustained_hold_trial01.csv]' \
+  outdir=data/analysis_results/stage_6/review \
   analysis.filter_config=conf/filters/candidates.yaml
 ```
 
@@ -338,17 +338,17 @@ If you want to use sample data in the repository root `data/` directory, run fro
 
 ```bash
 python scripts/stage2_static_noise.py analysis=stage2 \
-  +input=../data/handgrip_samples.csv \
-  +outdir=outputs/example_stage2
+  input=../data/handgrip_samples.csv \
+  outdir=outputs/example_stage2
 ```
 
 ### Filter design example
 
 ```bash
 python scripts/stage6_filter_design.py analysis=stage6 \
-  +input=../data/target_handgrip_samples_v2.csv \
-  +rest_input=../data/reference_rs485_samples_v2.csv \
-  +outdir=outputs/example_stage6 \
+  input=../data/target_handgrip_samples_v2.csv \
+  rest_input=../data/reference_rs485_samples_v2.csv \
+  outdir=outputs/example_stage6 \
   analysis.filter_config=conf/filters/candidates.yaml
 ```
 

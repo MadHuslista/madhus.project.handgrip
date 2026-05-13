@@ -14,3 +14,13 @@ logging:
   #   file: ${hydra:run.dir}/run.log
   # Leave null to log to console only.
   file: null
+
+# Runtime CLI overrides consumed by stage scripts and run_all.
+input: null
+inputs: []
+labels: []
+outdir: null
+rest_input: null
+dynamic_inputs: []
+manifest: null
+base_outdir: null

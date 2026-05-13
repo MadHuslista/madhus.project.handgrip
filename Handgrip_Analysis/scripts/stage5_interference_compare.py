@@ -18,17 +18,35 @@ matplotlib.use("Agg")
 log = logging.getLogger(__name__)
 
 
+def _require_str(cfg: DictConfig, key: str) -> str:
+    value = cfg.get(key)
+    if value is None or not str(value).strip():
+        raise ValueError(f"Missing required argument: {key}=<value>")
+    return str(value)
+
+
+def _require_list(cfg: DictConfig, key: str) -> list[str]:
+    raw = cfg.get(key)
+    if raw is None:
+        raise ValueError(f"Missing required argument: {key}=[...]")
+    values = [str(v) for v in list(raw) if str(v).strip()]
+    if not values:
+        raise ValueError(f"Missing required argument: {key}=[...]")
+    return values
+
+
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)
     log.info("Stage 5 — interference PSD comparison")
 
-    inputs = list(cfg.inputs)
-    labels = list(cfg.labels)
+    inputs = _require_list(cfg, "inputs")
+    labels = _require_list(cfg, "labels")
+    outdir_path = _require_str(cfg, "outdir")
     if len(inputs) != len(labels):
         raise ValueError("inputs and labels must have the same length")
 
-    outdir = ensure_dir(cfg.outdir)
+    outdir = ensure_dir(outdir_path)
     bands = [list(b) for b in cfg.dsp.bandpower_bands]
     dpi = cfg.dsp.plot.dpi
 

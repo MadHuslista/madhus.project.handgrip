@@ -26,6 +26,13 @@ matplotlib.use("Agg")
 log = logging.getLogger(__name__)
 
 
+def _require_str(cfg: DictConfig, key: str) -> str:
+    value = cfg.get(key)
+    if value is None or not str(value).strip():
+        raise ValueError(f"Missing required argument: {key}=<value>")
+    return str(value)
+
+
 def channel_summary(
     y: np.ndarray, fs: float, bands: list
 ) -> tuple[dict, pd.DataFrame, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -64,13 +71,16 @@ def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)
     log.info("Stage 2 — static rest noise characterisation")
 
-    outdir = ensure_dir(cfg.outdir)
-    cap = load_capture(cfg.input, time_source=cfg.io.time_source)
+    input_path = _require_str(cfg, "input")
+    outdir_path = _require_str(cfg, "outdir")
+
+    outdir = ensure_dir(outdir_path)
+    cap = load_capture(input_path, time_source=cfg.io.time_source)
     bands = [list(b) for b in cfg.dsp.bandpower_bands]
     dpi = cfg.dsp.plot.dpi
 
     summary: dict = {
-        "input": str(Path(cfg.input).resolve()),
+        "input": str(Path(input_path).resolve()),
         "time_source": cap.time_source,
         "sampling": sampling_summary(cap.time_s),
         "channels": {},
