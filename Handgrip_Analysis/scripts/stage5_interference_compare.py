@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 import hydra
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-from omegaconf import DictConfig
-
 from handgrip_analysis._logging import setup_logging
 from handgrip_analysis.dsp import bandpower, dominant_psd_peaks, welch_psd
 from handgrip_analysis.io import ensure_dir, load_capture
 from handgrip_analysis.report import save_csv, save_json
+from omegaconf import DictConfig
 
 matplotlib.use("Agg")
 log = logging.getLogger(__name__)
@@ -38,7 +36,7 @@ def main(cfg: DictConfig) -> None:
     summary: dict = {"comparisons": []}
     fig, ax = plt.subplots(figsize=tuple(cfg.dsp.plot.figsize_square))
 
-    for csv_path, label in zip(inputs, labels):
+    for csv_path, label in zip(inputs, labels, strict=False):
         cap = load_capture(csv_path, time_source=cfg.io.time_source)
         y = cap.series(cfg.analysis.channel)
         f, pxx = welch_psd(y, cap.fs_estimate_hz)

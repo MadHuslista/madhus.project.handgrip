@@ -1,13 +1,11 @@
 """Unit tests for handgrip_analysis.io."""
 from __future__ import annotations
 
-import io
 import math
 
 import numpy as np
 import pandas as pd
 import pytest
-
 from handgrip_analysis.io import (
     CaptureData,
     estimate_fs,

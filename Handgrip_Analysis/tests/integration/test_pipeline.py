@@ -10,16 +10,13 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-
 from handgrip_analysis.dsp import (
     apply_filter_spec,
     best_event_metrics,
     detect_events,
     load_filter_specs,
-    welch_psd,
 )
 from handgrip_analysis.io import load_capture, sampling_summary
-
 
 FS = 100.0
 N = 3000
