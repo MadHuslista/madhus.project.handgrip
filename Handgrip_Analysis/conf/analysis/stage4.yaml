@@ -1,0 +1,4 @@
+# @package analysis
+# Stage 4: Grip dynamics (event detection + metrics)
+channel: raw
+threshold_sigma: 5.0

@@ -1,0 +1,16 @@
+defaults:
+  - io: defaults
+  - dsp: defaults
+  - analysis: stage1  # overridden per-script via CLI or Hydra compose
+  - _self_
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d_%H-%M-%S}
+
+logging:
+  level: INFO
+  # Set to a path string to also write a .log file, e.g.:
+  #   file: ${hydra:run.dir}/run.log
+  # Leave null to log to console only.
+  file: null

@@ -1,36 +1,50 @@
 #!/usr/bin/env python3
+"""
+Batch dispatcher — routes manifest rows to the appropriate stage script.
+
+Manifest CSV columns: stage, label, path [, channel]
+
+Supported stage values:
+    stage1, stage2, stage3, stage4, stage5, stage6_design, stage6_review
+"""
 from __future__ import annotations
 
-import argparse
+import logging
 import subprocess
+import sys
 from pathlib import Path
 
+import hydra
 import pandas as pd
+from omegaconf import DictConfig
 
+from handgrip_analysis._logging import setup_logging
 
-STAGE_TO_SCRIPT = {
+log = logging.getLogger(__name__)
+
+STAGE_TO_SCRIPT: dict[str, str] = {
     "stage1": "stage1_startup_warmup.py",
     "stage2": "stage2_static_noise.py",
     "stage3": "stage3_loaded_drift.py",
     "stage4": "stage4_grip_dynamics.py",
-    "stage5": None,
+    "stage5": "stage5_interference_compare.py",
+    "stage6_design": "stage6_filter_design.py",
+    "stage6_review": "stage6_filter_family_review.py",
 }
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Dispatch manifest rows to stage scripts")
-    parser.add_argument("--manifest", required=True)
-    parser.add_argument("--base-outdir", required=True)
-    return parser.parse_args()
+@hydra.main(config_path="../conf", config_name="config", version_base="1.3")
+def main(cfg: DictConfig) -> None:
+    setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)
+    log.info("run_all: reading manifest %s", cfg.manifest)
 
-
-def main() -> None:
-    args = parse_args()
-    manifest = pd.read_csv(args.manifest)
-    project_root = Path(__file__).resolve().parent.parent
-    scripts_dir = project_root / "scripts"
-    base_outdir = Path(args.base_outdir)
+    manifest = pd.read_csv(cfg.manifest)
+    scripts_dir = Path(__file__).resolve().parent
+    base_outdir = Path(cfg.base_outdir)
     base_outdir.mkdir(parents=True, exist_ok=True)
+
+    skipped = 0
+    dispatched = 0
 
     for _, row in manifest.iterrows():
         stage = str(row["stage"])
@@ -38,22 +52,40 @@ def main() -> None:
         path = str(row["path"])
         channel = str(row.get("channel", "raw"))
         outdir = base_outdir / label
-        if stage == "stage5":
-            continue
+
         script_name = STAGE_TO_SCRIPT.get(stage)
         if not script_name:
+            log.warning("run_all: unknown stage %r for label %r — skipping", stage, label)
+            skipped += 1
             continue
+
+        script_path = scripts_dir / script_name
         cmd = [
-            "python",
-            str(scripts_dir / script_name),
-            "--input",
-            path,
-            "--outdir",
-            str(outdir),
+            sys.executable,
+            str(script_path),
+            f"input={path}",
+            f"outdir={outdir}",
+            f"io.time_source={cfg.io.time_source}",
+            f"logging.level={cfg.logging.level}",
+            f"analysis={stage}",
         ]
-        if stage != "stage2":
-            cmd.extend(["--channel", channel])
-        subprocess.run(cmd, check=True)
+        if stage not in ("stage2",):
+            cmd.append(f"analysis.channel={channel}")
+
+        log.info("run_all: dispatching %s → %s (label=%r)", stage, script_name, label)
+        result = subprocess.run(cmd, check=False)
+        if result.returncode != 0:
+            log.error(
+                "run_all: script %s failed for label %r (exit code %d)",
+                script_name, label, result.returncode,
+            )
+        else:
+            dispatched += 1
+
+    log.info(
+        "run_all: complete — %d dispatched, %d skipped",
+        dispatched, skipped,
+    )
 
 
 if __name__ == "__main__":

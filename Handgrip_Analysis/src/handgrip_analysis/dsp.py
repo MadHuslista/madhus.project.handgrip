@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,8 @@ import numpy as np
 import pandas as pd
 import yaml
 from scipy import signal
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -25,14 +28,24 @@ class EventWindow:
     end_idx: int
 
 
+# ---------------------------------------------------------------------------
+# Basic statistics
+# ---------------------------------------------------------------------------
+
 def robust_std(x: np.ndarray) -> float:
+    """MAD-based outlier-robust standard deviation (consistent estimator)."""
     x = np.asarray(x, dtype=float)
     med = np.median(x)
     mad = np.median(np.abs(x - med))
     return float(1.4826 * mad)
 
 
-def rolling_mean_std_slope(y: np.ndarray, fs: float, window_s: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def rolling_mean_std_slope(
+    y: np.ndarray,
+    fs: float,
+    window_s: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Centred rolling mean, std, and linear slope over a time window."""
     y = np.asarray(y, dtype=float)
     n = len(y)
     w = max(3, int(round(window_s * fs)))
@@ -53,12 +66,19 @@ def rolling_mean_std_slope(y: np.ndarray, fs: float, window_s: float) -> tuple[n
         stds[i] = np.std(seg, ddof=1)
         seg_center = seg - seg.mean()
         slopes[i] = np.dot(x_center, seg_center) / denom
+    log.debug("rolling_mean_std_slope: n=%d, window_s=%.2f, w=%d samples", n, window_s, w)
     return means, stds, slopes
 
 
-def suggest_ready_time(time_s: np.ndarray, stds: np.ndarray, slopes: np.ndarray) -> dict[str, float | None]:
+def suggest_ready_time(
+    time_s: np.ndarray,
+    stds: np.ndarray,
+    slopes: np.ndarray,
+) -> dict[str, float | None]:
+    """Suggest the earliest time at which the signal has stabilised."""
     valid = np.isfinite(stds) & np.isfinite(slopes)
     if not np.any(valid):
+        log.warning("suggest_ready_time: no valid (finite) std/slope values")
         return {"suggested_ready_time_s": None, "std_threshold": None, "slope_threshold": None}
     tail_mask = valid.copy()
     tail_start = int(0.8 * len(time_s))
@@ -71,6 +91,10 @@ def suggest_ready_time(time_s: np.ndarray, stds: np.ndarray, slopes: np.ndarray)
     slope_thr = float(np.nanmedian(tail_slope) * 1.5)
     candidates = np.where(valid & (stds <= std_thr) & (np.abs(slopes) <= slope_thr))[0]
     suggested = None if candidates.size == 0 else float(time_s[candidates[0]])
+    log.debug(
+        "suggest_ready_time: std_thr=%.4g, slope_thr=%.4g, suggested=%s s",
+        std_thr, slope_thr, f"{suggested:.2f}" if suggested is not None else "None",
+    )
     return {
         "suggested_ready_time_s": suggested,
         "std_threshold": std_thr,
@@ -78,20 +102,30 @@ def suggest_ready_time(time_s: np.ndarray, stds: np.ndarray, slopes: np.ndarray)
     }
 
 
+# ---------------------------------------------------------------------------
+# Spectral analysis
+# ---------------------------------------------------------------------------
+
 def welch_psd(y: np.ndarray, fs: float) -> tuple[np.ndarray, np.ndarray]:
+    """Compute Welch PSD with adaptive segment length."""
     y = np.asarray(y, dtype=float)
     if y.size < 8:
+        log.warning("welch_psd: signal too short (%d samples) — returning empty", y.size)
         return np.array([]), np.array([])
     y = signal.detrend(y, type="linear")
     nperseg = min(2048, max(256, y.size // 8))
     if nperseg >= y.size:
         nperseg = max(64, y.size // 2)
     noverlap = nperseg // 2
-    f, pxx = signal.welch(y, fs=fs, window="hann", nperseg=nperseg, noverlap=noverlap, scaling="density")
+    f, pxx = signal.welch(
+        y, fs=fs, window="hann", nperseg=nperseg, noverlap=noverlap, scaling="density"
+    )
+    log.debug("welch_psd: n=%d, nperseg=%d, freq_bins=%d", y.size, nperseg, f.size)
     return f, pxx
 
 
 def alias_hint(fs: float, peak_hz: float) -> str | None:
+    """Flag if a PSD peak is a plausible mains alias (50 or 60 Hz) at the output rate."""
     if not np.isfinite(fs) or fs <= 0:
         return None
     hints = []
@@ -102,7 +136,13 @@ def alias_hint(fs: float, peak_hz: float) -> str | None:
     return "; ".join(hints) if hints else None
 
 
-def dominant_psd_peaks(f: np.ndarray, pxx: np.ndarray, fs: float, max_peaks: int = 8) -> list[PeakInfo]:
+def dominant_psd_peaks(
+    f: np.ndarray,
+    pxx: np.ndarray,
+    fs: float,
+    max_peaks: int = 8,
+) -> list[PeakInfo]:
+    """Return up to *max_peaks* most prominent spectral peaks as PeakInfo objects."""
     if f.size == 0 or pxx.size == 0:
         return []
     log_psd = 10.0 * np.log10(np.maximum(pxx, 1e-30))
@@ -120,12 +160,33 @@ def dominant_psd_peaks(f: np.ndarray, pxx: np.ndarray, fs: float, max_peaks: int
                 alias_hint=alias_hint(fs, float(f[idx])),
             )
         )
+    log.debug("dominant_psd_peaks: found %d peaks", len(info))
     return info
 
 
-def allan_deviation(y: np.ndarray, fs: float, taus: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
+def bandpower(f: np.ndarray, pxx: np.ndarray, low_hz: float, high_hz: float) -> float:
+    """Trapezoidal integration of PSD within [low_hz, high_hz]."""
+    if f.size == 0:
+        return float("nan")
+    mask = (f >= low_hz) & (f <= high_hz)
+    if np.count_nonzero(mask) < 2:
+        return float("nan")
+    return float(np.trapezoid(pxx[mask], f[mask]))
+
+
+# ---------------------------------------------------------------------------
+# Noise characterisation
+# ---------------------------------------------------------------------------
+
+def allan_deviation(
+    y: np.ndarray,
+    fs: float,
+    taus: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute Allan deviation over log-spaced averaging times."""
     y = np.asarray(y, dtype=float)
     if y.size < 16:
+        log.warning("allan_deviation: signal too short (%d samples)", y.size)
         return np.array([]), np.array([])
     if taus is None:
         max_m = max(4, y.size // 10)
@@ -144,22 +205,19 @@ def allan_deviation(y: np.ndarray, fs: float, taus: np.ndarray | None = None) ->
         avar = 0.5 * np.mean(diff**2)
         tau_out.append(m / fs)
         adev_out.append(np.sqrt(avar))
+    log.debug("allan_deviation: computed %d tau points", len(tau_out))
     return np.asarray(tau_out, dtype=float), np.asarray(adev_out, dtype=float)
 
 
 def linear_trend(y: np.ndarray, time_s: np.ndarray) -> tuple[float, float]:
+    """Fit a linear trend and return (slope, intercept)."""
     coeff = np.polyfit(time_s, y, 1)
     return float(coeff[0]), float(coeff[1])
 
 
-def bandpower(f: np.ndarray, pxx: np.ndarray, low_hz: float, high_hz: float) -> float:
-    if f.size == 0:
-        return float("nan")
-    mask = (f >= low_hz) & (f <= high_hz)
-    if np.count_nonzero(mask) < 2:
-        return float("nan")
-    return float(np.trapezoid(pxx[mask], f[mask]))
-
+# ---------------------------------------------------------------------------
+# Event detection and metrics
+# ---------------------------------------------------------------------------
 
 def detect_events(
     y: np.ndarray,
@@ -168,9 +226,24 @@ def detect_events(
     threshold_sigma: float = 5.0,
     min_duration_s: float = 0.20,
     merge_gap_s: float = 0.15,
+    pad_s: float = 0.25,
 ) -> list[EventWindow]:
+    """
+    Detect above-threshold transient events using a robust baseline estimate.
+
+    Parameters
+    ----------
+    y:               Signal array.
+    fs:              Sampling frequency [Hz].
+    baseline_s:      Duration of the initial baseline window.
+    threshold_sigma: Threshold in units of robust-std above the baseline centre.
+    min_duration_s:  Minimum event duration; shorter blobs are discarded.
+    merge_gap_s:     Gaps shorter than this are merged into a single event.
+    pad_s:           Symmetric padding added around each detected event boundary.
+    """
     y = np.asarray(y, dtype=float)
     if y.size < 8:
+        log.warning("detect_events: signal too short (%d samples)", y.size)
         return []
     n_base = min(len(y), max(8, int(round(baseline_s * fs))))
     base = y[:n_base]
@@ -179,9 +252,10 @@ def detect_events(
     threshold = center + threshold_sigma * spread
     active = y > threshold
     if not np.any(active):
+        log.info("detect_events: no events detected (threshold=%.4g)", threshold)
         return []
     idx = np.flatnonzero(active)
-    groups = [[int(idx[0])]]
+    groups: list[list[int]] = [[int(idx[0])]]
     max_gap = max(1, int(round(merge_gap_s * fs)))
     for i in idx[1:]:
         if i - groups[-1][-1] <= max_gap:
@@ -189,21 +263,27 @@ def detect_events(
         else:
             groups.append([int(i)])
     min_len = max(1, int(round(min_duration_s * fs)))
+    pad = max(1, int(round(pad_s * fs)))
     windows: list[EventWindow] = []
     for group in groups:
         start = group[0]
         end = group[-1]
         if end - start + 1 < min_len:
             continue
-        pad = max(1, int(round(0.25 * fs)))
         start = max(0, start - pad)
         end = min(len(y) - 1, end + pad)
         peak = int(start + np.argmax(y[start : end + 1]))
         windows.append(EventWindow(start_idx=start, peak_idx=peak, end_idx=end))
+    log.info("detect_events: detected %d event(s)", len(windows))
     return windows
 
 
-def event_metrics(y: np.ndarray, time_s: np.ndarray, events: list[EventWindow]) -> pd.DataFrame:
+def event_metrics(
+    y: np.ndarray,
+    time_s: np.ndarray,
+    events: list[EventWindow],
+) -> pd.DataFrame:
+    """Compute per-event feature metrics (one row per event)."""
     rows = []
     for i, ev in enumerate(events, start=1):
         seg_y = y[ev.start_idx : ev.end_idx + 1]
@@ -240,27 +320,151 @@ def event_metrics(y: np.ndarray, time_s: np.ndarray, events: list[EventWindow]) 
     return pd.DataFrame(rows)
 
 
+def best_event_metrics(
+    y: np.ndarray,
+    time_s: np.ndarray,
+    fs: float,
+    baseline_s: float = 2.0,
+    threshold_sigma: float = 5.0,
+    min_duration_s: float = 0.20,
+    merge_gap_s: float = 0.15,
+    pad_s: float = 0.25,
+) -> dict[str, float]:
+    """
+    Summarise the dominant grip event in a capture.
+
+    Selects the event with the largest baseline-to-peak excursion and returns a
+    flat dict of scalar metrics.  Suitable for filter benchmarking (stage 6).
+
+    Keys
+    ----
+    n_events, peak_value, peak_time_s, rise_10_90_s, max_dfdt,
+    plateau_std_last20pct, event_start_s, event_end_s
+    """
+    _nan: dict[str, float] = {
+        "n_events": 0.0,
+        "peak_value": float("nan"),
+        "peak_time_s": float("nan"),
+        "rise_10_90_s": float("nan"),
+        "max_dfdt": float("nan"),
+        "plateau_std_last20pct": float("nan"),
+        "event_start_s": float("nan"),
+        "event_end_s": float("nan"),
+    }
+    events = detect_events(
+        y, fs,
+        baseline_s=baseline_s,
+        threshold_sigma=threshold_sigma,
+        min_duration_s=min_duration_s,
+        merge_gap_s=merge_gap_s,
+        pad_s=pad_s,
+    )
+    if not events:
+        log.warning("best_event_metrics: no events detected")
+        return _nan
+
+    best = max(events, key=lambda ev: float(y[ev.peak_idx] - y[ev.start_idx]))
+    seg_y = y[best.start_idx : best.end_idx + 1]
+    seg_t = time_s[best.start_idx : best.end_idx + 1]
+
+    peak_local = int(np.argmax(seg_y))
+    peak_value = float(seg_y[peak_local])
+    peak_time = float(seg_t[peak_local])
+    baseline = float(seg_y[0])
+    rise = peak_value - baseline
+
+    y10 = baseline + 0.1 * rise
+    y90 = baseline + 0.9 * rise
+    c10 = np.where(seg_y >= y10)[0]
+    c90 = np.where(seg_y >= y90)[0]
+    rise_10_90 = (
+        float(seg_t[c90[0]] - seg_t[c10[0]])
+        if c10.size and c90.size
+        else float("nan")
+    )
+
+    dy = np.gradient(seg_y, seg_t)
+    tail = seg_y[int(0.8 * len(seg_y)):]
+    plateau_std = float(np.std(tail)) if len(tail) > 1 else float("nan")
+
+    log.debug(
+        "best_event_metrics: n_events=%d, peak=%.4g, rise_10_90=%.4f s",
+        len(events), peak_value,
+        rise_10_90 if np.isfinite(rise_10_90) else float("nan"),
+    )
+    return {
+        "n_events": float(len(events)),
+        "peak_value": peak_value,
+        "peak_time_s": peak_time,
+        "rise_10_90_s": rise_10_90,
+        "max_dfdt": float(np.max(dy)),
+        "plateau_std_last20pct": plateau_std,
+        "event_start_s": float(seg_t[0]),
+        "event_end_s": float(seg_t[-1]),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Filter application
+# ---------------------------------------------------------------------------
+
 def apply_filter_spec(y: np.ndarray, fs: float, spec: dict[str, Any]) -> np.ndarray:
+    """
+    Apply a filter specified as a dict to signal *y*.
+
+    Supported types
+    ---------------
+    identity          — pass-through (no-op copy)
+    moving_average    — causal FIR box filter; requires ``window_samples``
+    median            — median filter; requires ``kernel_size``
+    butter_lowpass    — zero-phase Butterworth low-pass; requires ``cutoff_hz``
+    butter_highpass   — zero-phase Butterworth high-pass; requires ``cutoff_hz``
+    butter_bandpass   — zero-phase Butterworth band-pass; requires ``low_hz``, ``high_hz``
+    one_pole_lowpass  — causal single-pole IIR; requires ``cutoff_hz``
+    notch             — zero-phase IIR notch; requires ``freq_hz``
+    chain             — sequential composition; requires ``steps`` list of specs
+    """
     y = np.asarray(y, dtype=float)
-    filter_type = spec["type"]
+    filter_type = spec.get("type", "")
+    log.debug("apply_filter_spec: type=%r", filter_type)
+
     if filter_type == "identity":
         return y.copy()
+
     if filter_type == "moving_average":
         w = int(spec["window_samples"])
         if w <= 1:
             return y.copy()
         kernel = np.ones(w, dtype=float) / w
         return np.convolve(y, kernel, mode="same")
+
     if filter_type == "median":
         k = int(spec["kernel_size"])
         if k % 2 == 0:
             k += 1
         return signal.medfilt(y, kernel_size=k)
+
     if filter_type == "butter_lowpass":
         order = int(spec.get("order", 2))
         cutoff_hz = float(spec["cutoff_hz"])
         sos = signal.butter(order, cutoff_hz, btype="low", fs=fs, output="sos")
         return signal.sosfiltfilt(sos, y)
+
+    if filter_type == "butter_highpass":
+        order = int(spec.get("order", 2))
+        cutoff_hz = float(spec["cutoff_hz"])
+        sos = signal.butter(order, cutoff_hz, btype="high", fs=fs, output="sos")
+        return signal.sosfiltfilt(sos, y)
+
+    if filter_type == "butter_bandpass":
+        order = int(spec.get("order", 2))
+        low_hz = float(spec["low_hz"])
+        high_hz = float(spec["high_hz"])
+        sos = signal.butter(
+            order, [low_hz, high_hz], btype="bandpass", fs=fs, output="sos"
+        )
+        return signal.sosfiltfilt(sos, y)
+
     if filter_type == "one_pole_lowpass":
         cutoff_hz = float(spec["cutoff_hz"])
         tau = 1.0 / (2.0 * np.pi * cutoff_hz)
@@ -271,20 +475,27 @@ def apply_filter_spec(y: np.ndarray, fs: float, spec: dict[str, Any]) -> np.ndar
         for i in range(1, len(y)):
             out[i] = out[i - 1] + alpha * (y[i] - out[i - 1])
         return out
+
     if filter_type == "notch":
         freq_hz = float(spec["freq_hz"])
         q = float(spec.get("q", 20.0))
         b, a = signal.iirnotch(freq_hz, q, fs=fs)
         return signal.filtfilt(b, a, y)
+
     if filter_type == "chain":
         out = y.copy()
         for step in spec.get("steps", []):
             out = apply_filter_spec(out, fs, step)
         return out
-    raise ValueError(f"Unsupported filter type: {filter_type}")
+
+    log.error("apply_filter_spec: unsupported filter type %r", filter_type)
+    raise ValueError(f"Unsupported filter type: {filter_type!r}")
 
 
 def load_filter_specs(path: str | Path) -> list[dict[str, Any]]:
+    """Load a YAML filter candidate file and return the list of filter dicts."""
     with Path(path).open("r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
-    return list(cfg.get("filters", []))
+    specs = list(cfg.get("filters", []))
+    log.info("load_filter_specs: loaded %d filter specs from %s", len(specs), path)
+    return specs

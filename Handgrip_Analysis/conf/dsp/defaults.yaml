@@ -1,0 +1,47 @@
+# @package dsp
+# DSP constants and algorithm parameters.
+
+# ---------------------------------------------------------------------------
+# Bandpower frequency bands [low_hz, high_hz].
+# Used by stage2, stage5, and stage6 for bandpower reporting.
+# ---------------------------------------------------------------------------
+bandpower_bands:
+  - [0.0,  1.0]    # sub-Hz / ultra-low
+  - [1.0,  4.0]    # low
+  - [4.0, 12.0]    # mid
+  - [12.0, 30.0]   # upper-mid
+  - [30.0, 49.0]   # HF noise assessment band (used in stage6)
+
+# ---------------------------------------------------------------------------
+# Welch PSD computation
+# ---------------------------------------------------------------------------
+welch:
+  max_nperseg: 2048
+  min_nperseg: 256
+  window: hann
+
+# ---------------------------------------------------------------------------
+# Event detection
+# ---------------------------------------------------------------------------
+event_detection:
+  baseline_s: 2.0          # initial baseline window for noise floor estimate
+  threshold_sigma: 5.0     # threshold height above baseline in robust-std units
+  min_duration_s: 0.20     # discard events shorter than this
+  merge_gap_s: 0.15        # merge events separated by less than this
+  pad_s: 0.25              # symmetric padding around each event boundary
+  tail_fraction: 0.80      # fraction of event used for plateau-std computation
+
+# ---------------------------------------------------------------------------
+# PSD peak finder
+# ---------------------------------------------------------------------------
+psd_peaks:
+  prominence_db: 3.0   # minimum prominence for a peak to be reported
+  max_peaks: 8         # maximum number of peaks to return
+
+# ---------------------------------------------------------------------------
+# Plot output
+# ---------------------------------------------------------------------------
+plot:
+  dpi: 150
+  figsize_wide: [12, 5]    # [width, height] in inches — for time-series plots
+  figsize_square: [10, 5]  # [width, height] in inches — for PSD / comparison

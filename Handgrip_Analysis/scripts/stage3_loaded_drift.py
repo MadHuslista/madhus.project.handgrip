@@ -1,50 +1,45 @@
 #!/usr/bin/env python3
+"""Stage 3 — Loaded drift / creep analysis."""
 from __future__ import annotations
 
-import argparse
-import sys
+import logging
 from pathlib import Path
 
+import hydra
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from omegaconf import DictConfig
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(ROOT / "src"))
-
+from handgrip_analysis._logging import setup_logging
 from handgrip_analysis.dsp import linear_trend
 from handgrip_analysis.io import ensure_dir, load_capture, sampling_summary
 from handgrip_analysis.report import save_json
 
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Analyze loaded drift / creep")
-    parser.add_argument("--input", required=True)
-    parser.add_argument("--channel", default="raw", choices=["raw", "filtered"])
-    parser.add_argument("--time-source", default="auto", choices=["auto", "device", "lsl", "host"])
-    parser.add_argument("--pre-window-s", type=float, default=10.0, help="Baseline window at start for return-to-zero estimate")
-    parser.add_argument("--post-window-s", type=float, default=10.0, help="Post window at end for return-to-zero estimate")
-    parser.add_argument("--outdir", required=True)
-    return parser.parse_args()
+matplotlib.use("Agg")
+log = logging.getLogger(__name__)
 
 
-def main() -> None:
-    args = parse_args()
-    outdir = ensure_dir(args.outdir)
-    cap = load_capture(args.input, time_source=args.time_source)
-    y = cap.series(args.channel)
+@hydra.main(config_path="../conf", config_name="config", version_base="1.3")
+def main(cfg: DictConfig) -> None:
+    setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)
+    log.info("Stage 3 — loaded drift / creep analysis")
+
+    outdir = ensure_dir(cfg.outdir)
+    cap = load_capture(cfg.input, time_source=cfg.io.time_source)
+    y = cap.series(cfg.analysis.channel)
     slope, intercept = linear_trend(y, cap.time_s)
     trend = slope * cap.time_s + intercept
     detrended = y - trend
 
-    n_pre = max(1, int(round(args.pre_window_s * cap.fs_estimate_hz)))
-    n_post = max(1, int(round(args.post_window_s * cap.fs_estimate_hz)))
+    n_pre = max(1, int(round(cfg.analysis.pre_window_s * cap.fs_estimate_hz)))
+    n_post = max(1, int(round(cfg.analysis.post_window_s * cap.fs_estimate_hz)))
     pre_mean = float(np.mean(y[:n_pre]))
     post_mean = float(np.mean(y[-n_post:]))
 
     summary = {
-        "input": str(Path(args.input).resolve()),
-        "channel": args.channel,
+        "input": str(Path(cfg.input).resolve()),
+        "channel": cfg.analysis.channel,
         "time_source": cap.time_source,
         "sampling": sampling_summary(cap.time_s),
         "drift_slope_per_s": slope,
@@ -56,7 +51,7 @@ def main() -> None:
     }
     save_json(outdir / "summary.json", summary)
 
-    fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=tuple(cfg.dsp.plot.figsize_wide), sharex=True)
     axes[0].plot(cap.time_s, y, label="signal")
     axes[0].plot(cap.time_s, trend, label="linear trend")
     axes[0].set_ylabel("Signal")
@@ -69,9 +64,11 @@ def main() -> None:
     axes[1].set_ylabel("Signal")
     axes[1].grid(True)
     axes[1].legend()
+
     fig.tight_layout()
-    fig.savefig(outdir / "loaded_drift.png", dpi=150)
+    fig.savefig(outdir / "loaded_drift.png", dpi=cfg.dsp.plot.dpi)
     plt.close(fig)
+    log.info("Stage 3 complete — outputs in %s", outdir)
 
 
 if __name__ == "__main__":

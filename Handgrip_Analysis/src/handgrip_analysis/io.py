@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 import numpy as np
 import pandas as pd
+
+log = logging.getLogger(__name__)
 
 TimeSource = Literal["auto", "device", "lsl", "host"]
 ChannelName = Literal["raw", "filtered", "value_raw", "value_filtered"]
@@ -53,21 +56,34 @@ def _is_monotonic_enough(t: np.ndarray) -> bool:
     if t.size < 3:
         return True
     dt = np.diff(t)
-    return np.all(dt > 0)
+    return bool(np.all(dt > 0))
 
 
 def estimate_fs(time_s: np.ndarray) -> float:
+    """Estimate sampling frequency as 1 / median(dt)."""
     if time_s.size < 2:
+        log.warning("estimate_fs: fewer than 2 samples — returning NaN")
         return float("nan")
     dt = np.diff(time_s)
     dt = dt[np.isfinite(dt) & (dt > 0)]
     if dt.size == 0:
+        log.warning("estimate_fs: no valid positive dt values — returning NaN")
         return float("nan")
     return 1.0 / float(np.median(dt))
 
 
 def load_capture(path: str | Path, time_source: TimeSource = "auto") -> CaptureData:
+    """
+    Load a CSV sensor capture and select the best monotonic time column.
+
+    The *time_source* parameter controls which column(s) are tried:
+    - ``"auto"``   — try device_clock_us → lsl_timestamp_s → host_unix_time_ns
+    - ``"device"`` — require device_clock_us
+    - ``"lsl"``    — require lsl_timestamp_s
+    - ``"host"``   — require host_unix_time_ns
+    """
     path = Path(path)
+    log.info("load_capture: reading %s (time_source=%r)", path, time_source)
     df = pd.read_csv(path)
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
@@ -79,18 +95,29 @@ def load_capture(path: str | Path, time_source: TimeSource = "auto") -> CaptureD
             t = _normalize_time(df, col)
             if _is_monotonic_enough(t):
                 selected_col = col
+                log.debug("load_capture: selected time column %r", col)
                 break
+            else:
+                log.warning("load_capture: column %r is not monotonic — skipping", col)
     if selected_col is None:
         raise ValueError(
-            f"Could not select a monotonic time source from {TIME_PRIORITY[time_source]} for {path}"
+            f"Could not select a monotonic time source from "
+            f"{TIME_PRIORITY[time_source]} for {path}"
         )
 
     time_s = _normalize_time(df, selected_col)
     fs = estimate_fs(time_s)
-    return CaptureData(path=path, df=df, time_s=time_s, fs_estimate_hz=fs, time_source=selected_col)
+    log.info(
+        "load_capture: loaded %d samples, fs=%.1f Hz, duration=%.2f s",
+        len(time_s), fs, float(time_s[-1] - time_s[0]),
+    )
+    return CaptureData(
+        path=path, df=df, time_s=time_s, fs_estimate_hz=fs, time_source=selected_col
+    )
 
 
 def sampling_summary(time_s: np.ndarray) -> dict[str, float]:
+    """Return a dict of sampling statistics for a time vector."""
     if time_s.size < 2:
         return {
             "n_samples": int(time_s.size),
@@ -117,6 +144,8 @@ def sampling_summary(time_s: np.ndarray) -> dict[str, float]:
 
 
 def ensure_dir(path: str | Path) -> Path:
+    """Create *path* (and parents) if it does not exist; return a Path object."""
     path = Path(path)
     path.mkdir(parents=True, exist_ok=True)
+    log.debug("ensure_dir: %s", path)
     return path

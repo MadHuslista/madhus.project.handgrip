@@ -1,0 +1,14 @@
+# @package io
+# Default I/O parameters shared across all stages.
+
+# Time column selection strategy.
+# Choices: auto | device | lsl | host
+time_source: auto
+
+# Default signal channel to load when a single channel is needed.
+# Choices: raw | filtered
+channel: raw
+
+# Columns that MUST be present in every capture CSV.
+required_columns:
+  - value_raw

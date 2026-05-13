@@ -1,44 +1,46 @@
 #!/usr/bin/env python3
+"""Stage 5 — Interference PSD comparison across conditions."""
 from __future__ import annotations
 
-import argparse
-import sys
+import logging
 from pathlib import Path
 
+import hydra
+import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
+from omegaconf import DictConfig
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(ROOT / "src"))
-
+from handgrip_analysis._logging import setup_logging
 from handgrip_analysis.dsp import bandpower, dominant_psd_peaks, welch_psd
 from handgrip_analysis.io import ensure_dir, load_capture
 from handgrip_analysis.report import save_csv, save_json
 
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Compare interference conditions through PSD overlays")
-    parser.add_argument("--inputs", nargs="+", required=True)
-    parser.add_argument("--labels", nargs="+", required=True)
-    parser.add_argument("--channel", default="raw", choices=["raw", "filtered"])
-    parser.add_argument("--time-source", default="auto", choices=["auto", "device", "lsl", "host"])
-    parser.add_argument("--outdir", required=True)
-    return parser.parse_args()
+matplotlib.use("Agg")
+log = logging.getLogger(__name__)
 
 
-def main() -> None:
-    args = parse_args()
-    if len(args.inputs) != len(args.labels):
-        raise SystemExit("--inputs and --labels must have the same length")
-    outdir = ensure_dir(args.outdir)
+@hydra.main(config_path="../conf", config_name="config", version_base="1.3")
+def main(cfg: DictConfig) -> None:
+    setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)
+    log.info("Stage 5 — interference PSD comparison")
+
+    inputs = list(cfg.inputs)
+    labels = list(cfg.labels)
+    if len(inputs) != len(labels):
+        raise ValueError("inputs and labels must have the same length")
+
+    outdir = ensure_dir(cfg.outdir)
+    bands = [list(b) for b in cfg.dsp.bandpower_bands]
+    dpi = cfg.dsp.plot.dpi
+
     rows = []
-    summary = {"comparisons": []}
-    fig, ax = plt.subplots(figsize=(10, 5))
+    summary: dict = {"comparisons": []}
+    fig, ax = plt.subplots(figsize=tuple(cfg.dsp.plot.figsize_square))
 
-    for csv_path, label in zip(args.inputs, args.labels):
-        cap = load_capture(csv_path, time_source=args.time_source)
-        y = cap.series(args.channel)
+    for csv_path, label in zip(inputs, labels):
+        cap = load_capture(csv_path, time_source=cfg.io.time_source)
+        y = cap.series(cfg.analysis.channel)
         f, pxx = welch_psd(y, cap.fs_estimate_hz)
         ax.semilogy(f, pxx, label=label)
         peaks = dominant_psd_peaks(f, pxx, cap.fs_estimate_hz)
@@ -50,25 +52,25 @@ def main() -> None:
                 "prominence_db": peak.prominence_db,
                 "alias_hint": peak.alias_hint or "",
             })
-        summary["comparisons"].append({
-            "label": label,
-            "bandpower_0_1_hz": bandpower(f, pxx, 0.0, 1.0),
-            "bandpower_1_4_hz": bandpower(f, pxx, 1.0, 4.0),
-            "bandpower_4_12_hz": bandpower(f, pxx, 4.0, 12.0),
-            "bandpower_12_30_hz": bandpower(f, pxx, 12.0, 30.0),
-        })
+        bp = {}
+        for band in bands[:4]:
+            lo, hi = band[0], band[1]
+            key = f"bandpower_{str(lo).replace('.', 'p')}_{str(hi).replace('.', 'p')}_hz"
+            bp[key] = bandpower(f, pxx, lo, hi)
+        summary["comparisons"].append({"label": label, **bp})
 
     save_csv(outdir / "peak_comparison.csv", pd.DataFrame(rows))
     save_json(outdir / "summary.json", summary)
 
     ax.set_title("Stage 5 — Interference PSD comparison")
     ax.set_xlabel("Frequency [Hz]")
-    ax.set_ylabel("PSD [signal^2 / Hz]")
+    ax.set_ylabel("PSD [signal² / Hz]")
     ax.grid(True)
     ax.legend()
     fig.tight_layout()
-    fig.savefig(outdir / "psd_compare.png", dpi=150)
+    fig.savefig(outdir / "psd_compare.png", dpi=dpi)
     plt.close(fig)
+    log.info("Stage 5 complete — outputs in %s", outdir)
 
 
 if __name__ == "__main__":
