@@ -135,10 +135,10 @@ processing:
   timestamp_source: device_clock_us
   filters:
     - type: butterworth_lowpass_2nd
-      name: characterization_lowpass_15hz
+      name: butter_lowpass_9hz
       sample_rate_hz: 100.0
-      cutoff_hz: 15.0
-      q: 0.7071067811865476
+      cutoff_hz: 9.0
+      q: 0.7071067811865475
       reset_on_gap_s: 1.0
       min_dt_s: 0.000001
 
