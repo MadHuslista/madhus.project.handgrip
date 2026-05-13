@@ -202,3 +202,71 @@ def summarize_trials(results: list[TrialResult], cfg: StageConfig) -> list[Condi
                 uncertainty=first.uncertainty,
             )
     return summaries
+
+
+
+def stage6_artifact_tables(results: list[TrialResult], cfg: StageConfig) -> dict[str, pd.DataFrame]:
+    """Return standard Stage 6 Phase 3 artifact tables.
+
+    Full grouped cross-validation is intentionally left for Phase 4.  In Phase 3
+    this function formalizes the output contract by exposing per-trial filter
+    rows, validation-style aggregate scores, and the final ranking table.
+    """
+    filter_tables = [result.tables.get("filter_metrics") for result in results if "filter_metrics" in result.tables]
+    if filter_tables:
+        per_trial = pd.concat(filter_tables, ignore_index=True)
+    else:
+        per_trial = pd.DataFrame()
+
+    ranking = _score_filter_rows(per_trial, cfg) if not per_trial.empty else pd.DataFrame()
+    validation_scores = ranking.copy()
+    if not validation_scores.empty:
+        validation_scores.insert(0, "validation_mode", "aggregate_all_trials_phase3")
+
+    return {
+        "filter_per_trial_metrics": per_trial,
+        "filter_validation_scores": validation_scores,
+        "filter_ranking_summary": ranking,
+    }
+
+
+def filter_acceptance_markdown(ranking: pd.DataFrame, cfg: StageConfig) -> str:
+    """Create a compact human-readable Stage 6 acceptance report."""
+    lines: list[str] = [
+        "# Stage 6 Filter Acceptance Report",
+        "",
+        "## Summary",
+        "",
+    ]
+    if ranking.empty:
+        lines.extend([
+            "No filter ranking rows were generated.",
+            "",
+            "Check that the manifest includes Stage 6 rest and/or dynamic trials and that `filter_config` points to valid candidates.",
+        ])
+        return "\n".join(lines) + "\n"
+
+    top = ranking.iloc[0]
+    lines.extend([
+        f"- Top ranked filter: `{top.get('filter')}`",
+        f"- Composite score: `{top.get('composite_score')}`",
+        f"- Trials represented: `{top.get('n_trials')}`",
+        "",
+        "## Ranking",
+        "",
+        "| rank | filter | composite_score | n_trials |",
+        "|---:|---|---:|---:|",
+    ])
+    for idx, row in ranking.reset_index(drop=True).iterrows():
+        lines.append(
+            f"| {idx + 1} | `{row.get('filter')}` | {row.get('composite_score')} | {row.get('n_trials')} |"
+        )
+
+    lines.extend([
+        "",
+        "## Notes",
+        "",
+        "- Phase 3 standardizes the artifact contract and computes aggregate validation-style scores across available trials.",
+        "- Phase 4 should upgrade this to grouped cross-trial validation, e.g. leave-one-session-out with leave-one-trial-out fallback.",
+    ])
+    return "\n".join(lines) + "\n"

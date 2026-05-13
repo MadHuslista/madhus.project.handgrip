@@ -24,6 +24,7 @@ dev = [
 ]
 
 [project.scripts]
+ha-stage         = "handgrip_analysis.cli:main"
 ha-stage1        = "handgrip_analysis._cli.stage1:main"
 ha-stage2        = "handgrip_analysis._cli.stage2:main"
 ha-stage3        = "handgrip_analysis._cli.stage3:main"
@@ -31,7 +32,7 @@ ha-stage4        = "handgrip_analysis._cli.stage4:main"
 ha-stage5        = "handgrip_analysis._cli.stage5:main"
 ha-stage6-design = "handgrip_analysis._cli.stage6_design:main"
 ha-stage6-review = "handgrip_analysis._cli.stage6_review:main"
-ha-run-all       = "handgrip_analysis._cli.run_all:main"
+ha-run-all       = "handgrip_analysis.cli:run_all_main"
 ha-run-manifest  = "handgrip_analysis._cli.manifest:main"
 
 [tool.hatch.build.targets.wheel]

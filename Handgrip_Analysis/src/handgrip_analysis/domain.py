@@ -1,12 +1,10 @@
-"""
-Domain models for trial-aware handgrip analysis.
+"""Domain models for trial-aware handgrip analysis.
 
 This module defines the small, immutable data contracts used by the Phase 1
 multi-trial refactor.  The intent is to make the statistical unit explicit:
 analysis operates on *trials*, and trial results are later aggregated into
 conditions/stages.
 """
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -21,8 +19,7 @@ Metrics = dict[str, MetricValue]
 
 @dataclass(frozen=True, slots=True)
 class TrialSpec:
-    """
-    Validated manifest row describing one capture trial.
+    """Validated manifest row describing one capture trial.
 
     Parameters
     ----------
@@ -52,7 +49,6 @@ class TrialSpec:
         Optional known load for static loaded trials.
     notes:
         Free-form operator notes.
-
     """
 
     stage: str
@@ -89,8 +85,7 @@ class TrialSpec:
 
 @dataclass(frozen=True, slots=True)
 class StageConfig:
-    """
-    Typed configuration used by stage analyzers.
+    """Typed configuration used by stage analyzers.
 
     The class intentionally contains the common knobs needed by all stages plus
     stage-specific fields that are harmless when unused.  Construction happens

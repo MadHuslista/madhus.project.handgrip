@@ -1,13 +1,17 @@
-"""Entry point: ha-stage1."""
+"""Backward-compatible entry point: ha-stage1."""
 from __future__ import annotations
 
-import runpy
 import sys
-from pathlib import Path
 
-_SCRIPT = Path(__file__).resolve().parents[3] / "scripts" / "stage1_startup_warmup.py"
+from handgrip_analysis.cli import stage_main
 
 
-def main() -> None:
-    sys.argv[0] = str(_SCRIPT)
-    runpy.run_path(str(_SCRIPT), run_name="__main__")
+def main(argv: list[str] | None = None) -> None:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not any(arg == "--stage" or arg.startswith("--stage=") or arg.startswith("stage=") for arg in args):
+        args.insert(0, "stage=stage1")
+    raise SystemExit(stage_main(args))
+
+
+if __name__ == "__main__":
+    main()

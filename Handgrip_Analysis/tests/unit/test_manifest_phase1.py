@@ -90,3 +90,28 @@ def test_uncertainty_helpers_handle_small_n():
 
     assert summary["median"] == 2.0
     assert ci_low == ci_high == 1.0
+
+
+def test_phase3_pipeline_writes_standard_directories(tmp_path):
+    capture = tmp_path / "20260512_stage1_cold_start_trial01.csv"
+    _write_capture(capture, n=1000)
+    manifest = tmp_path / "manifest.csv"
+    pd.DataFrame(
+        {
+            "stage": ["stage1"],
+            "condition": ["cold_start"],
+            "trial_type": ["warmup"],
+            "trial_id": ["trial01"],
+            "session_id": ["s1"],
+            "path": [capture.name],
+        }
+    ).to_csv(manifest, index=False)
+
+    outdir = tmp_path / "out"
+    paths = run_manifest_analysis(manifest_path=manifest, stage="stage1", outdir=outdir)
+
+    assert paths["plan"].name == "plan.json"
+    assert (outdir / "figures" / "per_trial").is_dir()
+    assert (outdir / "figures" / "aggregate").is_dir()
+    assert (outdir / "figures" / "per_trial" / "README.md").exists()
+    assert (outdir / "summary.json").exists()

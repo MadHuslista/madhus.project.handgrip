@@ -65,8 +65,7 @@ def bootstrap_ci(
     n_resamples: int = 5000,
     random_seed: int = 42,
 ) -> tuple[float, float]:
-    """
-    Bootstrap confidence interval for a scalar statistic.
+    """Bootstrap confidence interval for a scalar statistic.
 
     For fewer than two finite values the interval collapses to the observed
     statistic.  This keeps early calibration sessions usable while still making
