@@ -1,4 +1,5 @@
-"""Root application configuration schema.
+"""
+Root application configuration schema.
 
 Provides the ``AppConfig`` dataclass that aggregates all sub-configs and
 optionally registers them with Hydra's ``ConfigStore`` so that structured
@@ -17,6 +18,7 @@ For non-Hydra usage (tests, library code), construct directly::
     from handgrip_analysis.config import AppConfig
     cfg = AppConfig()
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -24,14 +26,15 @@ from typing import Any, Mapping
 
 from .dsp_config import DSPConfig
 
-
 # ---------------------------------------------------------------------------
 # Logging config
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class LoggingConfig:
-    """Logging configuration.
+    """
+    Logging configuration.
 
     Attributes
     ----------
@@ -40,6 +43,7 @@ class LoggingConfig:
         ``"ERROR"``, or ``"CRITICAL"`` (case-insensitive).
     file:
         Optional path for the log file.  ``None`` disables file logging.
+
     """
 
     level: str = "INFO"
@@ -67,7 +71,8 @@ class LoggingConfig:
 
 @dataclass
 class Stage6ScoringConfig:
-    """Composite score weights for the Stage 6 filter family review.
+    """
+    Composite score weights for the Stage 6 filter family review.
 
     The two components are:
 
@@ -106,7 +111,8 @@ class Stage6ScoringConfig:
 
 @dataclass
 class AppConfig:
-    """Root application configuration aggregating all sub-configs.
+    """
+    Root application configuration aggregating all sub-configs.
 
     This class provides a single, validated configuration object that can be
     constructed from Hydra's composed config or directly in tests.
@@ -131,7 +137,8 @@ class AppConfig:
 # ---------------------------------------------------------------------------
 
 def register_configs() -> None:
-    """Register ``AppConfig`` with Hydra's ``ConfigStore``.
+    """
+    Register ``AppConfig`` with Hydra's ``ConfigStore``.
 
     Call this once at application startup, before any ``hydra.initialize()``
     or ``@hydra.main`` decorated entry point runs.  Safe to call multiple

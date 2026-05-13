@@ -35,6 +35,7 @@ def setup_logging(
     log_file:
         If provided, log output is also written to this path.  Parent
         directories are created automatically.
+
     """
     root = logging.getLogger()
     root.setLevel(level.upper())

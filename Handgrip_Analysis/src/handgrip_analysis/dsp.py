@@ -1,4 +1,5 @@
-"""DSP functions for handgrip sensor signal analysis.
+"""
+DSP functions for handgrip sensor signal analysis.
 
 All functions in this module are **pure** — they have no file I/O or
 side effects and can be tested without mocking.
@@ -30,6 +31,7 @@ They serve as fallback defaults when callers do not supply a
      - Fraction of the signal treated as the "settled tail" by
        :func:`suggest_ready_time`
 """
+
 from __future__ import annotations
 
 import logging
@@ -65,6 +67,7 @@ TAIL_FRACTION: float = 0.80
 # Data structures
 # ---------------------------------------------------------------------------
 
+
 @dataclass(slots=True)
 class PeakInfo:
     frequency_hz: float
@@ -84,8 +87,10 @@ class EventWindow:
 # Basic statistics
 # ---------------------------------------------------------------------------
 
+
 def robust_std(x: np.ndarray) -> float:
-    """MAD-based outlier-robust standard deviation (consistent estimator).
+    """
+    MAD-based outlier-robust standard deviation (consistent estimator).
 
     Uses :data:`MAD_CONSISTENCY_CONSTANT` (1.4826) to scale MAD so that the
     result is a consistent estimator of σ for Gaussian data.
@@ -134,7 +139,8 @@ def suggest_ready_time(
     tail_fraction: float = TAIL_FRACTION,
     threshold_multiplier: float = READY_TIME_THRESHOLD_MULTIPLIER,
 ) -> dict[str, float | None]:
-    """Suggest the earliest time at which the signal has stabilised.
+    """
+    Suggest the earliest time at which the signal has stabilised.
 
     Parameters
     ----------
@@ -151,6 +157,7 @@ def suggest_ready_time(
     threshold_multiplier:
         Multiplier applied to the tail median for threshold derivation.
         Defaults to :data:`READY_TIME_THRESHOLD_MULTIPLIER` (1.5).
+
     """
     valid = np.isfinite(stds) & np.isfinite(slopes)
     if not np.any(valid):
@@ -190,7 +197,8 @@ def welch_psd(
     min_nperseg: int = 256,
     window: str = "hann",
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Compute Welch PSD with adaptive segment length.
+    """
+    Compute Welch PSD with adaptive segment length.
 
     Parameters
     ----------
@@ -207,6 +215,7 @@ def welch_psd(
     window:
         Window function name.  Defaults to ``"hann"``; override via
         ``WelchConfig.window``.
+
     """
     y = np.asarray(y, dtype=float)
     if y.size < 8:
@@ -217,9 +226,7 @@ def welch_psd(
     if nperseg >= y.size:
         nperseg = max(64, y.size // 2)
     noverlap = nperseg // 2
-    f, pxx = signal.welch(
-        y, fs=fs, window=window, nperseg=nperseg, noverlap=noverlap, scaling="density"
-    )
+    f, pxx = signal.welch(y, fs=fs, window=window, nperseg=nperseg, noverlap=noverlap, scaling="density")
     log.debug("welch_psd: n=%d, nperseg=%d, freq_bins=%d", y.size, nperseg, f.size)
     return f, pxx
 
@@ -244,7 +251,8 @@ def dominant_psd_peaks(
     prominence_db: float = 3.0,
     max_peaks: int = 8,
 ) -> list[PeakInfo]:
-    """Return the most prominent spectral peaks as :class:`PeakInfo` objects.
+    """
+    Return the most prominent spectral peaks as :class:`PeakInfo` objects.
 
     Parameters
     ----------
@@ -260,6 +268,7 @@ def dominant_psd_peaks(
     max_peaks:
         Maximum number of peaks to return (sorted by PSD, descending).
         Defaults to 8; override via ``PsdPeaksConfig.max_peaks``.
+
     """
     if f.size == 0 or pxx.size == 0:
         return []
@@ -346,7 +355,8 @@ def detect_events(
     merge_gap_s: float = 0.15,
     pad_s: float = 0.25,
 ) -> list[EventWindow]:
-    """Detect above-threshold transient events using a robust baseline estimate.
+    """
+    Detect above-threshold transient events using a robust baseline estimate.
 
     Parameters default to :class:`~handgrip_analysis.config.EventDetectionConfig`
     field values; callers should pass config values explicitly::
@@ -466,7 +476,8 @@ def best_event_metrics(
     merge_gap_s: float = 0.15,
     pad_s: float = 0.25,
 ) -> dict[str, float]:
-    """Summarise the dominant grip event in a capture.
+    """
+    Summarise the dominant grip event in a capture.
 
     Selects the event with the largest baseline-to-peak excursion and returns a
     flat dict of scalar metrics.  Suitable for filter benchmarking (stage 6).
@@ -546,7 +557,8 @@ def best_event_metrics(
 # ---------------------------------------------------------------------------
 
 def apply_filter_spec(y: np.ndarray, fs: float, spec: dict[str, Any]) -> np.ndarray:
-    """Apply a filter specified as a dict to signal *y*.
+    """
+    Apply a filter specified as a dict to signal *y*.
 
     Supported types
     ---------------

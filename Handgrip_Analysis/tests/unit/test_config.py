@@ -1,11 +1,12 @@
-"""Unit tests for handgrip_analysis.config structured configurations.
+"""
+Unit tests for handgrip_analysis.config structured configurations.
 
 All tests are pure dataclass construction — no I/O, no Hydra runtime.
 """
+
 from __future__ import annotations
 
 import pytest
-
 from handgrip_analysis.config import (
     AppConfig,
     DSPConfig,
@@ -17,10 +18,10 @@ from handgrip_analysis.config import (
 )
 from handgrip_analysis.config.schema import Stage6ScoringConfig
 
-
 # ---------------------------------------------------------------------------
 # WelchConfig
 # ---------------------------------------------------------------------------
+
 
 class TestWelchConfig:
     def test_defaults(self):

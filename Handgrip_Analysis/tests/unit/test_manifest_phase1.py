@@ -4,7 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 from handgrip_analysis.manifest import load_manifest, normalize_manifest_frame, validate_manifest_frame
 from handgrip_analysis.pipeline import run_manifest_analysis
 from handgrip_analysis.uncertainty import bootstrap_ci, robust_summary

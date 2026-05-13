@@ -82,7 +82,8 @@ def _infer_from_path(path: Path) -> dict[str, str]:
 
 
 def normalize_manifest_frame(df: pd.DataFrame, base_dir: str | Path | None = None) -> pd.DataFrame:
-    """Normalize current or legacy manifest schemas into the Phase 1 schema.
+    """
+    Normalize current or legacy manifest schemas into the Phase 1 schema.
 
     Legacy support is intentional to allow manifests created before the Phase 1
     multi-trial schema to be loaded without manual migration.  A manifest that

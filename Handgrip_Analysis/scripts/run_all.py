@@ -16,9 +16,8 @@ from pathlib import Path
 
 import hydra
 import pandas as pd
-from omegaconf import DictConfig
-
 from handgrip_analysis._logging import setup_logging
+from omegaconf import DictConfig
 
 log = logging.getLogger(__name__)
 

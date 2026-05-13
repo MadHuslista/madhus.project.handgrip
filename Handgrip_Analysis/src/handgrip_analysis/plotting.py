@@ -545,6 +545,7 @@ def generate_stage_figures(
         Optional :class:`~handgrip_analysis.config.PlotConfig` controlling
         figure DPI and default sizes.  Falls back to ``cfg.dsp.plot`` if
         ``cfg`` carries a ``DSPConfig``, or to module-level defaults otherwise.
+
     """
     del summaries  # summaries are kept in the signature for future aggregate plots.
     _plot = plot_cfg or _resolve_plot_cfg(cfg)

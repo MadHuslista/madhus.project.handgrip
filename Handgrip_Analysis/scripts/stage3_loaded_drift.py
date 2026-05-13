@@ -9,12 +9,11 @@ import hydra
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from omegaconf import DictConfig
-
 from handgrip_analysis._logging import setup_logging
 from handgrip_analysis.dsp import linear_trend
 from handgrip_analysis.io import ensure_dir, load_capture, sampling_summary
 from handgrip_analysis.report import save_json
+from omegaconf import DictConfig
 
 matplotlib.use("Agg")
 log = logging.getLogger(__name__)

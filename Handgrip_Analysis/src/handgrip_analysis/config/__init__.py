@@ -1,4 +1,5 @@
-"""Structured configuration dataclasses for handgrip-analysis.
+"""
+Structured configuration dataclasses for handgrip-analysis.
 
 These dataclasses are the authoritative typed definitions for all algorithm
 constants and tunable parameters.  The YAML files under ``conf/`` are the

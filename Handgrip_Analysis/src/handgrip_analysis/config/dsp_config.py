@@ -1,4 +1,5 @@
-"""Structured configuration for DSP algorithm parameters.
+"""
+Structured configuration for DSP algorithm parameters.
 
 These dataclasses mirror ``conf/dsp/defaults.yaml`` and serve as the
 single source of truth for all DSP tuning constants.  Any value defined
@@ -7,19 +8,21 @@ runtime effect — the purpose of this module is to close that gap.
 
 Default values are kept in sync with ``conf/dsp/defaults.yaml``.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
-
 # ---------------------------------------------------------------------------
 # Welch PSD computation
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class WelchConfig:
-    """Parameters for scipy.signal.welch PSD estimation.
+    """
+    Parameters for scipy.signal.welch PSD estimation.
 
     Attributes
     ----------
@@ -29,6 +32,7 @@ class WelchConfig:
         Lower bound on the FFT segment length (samples).
     window:
         Window function name recognised by ``scipy.signal.welch``.
+
     """
 
     max_nperseg: int = 2048
@@ -51,9 +55,11 @@ class WelchConfig:
 # Event detection
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class EventDetectionConfig:
-    """Parameters for grip-event detection in dynamic trials.
+    """
+    Parameters for grip-event detection in dynamic trials.
 
     Attributes
     ----------
@@ -71,6 +77,7 @@ class EventDetectionConfig:
     tail_fraction:
         Fraction of the signal used to characterise the "tail" when suggesting
         the sensor ready-time (``suggest_ready_time``).
+
     """
 
     baseline_s: float = 2.0
@@ -96,9 +103,11 @@ class EventDetectionConfig:
 # PSD peak finder
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PsdPeaksConfig:
-    """Parameters for the dominant-peak finder applied to Welch PSD spectra.
+    """
+    Parameters for the dominant-peak finder applied to Welch PSD spectra.
 
     Attributes
     ----------
@@ -107,6 +116,7 @@ class PsdPeaksConfig:
         as a reportable spectral peak.
     max_peaks:
         Maximum number of peaks to return (sorted by prominence, descending).
+
     """
 
     prominence_db: float = 3.0
@@ -128,9 +138,11 @@ class PsdPeaksConfig:
 # Plot output
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PlotConfig:
-    """Parameters controlling figure output quality and dimensions.
+    """
+    Parameters controlling figure output quality and dimensions.
 
     Attributes
     ----------
@@ -140,6 +152,7 @@ class PlotConfig:
         ``(width, height)`` in inches for wide time-series plots.
     figsize_square:
         ``(width, height)`` in inches for PSD / histogram comparison plots.
+
     """
 
     dpi: int = 150
@@ -167,19 +180,22 @@ class PlotConfig:
 # Composite DSP config
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class DSPConfig:
-    """Top-level DSP configuration, combining all DSP sub-configs.
+    """
+    Top-level DSP configuration, combining all DSP sub-configs.
 
     Mirrors the structure of ``conf/dsp/defaults.yaml``.
 
-    Example
+    Example:
     -------
     Construct from a Hydra/OmegaConf DictConfig after converting to a dict::
 
         from omegaconf import OmegaConf
         cfg = OmegaConf.to_container(hydra_cfg.dsp, resolve=True)
         dsp = DSPConfig.from_mapping(cfg)
+
     """
 
     welch: WelchConfig = field(default_factory=WelchConfig)
@@ -189,7 +205,8 @@ class DSPConfig:
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any] | None = None) -> "DSPConfig":
-        """Build a ``DSPConfig`` from a nested mapping (e.g. OmegaConf dict).
+        """
+        Build a ``DSPConfig`` from a nested mapping (e.g. OmegaConf dict).
 
         Missing sub-keys fall back to dataclass defaults.
         """

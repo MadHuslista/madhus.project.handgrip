@@ -19,7 +19,6 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-
 from omegaconf import OmegaConf
 
 from ._logging import setup_logging
@@ -57,7 +56,8 @@ def normalize_stage(stage: str) -> str:
 
 
 def parse_key_value_args(items: Iterable[str]) -> dict[str, Any]:
-    """Parse Hydra-style ``key=value`` overrides into a nested mapping.
+    """
+    Parse Hydra-style ``key=value`` overrides into a nested mapping.
 
     Delegates to ``OmegaConf.from_dotlist`` so that type coercion and nested
     key expansion are handled by the same library used throughout the config

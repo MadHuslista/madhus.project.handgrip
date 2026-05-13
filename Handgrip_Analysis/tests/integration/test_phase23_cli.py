@@ -4,7 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 from handgrip_analysis.cli import run_all_main, stage_main
 
 
