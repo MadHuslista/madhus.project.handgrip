@@ -11,6 +11,7 @@ from .aggregation import condition_summaries_frame, trial_results_frame
 from .domain import AnalysisPlan, ConditionSummary, StageConfig, StageExecutionError, TrialResult, TrialSpec
 from .io import ensure_dir
 from .manifest import filter_trials, load_manifest
+from .plotting import generate_stage_figures
 from .report import save_csv, save_json
 from .stages import get_stage_module
 
@@ -81,8 +82,8 @@ def _ensure_phase3_directories(outdir: Path) -> dict[str, Path]:
         if not readme.exists():
             readme.write_text(
                 "# Generated figures\n\n"
-                "This directory is part of the standard Phase 3 output contract. "
-                "Stage-specific plotting can populate it without changing the artifact layout.\n",
+                "This directory is populated by the manifest-driven pipeline. "
+                "If this README is the only file present, plotting failed or no plottable trials were selected.\n",
                 encoding="utf-8",
             )
     return dirs
@@ -117,7 +118,8 @@ def write_stage_outputs(
     results: Sequence[TrialResult],
     summaries: Sequence[ConditionSummary],
 ) -> dict[str, Path]:
-    """Write standard Phase 3 artifacts for a completed stage plan.
+    """
+    Write standard Phase 3 artifacts for a completed stage plan.
 
     Required artifact family for every stage:
 
@@ -156,6 +158,10 @@ def write_stage_outputs(
 
     if plan.stage.startswith("stage6"):
         _write_stage6_outputs(outdir, cfg, results, paths)
+
+    figure_paths = generate_stage_figures(plan, cfg, results, summaries, dirs)
+    for key, figure_path in figure_paths.items():
+        paths[key] = figure_path
 
     summary = {
         "stage": plan.stage,

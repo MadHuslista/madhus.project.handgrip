@@ -114,4 +114,6 @@ def test_phase3_pipeline_writes_standard_directories(tmp_path):
     assert (outdir / "figures" / "per_trial").is_dir()
     assert (outdir / "figures" / "aggregate").is_dir()
     assert (outdir / "figures" / "per_trial" / "README.md").exists()
+    assert list((outdir / "figures" / "per_trial").glob("*.png"))
+    assert list((outdir / "figures" / "aggregate").glob("*.png"))
     assert (outdir / "summary.json").exists()

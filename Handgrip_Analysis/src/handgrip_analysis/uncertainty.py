@@ -65,7 +65,8 @@ def bootstrap_ci(
     n_resamples: int = 5000,
     random_seed: int = 42,
 ) -> tuple[float, float]:
-    """Bootstrap confidence interval for a scalar statistic.
+    """
+    Bootstrap confidence interval for a scalar statistic.
 
     For fewer than two finite values the interval collapses to the observed
     statistic.  This keeps early calibration sessions usable while still making
@@ -77,6 +78,11 @@ def bootstrap_ci(
     center = statistic_value(arr, statistic)
     if arr.size < 2:
         return center, center
+    if arr.size < 3:
+        # With two trials, a high-resampling bootstrap is slow and gives a false
+        # sense of precision.  Report the observed min/max as the honest small-n
+        # interval and reserve bootstrap for n>=3.
+        return float(np.min(arr)), float(np.max(arr))
 
     def func(x: np.ndarray, axis: int = -1) -> np.ndarray:
         if statistic == "mean":

@@ -44,6 +44,8 @@ def test_stage_cli_accepts_key_value_arguments(tmp_path):
     assert (outdir / "summary.json").exists()
     assert (outdir / "figures" / "per_trial").is_dir()
     assert (outdir / "figures" / "aggregate").is_dir()
+    assert list((outdir / "figures" / "per_trial").glob("*.png"))
+    assert list((outdir / "figures" / "aggregate").glob("*.png"))
 
 
 def test_run_all_cli_dispatches_package_pipeline(tmp_path):
