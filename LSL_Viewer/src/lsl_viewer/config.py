@@ -124,6 +124,21 @@ class ControlsCfg:
 
 
 # ---------------------------------------------------------------------------
+# NiceGUI server configuration
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ServerCfg:
+    """NiceGUI server settings.  Replaces the PyQt5/Matplotlib window."""
+    host: str = "127.0.0.1"
+    port: int = 8765
+    reload: bool = False
+    show: bool = True       # auto-open browser on start
+    dark: bool = False
+    title: str = "LSL Viewer"
+
+
+# ---------------------------------------------------------------------------
 # Viewer / display
 # ---------------------------------------------------------------------------
 
@@ -140,6 +155,7 @@ class ViewerCfg:
     xy_correlation: XYCorrelationCfg = field(default_factory=XYCorrelationCfg)
     style: StyleCfg = field(default_factory=StyleCfg)
     controls: ControlsCfg = field(default_factory=ControlsCfg)
+    server: ServerCfg = field(default_factory=ServerCfg)
 
 
 # ---------------------------------------------------------------------------

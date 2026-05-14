@@ -1,8 +1,16 @@
-"""Calibration-event marker overlay for time-domain axes.
+"""Calibration-event marker overlay for time-domain panels.
 
 The viewer reads marker events from an NDJSON file written by
 Handgrip_Calibration.  It is a **read-only** overlay aid; the viewer
 never owns or modifies calibration decisions.
+
+Design changes from original
+-----------------------------
+* ``_load_marker_events()`` is unchanged (pure loader).
+* ``draw_marker_overlays()`` (Matplotlib axvline) is replaced by
+  ``get_marker_shapes()`` which returns Plotly shape dicts.
+* Result is cached in :class:`~lsl_viewer.types.ViewerState` to prevent
+  re-reading the NDJSON file on every frame (was a bug in the original).
 """
 from __future__ import annotations
 
@@ -14,10 +22,14 @@ from typing import Any
 from hydra.utils import to_absolute_path
 from omegaconf import DictConfig
 
-from lsl_viewer.types import FigureHandles
+from lsl_viewer.types import ViewerState
 
 log = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Pure NDJSON loader  (unchanged from original viz/markers.py)
+# ---------------------------------------------------------------------------
 
 def _load_marker_events(cfg: DictConfig) -> list[dict[str, Any]]:
     """Parse the optional calibration NDJSON marker file.
@@ -60,48 +72,93 @@ def _load_marker_events(cfg: DictConfig) -> list[dict[str, Any]]:
     return events
 
 
-def draw_marker_overlays(
-    handles: FigureHandles, cfg: DictConfig, t_end: float
-) -> int:
-    """Draw vertical calibration-event markers on the time-domain axes.
+# ---------------------------------------------------------------------------
+# Cache management (fixes per-frame re-read bug from original)
+# ---------------------------------------------------------------------------
 
-    Existing marker artists from previous frames are removed before drawing.
+def refresh_marker_cache(state: ViewerState, cfg: DictConfig) -> None:
+    """Reload marker events if the NDJSON file has changed since last read.
+
+    Only reads from disk when the file modification time differs from the
+    cached value.  Calling this once per render cycle is safe and cheap.
+    """
+    if not cfg.calibration_markers.enabled:
+        if state.marker_events:
+            state.marker_events = []
+        return
+
+    raw_path = cfg.calibration_markers.events_ndjson_path
+    if not raw_path:
+        state.marker_events = []
+        return
+
+    path = Path(to_absolute_path(str(raw_path)))
+    if not path.exists():
+        state.marker_events = []
+        return
+
+    mtime = path.stat().st_mtime
+    if mtime != state.marker_file_mtime:
+        state.marker_events = _load_marker_events(cfg)
+        state.marker_file_mtime = mtime
+        log.debug(
+            "Calibration markers reloaded: %d events from %s",
+            len(state.marker_events),
+            path,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Plotly shape builder (replaces axvline drawing in original)
+# ---------------------------------------------------------------------------
+
+def get_marker_shapes(
+    state: ViewerState,
+    cfg: DictConfig,
+    t_end: float,
+    xaxis_refs: list[str],
+) -> list[dict[str, Any]]:
+    """Return Plotly layout shape dicts for calibration markers.
+
+    Each event produces one vertical dashed line per time-domain axis
+    (``target_raw``, ``reference_raw``, ``target_filtered``, ``overlay``).
 
     Parameters
     ----------
-    handles:
-        Figure handles (state mutated: ``marker_artists`` key).
+    state:
+        ViewerState with cached ``marker_events``.
     cfg:
-        Hydra config; ``calibration_markers`` section controls behaviour.
+        Hydra config; ``calibration_markers.draw_events`` controls which
+        event types are drawn.
     t_end:
-        Current end-of-window LSL timestamp (seconds); used to compute the
-        x-position of each event relative to the window edge.
+        Current end-of-window LSL timestamp (seconds).
+    xaxis_refs:
+        List of Plotly xaxis reference strings (e.g. ``['x', 'x2', 'x3', 'x4']``)
+        identifying the panels that should receive marker lines.
 
     Returns
     -------
-    Number of markers drawn in the current frame.
+    List of Plotly shape dicts suitable for ``fig.layout.shapes``.
     """
-    for artist in handles.state.get("marker_artists", []):
-        try:
-            artist.remove()
-        except Exception:
-            pass
-    handles.state["marker_artists"] = []
+    shapes: list[dict[str, Any]] = []
+    window_s = float(cfg.viewer.window_seconds)
 
-    marker_events = _load_marker_events(cfg)
-    if not marker_events:
-        return 0
-
-    window_s = cfg.viewer.window_seconds
-    axes = [handles.axes[k] for k in ["target_raw", "reference_raw", "target_filtered", "overlay"]]
-    count = 0
-    for item in marker_events:
-        x = float(item["lsl_ts"]) - t_end
-        if x < -window_s or x > 0.5:
+    for item in state.marker_events:
+        x_pos = float(item["lsl_ts"]) - t_end
+        if x_pos < -window_s or x_pos > 0.5:
             continue
-        for ax in axes:
-            handles.state["marker_artists"].append(
-                ax.axvline(x, linestyle=":", linewidth=0.8, alpha=0.45)
+        for xref in xaxis_refs:
+            shapes.append(
+                dict(
+                    type="line",
+                    x0=x_pos,
+                    x1=x_pos,
+                    y0=0,
+                    y1=1,
+                    xref=xref,
+                    yref="paper",
+                    line=dict(color="gray", dash="dot", width=0.8),
+                    opacity=0.45,
+                )
             )
-        count += 1
-    return count
+    return shapes

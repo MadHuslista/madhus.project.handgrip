@@ -85,6 +85,15 @@ viewer:
     clear_key: c
     pause_key: p
 
+  # NiceGUI server configuration
+  server:
+    host: "127.0.0.1"
+    port: 8765
+    reload: false
+    show: true    # auto-open browser on start
+    dark: false
+    title: "LSL Viewer"
+
 calibration_markers:
   # Optional marker overlay from Handgrip_Calibration events.ndjson for replay/analysis.
   # Live calibration markers remain owned by the Handgrip_Calibration recorder.

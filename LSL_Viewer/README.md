@@ -1,21 +1,59 @@
-# Handgrip Realtime Viewer
+# LSL Viewer v0.3.0
 
-Dual-native-stream LSL handgrip force viewer with live, CSV, and XDF replay modes.
+Dual-native-stream handgrip force viewer with live LSL monitoring, CSV replay, and XDF replay modes.
+
+## What changed in v0.3.0 — NiceGUI migration
+
+**Root cause fixed:** The original Matplotlib/PyQt5 implementation called `plt.pause()` at 20 Hz, which triggered `QWidget.raise_()` + `QWidget.activateWindow()` on every frame via the Qt5Agg backend — **stealing OS keyboard focus 20 times per second**. This made the viewer unusable alongside any other application.
+
+**Fix:** The rendering stack is replaced with **NiceGUI + Plotly**. NiceGUI serves the viewer in a browser tab over localhost; no native OS window is created, so focus-stealing is architecturally impossible.
+
+**Secondary bug fixed:** `viz/markers.py` previously re-read the calibration events NDJSON from disk on every frame (20 Hz). The file is now cached and only reloaded when its mtime changes.
+
+## Architecture
+
+```
+src/lsl_viewer/
+├── cli.py                 # Hydra entry point; dispatches to viz.app runners
+├── config.py              # Structured Hydra config (+ ServerCfg)
+├── types.py               # DualWindow, ViewerState, FigureHandles
+├── errors.py
+├── logging_setup.py
+├── core/                  # UNCHANGED — pure functional core
+│   ├── alignment.py       #   XY interpolation, time-shift computation
+│   ├── timing.py          #   LSL interval / clock metrics
+│   ├── replay.py          #   CSV/XDF loaders, window_from_replay
+│   └── stream.py          #   LSL stream connect + fetch
+└── viz/                   # NEW — NiceGUI + Plotly rendering layer
+    ├── state.py           #   compute_axis_limits, update_xy_max_span (pure)
+    ├── dashboard.py       #   render_info_text (pure, 4-column monospace)
+    ├── markers.py         #   Calibration marker loader + Plotly shape builder
+    ├── charts.py          #   ChartHandles, build_chart_handles, update_charts
+    ├── panels.py          #   NiceGUI page layout, keyboard/button controls
+    └── app.py             #   run_live_mode_nicegui, run_replay_mode_nicegui
+```
+
+**Deleted:**
+- `viz/figure.py` — Matplotlib figure creation
+- `viz/plots.py` — Matplotlib per-frame updaters
+- `runners/live.py` — `while/plt.pause()` live event loop
+- `runners/replay.py` — `while/plt.pause()` replay event loop
+
+**Core layer is 100% unchanged.** All four `core/` modules pass their existing test suites without modification.
+
+## XY faded line collection
+
+The time-faded line collection from the Matplotlib `LineCollection` implementation is reproduced using **20 pre-allocated Plotly Scatter traces** (`N_XY_BUCKETS = 20`). Each bucket covers a freshness band (0 = oldest, 1 = newest); its line colour carries the corresponding alpha. The trace count is constant across frames, which is critical for Plotly.js's `Plotly.react` diffing efficiency.
 
 ## Installation
 
 ```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-
-# Install core + live-streaming dependencies
-pip install -e ".[live,xdf,dev]"
-
-# Or with uv (recommended)
-uv venv
-uv pip install -e ".[live,xdf,dev]"
+pip install -e ".[dev]"
 ```
+
+**Dependencies changed:**
+- Removed: `matplotlib>=3.8`, `PyQt5>=5.15`
+- Added: `nicegui>=1.4`, `plotly>=5.18`
 
 ## Usage
 
@@ -23,68 +61,59 @@ uv pip install -e ".[live,xdf,dev]"
 # Live mode (default)
 lsl-viewer
 
-# Live mode with reference validation
+# Live mode with reference validation overlay
 lsl-viewer mode=live_with_reference_validation
 
 # CSV replay
 lsl-viewer mode=csv_replay \
-    reference.target_csv_path=./data/target.csv \
-    reference.reference_csv_path=./data/reference.csv
+  reference.target_csv_path=./data/target.csv \
+  reference.reference_csv_path=./data/reference.csv
 
 # XDF replay
-lsl-viewer mode=xdf_replay reference.xdf_path=./data/recording.xdf
-
-# Preview config without running
-lsl-viewer --cfg job
-
-# Override any config value via CLI
-lsl-viewer viewer.window_seconds=5.0 logging.level=DEBUG
+lsl-viewer mode=xdf_replay reference.xdf_path=./data/session.xdf
 ```
 
-## Running Tests
+The viewer opens at `http://127.0.0.1:8765` by default (configurable via `viewer.server.*`).
 
-```bash
-pytest tests/
-```
+## Keyboard shortcuts
 
-## Architecture
+| Key | Action |
+|-----|--------|
+| `c` | Clear plots / reset post-clear cutoff |
+| `p` | Pause / resume |
+| `x` | Toggle XY axis lock-max-span |
 
-```
-src/lsl_viewer/
-├── cli.py                  # @hydra.main entry point, mode dispatch
-├── config.py               # Structured Hydra config dataclasses
-├── logging_setup.py        # Console + rotating file handler setup
-├── types.py                # Shared dataclasses (StreamLayout, TargetWindow, …)
-├── errors.py               # Typed exception hierarchy
-├── core/
-│   ├── timing.py           # Pure: LSL/clock interval & validation metrics
-│   ├── alignment.py        # Pure: XY time-shift computation & interpolation
-│   ├── replay.py           # CSV/XDF loaders + window slicing
-│   └── stream.py           # LSL stream connection & live window fetching
-├── viz/
-│   ├── figure.py           # Figure init, axis helpers, artist reset
-│   ├── plots.py            # Per-frame update_plots()
-│   └── markers.py          # Calibration NDJSON marker overlay
-└── runners/
-    ├── live.py             # Live mode event loop
-    └── replay.py           # Replay mode animation loop
-```
+Shortcuts are handled by NiceGUI's `ui.keyboard` (browser key events) — **OS focus on the viewer is not required**.
 
 ## Configuration
 
-All settings live in `conf/config.yaml` and can be overridden at the CLI
-using Hydra's override syntax (`key=value`).  See `conf/config.yaml` for
-documentation on each setting.
+Key additions in `conf/config.yaml`:
 
-### Key sections
+```yaml
+viewer:
+  server:
+    host: "127.0.0.1"
+    port: 8765
+    show: true       # auto-open browser on start
+    dark: false
+    title: "LSL Viewer"
+```
 
-| Section | Purpose |
-|---|---|
-| `streams` | LSL stream names and buffer settings |
-| `channels` | Channel label mappings |
-| `viewer` | Window size, refresh rate, style (colors), XY correlation |
-| `alignment` | Reference interpolation policy |
-| `calibration_markers` | Optional NDJSON event overlay |
-| `reference` | Replay file paths |
-| `replay` | Replay speed, loop, start offset |
-| `logging` | Level, log file path, rotation settings |
+All existing config keys are preserved.
+
+## Tests
+
+```bash
+# All tiers
+pytest
+
+# By tier
+pytest tests/unit/
+pytest tests/integration/
+pytest tests/e2e/
+```
+
+**53 tests, 3 tiers:**
+- `unit/` — Pure logic (alignment, timing, replay loaders, axis helpers, ViewerState adapter)
+- `integration/` — Plotly figure construction and per-frame updates without a live server
+- `e2e/` — Subprocess CLI smoke tests (help flag, invalid mode guard, missing file error)

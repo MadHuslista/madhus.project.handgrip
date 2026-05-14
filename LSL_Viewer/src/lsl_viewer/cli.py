@@ -7,6 +7,12 @@ and dispatch to the correct mode runner.
 
 Structured config registration must happen before ``@hydra.main`` is
 evaluated, which is why ``register_config()`` is called at import time.
+
+Changes from v0.2.0
+-------------------
+* Runner imports updated: ``runners.live`` / ``runners.replay``
+  → ``viz.app`` (NiceGUI-based runners).
+* ``matplotlib`` / ``PyQt5`` are no longer imported anywhere in the package.
 """
 from __future__ import annotations
 
@@ -66,21 +72,21 @@ def app(cfg: DictConfig) -> int:
 
     # ── Mode dispatch ─────────────────────────────────────────────────────
     if mode == "live":
-        from lsl_viewer.runners.live import run_live_mode
-        return run_live_mode(cfg, validate_reference=False)
+        from lsl_viewer.viz.app import run_live_mode_nicegui
+        return run_live_mode_nicegui(cfg, validate_reference=False)
 
     if mode == "live_with_reference_validation":
-        from lsl_viewer.runners.live import run_live_mode
-        return run_live_mode(cfg, validate_reference=True)
+        from lsl_viewer.viz.app import run_live_mode_nicegui
+        return run_live_mode_nicegui(cfg, validate_reference=True)
 
     if mode == "csv_replay":
         from lsl_viewer.core.replay import load_csv_replay
-        from lsl_viewer.runners.replay import run_replay_mode
-        return run_replay_mode(cfg, load_csv_replay(cfg), mode)
+        from lsl_viewer.viz.app import run_replay_mode_nicegui
+        return run_replay_mode_nicegui(cfg, load_csv_replay(cfg), mode)
 
     if mode == "xdf_replay":
         from lsl_viewer.core.replay import load_xdf_replay
-        from lsl_viewer.runners.replay import run_replay_mode
-        return run_replay_mode(cfg, load_xdf_replay(cfg), mode)
+        from lsl_viewer.viz.app import run_replay_mode_nicegui
+        return run_replay_mode_nicegui(cfg, load_xdf_replay(cfg), mode)
 
     raise AssertionError("Unreachable mode dispatch")  # pragma: no cover
