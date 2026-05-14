@@ -28,8 +28,8 @@ from lsl_viewer.viz.charts import ChartHandles, bind_chart_element, clear_chart_
 log = logging.getLogger(__name__)
 
 # Tailwind height classes
-_PANEL_H = "h-52"  # 6 time-domain panels
-_XY_H = "h-80"  # XY scatter (slightly taller for aspect ratio)
+_PANEL_H = "h-80"  # 6 time-domain panels
+_XY_H = "h-150"  # XY scatter (slightly taller for aspect ratio)
 
 
 # ---------------------------------------------------------------------------
@@ -105,16 +105,38 @@ def build_page_layout(
                     "text-sm bg-orange-100 text-orange-800 px-2 py-0.5 rounded"
                 )
 
-        # ── Info panel ────────────────────────────────────────────────────
-        ch.info_label = (
-            ui.label("Waiting for data…")
-            .style(
-                "font-family: monospace; font-size: 11px; "
-                "white-space: pre; line-height: 1.35; "
-                "background: #f8f8f8; padding: 6px 8px; border-radius: 4px; "
-                "width: 100%; overflow-x: auto;"
+        # ── 1 × 2 time-series grid ────────────────────────────────────────
+        with ui.grid(columns=2).classes("w-full gap-2"):
+            with ui.row().classes("items-center gap-3 mt-1"):
+                # ── Info panel ────────────────────────────────────────────────────
+                ch.info_label = ui.label("Waiting for data…").style(
+                    "font-family: monospace; font-size: 11px; "
+                    "white-space: pre; line-height: 1.35; "
+                    "background: #f8f8f8; padding: 6px 8px; border-radius: 4px; "
+                    "width: 100%; overflow-x: auto;"
+                )
+
+                # ── Control bar ───────────────────────────────────────────────────
+                ui.button(
+                    "Clear (c)",
+                    on_click=lambda: _on_clear(state, ch),
+                ).classes("text-xs").props("color=negative outline")
+
+                pause_btn = ui.button("Pause (p)").classes("text-xs").props("color=primary outline")
+                pause_btn.on_click(lambda: _on_pause_toggle(state, ch, pause_btn, is_replay=is_replay))
+
+                lock_btn = ui.button("Lock XY (x)").classes("text-xs").props("color=secondary outline")
+                lock_btn.on_click(lambda: _on_xy_lock_toggle(state, lock_btn))
+
+                ui.label("  Keyboard: c=clear  p=pause  x=lock-XY").classes("text-xs text-gray-500 ml-2")
+
+            # ── XY panel (full width) ─────────────────────────────────────────
+            bind_chart_element(
+                ch,
+                options_attr="opts_xy",
+                chart_attr="chart_xy",
+                chart_el=ui.echart(ch.opts_xy).classes(f"w-full {_XY_H}"),
             )
-        )
 
         # ── 3 × 2 time-series grid ────────────────────────────────────────
         with ui.grid(columns=2).classes("w-full gap-2"):
@@ -153,33 +175,6 @@ def build_page_layout(
                 options_attr="opts_reference_dt",
                 chart_attr="chart_reference_dt",
                 chart_el=ui.echart(ch.opts_reference_dt).classes(f"w-full {_PANEL_H}"),
-            )
-
-        # ── XY panel (full width) ─────────────────────────────────────────
-        bind_chart_element(
-            ch,
-            options_attr="opts_xy",
-            chart_attr="chart_xy",
-            chart_el=ui.echart(ch.opts_xy).classes(f"w-full {_XY_H}"),
-        )
-
-        # ── Control bar ───────────────────────────────────────────────────
-        with ui.row().classes("items-center gap-3 mt-1"):
-            ui.button(
-                "Clear (c)",
-                on_click=lambda: _on_clear(state, ch),
-            ).classes("text-xs").props("color=negative outline")
-
-            pause_btn = ui.button("Pause (p)").classes("text-xs").props("color=primary outline")
-            pause_btn.on_click(
-                lambda: _on_pause_toggle(state, ch, pause_btn, is_replay=is_replay)
-            )
-
-            lock_btn = ui.button("Lock XY (x)").classes("text-xs").props("color=secondary outline")
-            lock_btn.on_click(lambda: _on_xy_lock_toggle(state, lock_btn))
-
-            ui.label("  Keyboard: c=clear  p=pause  x=lock-XY").classes(
-                "text-xs text-gray-500 ml-2"
             )
 
         # ── Keyboard shortcuts (browser key events — no OS focus needed) ──
