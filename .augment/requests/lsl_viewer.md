@@ -135,3 +135,53 @@ Modify `init_figure` to support a dynamic grid (e.g., using `matplotlib.gridspec
 - Ensure `_window_from_replay` correctly slices the additional channels.
 - Update the render loops in `run_live_mode` and `run_replay_mode` to handle the conditional plotting of the extra 4 subplots only when the RS485 data is present.
 
+
+
+
+==============================
+
+
+
+Based on the "Tool Design Guides" and modern Python packaging standards, perform a comprehensive technical audit and create a GUI porting plan for the attached .zip file from current Matplotlib GUI to NiceGUI, or refactoring Matplotlib
+
+# Pain Point to Overcome
+The current Matplotlib GUI capture the focus on every frame, so it became imposible to execute any other task on the host PC while executing the viewer. 
+The only alternative is to close the viewer while needing to execute other tasks, for example, the calibration CLI workflow. 
+
+# Goal
+Refactor the viewer GUI to be able to showcase and display the full set of features currently implemented, without hoarding the focus on every frame, thus allowing to interact in parallel with the other GUIs and elements of the system. 
+Standardize the refactored library architecture to keep maintainability, configuration management, and observability using Python best practices.
+
+# Plausible Alternatives
+- Port the App to the NiceGUI framework: Known framework already successfully working with single plot display. 
+- Refactor the MatplotLib GUI: Possible easier? 
+
+# Tasks
+1. **Pain Point Diagnostic**
+   - Based on the symptom description, review the code and identify a set of plausible causes. 
+   - Identify the root cause (or causes) that provoque the pain point (even if it's not a 'bug'). All causes needs to be justified by code. 
+   - Design a set of plausible "ideal" fixes for the root cause(s), that would solve the paint point in the best way possible. 
+   - Compare the advantages or disadvantages of fixing the Matplotlib GUI or poriting the library to NiceGUI, considering the root cause(s) and plausible 'ideal' fixes. 
+
+2. **System Inventory & Evaluation**:
+    - Identify and document all existing features.
+    - Design an "ideal" architecture for the application, that would solve the pain point, the root cause, and apply the best set of fixes, while also optimizing for maintainability, configuration management, and observability.
+    - Map the current architecture and contrast it with the ideal architecture, and evaluate its gap, specifically focusing on how to achieve full feature parity wiht the original while fixing the pain point.
+
+
+3. **Refactoring Strategy**:
+    Plan the transition to a modern stack with the following requirements:
+    - **Structural Layout**: Keep the `src-layout` (e.g., `LSL_Bridge/src/lsl_bridge/`) to ensure proper package isolation and testing.
+    - **Dependency Management**: Update the standard `pyproject.toml` for the sub-module using PEP 621 metadata, using `uv` as the python package manager and  `hatchling` as the build system. 
+    - **Configuration**: Standardize on `Hydra` for configuration management. Ensure to not generate conflicts with the usage of other libraries. Avoid hard-coded 'magic' values, and instead define them as constants in the configuration schema.
+    - **Observability**: Implement a hierarchical logging system using the standard `logging` library. Replace ad-hoc logging with loggers scoped to modules (e.g., `logging.getLogger(__name__)`) and configurable levels (DEBUG to CRITICAL) via Hydra. Ensure that any logging that goes to the console is also captured in a .log file.
+    - **Feature Completeness**: Ensure that ALL the original features that were touched by the refactor, are still present and working as originally intended (unless purposefully removed - se below). Keep full compatibility with the existing CLI and API; and ensure that the application is still functional and compatible with it's original endpoints.
+
+4. **Code Pruning & Debt Identification**:
+    Identify and mark for removal:
+    - **Legacy Compatibility**: Unused parsers or protocol handlers (e.g., `legacy_pair_lines` mentioned in documentation but potentially obsolete).
+    - **Dead Code**: Features or helper functions left over from the initial development of the HX711 or RS485 integration that are no longer referenced.
+    - **Bloated Defensive Programming**: Evaluate and simplify "over-defensive" error handling that overlaps with the underlying `pyserial` or `pylsl` robust error management.
+
+# Deliverable
+4. Provide the complete refactor plan in a structured Markdown format (`<module_name>_refactor_plan.md`). This document should include the proposed file tree, a mapping of configuration migrations, and a checklist of code sections to be deprecated.
