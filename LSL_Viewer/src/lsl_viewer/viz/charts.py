@@ -1,5 +1,4 @@
-"""
-ECharts option builders and per-frame chart updaters.
+"""ECharts option builders and per-frame chart updaters.
 
 Replaces the Plotly implementation (v0.3.0) with Apache ECharts via
 NiceGUI's ``ui.echart()`` element.  The architectural change is a charting
@@ -163,8 +162,7 @@ def _mk_time_opts(title: str, y_label: str, series: list[dict]) -> dict:
 
 @dataclass
 class ChartHandles:
-    """
-    Holds all ECharts option dicts and their NiceGUI ui.echart elements.
+    """Holds all ECharts option dicts and their NiceGUI ui.echart elements.
 
     Option dicts are mutated in-place on each render cycle.  The ``chart_*``
     and ``info_label`` attributes are ``None`` until ``viz/panels.py``
@@ -308,8 +306,7 @@ def _build_xy_opts(cfg: DictConfig) -> dict:
 
 
 def build_chart_handles(cfg: DictConfig) -> ChartHandles:
-    """
-    Create all ECharts option dicts with pre-allocated series.
+    """Create all ECharts option dicts with pre-allocated series.
 
     Called *before* the NiceGUI page is built.  ``viz/panels.py`` fills in
     the ``chart_*`` element references once ``ui.echart()`` is called.

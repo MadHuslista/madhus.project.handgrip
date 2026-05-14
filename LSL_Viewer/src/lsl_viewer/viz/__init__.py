@@ -1,5 +1,4 @@
-"""
-Visualisation layer — NiceGUI + Apache ECharts (v0.4.0).
+"""Visualisation layer — NiceGUI + Apache ECharts (v0.4.1).
 
 Replaces the Matplotlib/PyQt5 stack (original) and the NiceGUI+Plotly
 stack (v0.3.0).  Public surface is intentionally minimal; callers

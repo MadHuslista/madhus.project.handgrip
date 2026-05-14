@@ -1,5 +1,4 @@
-"""
-Calibration-event marker overlay for time-domain panels.
+"""Calibration-event marker overlay for time-domain panels.
 
 The viewer reads marker events from an NDJSON file written by
 Handgrip_Calibration.  It is a **read-only** overlay aid; the viewer
@@ -36,8 +35,7 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def _load_marker_events(cfg: DictConfig) -> list[dict[str, Any]]:
-    """
-    Parse the optional calibration NDJSON marker file.
+    """Parse the optional calibration NDJSON marker file.
 
     Returns an empty list when markers are disabled, the path is unset,
     or the file does not exist.  Malformed lines are silently skipped.
@@ -82,8 +80,7 @@ def _load_marker_events(cfg: DictConfig) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 def refresh_marker_cache(state: ViewerState, cfg: DictConfig) -> None:
-    """
-    Reload marker events only when the NDJSON file mtime has changed.
+    """Reload marker events only when the NDJSON file mtime has changed.
 
     Safe and cheap to call once per render cycle.
     """
@@ -122,8 +119,7 @@ def get_marker_x_positions(
     cfg: DictConfig,
     t_end: float,
 ) -> list[float]:
-    """
-    Return relative x-axis positions for calibration marker lines.
+    """Return relative x-axis positions for calibration marker lines.
 
     Pure function — reads only ``state.marker_events`` and ``cfg``.
 
@@ -145,7 +141,6 @@ def get_marker_x_positions(
     -------
     List of relative x positions (float).  Empty when no events fall
     within the current window.
-
     """
     window_s = float(cfg.viewer.window_seconds)
     positions: list[float] = []

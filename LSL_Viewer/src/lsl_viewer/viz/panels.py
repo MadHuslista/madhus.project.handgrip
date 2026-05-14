@@ -1,5 +1,4 @@
-"""
-NiceGUI page layout for the LSL Viewer.
+"""NiceGUI page layout for the LSL Viewer.
 
 Builds the browser-rendered page: info panel, 3×2 time-series grid,
 full-width XY scatter panel, and keyboard/button controls.
@@ -14,6 +13,7 @@ Changes from v0.3.0 (Plotly → ECharts)
 Keyboard shortcuts fire on browser key events via ``ui.keyboard`` —
 OS focus on the viewer window is **never required**.
 """
+
 from __future__ import annotations
 
 import logging
@@ -35,6 +35,7 @@ _XY_H = "h-80"  # XY scatter (slightly taller for aspect ratio)
 # ---------------------------------------------------------------------------
 # Control callbacks  (unchanged from v0.3.0)
 # ---------------------------------------------------------------------------
+
 
 def _on_clear(state: ViewerState, ch: ChartHandles) -> None:
     """Clear plots and arm the post-clear cutoff (key 'c' or button)."""
@@ -77,6 +78,7 @@ def _on_xy_lock_toggle(state: ViewerState, lock_btn: Any) -> None:
 # Page layout builder
 # ---------------------------------------------------------------------------
 
+
 def build_page_layout(
     cfg: DictConfig,
     ch: ChartHandles,
@@ -85,8 +87,7 @@ def build_page_layout(
     mode: str = "live",
     is_replay: bool = False,
 ) -> None:
-    """
-    Build the NiceGUI page and store ``ui.echart`` references into *ch*.
+    """Build the NiceGUI page and store ``ui.echart`` references into *ch*.
 
     Must be called inside a ``@ui.page``-decorated function.
 

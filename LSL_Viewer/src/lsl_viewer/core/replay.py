@@ -1,5 +1,4 @@
-"""
-Replay data loading for CSV and XDF modes.
+"""Replay data loading for CSV and XDF modes.
 
 These functions load data from disk and return pure ``DualReplayData`` values.
 The I/O boundary is kept thin: all validation and transformation after loading
@@ -65,8 +64,7 @@ def _extract_numeric(df: pd.DataFrame, col: str) -> np.ndarray:
 def _time_from_df(
     df: pd.DataFrame, preferred: list[str], expected_rate_hz: float
 ) -> np.ndarray:
-    """
-    Derive a timestamp array from a DataFrame.
+    """Derive a timestamp array from a DataFrame.
 
     Prefers columns in *preferred* order.  Handles ``_ns`` and ``_us`` suffixes
     for unit conversion.  Falls back to a synthetic uniform grid.
@@ -221,8 +219,7 @@ def window_from_replay(
 # ---------------------------------------------------------------------------
 
 def load_csv_replay(cfg: DictConfig) -> DualReplayData:
-    """
-    Load dual native CSV replay files produced by LSL_Bridge v2.
+    """Load dual native CSV replay files produced by LSL_Bridge v2.
 
     Expects two separate CSVs — one for the target (handgrip) stream and one
     for the reference (RS485) stream — as set in ``reference.target_csv_path``

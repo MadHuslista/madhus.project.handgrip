@@ -1,11 +1,9 @@
-"""
-Timing and clock-validation utilities.
+"""Timing and clock-validation utilities.
 
 All functions here are **pure**: they accept numpy arrays and return arrays
 or dicts.  No side effects, no I/O, no logging.  This makes them trivially
 unit-testable without mocking.
 """
-
 from __future__ import annotations
 
 import numpy as np
@@ -14,8 +12,7 @@ import numpy as np
 def lsl_interval_ms(
     timestamps_s: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, float, float]:
-    """
-    Compute per-sample LSL inter-arrival intervals in milliseconds.
+    """Compute per-sample LSL inter-arrival intervals in milliseconds.
 
     Parameters
     ----------
@@ -32,7 +29,6 @@ def lsl_interval_ms(
         Estimated sample rate from median inter-arrival interval (nan if < 2 samples).
     mean_dt_ms:
         Mean of ``dt_ms`` (nan if < 2 samples).
-
     """
     ts = np.asarray(timestamps_s, dtype=np.float64)
     finite = np.isfinite(ts)
@@ -64,8 +60,7 @@ def clock_interval_ms(
     clock_values: np.ndarray,
     scale_to_ms: float,
 ) -> tuple[np.ndarray, np.ndarray, float, float]:
-    """
-    Compute per-sample intervals from a device clock channel.
+    """Compute per-sample intervals from a device clock channel.
 
     Parameters
     ----------
@@ -78,7 +73,6 @@ def clock_interval_ms(
     Returns
     -------
     Same four-tuple as :func:`lsl_interval_ms`.
-
     """
     values = np.asarray(clock_values, dtype=np.float64)
     finite = np.isfinite(values)
@@ -112,8 +106,7 @@ def clock_validation_metrics(
     *,
     clock_scale_to_s: float,
 ) -> dict[str, float]:
-    """
-    Compare LSL sample timestamps against a diagnostic clock channel.
+    """Compare LSL sample timestamps against a diagnostic clock channel.
 
     The diagnostic clock is not the LSL authority.  For the reference stream
     ``rs485_clock`` is in LSL seconds so absolute offset is meaningful; for
@@ -136,7 +129,6 @@ def clock_validation_metrics(
         ``lsl_rate_hz``, ``clock_rate_hz``, ``median_dt_error_ms``,
         ``clock_vs_lsl_span_error_ms``, ``median_clock_minus_lsl_s``.
         All values are ``float("nan")`` when there is insufficient data.
-
     """
     _nan_result: dict[str, float] = {
         "lsl_rate_hz": float("nan"),

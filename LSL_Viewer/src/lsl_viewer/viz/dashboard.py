@@ -1,5 +1,4 @@
-"""
-Info-panel text rendering for the NiceGUI viewer.
+"""Info-panel text rendering for the NiceGUI viewer.
 
 All functions here are **pure**: they accept data and return strings.
 No side effects, no I/O.  The output is consumed by ``viz/panels.py``
@@ -8,7 +7,6 @@ which calls ``info_label.set_text()``.
 The 4-column monospace layout (SOURCE/MODE | TARGET | REFERENCE | METRICS)
 is preserved exactly from the original ``viz/plots.py`` implementation.
 """
-
 from __future__ import annotations
 
 import numpy as np
@@ -66,8 +64,7 @@ def render_info_text(
     reference_new_samples: int | None = None,
     replay_progress_text: str | None = None,
 ) -> str:
-    """
-    Render the 4-column info panel text.
+    """Render the 4-column info panel text.
 
     Pure function — returns a formatted string suitable for ``<pre>`` rendering.
     All parameters are passed explicitly; no global state is read.
@@ -130,8 +127,10 @@ def render_info_text(
         f"clock  : {_format_latest(latest_reference_clock, ' s', 6)}\n"
         f"LSL Hz : {_format_latest(reference_rate_hz, ' Hz', 2)}\n"
         f"clk Hz : {_format_latest(float(reference_clock_metrics.get('clock_rate_hz', float('nan'))), ' Hz', 2)}\n"
-        f"clk-LSL: {_format_latest(float(reference_clock_metrics.get('median_clock_minus_lsl_s', float('nan'))), ' s', 4)}\n"
-        f"spanerr: {_format_latest(float(reference_clock_metrics.get('clock_vs_lsl_span_error_ms', float('nan'))), ' ms', 2)}\n"
+        "clk-LSL: "
+        f"{_format_latest(float(reference_clock_metrics.get('median_clock_minus_lsl_s', float('nan'))), ' s', 4)}\n"
+        "spanerr: "
+        f"{_format_latest(float(reference_clock_metrics.get('clock_vs_lsl_span_error_ms', float('nan'))), ' ms', 2)}\n"
         f"pairs  : {xy_pair_count}"
     )
     col_metrics = (

@@ -1,5 +1,4 @@
-"""
-NiceGUI application factory and event-loop runners.
+"""NiceGUI application factory and event-loop runners.
 
 This module replaces ``runners/live.py`` and ``runners/replay.py``.
 The ``while/plt.pause()`` event loops are replaced by NiceGUI ``ui.timer()``
@@ -12,7 +11,6 @@ on every frame via the Qt5Agg backend, stealing keyboard focus at 20 Hz.
 NiceGUI renders in a browser tab served over localhost; no native OS window
 is created, so focus stealing is architecturally impossible.
 """
-
 from __future__ import annotations
 
 import logging
@@ -47,8 +45,7 @@ def _slice_dual_after_cutoffs(
     window: DualWindow,
     state: ViewerState,
 ) -> DualWindow | None:
-    """
-    Remove samples that predate the live-reset cutoff timestamps.
+    """Remove samples that predate the live-reset cutoff timestamps.
 
     After the user presses the clear key, only samples newer than the cutoff
     are rendered so previously buffered data does not reappear.
@@ -93,8 +90,7 @@ def _establish_live_cutoff(
     reference_layout: object,
     state: ViewerState,
 ) -> None:
-    """
-    Record the latest buffered timestamps as post-clear cutoffs.
+    """Record the latest buffered timestamps as post-clear cutoffs.
 
     After a manual clear or pause-resume, only samples arriving after these
     cutoffs are rendered so the display starts fresh.
@@ -219,8 +215,7 @@ def _replay_tick(
 
 
 def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
-    """
-    Run the viewer in live LSL streaming mode via NiceGUI.
+    """Run the viewer in live LSL streaming mode via NiceGUI.
 
     Replaces ``runners/live.py:run_live_mode()``.  The ``while/plt.pause()``
     event loop is replaced by a ``ui.timer()`` callback so the process never
@@ -236,7 +231,6 @@ def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
     Returns
     -------
     Exit code (0 on clean exit).
-
     """
     target_stream, reference_stream, target_layout, reference_layout = build_streams(cfg)
     state = ViewerState()
@@ -294,8 +288,7 @@ def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
 
 
 def run_replay_mode_nicegui(cfg: DictConfig, replay_data: DualReplayData, mode: str) -> int:
-    """
-    Animate a pre-loaded replay dataset via NiceGUI.
+    """Animate a pre-loaded replay dataset via NiceGUI.
 
     Replaces ``runners/replay.py:run_replay_mode()``.
 
@@ -311,7 +304,6 @@ def run_replay_mode_nicegui(cfg: DictConfig, replay_data: DualReplayData, mode: 
     Returns
     -------
     Exit code (0 on clean exit).
-
     """
     duration_s = replay_data.duration_s
     if duration_s <= 0:
