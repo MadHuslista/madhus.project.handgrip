@@ -1,4 +1,5 @@
-"""Info-panel text rendering for the NiceGUI viewer.
+"""
+Info-panel text rendering for the NiceGUI viewer.
 
 All functions here are **pure**: they accept data and return strings.
 No side effects, no I/O.  The output is consumed by ``viz/panels.py``
@@ -64,7 +65,8 @@ def render_info_text(
     reference_new_samples: int | None = None,
     replay_progress_text: str | None = None,
 ) -> str:
-    """Render the 4-column info panel text.
+    """
+    Render the 4-column info panel text.
 
     Pure function — returns a formatted string suitable for ``<pre>`` rendering.
     All parameters are passed explicitly; no global state is read.

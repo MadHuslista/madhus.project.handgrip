@@ -1,4 +1,5 @@
-"""LSL stream connection and live window fetching.
+"""
+LSL stream connection and live window fetching.
 
 This module is part of the **imperative shell**: it performs real I/O
 (network connections to LSL streams, data reads from the mne-lsl buffer).
@@ -6,6 +7,7 @@ This module is part of the **imperative shell**: it performs real I/O
 The layout-from-config helpers and label validation are also here because
 they depend on the config structure rather than on any pure math.
 """
+
 from __future__ import annotations
 
 import logging
@@ -59,7 +61,8 @@ def validate_labels(ch_names: list[str], layout: StreamLayout, role: str) -> Non
 
 
 def build_streams(cfg: DictConfig):
-    """Connect to the target and reference LSL streams.
+    """
+    Connect to the target and reference LSL streams.
 
     Requires mne-lsl; raises a clear ``RuntimeError`` if not installed so the
     error is shown before any LSL network activity starts.
@@ -67,6 +70,7 @@ def build_streams(cfg: DictConfig):
     Returns
     -------
     (target_stream, reference_stream, target_layout, reference_layout)
+
     """
     try:
         from mne_lsl.stream import StreamLSL  # type: ignore[import]
@@ -218,7 +222,8 @@ def fetch_live_window(
     target_layout: StreamLayout,
     reference_layout: StreamLayout,
 ) -> DualWindow | None:
-    """Read the current buffer from both LSL streams and return a DualWindow.
+    """
+    Read the current buffer from both LSL streams and return a DualWindow.
 
     The two streams are sampled independently.  The returned window covers
     the common visible interval ``[t_end - window_seconds, t_end]`` aligned

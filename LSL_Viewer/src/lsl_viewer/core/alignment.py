@@ -1,9 +1,11 @@
-"""XY correlation time-alignment and reference-interpolation logic.
+"""
+XY correlation time-alignment and reference-interpolation logic.
 
 All functions are **pure**: they operate only on numpy arrays and dicts.
 No side effects, no I/O.  The ``FigureHandles.state`` dict is accepted as a
 parameter (not imported) so the unit tests need not construct a real figure.
 """
+
 from __future__ import annotations
 
 import logging
@@ -45,7 +47,8 @@ def compute_xy_reference_time_shift_s(
     snap_threshold_s: float,
     smoothing_alpha: float,
 ) -> tuple[float, str]:
-    """Return the display-only reference time shift for the live XY plot.
+    """
+    Return the display-only reference time shift for the live XY plot.
 
     The native stream buffers and LSL/XDF timestamps are never modified.
     This function only determines the timebase used by the *live* XY panel.
@@ -79,6 +82,7 @@ def compute_xy_reference_time_shift_s(
     (shift_s, mode_label):
         ``shift_s`` is the seconds to add to reference LSL timestamps for
         display purposes; ``mode_label`` is a short diagnostic string.
+
     """
     mode = alignment_mode.strip().lower()
 
@@ -145,7 +149,8 @@ def interpolate_reference_to_target(
     reference_time_shift_s: float = 0.0,
     target_signal: str = "raw",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return XY samples with reference interpolated onto target timestamps.
+    """
+    Return XY samples with reference interpolated onto target timestamps.
 
     Output layout (matching original viewer convention):
     ``x`` = reference/RS485 force at target timestamps (interpolated);
@@ -172,6 +177,7 @@ def interpolate_reference_to_target(
     (x, y, t):
         Three 1-D float64 arrays of identical length.  Empty on any error or
         when no overlapping data exists.
+
     """
     _empty = (
         np.array([], dtype=np.float64),

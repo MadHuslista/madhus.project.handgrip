@@ -1,4 +1,5 @@
-"""Structured Hydra configuration schema for the handgrip realtime viewer.
+"""
+Structured Hydra configuration schema for the handgrip realtime viewer.
 
 Each @dataclass here corresponds to a section of conf/config.yaml.
 Registering these with ConfigStore gives Hydra full type awareness:
@@ -10,6 +11,7 @@ Usage
 Call ``register_config()`` once at module import time in cli.py,
 before the ``@hydra.main`` decorator is evaluated.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -53,6 +55,7 @@ class StreamsCfg:
 # Channel label configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class TargetChannelCfg:
     clock_label: str = "device_clock_us"
@@ -76,6 +79,7 @@ class ChannelsCfg:
 # Visual style (replaces module-level color globals)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class StyleCfg:
     """Visual constants previously hardcoded as module-level globals."""
@@ -95,9 +99,10 @@ class StyleCfg:
 # XY correlation / time alignment
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class TimeAlignmentCfg:
-    mode: str = "raw_lsl"              # raw_lsl | tail_aligned_lsl | manual
+    mode: str = "raw_lsl"  # raw_lsl | tail_aligned_lsl | manual
     manual_reference_shift_s: float = 0.0
     max_auto_shift_s: float | None = None
     min_auto_shift_s: float = 0.0
@@ -109,13 +114,14 @@ class TimeAlignmentCfg:
 class XYCorrelationCfg:
     lock_max_span: bool = False
     toggle_key: str = "x"
-    target_signal: str = "raw"         # raw | filtered
+    target_signal: str = "raw"  # raw | filtered
     time_alignment: TimeAlignmentCfg = field(default_factory=TimeAlignmentCfg)
 
 
 # ---------------------------------------------------------------------------
 # Interactive controls
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ControlsCfg:
@@ -139,6 +145,7 @@ class RenderCfg:
 @dataclass
 class ServerCfg:
     """NiceGUI server settings.  Replaces the PyQt5/Matplotlib window."""
+
     host: str = "127.0.0.1"
     port: int = 8765
     reload: bool = False
@@ -250,7 +257,8 @@ class AppConfig:
 
 
 def register_config() -> None:
-    """Register the structured config schema with Hydra's ConfigStore.
+    """
+    Register the structured config schema with Hydra's ConfigStore.
 
     Must be called before the ``@hydra.main`` decorator is evaluated.
     """

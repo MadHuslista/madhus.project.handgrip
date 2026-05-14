@@ -1,4 +1,5 @@
-"""Integration tests for viz.charts — ECharts option construction and updates.
+"""
+Integration tests for viz.charts — ECharts option construction and updates.
 
 Tests verify that:
 * ``build_chart_handles`` creates option dicts with the correct series counts.
@@ -12,6 +13,7 @@ No NiceGUI server is started; ``chart_*`` and ``info_label`` attributes in
 ChartHandles remain ``None``, which the update functions handle gracefully
 (the ``.update()`` call is skipped when the element is ``None``).
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -123,6 +125,7 @@ def cfg():
 # Sample data helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_target(n: int = 50, rate_hz: float = 100.0) -> TargetWindow:
     ts = np.arange(n, dtype=np.float64) / rate_hz
     return TargetWindow(
@@ -179,20 +182,29 @@ def _bind_all_fake_charts(ch: ChartHandles) -> list[FakeEChart]:
 # TestBuildChartHandles
 # ---------------------------------------------------------------------------
 
+
 class TestBuildChartHandles:
     def test_creates_all_seven_option_dicts(self, cfg):
         ch = build_chart_handles(cfg)
         for attr in (
-            "opts_target_raw", "opts_reference_raw", "opts_target_filtered",
-            "opts_overlay", "opts_target_dt", "opts_reference_dt", "opts_xy",
+            "opts_target_raw",
+            "opts_reference_raw",
+            "opts_target_filtered",
+            "opts_overlay",
+            "opts_target_dt",
+            "opts_reference_dt",
+            "opts_xy",
         ):
             assert getattr(ch, attr) is not None, f"Missing: {attr}"
 
     def test_single_series_time_panels(self, cfg):
         ch = build_chart_handles(cfg)
         for opts in (
-            ch.opts_target_raw, ch.opts_reference_raw,
-            ch.opts_target_filtered, ch.opts_target_dt, ch.opts_reference_dt,
+            ch.opts_target_raw,
+            ch.opts_reference_raw,
+            ch.opts_target_filtered,
+            ch.opts_target_dt,
+            ch.opts_reference_dt,
         ):
             assert len(opts["series"]) == 1
 
@@ -207,8 +219,11 @@ class TestBuildChartHandles:
     def test_all_series_start_empty(self, cfg):
         ch = build_chart_handles(cfg)
         for opts in (
-            ch.opts_target_raw, ch.opts_reference_raw,
-            ch.opts_target_filtered, ch.opts_target_dt, ch.opts_reference_dt,
+            ch.opts_target_raw,
+            ch.opts_reference_raw,
+            ch.opts_target_filtered,
+            ch.opts_target_dt,
+            ch.opts_reference_dt,
         ):
             assert _series_data(opts) == []
         assert all(_series_data(ch.opts_xy, i) == [] for i in range(N_XY_BUCKETS))
@@ -216,18 +231,26 @@ class TestBuildChartHandles:
     def test_chart_attrs_none_before_page_build(self, cfg):
         ch = build_chart_handles(cfg)
         for attr in (
-            "chart_target_raw", "chart_reference_raw", "chart_target_filtered",
-            "chart_overlay", "chart_target_dt", "chart_reference_dt",
-            "chart_xy", "info_label",
+            "chart_target_raw",
+            "chart_reference_raw",
+            "chart_target_filtered",
+            "chart_overlay",
+            "chart_target_dt",
+            "chart_reference_dt",
+            "chart_xy",
+            "info_label",
         ):
             assert getattr(ch, attr) is None, f"Expected None: {attr}"
 
     def test_animation_disabled_on_all_series(self, cfg):
         ch = build_chart_handles(cfg)
         for opts in (
-            ch.opts_target_raw, ch.opts_reference_raw,
-            ch.opts_target_filtered, ch.opts_overlay,
-            ch.opts_target_dt, ch.opts_reference_dt,
+            ch.opts_target_raw,
+            ch.opts_reference_raw,
+            ch.opts_target_filtered,
+            ch.opts_overlay,
+            ch.opts_target_dt,
+            ch.opts_reference_dt,
         ):
             assert opts.get("animation") is False
             for s in opts["series"]:
@@ -538,7 +561,8 @@ class TestMarkerIntegration:
         assert ml.get("data", []) == []
 
     def test_refresh_cache_clears_events_when_disabled(self, cfg):
-        """refresh_marker_cache respects enabled=False by clearing injected events.
+        """
+        refresh_marker_cache respects enabled=False by clearing injected events.
 
         This verifies the cache-guard semantics: state.marker_events injected
         externally are always cleared on the next render cycle when markers are
@@ -578,7 +602,8 @@ class TestMarkerIntegration:
         assert ml["data"][1]["xAxis"] == pytest.approx(-3.5)
 
     def test_update_charts_applies_marklines_via_monkeypatch(self, cfg, monkeypatch):
-        """Integration path: update_charts passes marker positions to _apply_markline.
+        """
+        Integration path: update_charts passes marker positions to _apply_markline.
 
         refresh_marker_cache is patched to a no-op so injected events survive
         the cache guard and reach _apply_markline.
