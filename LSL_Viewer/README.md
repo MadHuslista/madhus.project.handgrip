@@ -1,8 +1,8 @@
-# LSL Viewer v0.4.1
+# LSL Viewer v0.5.0
 
 Dual-native-stream handgrip force viewer — live LSL, CSV replay, and XDF replay modes.
 
-## What changed in v0.4.1 — correctness-first NiceGUI + ECharts
+## What changed in v0.5.0 — XY-first square ECharts layout
 
 **Root cause fixed (v0.3.0):** `plt.pause()` called `QWidget.activateWindow()` at 20 Hz, stealing OS keyboard focus on every frame.
 
@@ -10,11 +10,13 @@ Dual-native-stream handgrip force viewer — live LSL, CSV replay, and XDF repla
 
 **v0.4.0 fix:** Real-time rendering performance. The v0.3.0 Plotly backend was too slow for the data rate. Every `chart.update()` call serialised full trace arrays to JSON, transmitted them over the WebSocket, and Plotly.js ran a full diff before painting — repeating for all 7 panels at 20 Hz.
 
-**v0.4.1 fix:** Robust ECharts render handoff. The browser chart element now owns the authoritative `options` object, chart updates are pushed through an explicit EChart sink boundary, ECharts `large` mode is disabled by default, and display-only render budgets bound the payload sent to the browser.
+**v0.4.1 fix:** Robust ECharts render handoff. The browser chart element owns the authoritative `options` object, chart updates are pushed through an explicit EChart sink boundary, ECharts `large` mode is disabled by default, and display-only render budgets bound the payload sent to the browser.
+
+**v0.5.0 changes:** The XY correlation panel is now first in the page, rendered as a connected faded line path, and all chart boxes use square aspect ratio. Downsampling is configurable from the Hydra config with `viewer.render.downsample_enabled`.
 
 **Current backend:** Apache ECharts via NiceGUI's `ui.echart()`. Key improvements:
 
-| Concern | Plotly (v0.3.0) | ECharts (v0.4.1) |
+| Concern | Plotly (v0.3.0) | ECharts (v0.5.0) |
 |---|---|---|
 | Renderer | SVG (DOM node per point) | HTML5 Canvas (pixel buffer) |
 | Update model | `Plotly.react()` + JSON diff | Element-owned `options` + explicit update sink |
@@ -50,9 +52,9 @@ src/lsl_viewer/
 
 **Core layer is 100% unchanged** across all three versions.
 
-### XY faded scatter collection
+### XY faded line collection
 
-20 pre-allocated ECharts scatter series (`N_XY_BUCKETS`). Each bucket covers a freshness band; its `itemStyle.color` carries the corresponding alpha. Data entries are display-ready `[x, y]` points, with no `None` line-break sentinels and no ECharts `large` mode. Constant series count means ECharts never adds or removes series on update.
+20 pre-allocated ECharts line series (`N_XY_BUCKETS`). Each bucket covers a freshness band; its `lineStyle.color` carries the corresponding alpha. Data entries are display-ready `[x, y]` points, with no `None` line-break sentinels and no ECharts `large` mode. Boundary points are duplicated only between occupied age buckets to preserve a continuous-looking path while keeping a constant series count.
 
 ### Render budgeting
 
@@ -61,11 +63,12 @@ Raw acquisition/replay windows remain intact. Only the browser payload is bounde
 ```yaml
 viewer:
   render:
+    downsample_enabled: true
     max_points_time_series: 1200
     max_points_xy: 1500
 ```
 
-This keeps correctness and replayability in the core data path while protecting the browser renderer from unbounded per-refresh payloads.
+Set `downsample_enabled: false` to send the full current display window to ECharts. Keeping it enabled protects the browser renderer from unbounded per-refresh payloads while preserving correctness and replayability in the core data path.
 
 ### Calibration marker overlay
 
@@ -116,7 +119,7 @@ Handled by `ui.keyboard` (browser key events — OS focus on viewer not required
 ## Tests
 
 ```bash
-uv run pytest            # all 77 tests
+uv run pytest            # all tests
 uv run pytest tests/unit/      # pure logic
 uv run pytest tests/integration/  # ECharts model/sink/update logic
 uv run pytest tests/e2e/       # subprocess CLI smoke tests

@@ -34,7 +34,7 @@ def _zip_columns(*columns: str, pad: int = 3) -> str:
     rows: list[str] = []
     for row_idx in range(height):
         row_parts = []
-        for lines, width in zip(split_cols, widths):
+        for lines, width in zip(split_cols, widths, strict=False):
             text = lines[row_idx] if row_idx < len(lines) else ""
             row_parts.append(text.ljust(width + pad))
         rows.append("".join(row_parts).rstrip())

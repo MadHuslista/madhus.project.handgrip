@@ -33,13 +33,12 @@ Calibration event markers are rendered as ECharts ``markLine`` entries
 attached to the first series of each time-domain panel — no separate shape
 layer needed.
 
-XY faded scatter collection
----------------------------
+XY faded line collection
+------------------------
 The N_XY_BUCKETS=20 pre-allocated series approach is preserved, but each bucket
-is now a scatter series instead of a line series with ``None`` separators.  This
-is more robust for high-rate browser rendering and decimation: the XY panel
-shows the force/count relationship cloud without relying on renderer-specific
-line-gap behaviour.
+is now a line-path series without ``None`` separators.  This keeps the XY
+correlation as a connected curve while avoiding renderer-specific line-gap
+behaviour and preserving stable ECharts series identity across updates.
 """
 
 from __future__ import annotations
@@ -291,14 +290,18 @@ def _build_xy_opts(cfg: DictConfig) -> dict:
             "name": cfg.viewer.target_raw_unit_label,
             "splitLine": _split_line(),
         },
-        # N_XY_BUCKETS pre-allocated scatter series — data and colour updated each frame.
+        # N_XY_BUCKETS pre-allocated line series — data and colour updated each frame.
         "series": [
             {
-                "type": "scatter",
+                "type": "line",
                 "name": f"age bucket {i + 1}",
                 "data": [],
-                "symbolSize": 2,
-                "itemStyle": {"color": _rgba(s.xy_color, 0.0)},
+                "showSymbol": False,
+                "connectNulls": False,
+                "lineStyle": {
+                    "color": _rgba(s.xy_color, 0.0),
+                    "width": float(s.xy_line_width),
+                },
                 "animation": False,
             }
             for i in range(N_XY_BUCKETS)
@@ -409,8 +412,18 @@ def _apply_markline(opts: dict, x_positions: list[float]) -> None:
 # Per-panel data updaters
 # ---------------------------------------------------------------------------
 
-def _render_max_points(cfg: DictConfig, key: str, default: int) -> int:
-    """Read a positive render budget from config with a safe fallback."""
+def _render_downsample_enabled(cfg: DictConfig) -> bool:
+    """Return whether display-only downsampling is enabled in config."""
+    try:
+        return bool(cfg.viewer.render.downsample_enabled)
+    except Exception:
+        return True
+
+
+def _render_max_points(cfg: DictConfig, key: str, default: int) -> int | None:
+    """Read a positive render budget, or return None when downsampling is disabled."""
+    if not _render_downsample_enabled(cfg):
+        return None
     try:
         value = int(getattr(cfg.viewer.render, key))
     except Exception:
@@ -422,15 +435,15 @@ def downsample_for_render(
     x: np.ndarray,
     y: np.ndarray,
     *,
-    max_points: int,
+    max_points: int | None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Return an evenly sampled display-only subset of paired data.
-
-    The acquisition arrays are not modified.  This is intentionally simple and
-    deterministic; it is a safe first-stage render budget that can later be
-    replaced by LTTB/min-max decimation if profiling shows a real need.
     """
-    if x.size <= max_points:
+    Return an optionally bounded display-only subset of paired data.
+
+    The acquisition arrays are not modified.  Set ``max_points=None`` to disable
+    downsampling and send the full current window to the browser.
+    """
+    if max_points is None or x.size <= max_points:
         return x, y
     idx = np.linspace(0, x.size - 1, max_points, dtype=np.int64)
     return x[idx], y[idx]
@@ -441,10 +454,10 @@ def downsample_xy_for_render(
     y: np.ndarray,
     t: np.ndarray,
     *,
-    max_points: int,
+    max_points: int | None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return a bounded display-only subset of XY points and timestamps."""
-    if x.size <= max_points:
+    """Return an optionally bounded display-only subset of XY points/timestamps."""
+    if max_points is None or x.size <= max_points:
         return x, y, t
     idx = np.linspace(0, x.size - 1, max_points, dtype=np.int64)
     return x[idx], y[idx], t[idx]
@@ -456,9 +469,9 @@ def _set_time_series(
     t_rel: np.ndarray | None,
     y: np.ndarray | None,
     *,
-    max_points: int,
+    max_points: int | None,
 ) -> None:
-    """Replace one time-domain series with bounded paired [t, y] entries."""
+    """Replace one time-domain series with optionally bounded [t, y] entries."""
     if t_rel is not None and t_rel.size > 0 and y is not None and y.size > 0:
         plot_t, plot_y = downsample_for_render(t_rel, y, max_points=max_points)
         opts["series"][series_idx]["data"] = np.column_stack([plot_t, plot_y]).tolist()
@@ -476,13 +489,13 @@ def _update_xy_series(
     color: str,
     alpha_old: float,
     alpha_new: float,
-    max_points: int,
+    max_points: int | None,
 ) -> None:
-    """Fill the N_XY_BUCKETS pre-allocated scatter series with faded points."""
+    """Fill the N_XY_BUCKETS pre-allocated line series with faded path segments."""
     if x.size == 0:
         for i in range(N_XY_BUCKETS):
             opts["series"][i]["data"] = []
-            opts["series"][i]["itemStyle"]["color"] = _rgba(color, 0.0)
+            opts["series"][i]["lineStyle"]["color"] = _rgba(color, 0.0)
         return
 
     order = np.argsort(t)
@@ -493,18 +506,29 @@ def _update_xy_series(
     freshness = 1.0 - ages / float(window_seconds)
     bucket_idx = np.floor(freshness * N_XY_BUCKETS).astype(int).clip(0, N_XY_BUCKETS - 1)
 
+    # Each bucket is one ECharts line series.  To avoid visible gaps between
+    # freshness buckets, a bucket that starts after a previous bucket inherits
+    # the immediately preceding point as its first point.  This preserves a
+    # continuous-looking path without using renderer-specific None separators.
     bucket_data: list[list[list[float]]] = [[] for _ in range(N_XY_BUCKETS)]
+    previous_point: list[float] | None = None
+    previous_bucket: int | None = None
     for i, bkt_raw in enumerate(bucket_idx):
         bkt = int(bkt_raw)
-        bucket_data[bkt].append([float(x[i]), float(y[i])])
+        point = [float(x[i]), float(y[i])]
+        if not bucket_data[bkt] and previous_point is not None and previous_bucket != bkt:
+            bucket_data[bkt].append(previous_point)
+        bucket_data[bkt].append(point)
+        previous_point = point
+        previous_bucket = bkt
 
     r, g, b = _css_to_rgb(color)
     for bkt in range(N_XY_BUCKETS):
         mid_freshness = (bkt + 0.5) / N_XY_BUCKETS
         alpha = float(alpha_old) + mid_freshness * (float(alpha_new) - float(alpha_old))
-        color_str = f"rgba({r},{g},{b},{alpha:.3f})" if bucket_data[bkt] else f"rgba({r},{g},{b},0)"
+        color_str = f"rgba({r},{g},{b},{alpha:.3f})" if len(bucket_data[bkt]) >= 2 else f"rgba({r},{g},{b},0)"
         opts["series"][bkt]["data"] = bucket_data[bkt]
-        opts["series"][bkt]["itemStyle"]["color"] = color_str
+        opts["series"][bkt]["lineStyle"]["color"] = color_str
 
 
 # ---------------------------------------------------------------------------

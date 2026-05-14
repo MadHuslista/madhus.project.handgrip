@@ -136,8 +136,9 @@ class ControlsCfg:
 
 @dataclass
 class RenderCfg:
-    """Browser-rendering budgets; raw acquisition windows remain unchanged."""
+    """Browser-rendering controls; raw acquisition windows remain unchanged."""
 
+    downsample_enabled: bool = True
     max_points_time_series: int = 1200
     max_points_xy: int = 1500
 

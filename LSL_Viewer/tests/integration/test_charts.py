@@ -42,7 +42,7 @@ from lsl_viewer.viz.charts import (
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 def cfg():
     return OmegaConf.create(
         {
@@ -81,6 +81,7 @@ def cfg():
                 },
                 "controls": {"clear_key": "c", "pause_key": "p"},
                 "render": {
+                    "downsample_enabled": True,
                     "max_points_time_series": 1200,
                     "max_points_xy": 1500,
                 },
@@ -270,11 +271,12 @@ class TestBuildChartHandles:
             for s in opts["series"]:
                 assert "large" not in s
 
-    def test_xy_series_are_scatter_buckets(self, cfg):
+    def test_xy_series_are_line_buckets(self, cfg):
         ch = build_chart_handles(cfg)
         for s in ch.opts_xy["series"]:
-            assert s["type"] == "scatter"
-            assert "itemStyle" in s
+            assert s["type"] == "line"
+            assert s["showSymbol"] is False
+            assert "lineStyle" in s
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +327,21 @@ class TestRenderBudgeting:
         update_charts(ch, window, state, cfg, mode="test", source_name="src", source_type="typ")
 
         xy_point_count = sum(len(_series_data(ch.opts_xy, i)) for i in range(N_XY_BUCKETS))
-        assert xy_point_count <= 11
+        # Line buckets may duplicate one boundary point per occupied bucket to
+        # preserve continuity without None separators. The primary sampled
+        # point budget still governs the display payload.
+        assert xy_point_count <= 11 + N_XY_BUCKETS
+
+    def test_update_charts_can_disable_downsampling(self, cfg):
+        cfg.viewer.render.downsample_enabled = False
+        cfg.viewer.render.max_points_time_series = 10
+        ch = build_chart_handles(cfg)
+        state = ViewerState()
+        window = DualWindow(target=_make_target(n=50), reference=None)
+
+        update_charts(ch, window, state, cfg, mode="test", source_name="src", source_type="typ")
+
+        assert len(_series_data(ch.opts_target_raw)) == 50
 
 
 # ---------------------------------------------------------------------------

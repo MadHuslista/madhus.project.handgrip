@@ -166,7 +166,7 @@ def interpolate_reference_to_target(
         Current window data.
     max_reference_gap_s:
         Maximum gap in the reference stream before a target point is excluded
-        from the XY scatter.
+        from the XY correlation display.
     reference_time_shift_s:
         Seconds to add to reference timestamps for alignment purposes.
     target_signal:
