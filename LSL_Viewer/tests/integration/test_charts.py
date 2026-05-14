@@ -26,8 +26,12 @@ from lsl_viewer.types import (
 )
 from lsl_viewer.viz.charts import (
     N_XY_BUCKETS,
+    ChartHandles,
+    bind_chart_element,
     build_chart_handles,
     clear_chart_data,
+    downsample_for_render,
+    downsample_xy_for_render,
     update_charts,
 )
 
@@ -35,77 +39,84 @@ from lsl_viewer.viz.charts import (
 # Minimal config fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def cfg():
-    return OmegaConf.create({
-        "viewer": {
-            "window_seconds": 10.0,
-            "target_window_samples": 160,
-            "reference_window_extra_s": 1.0,
-            "expected_target_rate_hz": 100.0,
-            "refresh_s": 0.05,
-            "force_unit_label": "N",
-            "target_raw_unit_label": "count",
-            "dt_unit_label": "ms",
-            "style": {
-                "raw_color": "red",
-                "filtered_color": "green",
-                "reference_color": "purple",
-                "timing_color": "blue",
-                "grid_alpha": 0.3,
-                "xy_color": "red",
-                "xy_alpha_old": 0.12,
-                "xy_alpha_new": 0.92,
-                "xy_line_width": 1.6,
-            },
-            "xy_correlation": {
-                "lock_max_span": False,
-                "toggle_key": "x",
-                "target_signal": "raw",
-                "time_alignment": {
-                    "mode": "raw_lsl",
-                    "manual_reference_shift_s": 0.0,
-                    "max_auto_shift_s": None,
-                    "min_auto_shift_s": 0.0,
-                    "snap_threshold_s": 0.25,
-                    "smoothing_alpha": 1.0,
+    return OmegaConf.create(
+        {
+            "viewer": {
+                "window_seconds": 10.0,
+                "target_window_samples": 160,
+                "reference_window_extra_s": 1.0,
+                "expected_target_rate_hz": 100.0,
+                "refresh_s": 0.05,
+                "force_unit_label": "N",
+                "target_raw_unit_label": "count",
+                "dt_unit_label": "ms",
+                "style": {
+                    "raw_color": "red",
+                    "filtered_color": "green",
+                    "reference_color": "purple",
+                    "timing_color": "blue",
+                    "grid_alpha": 0.3,
+                    "xy_color": "red",
+                    "xy_alpha_old": 0.12,
+                    "xy_alpha_new": 0.92,
+                    "xy_line_width": 1.6,
+                },
+                "xy_correlation": {
+                    "lock_max_span": False,
+                    "toggle_key": "x",
+                    "target_signal": "raw",
+                    "time_alignment": {
+                        "mode": "raw_lsl",
+                        "manual_reference_shift_s": 0.0,
+                        "max_auto_shift_s": None,
+                        "min_auto_shift_s": 0.0,
+                        "snap_threshold_s": 0.25,
+                        "smoothing_alpha": 1.0,
+                    },
+                },
+                "controls": {"clear_key": "c", "pause_key": "p"},
+                "render": {
+                    "max_points_time_series": 1200,
+                    "max_points_xy": 1500,
+                },
+                "server": {
+                    "host": "127.0.0.1",
+                    "port": 8765,
+                    "reload": False,
+                    "show": False,
+                    "dark": False,
+                    "title": "LSL Viewer Test",
                 },
             },
-            "controls": {"clear_key": "c", "pause_key": "p"},
-            "server": {
-                "host": "127.0.0.1",
-                "port": 8765,
-                "reload": False,
-                "show": False,
-                "dark": False,
-                "title": "LSL Viewer Test",
+            "alignment": {
+                "interpolation": "linear",
+                "max_reference_gap_s": 0.02,
+                "allow_extrapolation": False,
             },
-        },
-        "alignment": {
-            "interpolation": "linear",
-            "max_reference_gap_s": 0.02,
-            "allow_extrapolation": False,
-        },
-        "calibration_markers": {
-            "enabled": False,
-            "events_ndjson_path": None,
-            "draw_events": [],
-        },
-        "channels": {
-            "target": {
-                "clock_label": "device_clock_us",
-                "raw_label": "target_raw_count",
-                "filtered_label": "target_filtered_units",
+            "calibration_markers": {
+                "enabled": False,
+                "events_ndjson_path": None,
+                "draw_events": [],
             },
-            "reference": {
-                "clock_label": "reference_clock_s",
-                "raw_label": "reference_force_N",
+            "channels": {
+                "target": {
+                    "clock_label": "device_clock_us",
+                    "raw_label": "target_raw_count",
+                    "filtered_label": "target_filtered_units",
+                },
+                "reference": {
+                    "clock_label": "reference_clock_s",
+                    "raw_label": "reference_force_N",
+                },
             },
-        },
-        "streams": {
-            "reference": {"expected_rate_hz": 500.0},
-        },
-    })
+            "streams": {
+                "reference": {"expected_rate_hz": 500.0},
+            },
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +144,35 @@ def _make_reference(n: int = 250, rate_hz: float = 500.0) -> ReferenceWindow:
 
 def _series_data(opts: dict, idx: int = 0) -> list:
     return opts["series"][idx]["data"]
+
+
+class FakeEChart:
+    """Minimal NiceGUI EChart test double with explicit option ownership."""
+
+    def __init__(self, options: dict):
+        self.options = options
+        self.update_calls = 0
+
+    def update(self) -> None:
+        self.update_calls += 1
+
+
+def _bind_all_fake_charts(ch: ChartHandles) -> list[FakeEChart]:
+    bindings = (
+        ("opts_target_raw", "chart_target_raw"),
+        ("opts_reference_raw", "chart_reference_raw"),
+        ("opts_target_filtered", "chart_target_filtered"),
+        ("opts_overlay", "chart_overlay"),
+        ("opts_target_dt", "chart_target_dt"),
+        ("opts_reference_dt", "chart_reference_dt"),
+        ("opts_xy", "chart_xy"),
+    )
+    charts: list[FakeEChart] = []
+    for options_attr, chart_attr in bindings:
+        fake = FakeEChart(getattr(ch, options_attr))
+        bind_chart_element(ch, options_attr=options_attr, chart_attr=chart_attr, chart_el=fake)
+        charts.append(fake)
+    return charts
 
 
 # ---------------------------------------------------------------------------
@@ -193,10 +233,118 @@ class TestBuildChartHandles:
             for s in opts["series"]:
                 assert s.get("animation") is False
 
-    def test_xy_series_large_mode_enabled(self, cfg):
+    def test_large_mode_disabled_on_all_series(self, cfg):
+        ch = build_chart_handles(cfg)
+        for opts in (
+            ch.opts_target_raw,
+            ch.opts_reference_raw,
+            ch.opts_target_filtered,
+            ch.opts_overlay,
+            ch.opts_target_dt,
+            ch.opts_reference_dt,
+            ch.opts_xy,
+        ):
+            for s in opts["series"]:
+                assert "large" not in s
+
+    def test_xy_series_are_scatter_buckets(self, cfg):
         ch = build_chart_handles(cfg)
         for s in ch.opts_xy["series"]:
-            assert s.get("large") is True
+            assert s["type"] == "scatter"
+            assert "itemStyle" in s
+
+
+# ---------------------------------------------------------------------------
+# TestRenderBudgeting
+# ---------------------------------------------------------------------------
+
+
+class TestRenderBudgeting:
+    def test_downsample_for_render_limits_time_series_without_mutating(self):
+        x = np.arange(100, dtype=np.float64)
+        y = x * 2
+
+        out_x, out_y = downsample_for_render(x, y, max_points=10)
+
+        assert len(out_x) == 10
+        assert len(out_y) == 10
+        assert out_x[0] == pytest.approx(0.0)
+        assert out_x[-1] == pytest.approx(99.0)
+        assert len(x) == 100
+
+    def test_downsample_xy_for_render_limits_all_three_arrays(self):
+        x = np.arange(100, dtype=np.float64)
+        y = x * 2
+        t = x / 100
+
+        out_x, out_y, out_t = downsample_xy_for_render(x, y, t, max_points=12)
+
+        assert len(out_x) == len(out_y) == len(out_t) == 12
+        assert out_x[0] == pytest.approx(0.0)
+        assert out_x[-1] == pytest.approx(99.0)
+
+    def test_update_charts_applies_time_series_render_budget(self, cfg):
+        cfg.viewer.render.max_points_time_series = 10
+        ch = build_chart_handles(cfg)
+        state = ViewerState()
+        window = DualWindow(target=_make_target(n=50), reference=None)
+
+        update_charts(ch, window, state, cfg, mode="test", source_name="src", source_type="typ")
+
+        assert len(_series_data(ch.opts_target_raw)) == 10
+
+    def test_update_charts_applies_xy_render_budget(self, cfg):
+        cfg.viewer.render.max_points_xy = 11
+        ch = build_chart_handles(cfg)
+        state = ViewerState()
+        window = DualWindow(target=_make_target(n=80), reference=_make_reference(n=400))
+
+        update_charts(ch, window, state, cfg, mode="test", source_name="src", source_type="typ")
+
+        xy_point_count = sum(len(_series_data(ch.opts_xy, i)) for i in range(N_XY_BUCKETS))
+        assert xy_point_count <= 11
+
+
+# ---------------------------------------------------------------------------
+# TestEChartSinkBinding
+# ---------------------------------------------------------------------------
+
+
+class TestEChartSinkBinding:
+    def test_bind_chart_element_rebinds_options_to_element_owner(self, cfg):
+        ch = build_chart_handles(cfg)
+        original = ch.opts_target_raw
+        owned = {**original, "series": original["series"]}
+        fake = FakeEChart(owned)
+
+        returned = bind_chart_element(ch, options_attr="opts_target_raw", chart_attr="chart_target_raw", chart_el=fake)
+
+        assert returned is fake
+        assert ch.chart_target_raw is fake
+        assert ch.opts_target_raw is fake.options
+
+    def test_update_charts_pushes_to_bound_echart_elements(self, cfg):
+        ch = build_chart_handles(cfg)
+        charts = _bind_all_fake_charts(ch)
+        state = ViewerState()
+        window = DualWindow(target=_make_target(n=20), reference=_make_reference(n=100))
+
+        update_charts(ch, window, state, cfg, mode="test", source_name="src", source_type="typ")
+
+        assert len(ch.chart_target_raw.options["series"][0]["data"]) == 20
+        assert all(fake.update_calls == 1 for fake in charts)
+
+    def test_clear_chart_data_pushes_to_bound_echart_elements(self, cfg):
+        ch = build_chart_handles(cfg)
+        charts = _bind_all_fake_charts(ch)
+        state = ViewerState()
+        window = DualWindow(target=_make_target(n=20), reference=_make_reference(n=100))
+        update_charts(ch, window, state, cfg, mode="test", source_name="src", source_type="typ")
+
+        clear_chart_data(ch)
+
+        assert ch.chart_target_raw.options["series"][0]["data"] == []
+        assert all(fake.update_calls == 2 for fake in charts)
 
 
 # ---------------------------------------------------------------------------
@@ -271,8 +419,8 @@ class TestUpdateCharts:
         )
         assert any_data
 
-    def test_xy_data_entries_are_pairs_or_none(self, cfg):
-        """Each XY bucket entry must be [float, float] or None (segment break)."""
+    def test_xy_data_entries_are_pairs(self, cfg):
+        """Each XY bucket entry must be a display-ready [float, float] point."""
         ch = build_chart_handles(cfg)
         state = ViewerState()
         window = DualWindow(target=_make_target(n=50), reference=_make_reference(n=250))
@@ -282,9 +430,7 @@ class TestUpdateCharts:
         )
         for i in range(N_XY_BUCKETS):
             for entry in _series_data(ch.opts_xy, i):
-                assert entry is None or (
-                    isinstance(entry, list) and len(entry) == 2
-                ), f"Bad XY entry in bucket {i}: {entry!r}"
+                assert isinstance(entry, list) and len(entry) == 2, f"Bad XY entry in bucket {i}: {entry!r}"
 
     def test_xy_lock_max_span_updates_state(self, cfg):
         ch = build_chart_handles(cfg)
@@ -414,7 +560,7 @@ class TestMarkerIntegration:
         # Two events: one in window, one outside
         state.marker_events = [
             {"event": "hold_start", "lsl_ts": t_end - 2.0, "payload": {}},
-            {"event": "hold_end",   "lsl_ts": t_end - 999.0, "payload": {}},  # too old
+            {"event": "hold_end", "lsl_ts": t_end - 999.0, "payload": {}},  # too old
         ]
         positions = get_marker_x_positions(state, cfg, t_end)
         assert len(positions) == 1

@@ -23,7 +23,7 @@ from nicegui import ui
 from omegaconf import DictConfig
 
 from lsl_viewer.types import ViewerState
-from lsl_viewer.viz.charts import ChartHandles, clear_chart_data
+from lsl_viewer.viz.charts import ChartHandles, bind_chart_element, clear_chart_data
 
 log = logging.getLogger(__name__)
 
@@ -118,15 +118,50 @@ def build_page_layout(
 
         # ── 3 × 2 time-series grid ────────────────────────────────────────
         with ui.grid(columns=2).classes("w-full gap-2"):
-            ch.chart_target_raw = ui.echart(ch.opts_target_raw).classes(f"w-full {_PANEL_H}")
-            ch.chart_reference_raw = ui.echart(ch.opts_reference_raw).classes(f"w-full {_PANEL_H}")
-            ch.chart_target_filtered = ui.echart(ch.opts_target_filtered).classes(f"w-full {_PANEL_H}")
-            ch.chart_overlay = ui.echart(ch.opts_overlay).classes(f"w-full {_PANEL_H}")
-            ch.chart_target_dt = ui.echart(ch.opts_target_dt).classes(f"w-full {_PANEL_H}")
-            ch.chart_reference_dt = ui.echart(ch.opts_reference_dt).classes(f"w-full {_PANEL_H}")
+            bind_chart_element(
+                ch,
+                options_attr="opts_target_raw",
+                chart_attr="chart_target_raw",
+                chart_el=ui.echart(ch.opts_target_raw).classes(f"w-full {_PANEL_H}"),
+            )
+            bind_chart_element(
+                ch,
+                options_attr="opts_reference_raw",
+                chart_attr="chart_reference_raw",
+                chart_el=ui.echart(ch.opts_reference_raw).classes(f"w-full {_PANEL_H}"),
+            )
+            bind_chart_element(
+                ch,
+                options_attr="opts_target_filtered",
+                chart_attr="chart_target_filtered",
+                chart_el=ui.echart(ch.opts_target_filtered).classes(f"w-full {_PANEL_H}"),
+            )
+            bind_chart_element(
+                ch,
+                options_attr="opts_overlay",
+                chart_attr="chart_overlay",
+                chart_el=ui.echart(ch.opts_overlay).classes(f"w-full {_PANEL_H}"),
+            )
+            bind_chart_element(
+                ch,
+                options_attr="opts_target_dt",
+                chart_attr="chart_target_dt",
+                chart_el=ui.echart(ch.opts_target_dt).classes(f"w-full {_PANEL_H}"),
+            )
+            bind_chart_element(
+                ch,
+                options_attr="opts_reference_dt",
+                chart_attr="chart_reference_dt",
+                chart_el=ui.echart(ch.opts_reference_dt).classes(f"w-full {_PANEL_H}"),
+            )
 
         # ── XY panel (full width) ─────────────────────────────────────────
-        ch.chart_xy = ui.echart(ch.opts_xy).classes(f"w-full {_XY_H}")
+        bind_chart_element(
+            ch,
+            options_attr="opts_xy",
+            chart_attr="chart_xy",
+            chart_el=ui.echart(ch.opts_xy).classes(f"w-full {_XY_H}"),
+        )
 
         # ── Control bar ───────────────────────────────────────────────────
         with ui.row().classes("items-center gap-3 mt-1"):

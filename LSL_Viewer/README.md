@@ -1,8 +1,8 @@
-# LSL Viewer v0.4.0
+# LSL Viewer v0.4.1
 
 Dual-native-stream handgrip force viewer — live LSL, CSV replay, and XDF replay modes.
 
-## What changed in v0.4.0 — NiceGUI + ECharts
+## What changed in v0.4.1 — correctness-first NiceGUI + ECharts
 
 **Root cause fixed (v0.3.0):** `plt.pause()` called `QWidget.activateWindow()` at 20 Hz, stealing OS keyboard focus on every frame.
 
@@ -10,16 +10,18 @@ Dual-native-stream handgrip force viewer — live LSL, CSV replay, and XDF repla
 
 **v0.4.0 fix:** Real-time rendering performance. The v0.3.0 Plotly backend was too slow for the data rate. Every `chart.update()` call serialised full trace arrays to JSON, transmitted them over the WebSocket, and Plotly.js ran a full diff before painting — repeating for all 7 panels at 20 Hz.
 
-**New backend:** Apache ECharts via NiceGUI's `ui.echart()`. Key improvements:
+**v0.4.1 fix:** Robust ECharts render handoff. The browser chart element now owns the authoritative `options` object, chart updates are pushed through an explicit EChart sink boundary, ECharts `large` mode is disabled by default, and display-only render budgets bound the payload sent to the browser.
 
-| Concern            | Plotly (v0.3.0)              | ECharts (v0.4.0)                     |
-| ------------------ | ---------------------------- | ------------------------------------ |
-| Renderer           | SVG (DOM node per point)     | HTML5 Canvas (pixel buffer)          |
-| Update model       | `Plotly.react()` + JSON diff | `setOption()` direct replace         |
-| Large-data path    | None                         | `large: True` + `largeThreshold`     |
-| Animation overhead | Always present               | `animation: False` throughout        |
-| Marker overlay     | Separate shape layer         | `markLine` on first series           |
-| Dependency         | `plotly>=5.18`               | Built into NiceGUI (ECharts bundled) |
+**Current backend:** Apache ECharts via NiceGUI's `ui.echart()`. Key improvements:
+
+| Concern | Plotly (v0.3.0) | ECharts (v0.4.1) |
+|---|---|---|
+| Renderer | SVG (DOM node per point) | HTML5 Canvas (pixel buffer) |
+| Update model | `Plotly.react()` + JSON diff | Element-owned `options` + explicit update sink |
+| Large-data path | None | Explicit display-only render budgets |
+| Animation overhead | Always present | `animation: False` throughout |
+| Marker overlay | Separate shape layer | `markLine` on first series |
+| Dependency | `plotly>=5.18` | Built into NiceGUI (ECharts bundled) |
 
 ---
 
@@ -48,9 +50,22 @@ src/lsl_viewer/
 
 **Core layer is 100% unchanged** across all three versions.
 
-### XY faded-line collection
+### XY faded scatter collection
 
-20 pre-allocated ECharts series (`N_XY_BUCKETS`). Each bucket covers a freshness band; its `lineStyle.color` carries the corresponding alpha. Data entries are `[x, y]` pairs with `None` as segment break markers. Constant series count means ECharts never adds or removes series on update.
+20 pre-allocated ECharts scatter series (`N_XY_BUCKETS`). Each bucket covers a freshness band; its `itemStyle.color` carries the corresponding alpha. Data entries are display-ready `[x, y]` points, with no `None` line-break sentinels and no ECharts `large` mode. Constant series count means ECharts never adds or removes series on update.
+
+### Render budgeting
+
+Raw acquisition/replay windows remain intact. Only the browser payload is bounded:
+
+```yaml
+viewer:
+  render:
+    max_points_time_series: 1200
+    max_points_xy: 1500
+```
+
+This keeps correctness and replayability in the core data path while protecting the browser renderer from unbounded per-refresh payloads.
 
 ### Calibration marker overlay
 
@@ -61,7 +76,7 @@ src/lsl_viewer/
 ## Installation
 
 ```bash
-pip install -e ".[dev]"
+uv sync --extra dev
 ```
 
 **Dependency change from v0.3.0:** `plotly>=5.18` removed. ECharts is bundled with NiceGUI.
@@ -90,35 +105,19 @@ Opens at `http://127.0.0.1:8765` by default (configure via `viewer.server.*`).
 
 ## Keyboard shortcuts
 
-| Key | Action                  |
-| --- | ----------------------- |
-| `c` | Clear plots             |
-| `p` | Pause / resume          |
+| Key | Action |
+|---|---|
+| `c` | Clear plots |
+| `p` | Pause / resume |
 | `x` | Toggle XY lock-max-span |
 
 Handled by `ui.keyboard` (browser key events — OS focus on viewer not required).
 
-## Configuration
-
-Key additions in `conf/config.yaml`:
-
-```yaml
-viewer:
-  server:
-    host: "127.0.0.1"
-    port: 8765
-    show: true       # auto-open browser on start
-    dark: false
-    title: "LSL Viewer"
-```
-
-All existing config keys are preserved.
-
 ## Tests
 
 ```bash
-pytest                  # all 69 tests
-pytest tests/unit/      # pure logic
-pytest tests/integration/  # ECharts option construction + update logic
-pytest tests/e2e/       # subprocess CLI smoke tests
+uv run pytest            # all 77 tests
+uv run pytest tests/unit/      # pure logic
+uv run pytest tests/integration/  # ECharts model/sink/update logic
+uv run pytest tests/e2e/       # subprocess CLI smoke tests
 ```

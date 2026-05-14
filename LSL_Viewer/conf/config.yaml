@@ -85,6 +85,12 @@ viewer:
     clear_key: c
     pause_key: p
 
+  # Browser-rendering budgets only. Acquisition buffers and replay data are
+  # kept intact; these limits bound the payload sent to ECharts per refresh.
+  render:
+    max_points_time_series: 1200
+    max_points_xy: 1500
+
   # NiceGUI server configuration
   server:
     host: "127.0.0.1"

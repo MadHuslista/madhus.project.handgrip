@@ -127,6 +127,15 @@ class ControlsCfg:
 # NiceGUI server configuration
 # ---------------------------------------------------------------------------
 
+
+@dataclass
+class RenderCfg:
+    """Browser-rendering budgets; raw acquisition windows remain unchanged."""
+
+    max_points_time_series: int = 1200
+    max_points_xy: int = 1500
+
+
 @dataclass
 class ServerCfg:
     """NiceGUI server settings.  Replaces the PyQt5/Matplotlib window."""
@@ -155,6 +164,7 @@ class ViewerCfg:
     xy_correlation: XYCorrelationCfg = field(default_factory=XYCorrelationCfg)
     style: StyleCfg = field(default_factory=StyleCfg)
     controls: ControlsCfg = field(default_factory=ControlsCfg)
+    render: RenderCfg = field(default_factory=RenderCfg)
     server: ServerCfg = field(default_factory=ServerCfg)
 
 

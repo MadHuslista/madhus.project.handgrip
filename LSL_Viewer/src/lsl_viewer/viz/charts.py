@@ -10,14 +10,21 @@ Why ECharts over Plotly for real-time streaming
 ------------------------------------------------
 * **Canvas rendering** — ECharts renders to an HTML5 canvas pixel buffer by
   default.  Plotly uses SVG (one DOM node per visible data point), which is
-  3–10× slower to repaint for 1,000-point time-series lines.
-* **``large`` mode** — when ``large: True`` and point count exceeds
-  ``largeThreshold``, ECharts automatically applies a line-sampling algorithm
-  so 10,000 points render as fast as 500 visually.
-* **``animation: False``** — eliminates all transition overhead for real-time
+  slower to repaint for high-rate live time-series lines.
+* **Explicit element-owned options** — the NiceGUI ``ui.echart`` element is
+  treated as the authoritative mutable chart sink.  The Python-side option
+  dictionaries remain as pure construction models until bound to UI elements.
+* **Render budgeting** — raw acquisition windows stay intact, while only a
+  bounded display representation is sent to the browser on each refresh.
+* **``animation: False``** — eliminates transition overhead for real-time
   updates; essential for sub-100 ms refresh cycles.
-* **No differential overhead** — ``setOption()`` replaces data directly.
-  Plotly's ``Plotly.react()`` computed a JSON diff first, then applied it.
+
+Correctness-first ECharts policy
+--------------------------------
+ECharts ``large`` mode is intentionally disabled by default.  The viewer first
+limits browser payload size via explicit downsampling, then lets normal ECharts
+line/scatter rendering handle the bounded data.  This avoids silently changing
+feature support for paired ``[x, y]`` data, marker overlays, and XY fading.
 
 Marker overlays
 ---------------
@@ -25,13 +32,15 @@ Calibration event markers are rendered as ECharts ``markLine`` entries
 attached to the first series of each time-domain panel — no separate shape
 layer needed.
 
-XY faded-line collection
-------------------------
-The N_XY_BUCKETS=20 pre-allocated series approach is preserved verbatim from
-the Plotly implementation.  Only the data container changes: ECharts paired
-``[[x, y], [x, y], None, ...]`` lists replace Plotly's ``Scatter.x`` /
-``Scatter.y`` arrays.
+XY faded scatter collection
+---------------------------
+The N_XY_BUCKETS=20 pre-allocated series approach is preserved, but each bucket
+is now a scatter series instead of a line series with ``None`` separators.  This
+is more robust for high-rate browser rendering and decimation: the XY panel
+shows the force/count relationship cloud without relying on renderer-specific
+line-gap behaviour.
 """
+
 from __future__ import annotations
 
 import logging
@@ -117,15 +126,14 @@ def _split_line() -> dict:
 
 
 def _mk_series(name: str, color: str, width: float = 1.0, dash: str = "solid") -> dict:
-    """Single ECharts line series with real-time optimisations enabled."""
+    """Single ECharts line series with correctness-first realtime defaults."""
     return {
         "type": "line",
         "name": name,
         "data": [],
         "showSymbol": False,
+        "connectNulls": False,
         "lineStyle": {"color": color, "width": width, "type": dash},
-        "large": True,
-        "largeThreshold": 100,
         "animation": False,
     }
 
@@ -281,21 +289,17 @@ def _build_xy_opts(cfg: DictConfig) -> dict:
             "name": cfg.viewer.target_raw_unit_label,
             "splitLine": _split_line(),
         },
-        # N_XY_BUCKETS pre-allocated series — data and colour updated each frame
+        # N_XY_BUCKETS pre-allocated scatter series — data and colour updated each frame.
         "series": [
             {
-                "type": "line",
+                "type": "scatter",
+                "name": f"age bucket {i + 1}",
                 "data": [],
-                "showSymbol": False,
-                "lineStyle": {
-                    "color": _rgba(s.xy_color, 0.0),
-                    "width": float(s.xy_line_width),
-                },
-                "large": True,
-                "largeThreshold": 50,
+                "symbolSize": 2,
+                "itemStyle": {"color": _rgba(s.xy_color, 0.0)},
                 "animation": False,
             }
-            for _ in range(N_XY_BUCKETS)
+            for i in range(N_XY_BUCKETS)
         ],
     }
 
@@ -323,6 +327,64 @@ def build_chart_handles(cfg: DictConfig) -> ChartHandles:
 
 
 # ---------------------------------------------------------------------------
+# EChart sink helpers
+# ---------------------------------------------------------------------------
+
+_CHART_BINDINGS: tuple[tuple[str, str], ...] = (
+    ("opts_target_raw", "chart_target_raw"),
+    ("opts_reference_raw", "chart_reference_raw"),
+    ("opts_target_filtered", "chart_target_filtered"),
+    ("opts_overlay", "chart_overlay"),
+    ("opts_target_dt", "chart_target_dt"),
+    ("opts_reference_dt", "chart_reference_dt"),
+    ("opts_xy", "chart_xy"),
+)
+
+
+def bind_chart_element(
+    ch: ChartHandles,
+    *,
+    options_attr: str,
+    chart_attr: str,
+    chart_el: Any,
+) -> Any:
+    """Bind one NiceGUI EChart element as the authoritative option owner.
+
+    NiceGUI updates are pushed from the element's ``options`` property, so the
+    ChartHandles option reference is immediately re-bound to that same object.
+    This keeps pure tests working before page construction while avoiding
+    hidden reliance on pre-bind dictionary identity at runtime.
+    """
+    if not hasattr(chart_el, "options"):
+        raise TypeError(f"{chart_attr} must expose an .options mapping")
+    setattr(ch, chart_attr, chart_el)
+    setattr(ch, options_attr, chart_el.options)
+    return chart_el
+
+
+def chart_options(ch: ChartHandles, options_attr: str, chart_attr: str) -> dict:
+    """Return the authoritative mutable options for a chart slot."""
+    chart_el = getattr(ch, chart_attr)
+    if chart_el is None:
+        return getattr(ch, options_attr)
+    options = chart_el.options
+    setattr(ch, options_attr, options)
+    return options
+
+
+def iter_chart_elements(ch: ChartHandles) -> tuple[Any, ...]:
+    """Return all bound chart elements in stable visual order."""
+    return tuple(getattr(ch, chart_attr) for _, chart_attr in _CHART_BINDINGS)
+
+
+def push_chart_updates(ch: ChartHandles) -> None:
+    """Push all bound chart option changes to the browser."""
+    for chart_el in iter_chart_elements(ch):
+        if chart_el is not None:
+            chart_el.update()
+
+
+# ---------------------------------------------------------------------------
 # Marker overlay helpers
 # ---------------------------------------------------------------------------
 
@@ -343,11 +405,59 @@ def _apply_markline(opts: dict, x_positions: list[float]) -> None:
 # Per-panel data updaters
 # ---------------------------------------------------------------------------
 
+def _render_max_points(cfg: DictConfig, key: str, default: int) -> int:
+    """Read a positive render budget from config with a safe fallback."""
+    try:
+        value = int(getattr(cfg.viewer.render, key))
+    except Exception:
+        value = default
+    return max(2, value)
 
-def _set_time_series(opts: dict, series_idx: int, t_rel: np.ndarray | None, y: np.ndarray | None) -> None:
-    """Replace the data for one time-domain series with paired [t, y] entries."""
+
+def downsample_for_render(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    max_points: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return an evenly sampled display-only subset of paired data.
+
+    The acquisition arrays are not modified.  This is intentionally simple and
+    deterministic; it is a safe first-stage render budget that can later be
+    replaced by LTTB/min-max decimation if profiling shows a real need.
+    """
+    if x.size <= max_points:
+        return x, y
+    idx = np.linspace(0, x.size - 1, max_points, dtype=np.int64)
+    return x[idx], y[idx]
+
+
+def downsample_xy_for_render(
+    x: np.ndarray,
+    y: np.ndarray,
+    t: np.ndarray,
+    *,
+    max_points: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return a bounded display-only subset of XY points and timestamps."""
+    if x.size <= max_points:
+        return x, y, t
+    idx = np.linspace(0, x.size - 1, max_points, dtype=np.int64)
+    return x[idx], y[idx], t[idx]
+
+
+def _set_time_series(
+    opts: dict,
+    series_idx: int,
+    t_rel: np.ndarray | None,
+    y: np.ndarray | None,
+    *,
+    max_points: int,
+) -> None:
+    """Replace one time-domain series with bounded paired [t, y] entries."""
     if t_rel is not None and t_rel.size > 0 and y is not None and y.size > 0:
-        opts["series"][series_idx]["data"] = np.column_stack([t_rel, y]).tolist()
+        plot_t, plot_y = downsample_for_render(t_rel, y, max_points=max_points)
+        opts["series"][series_idx]["data"] = np.column_stack([plot_t, plot_y]).tolist()
     else:
         opts["series"][series_idx]["data"] = []
 
@@ -362,42 +472,35 @@ def _update_xy_series(
     color: str,
     alpha_old: float,
     alpha_new: float,
+    max_points: int,
 ) -> None:
-    """
-    Fill the N_XY_BUCKETS pre-allocated series with faded line segments.
-
-    Data format: ``[[x0, y0], [x1, y1], None, [x2, y2], ...]``
-    ``None`` entries break the line between non-consecutive segments,
-    equivalent to the NaN-separator approach used in the Plotly version.
-    """
-    if x.size < 2:
+    """Fill the N_XY_BUCKETS pre-allocated scatter series with faded points."""
+    if x.size == 0:
         for i in range(N_XY_BUCKETS):
             opts["series"][i]["data"] = []
+            opts["series"][i]["itemStyle"]["color"] = _rgba(color, 0.0)
         return
 
     order = np.argsort(t)
     x, y, t = x[order], y[order], t[order]
-    n_segs = len(t) - 1
+    x, y, t = downsample_xy_for_render(x, y, t, max_points=max_points)
 
-    ages = np.clip(t[-1] - t[1:], 0.0, float(window_seconds))
+    ages = np.clip(t[-1] - t, 0.0, float(window_seconds))
     freshness = 1.0 - ages / float(window_seconds)
     bucket_idx = np.floor(freshness * N_XY_BUCKETS).astype(int).clip(0, N_XY_BUCKETS - 1)
 
-    # Accumulate segment pairs per bucket (with None breaks)
-    bucket_data: list[list] = [[] for _ in range(N_XY_BUCKETS)]
-    for i in range(n_segs):
-        bkt = int(bucket_idx[i])
+    bucket_data: list[list[list[float]]] = [[] for _ in range(N_XY_BUCKETS)]
+    for i, bkt_raw in enumerate(bucket_idx):
+        bkt = int(bkt_raw)
         bucket_data[bkt].append([float(x[i]), float(y[i])])
-        bucket_data[bkt].append([float(x[i + 1]), float(y[i + 1])])
-        bucket_data[bkt].append(None)  # break between non-consecutive segments
 
     r, g, b = _css_to_rgb(color)
     for bkt in range(N_XY_BUCKETS):
         mid_freshness = (bkt + 0.5) / N_XY_BUCKETS
         alpha = float(alpha_old) + mid_freshness * (float(alpha_new) - float(alpha_old))
         color_str = f"rgba({r},{g},{b},{alpha:.3f})" if bucket_data[bkt] else f"rgba({r},{g},{b},0)"
-        opts["series"][bkt]["data"] = bucket_data[bkt] if bucket_data[bkt] else []
-        opts["series"][bkt]["lineStyle"]["color"] = color_str
+        opts["series"][bkt]["data"] = bucket_data[bkt]
+        opts["series"][bkt]["itemStyle"]["color"] = color_str
 
 
 # ---------------------------------------------------------------------------
@@ -421,6 +524,16 @@ def update_charts(
     target = window.target
     reference = window.reference
     style = cfg.viewer.style
+    time_max_points = _render_max_points(cfg, "max_points_time_series", 1200)
+    xy_max_points = _render_max_points(cfg, "max_points_xy", 1500)
+
+    opts_target_raw = chart_options(ch, "opts_target_raw", "chart_target_raw")
+    opts_reference_raw = chart_options(ch, "opts_reference_raw", "chart_reference_raw")
+    opts_target_filtered = chart_options(ch, "opts_target_filtered", "chart_target_filtered")
+    opts_overlay = chart_options(ch, "opts_overlay", "chart_overlay")
+    opts_target_dt = chart_options(ch, "opts_target_dt", "chart_target_dt")
+    opts_reference_dt = chart_options(ch, "opts_reference_dt", "chart_reference_dt")
+    opts_xy = chart_options(ch, "opts_xy", "chart_xy")
 
     # ── t_end for relative time axis ─────────────────────────────────────
     latest_ts: list[float] = []
@@ -441,28 +554,28 @@ def update_charts(
 
     if target is not None and target.timestamps_s.size:
         t_rel = target.timestamps_s - t_end
-        _set_time_series(ch.opts_target_raw, 0, t_rel, target.raw)
-        _set_time_series(ch.opts_target_filtered, 0, t_rel, target.filtered)
-        _set_time_series(ch.opts_overlay, 0, t_rel, target.filtered)
-        _apply_markline(ch.opts_target_raw, marker_x)
-        _apply_markline(ch.opts_target_filtered, marker_x)
-        _apply_markline(ch.opts_overlay, marker_x)
+        _set_time_series(opts_target_raw, 0, t_rel, target.raw, max_points=time_max_points)
+        _set_time_series(opts_target_filtered, 0, t_rel, target.filtered, max_points=time_max_points)
+        _set_time_series(opts_overlay, 0, t_rel, target.filtered, max_points=time_max_points)
+        _apply_markline(opts_target_raw, marker_x)
+        _apply_markline(opts_target_filtered, marker_x)
+        _apply_markline(opts_overlay, marker_x)
 
         dt_idx, dt_ms, target_rate_hz, _ = lsl_interval_ms(target.timestamps_s)
         if dt_ms.size:
-            _set_time_series(ch.opts_target_dt, 0, t_rel[dt_idx.astype(int)], dt_ms)
+            _set_time_series(opts_target_dt, 0, t_rel[dt_idx.astype(int)], dt_ms, max_points=time_max_points)
         else:
-            ch.opts_target_dt["series"][0]["data"] = []
+            opts_target_dt["series"][0]["data"] = []
 
         if target.device_clock_us.size:
             target_clock_metrics = clock_validation_metrics(
                 target.timestamps_s, target.device_clock_us, clock_scale_to_s=1e-6
             )
     else:
-        for opts in (ch.opts_target_raw, ch.opts_target_filtered, ch.opts_overlay):
+        for opts in (opts_target_raw, opts_target_filtered, opts_overlay):
             opts["series"][0]["data"] = []
             _apply_markline(opts, marker_x)
-        ch.opts_target_dt["series"][0]["data"] = []
+        opts_target_dt["series"][0]["data"] = []
 
     # ── Reference time-domain panels ──────────────────────────────────────
     reference_rate_hz = float("nan")
@@ -470,25 +583,25 @@ def update_charts(
 
     if reference is not None and reference.timestamps_s.size:
         ref_t_rel = reference.timestamps_s - t_end
-        _set_time_series(ch.opts_reference_raw, 0, ref_t_rel, reference.raw)
-        _set_time_series(ch.opts_overlay, 1, ref_t_rel, reference.raw)
-        _apply_markline(ch.opts_reference_raw, marker_x)
+        _set_time_series(opts_reference_raw, 0, ref_t_rel, reference.raw, max_points=time_max_points)
+        _set_time_series(opts_overlay, 1, ref_t_rel, reference.raw, max_points=time_max_points)
+        _apply_markline(opts_reference_raw, marker_x)
 
         dt_idx, dt_ms, reference_rate_hz, _ = lsl_interval_ms(reference.timestamps_s)
         if dt_ms.size:
-            _set_time_series(ch.opts_reference_dt, 0, ref_t_rel[dt_idx.astype(int)], dt_ms)
+            _set_time_series(opts_reference_dt, 0, ref_t_rel[dt_idx.astype(int)], dt_ms, max_points=time_max_points)
         else:
-            ch.opts_reference_dt["series"][0]["data"] = []
+            opts_reference_dt["series"][0]["data"] = []
 
         if reference.rs485_clock.size:
             reference_clock_metrics = clock_validation_metrics(
                 reference.timestamps_s, reference.rs485_clock, clock_scale_to_s=1.0
             )
     else:
-        ch.opts_reference_raw["series"][0]["data"] = []
-        _apply_markline(ch.opts_reference_raw, marker_x)
-        ch.opts_overlay["series"][1]["data"] = []
-        ch.opts_reference_dt["series"][0]["data"] = []
+        opts_reference_raw["series"][0]["data"] = []
+        _apply_markline(opts_reference_raw, marker_x)
+        opts_overlay["series"][1]["data"] = []
+        opts_reference_dt["series"][0]["data"] = []
 
     # ── XY correlation ────────────────────────────────────────────────────
     ta = cfg.viewer.xy_correlation.time_alignment
@@ -517,7 +630,7 @@ def update_charts(
     )
 
     _update_xy_series(
-        ch.opts_xy,
+        opts_xy,
         xy_x,
         xy_y,
         xy_t,
@@ -525,24 +638,25 @@ def update_charts(
         color=style.xy_color,
         alpha_old=style.xy_alpha_old,
         alpha_new=style.xy_alpha_new,
+        max_points=xy_max_points,
     )
 
     # XY axis range (lock-max-span)
     if xy_x.size > 0 and state.xy_lock_max_span:
         state.xy_max_span = update_xy_max_span(state.xy_max_span, xy_x, xy_y)
         span = state.xy_max_span
-        ch.opts_xy["xAxis"].update({"min": span["xmin"], "max": span["xmax"]})
-        ch.opts_xy["yAxis"].update({"min": span["ymin"], "max": span["ymax"]})
+        opts_xy["xAxis"].update({"min": span["xmin"], "max": span["xmax"]})
+        opts_xy["yAxis"].update({"min": span["ymin"], "max": span["ymax"]})
     elif not state.xy_lock_max_span:
         state.xy_max_span = {}
-        ch.opts_xy["xAxis"].pop("min", None)
-        ch.opts_xy["xAxis"].pop("max", None)
-        ch.opts_xy["yAxis"].pop("min", None)
-        ch.opts_xy["yAxis"].pop("max", None)
+        opts_xy["xAxis"].pop("min", None)
+        opts_xy["xAxis"].pop("max", None)
+        opts_xy["yAxis"].pop("min", None)
+        opts_xy["yAxis"].pop("max", None)
 
     xy_lock_label = "max-span lock" if state.xy_lock_max_span else "adaptive"
     clipped = "; clipped" if state.xy_reference_shift_clipped else ""
-    ch.opts_xy["title"]["text"] = (
+    opts_xy["title"]["text"] = (
         f"Sensor curve: reference force vs target raw count  "
         f"[{xy_lock_label}  align={xy_alignment_mode}{clipped}  "
         f"ref_shift={xy_reference_shift_s:+.3f}s]"
@@ -572,52 +686,40 @@ def update_charts(
         ch.info_label.set_text(info_text)
 
     # ── Push all chart updates to the browser ──────────────────────────────
-    for chart_el in (
-        ch.chart_target_raw,
-        ch.chart_reference_raw,
-        ch.chart_target_filtered,
-        ch.chart_overlay,
-        ch.chart_target_dt,
-        ch.chart_reference_dt,
-        ch.chart_xy,
-    ):
-        if chart_el is not None:
-            chart_el.update()
+    push_chart_updates(ch)
 
 
 def clear_chart_data(ch: ChartHandles) -> None:
     """Clear all series data and reset XY axis bounds."""
+    opts_target_raw = chart_options(ch, "opts_target_raw", "chart_target_raw")
+    opts_reference_raw = chart_options(ch, "opts_reference_raw", "chart_reference_raw")
+    opts_target_filtered = chart_options(ch, "opts_target_filtered", "chart_target_filtered")
+    opts_overlay = chart_options(ch, "opts_overlay", "chart_overlay")
+    opts_target_dt = chart_options(ch, "opts_target_dt", "chart_target_dt")
+    opts_reference_dt = chart_options(ch, "opts_reference_dt", "chart_reference_dt")
+    opts_xy = chart_options(ch, "opts_xy", "chart_xy")
+
     for opts in (
-        ch.opts_target_raw,
-        ch.opts_reference_raw,
-        ch.opts_target_filtered,
-        ch.opts_target_dt,
-        ch.opts_reference_dt,
+        opts_target_raw,
+        opts_reference_raw,
+        opts_target_filtered,
+        opts_target_dt,
+        opts_reference_dt,
     ):
         for series in opts["series"]:
             series["data"] = []
             series.pop("markLine", None)
 
-    for series in ch.opts_overlay["series"]:
+    for series in opts_overlay["series"]:
         series["data"] = []
         series.pop("markLine", None)
 
-    for series in ch.opts_xy["series"]:
+    for series in opts_xy["series"]:
         series["data"] = []
 
-    # Reset XY axis to auto-scale
+    # Reset XY axis to auto-scale.
     for axis in ("xAxis", "yAxis"):
-        ch.opts_xy[axis].pop("min", None)
-        ch.opts_xy[axis].pop("max", None)
+        opts_xy[axis].pop("min", None)
+        opts_xy[axis].pop("max", None)
 
-    for chart_el in (
-        ch.chart_target_raw,
-        ch.chart_reference_raw,
-        ch.chart_target_filtered,
-        ch.chart_overlay,
-        ch.chart_target_dt,
-        ch.chart_reference_dt,
-        ch.chart_xy,
-    ):
-        if chart_el is not None:
-            chart_el.update()
+    push_chart_updates(ch)
