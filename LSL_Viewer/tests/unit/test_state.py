@@ -119,7 +119,7 @@ class TestViewerState:
 
     def test_round_trip_handles_proxy_does_not_lose_data(self):
         """Verify the FigureHandles adapter pattern used in charts.py."""
-        from lsl_viewer.types import FigureHandles, ViewerState
+        from lsl_viewer.types import ViewerState
 
         state = ViewerState(
             xy_reference_time_shift_s=0.25,

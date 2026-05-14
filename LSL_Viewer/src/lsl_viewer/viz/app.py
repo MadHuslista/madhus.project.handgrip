@@ -1,4 +1,5 @@
-"""NiceGUI application factory and event-loop runners.
+"""
+NiceGUI application factory and event-loop runners.
 
 This module replaces ``runners/live.py`` and ``runners/replay.py``.
 The ``while/plt.pause()`` event loops are replaced by NiceGUI ``ui.timer()``
@@ -11,6 +12,7 @@ on every frame via the Qt5Agg backend, stealing keyboard focus at 20 Hz.
 NiceGUI renders in a browser tab served over localhost; no native OS window
 is created, so focus stealing is architecturally impossible.
 """
+
 from __future__ import annotations
 
 import logging
@@ -40,11 +42,13 @@ log = logging.getLogger(__name__)
 # Live-mode helpers  (migrated from runners/live.py)
 # ---------------------------------------------------------------------------
 
+
 def _slice_dual_after_cutoffs(
     window: DualWindow,
     state: ViewerState,
 ) -> DualWindow | None:
-    """Remove samples that predate the live-reset cutoff timestamps.
+    """
+    Remove samples that predate the live-reset cutoff timestamps.
 
     After the user presses the clear key, only samples newer than the cutoff
     are rendered so previously buffered data does not reappear.
@@ -89,24 +93,19 @@ def _establish_live_cutoff(
     reference_layout: object,
     state: ViewerState,
 ) -> None:
-    """Record the latest buffered timestamps as post-clear cutoffs.
+    """
+    Record the latest buffered timestamps as post-clear cutoffs.
 
     After a manual clear or pause-resume, only samples arriving after these
     cutoffs are rendered so the display starts fresh.
     """
-    latest = fetch_live_window(
-        target_stream, reference_stream, cfg, target_layout, reference_layout
-    )
+    latest = fetch_live_window(target_stream, reference_stream, cfg, target_layout, reference_layout)
     if latest is not None and latest.target is not None and latest.target.timestamps_s.size:
         state.target_cutoff_s = float(np.nanmax(latest.target.timestamps_s))
     else:
         state.target_cutoff_s = None
 
-    if (
-        latest is not None
-        and latest.reference is not None
-        and latest.reference.timestamps_s.size
-    ):
+    if latest is not None and latest.reference is not None and latest.reference.timestamps_s.size:
         state.reference_cutoff_s = float(np.nanmax(latest.reference.timestamps_s))
     else:
         state.reference_cutoff_s = None
@@ -123,6 +122,7 @@ def _establish_live_cutoff(
 # Live-mode timer callback
 # ---------------------------------------------------------------------------
 
+
 def _live_tick(
     cfg: DictConfig,
     target_stream: object,
@@ -138,14 +138,10 @@ def _live_tick(
         return
 
     if state.live_reset_from_latest_window:
-        _establish_live_cutoff(
-            target_stream, reference_stream, cfg, target_layout, reference_layout, state
-        )
+        _establish_live_cutoff(target_stream, reference_stream, cfg, target_layout, reference_layout, state)
         return
 
-    live = fetch_live_window(
-        target_stream, reference_stream, cfg, target_layout, reference_layout
-    )
+    live = fetch_live_window(target_stream, reference_stream, cfg, target_layout, reference_layout)
     if live is None:
         return
 
@@ -170,10 +166,11 @@ def _live_tick(
 # Replay-mode timer callback
 # ---------------------------------------------------------------------------
 
+
 def _replay_tick(
     cfg: DictConfig,
     replay_data: DualReplayData,
-    replay_start_wall: list[float],   # mutable container [start_time]
+    replay_start_wall: list[float],  # mutable container [start_time]
     state: ViewerState,
     ch: ChartHandles,
     mode: str,
@@ -190,9 +187,7 @@ def _replay_tick(
     loop = bool(cfg.replay.loop)
     duration_s = replay_data.duration_s
 
-    elapsed_s = (
-        time.monotonic() - replay_start_wall[0]
-    ) * replay_speed + start_offset_s
+    elapsed_s = (time.monotonic() - replay_start_wall[0]) * replay_speed + start_offset_s
 
     if loop and duration_s > 0:
         elapsed_s = elapsed_s % duration_s
@@ -201,10 +196,7 @@ def _replay_tick(
 
     window = window_from_replay(replay_data, elapsed_s, cfg.viewer.window_seconds)
     if window is not None:
-        progress = (
-            f"time   : {elapsed_s:.2f}/{duration_s:.2f} s\n"
-            f"speed  : {replay_speed:.2f}x"
-        )
+        progress = f"time   : {elapsed_s:.2f}/{duration_s:.2f} s\nspeed  : {replay_speed:.2f}x"
         update_charts(
             ch,
             window,
@@ -225,8 +217,10 @@ def _replay_tick(
 # Public runners (called from cli.py)
 # ---------------------------------------------------------------------------
 
+
 def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
-    """Run the viewer in live LSL streaming mode via NiceGUI.
+    """
+    Run the viewer in live LSL streaming mode via NiceGUI.
 
     Replaces ``runners/live.py:run_live_mode()``.  The ``while/plt.pause()``
     event loop is replaced by a ``ui.timer()`` callback so the process never
@@ -242,6 +236,7 @@ def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
     Returns
     -------
     Exit code (0 on clean exit).
+
     """
     target_stream, reference_stream, target_layout, reference_layout = build_streams(cfg)
     state = ViewerState()
@@ -250,8 +245,7 @@ def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
     mode_label = "live_with_reference_validation" if validate_reference else "live"
 
     log.info(
-        "Live viewer starting: mode=%s target=%s reference=%s "
-        "window_seconds=%.3f refresh_s=%.3f",
+        "Live viewer starting: mode=%s target=%s reference=%s window_seconds=%.3f refresh_s=%.3f",
         mode_label,
         cfg.streams.target.name,
         cfg.streams.reference.name,
@@ -299,10 +293,9 @@ def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
     return 0
 
 
-def run_replay_mode_nicegui(
-    cfg: DictConfig, replay_data: DualReplayData, mode: str
-) -> int:
-    """Animate a pre-loaded replay dataset via NiceGUI.
+def run_replay_mode_nicegui(cfg: DictConfig, replay_data: DualReplayData, mode: str) -> int:
+    """
+    Animate a pre-loaded replay dataset via NiceGUI.
 
     Replaces ``runners/replay.py:run_replay_mode()``.
 
@@ -318,6 +311,7 @@ def run_replay_mode_nicegui(
     Returns
     -------
     Exit code (0 on clean exit).
+
     """
     duration_s = replay_data.duration_s
     if duration_s <= 0:

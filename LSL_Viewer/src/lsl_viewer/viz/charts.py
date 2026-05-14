@@ -1,24 +1,37 @@
-"""Plotly figure builders and per-frame chart updaters.
+"""
+ECharts option builders and per-frame chart updaters.
 
-This module replaces ``viz/figure.py`` and ``viz/plots.py`` from the
-Matplotlib implementation.  All chart state lives in :class:`ChartHandles`;
-the NiceGUI ``ui.plotly`` element references are stored there too after
-``viz/panels.py`` creates the page.
+Replaces the Plotly implementation (v0.3.0) with Apache ECharts via
+NiceGUI's ``ui.echart()`` element.  The architectural change is a charting
+*backend* swap only — the module boundary, ``ChartHandles`` interface, and
+``update_charts`` / ``clear_chart_data`` signatures are unchanged from the
+callers' perspective.
 
-Architecture
-------------
-* ``build_chart_handles(cfg)``  — creates all :class:`plotly.graph_objects.Figure`
-  objects with pre-allocated traces.  Called *before* the NiceGUI page is built.
-* ``update_charts(ch, ...)``    — called once per timer tick to push new data into
-  the figures and call ``ui.plotly.update()`` on each element.
+Why ECharts over Plotly for real-time streaming
+------------------------------------------------
+* **Canvas rendering** — ECharts renders to an HTML5 canvas pixel buffer by
+  default.  Plotly uses SVG (one DOM node per visible data point), which is
+  3–10× slower to repaint for 1,000-point time-series lines.
+* **``large`` mode** — when ``large: True`` and point count exceeds
+  ``largeThreshold``, ECharts automatically applies a line-sampling algorithm
+  so 10,000 points render as fast as 500 visually.
+* **``animation: False``** — eliminates all transition overhead for real-time
+  updates; essential for sub-100 ms refresh cycles.
+* **No differential overhead** — ``setOption()`` replaces data directly.
+  Plotly's ``Plotly.react()`` computed a JSON diff first, then applied it.
 
-XY panel
---------
-The time-faded line collection from the Matplotlib implementation is reproduced
-using N_XY_BUCKETS pre-allocated Scatter traces.  Each bucket covers a freshness
-range; its line colour carries the corresponding alpha value.  The bucket approach
-keeps the trace count constant (no add/remove on each frame) which is critical for
-``Plotly.react``'s diffing efficiency.
+Marker overlays
+---------------
+Calibration event markers are rendered as ECharts ``markLine`` entries
+attached to the first series of each time-domain panel — no separate shape
+layer needed.
+
+XY faded-line collection
+------------------------
+The N_XY_BUCKETS=20 pre-allocated series approach is preserved verbatim from
+the Plotly implementation.  Only the data container changes: ECharts paired
+``[[x, y], [x, y], None, ...]`` lists replace Plotly's ``Scatter.x`` /
+``Scatter.y`` arrays.
 """
 from __future__ import annotations
 
@@ -27,7 +40,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
-import plotly.graph_objects as go
 from omegaconf import DictConfig
 
 from lsl_viewer.core.alignment import (
@@ -37,27 +49,17 @@ from lsl_viewer.core.alignment import (
 from lsl_viewer.core.timing import clock_validation_metrics, lsl_interval_ms
 from lsl_viewer.types import DualWindow, FigureHandles, ViewerState
 from lsl_viewer.viz.dashboard import render_info_text
-from lsl_viewer.viz.markers import get_marker_shapes, refresh_marker_cache
-from lsl_viewer.viz.state import compute_axis_limits, update_xy_max_span
+from lsl_viewer.viz.markers import get_marker_x_positions, refresh_marker_cache
+from lsl_viewer.viz.state import update_xy_max_span
 
 log = logging.getLogger(__name__)
 
-# Number of pre-allocated XY bucket traces (constant across updates)
+# Number of pre-allocated XY bucket series — constant across updates
 N_XY_BUCKETS: int = 20
-
-# Trace indices in the main figure (must match add_trace call order in _build_*_figure)
-TRACE_TARGET_RAW: int = 0
-TRACE_REFERENCE_RAW: int = 0
-TRACE_TARGET_FILTERED: int = 0
-TRACE_OVERLAY_TARGET: int = 0
-TRACE_OVERLAY_REFERENCE: int = 1
-TRACE_TARGET_DT: int = 0
-TRACE_REFERENCE_DT: int = 0
-TRACE_XY_START: int = 0  # traces 0..N_XY_BUCKETS-1 in fig_xy
 
 
 # ---------------------------------------------------------------------------
-# CSS colour utility
+# CSS colour utility (unchanged from v0.3.0)
 # ---------------------------------------------------------------------------
 
 _CSS_NAMED: dict[str, tuple[int, int, int]] = {
@@ -88,7 +90,6 @@ _CSS_NAMED: dict[str, tuple[int, int, int]] = {
 
 
 def _css_to_rgb(color: str) -> tuple[int, int, int]:
-    """Convert a CSS color name or hex string to an integer (R, G, B) tuple."""
     color = color.strip()
     if color.startswith("#"):
         h = color.lstrip("#")
@@ -104,243 +105,258 @@ def _rgba(color: str, alpha: float) -> str:
 
 
 # ---------------------------------------------------------------------------
+# ECharts option helpers
+# ---------------------------------------------------------------------------
+
+
+def _grid() -> dict:
+    return {"left": 58, "right": 18, "top": 48, "bottom": 48}
+
+
+def _split_line() -> dict:
+    return {"lineStyle": {"color": "rgba(200,200,200,0.55)"}}
+
+
+def _mk_series(name: str, color: str, width: float = 1.0, dash: str = "solid") -> dict:
+    """Single ECharts line series with real-time optimisations enabled."""
+    return {
+        "type": "line",
+        "name": name,
+        "data": [],
+        "showSymbol": False,
+        "lineStyle": {"color": color, "width": width, "type": dash},
+        "large": True,
+        "largeThreshold": 100,
+        "animation": False,
+    }
+
+
+def _mk_time_opts(title: str, y_label: str, series: list[dict]) -> dict:
+    """Base ECharts options for a time-domain panel."""
+    return {
+        "animation": False,
+        "title": {"text": title, "textStyle": {"fontSize": 11}},
+        "grid": _grid(),
+        "tooltip": {"trigger": "axis", "axisPointer": {"type": "cross"}},
+        "xAxis": {
+            "type": "value",
+            "name": "Relative LSL time (s)",
+            "nameLocation": "middle",
+            "nameGap": 28,
+            "axisLine": {"show": True},
+            "splitLine": _split_line(),
+        },
+        "yAxis": {
+            "type": "value",
+            "name": y_label,
+            "axisLine": {"show": True},
+            "splitLine": _split_line(),
+        },
+        "series": series,
+    }
+
+
+# ---------------------------------------------------------------------------
 # ChartHandles dataclass
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ChartHandles:
-    """Holds all Plotly figures and the NiceGUI ui.plotly element references.
+    """
+    Holds all ECharts option dicts and their NiceGUI ui.echart elements.
 
-    Figures are created in ``build_chart_handles()`` before the page is built.
-    The ``plot_*`` and ``info_label`` attributes are filled in by
-    ``viz/panels.py`` when it creates the NiceGUI page elements.
+    Option dicts are mutated in-place on each render cycle.  The ``chart_*``
+    and ``info_label`` attributes are ``None`` until ``viz/panels.py``
+    creates the page and fills them in.
     """
 
-    fig_target_raw: go.Figure
-    fig_reference_raw: go.Figure
-    fig_target_filtered: go.Figure
-    fig_overlay: go.Figure
-    fig_target_dt: go.Figure
-    fig_reference_dt: go.Figure
-    fig_xy: go.Figure
+    opts_target_raw: dict
+    opts_reference_raw: dict
+    opts_target_filtered: dict
+    opts_overlay: dict
+    opts_target_dt: dict
+    opts_reference_dt: dict
+    opts_xy: dict
 
-    # NiceGUI ui.plotly elements — assigned by panels.py
-    plot_target_raw: Any = field(default=None)
-    plot_reference_raw: Any = field(default=None)
-    plot_target_filtered: Any = field(default=None)
-    plot_overlay: Any = field(default=None)
-    plot_target_dt: Any = field(default=None)
-    plot_reference_dt: Any = field(default=None)
-    plot_xy: Any = field(default=None)
+    # NiceGUI ui.echart elements — assigned by panels.py
+    chart_target_raw: Any = field(default=None)
+    chart_reference_raw: Any = field(default=None)
+    chart_target_filtered: Any = field(default=None)
+    chart_overlay: Any = field(default=None)
+    chart_target_dt: Any = field(default=None)
+    chart_reference_dt: Any = field(default=None)
+    chart_xy: Any = field(default=None)
 
     # NiceGUI ui.label for the info panel — assigned by panels.py
     info_label: Any = field(default=None)
 
 
 # ---------------------------------------------------------------------------
-# Individual figure builders
+# Option-dict factories
 # ---------------------------------------------------------------------------
 
-_LAYOUT_DEFAULTS = dict(
-    margin=dict(l=55, r=15, t=40, b=45),
-    paper_bgcolor="white",
-    plot_bgcolor="white",
-    legend=dict(orientation="h", yanchor="bottom", y=1.01, x=0, font=dict(size=9)),
-)
 
-_GRID_STYLE = dict(showgrid=True, gridwidth=1, gridcolor="rgba(200,200,200,0.5)")
-
-
-def _base_time_figure(title: str, y_label: str, force_unit: str) -> go.Figure:
-    fig = go.Figure()
-    fig.update_layout(
-        title_text=title,
-        title_font=dict(size=11),
-        xaxis_title="Relative LSL time (s)",
-        yaxis_title=y_label,
-        showlegend=True,
-        **_LAYOUT_DEFAULTS,
-    )
-    fig.update_xaxes(**_GRID_STYLE)
-    fig.update_yaxes(**_GRID_STYLE)
-    return fig
-
-
-def _build_target_raw_figure(cfg: DictConfig) -> go.Figure:
+def _build_target_raw_opts(cfg: DictConfig) -> dict:
     s = cfg.viewer.style
     force_unit = cfg.viewer.force_unit_label
-    fig = _base_time_figure(
+    return _mk_time_opts(
         "Target raw ADC counts — native irregular samples",
-        f"Force ({force_unit})",
-        force_unit,
+        f"Count / {force_unit}",
+        [_mk_series("target raw", s.raw_color)],
     )
-    fig.add_trace(go.Scatter(
-        x=[], y=[], mode="lines",
-        line=dict(color=s.raw_color, width=1.0),
-        name="target raw",
-    ))
-    return fig
 
 
-def _build_reference_raw_figure(cfg: DictConfig) -> go.Figure:
+def _build_reference_raw_opts(cfg: DictConfig) -> dict:
     s = cfg.viewer.style
     force_unit = cfg.viewer.force_unit_label
-    fig = _base_time_figure(
+    return _mk_time_opts(
         "Reference force — native RS485 samples",
         f"Force ({force_unit})",
-        force_unit,
+        [_mk_series("reference raw", s.reference_color)],
     )
-    fig.add_trace(go.Scatter(
-        x=[], y=[], mode="lines",
-        line=dict(color=s.reference_color, width=1.0),
-        name="reference raw",
-    ))
-    return fig
 
 
-def _build_target_filtered_figure(cfg: DictConfig) -> go.Figure:
+def _build_target_filtered_opts(cfg: DictConfig) -> dict:
     s = cfg.viewer.style
     force_unit = cfg.viewer.force_unit_label
-    fig = _base_time_figure(
+    return _mk_time_opts(
         "Target filtered/current units — display only",
         f"Force ({force_unit})",
-        force_unit,
+        [_mk_series("target filtered", s.filtered_color, width=1.2)],
     )
-    fig.add_trace(go.Scatter(
-        x=[], y=[], mode="lines",
-        line=dict(color=s.filtered_color, width=1.2),
-        name="target filtered",
-    ))
-    return fig
 
 
-def _build_overlay_figure(cfg: DictConfig) -> go.Figure:
+def _build_overlay_opts(cfg: DictConfig) -> dict:
     s = cfg.viewer.style
     force_unit = cfg.viewer.force_unit_label
-    fig = _base_time_figure(
-        "Time-synchronised engineering-unit overlay on common LSL time axis",
+    return _mk_time_opts(
+        "Time-synchronised overlay on common LSL time axis",
         f"Force ({force_unit})",
-        force_unit,
+        [
+            _mk_series("target raw", s.raw_color),
+            _mk_series("reference raw", s.reference_color, dash="dashed"),
+        ],
     )
-    fig.add_trace(go.Scatter(
-        x=[], y=[], mode="lines",
-        line=dict(color=s.raw_color, width=1.0),
-        name="target raw",
-    ))
-    fig.add_trace(go.Scatter(
-        x=[], y=[], mode="lines",
-        line=dict(color=s.reference_color, width=1.0, dash="dash"),
-        name="reference raw",
-    ))
-    return fig
 
 
-def _build_target_dt_figure(cfg: DictConfig) -> go.Figure:
+def _build_target_dt_opts(cfg: DictConfig) -> dict:
     s = cfg.viewer.style
     dt_unit = cfg.viewer.dt_unit_label
-    fig = _base_time_figure(
+    return _mk_time_opts(
         "Target LSL sample interval",
         f"Interval ({dt_unit})",
-        "",
+        [_mk_series("target dt", s.timing_color)],
     )
-    fig.add_trace(go.Scatter(
-        x=[], y=[], mode="lines",
-        line=dict(color=s.timing_color, width=1.0),
-        name="target dt",
-    ))
-    return fig
 
 
-def _build_reference_dt_figure(cfg: DictConfig) -> go.Figure:
+def _build_reference_dt_opts(cfg: DictConfig) -> dict:
     s = cfg.viewer.style
     dt_unit = cfg.viewer.dt_unit_label
-    fig = _base_time_figure(
+    return _mk_time_opts(
         "Reference LSL sample interval",
         f"Interval ({dt_unit})",
-        "",
+        [_mk_series("reference dt", s.timing_color)],
     )
-    fig.add_trace(go.Scatter(
-        x=[], y=[], mode="lines",
-        line=dict(color=s.timing_color, width=1.0),
-        name="reference dt",
-    ))
-    return fig
 
 
-def _build_xy_figure(cfg: DictConfig) -> go.Figure:
+def _build_xy_opts(cfg: DictConfig) -> dict:
     s = cfg.viewer.style
     force_unit = cfg.viewer.force_unit_label
-    fig = go.Figure()
-    fig.update_layout(
-        title_text="Sensor curve: reference force vs target raw count",
-        title_font=dict(size=11),
-        xaxis_title=f"Reference force at target timestamps ({force_unit})",
-        yaxis_title=cfg.viewer.target_raw_unit_label,
-        showlegend=False,
-        **_LAYOUT_DEFAULTS,
-    )
-    fig.update_xaxes(**_GRID_STYLE)
-    fig.update_yaxes(**_GRID_STYLE)
-
-    # Pre-allocate N_XY_BUCKETS traces — data and colour updated in-place each frame
-    for _ in range(N_XY_BUCKETS):
-        fig.add_trace(go.Scatter(
-            x=[], y=[], mode="lines",
-            line=dict(color=_rgba(s.xy_color, 0.0), width=float(s.xy_line_width)),
-            showlegend=False,
-        ))
-    return fig
+    return {
+        "animation": False,
+        "title": {
+            "text": "Sensor curve: reference force vs target raw count",
+            "textStyle": {"fontSize": 11},
+        },
+        "grid": _grid(),
+        "tooltip": {"trigger": "axis"},
+        "xAxis": {
+            "type": "value",
+            "name": f"Reference force ({force_unit})",
+            "nameLocation": "middle",
+            "nameGap": 28,
+            "splitLine": _split_line(),
+        },
+        "yAxis": {
+            "type": "value",
+            "name": cfg.viewer.target_raw_unit_label,
+            "splitLine": _split_line(),
+        },
+        # N_XY_BUCKETS pre-allocated series — data and colour updated each frame
+        "series": [
+            {
+                "type": "line",
+                "data": [],
+                "showSymbol": False,
+                "lineStyle": {
+                    "color": _rgba(s.xy_color, 0.0),
+                    "width": float(s.xy_line_width),
+                },
+                "large": True,
+                "largeThreshold": 50,
+                "animation": False,
+            }
+            for _ in range(N_XY_BUCKETS)
+        ],
+    }
 
 
 # ---------------------------------------------------------------------------
 # Public factory
 # ---------------------------------------------------------------------------
 
-def build_chart_handles(cfg: DictConfig) -> ChartHandles:
-    """Create all Plotly figures with pre-allocated traces.
 
-    Must be called *before* the NiceGUI page is built.  The returned
-    :class:`ChartHandles` object is passed to ``viz/panels.py`` which
-    fills in the ``plot_*`` and ``info_label`` attributes.
+def build_chart_handles(cfg: DictConfig) -> ChartHandles:
+    """
+    Create all ECharts option dicts with pre-allocated series.
+
+    Called *before* the NiceGUI page is built.  ``viz/panels.py`` fills in
+    the ``chart_*`` element references once ``ui.echart()`` is called.
     """
     return ChartHandles(
-        fig_target_raw=_build_target_raw_figure(cfg),
-        fig_reference_raw=_build_reference_raw_figure(cfg),
-        fig_target_filtered=_build_target_filtered_figure(cfg),
-        fig_overlay=_build_overlay_figure(cfg),
-        fig_target_dt=_build_target_dt_figure(cfg),
-        fig_reference_dt=_build_reference_dt_figure(cfg),
-        fig_xy=_build_xy_figure(cfg),
+        opts_target_raw=_build_target_raw_opts(cfg),
+        opts_reference_raw=_build_reference_raw_opts(cfg),
+        opts_target_filtered=_build_target_filtered_opts(cfg),
+        opts_overlay=_build_overlay_opts(cfg),
+        opts_target_dt=_build_target_dt_opts(cfg),
+        opts_reference_dt=_build_reference_dt_opts(cfg),
+        opts_xy=_build_xy_opts(cfg),
     )
 
 
 # ---------------------------------------------------------------------------
-# Per-panel data updaters (imperative side of the functional core)
+# Marker overlay helpers
 # ---------------------------------------------------------------------------
 
-def _set_trace(fig: go.Figure, idx: int, x: Any, y: Any) -> None:
-    """Update x/y data on a single trace in-place."""
-    fig.data[idx].x = x if len(x) else []
-    fig.data[idx].y = y if len(y) else []
+
+def _apply_markline(opts: dict, x_positions: list[float]) -> None:
+    """Attach calibration-marker vertical lines to the first series."""
+    markline: dict = {
+        "silent": True,
+        "symbol": "none",
+        "animation": False,
+        "lineStyle": {"color": "#888", "type": "dashed", "width": 0.8, "opacity": 0.45},
+        "data": [{"xAxis": x} for x in x_positions],
+    }
+    opts["series"][0]["markLine"] = markline
 
 
-def _update_time_panel(
-    fig: go.Figure,
-    trace_idx: int,
-    t_rel: np.ndarray | None,
-    y: np.ndarray | None,
-    shapes: list[dict] | None = None,
-) -> None:
+# ---------------------------------------------------------------------------
+# Per-panel data updaters
+# ---------------------------------------------------------------------------
+
+
+def _set_time_series(opts: dict, series_idx: int, t_rel: np.ndarray | None, y: np.ndarray | None) -> None:
+    """Replace the data for one time-domain series with paired [t, y] entries."""
     if t_rel is not None and t_rel.size > 0 and y is not None and y.size > 0:
-        _set_trace(fig, trace_idx, t_rel, y)
+        opts["series"][series_idx]["data"] = np.column_stack([t_rel, y]).tolist()
     else:
-        _set_trace(fig, trace_idx, [], [])
-    if shapes is not None:
-        fig.update_layout(shapes=shapes)
+        opts["series"][series_idx]["data"] = []
 
 
-def _update_xy_traces(
-    fig: go.Figure,
+def _update_xy_series(
+    opts: dict,
     x: np.ndarray,
     y: np.ndarray,
     t: np.ndarray,
@@ -350,42 +366,41 @@ def _update_xy_traces(
     alpha_old: float,
     alpha_new: float,
 ) -> None:
-    """Fill XY bucket traces with faded line segments.
+    """
+    Fill the N_XY_BUCKETS pre-allocated series with faded line segments.
 
-    Reproduces the Matplotlib LineCollection per-segment alpha approach using
-    N_XY_BUCKETS pre-allocated Scatter traces.  Each bucket covers a freshness
-    band; its alpha is the midpoint of that band.
+    Data format: ``[[x0, y0], [x1, y1], None, [x2, y2], ...]``
+    ``None`` entries break the line between non-consecutive segments,
+    equivalent to the NaN-separator approach used in the Plotly version.
     """
     if x.size < 2:
         for i in range(N_XY_BUCKETS):
-            _set_trace(fig, i, [], [])
+            opts["series"][i]["data"] = []
         return
 
     order = np.argsort(t)
     x, y, t = x[order], y[order], t[order]
+    n_segs = len(t) - 1
 
-    # Freshness: 0.0 (oldest) → 1.0 (newest) for each segment endpoint
     ages = np.clip(t[-1] - t[1:], 0.0, float(window_seconds))
     freshness = 1.0 - ages / float(window_seconds)
-    bucket_indices = np.floor(freshness * N_XY_BUCKETS).astype(int).clip(0, N_XY_BUCKETS - 1)
+    bucket_idx = np.floor(freshness * N_XY_BUCKETS).astype(int).clip(0, N_XY_BUCKETS - 1)
 
-    # Build segment lists per bucket using NaN separators
-    bx: list[list[float]] = [[] for _ in range(N_XY_BUCKETS)]
-    by: list[list[float]] = [[] for _ in range(N_XY_BUCKETS)]
-    n_segs = len(t) - 1
+    # Accumulate segment pairs per bucket (with None breaks)
+    bucket_data: list[list] = [[] for _ in range(N_XY_BUCKETS)]
     for i in range(n_segs):
-        bkt = int(bucket_indices[i])
-        bx[bkt] += [float(x[i]), float(x[i + 1]), None]
-        by[bkt] += [float(y[i]), float(y[i + 1]), None]
+        bkt = int(bucket_idx[i])
+        bucket_data[bkt].append([float(x[i]), float(y[i])])
+        bucket_data[bkt].append([float(x[i + 1]), float(y[i + 1])])
+        bucket_data[bkt].append(None)  # break between non-consecutive segments
 
-    # Update each bucket trace with appropriate alpha
+    r, g, b = _css_to_rgb(color)
     for bkt in range(N_XY_BUCKETS):
         mid_freshness = (bkt + 0.5) / N_XY_BUCKETS
         alpha = float(alpha_old) + mid_freshness * (float(alpha_new) - float(alpha_old))
-        color_str = _rgba(color, alpha) if bx[bkt] else _rgba(color, 0.0)
-        fig.data[bkt].x = bx[bkt] if bx[bkt] else []
-        fig.data[bkt].y = by[bkt] if by[bkt] else []
-        fig.data[bkt].line.color = color_str
+        color_str = f"rgba({r},{g},{b},{alpha:.3f})" if bucket_data[bkt] else f"rgba({r},{g},{b},0)"
+        opts["series"][bkt]["data"] = bucket_data[bkt] if bucket_data[bkt] else []
+        opts["series"][bkt]["lineStyle"]["color"] = color_str
 
 
 # ---------------------------------------------------------------------------
@@ -405,16 +420,12 @@ def update_charts(
     reference_new_samples: int | None = None,
     replay_progress_text: str | None = None,
 ) -> None:
-    """Update all Plotly figures for one render cycle and push to browser.
-
-    Mirrors the signature of the original ``viz/plots.py:update_plots()``.
-    """
+    """Update all ECharts option dicts for one render cycle, then push to browser."""
     target = window.target
     reference = window.reference
     style = cfg.viewer.style
-    force_unit = cfg.viewer.force_unit_label
 
-    # ── Compute t_end for relative time axis ─────────────────────────────
+    # ── t_end for relative time axis ─────────────────────────────────────
     latest_ts: list[float] = []
     if target is not None and target.timestamps_s.size:
         latest_ts.append(float(np.nanmax(target.timestamps_s)))
@@ -422,78 +433,68 @@ def update_charts(
         latest_ts.append(float(np.nanmax(reference.timestamps_s)))
     t_end = max(latest_ts) if latest_ts else 0.0
 
-    # ── Calibration marker shapes (cached) ───────────────────────────────
+    # ── Calibration markers (cached read) ─────────────────────────────────
     refresh_marker_cache(state, cfg)
-    # xref names for the 4 time-domain panels (each is its own figure)
-    # Since each panel is a separate go.Figure, shapes use default refs ('x', 'y')
-    time_domain_shapes = get_marker_shapes(state, cfg, t_end, xaxis_refs=["x"])
+    marker_x = get_marker_x_positions(state, cfg, t_end)
 
-    # ── Target time-domain plots ──────────────────────────────────────────
+    # ── Target time-domain panels ─────────────────────────────────────────
     target_rate_hz = float("nan")
-    target_mean_dt_ms = float("nan")
-    target_t_rel: np.ndarray | None = None
+    target_clock_metrics: dict = {}
+    t_rel: np.ndarray | None = None
+
     if target is not None and target.timestamps_s.size:
-        target_t_rel = target.timestamps_s - t_end
-        _update_time_panel(ch.fig_target_raw, 0, target_t_rel, target.raw, time_domain_shapes)
-        _update_time_panel(ch.fig_target_filtered, 0, target_t_rel, target.filtered, time_domain_shapes)
-        # Overlay: target trace (index 0)
-        _set_trace(ch.fig_overlay, 0, target_t_rel, target.filtered)
+        t_rel = target.timestamps_s - t_end
+        _set_time_series(ch.opts_target_raw, 0, t_rel, target.raw)
+        _set_time_series(ch.opts_target_filtered, 0, t_rel, target.filtered)
+        _set_time_series(ch.opts_overlay, 0, t_rel, target.filtered)
+        _apply_markline(ch.opts_target_raw, marker_x)
+        _apply_markline(ch.opts_target_filtered, marker_x)
+        _apply_markline(ch.opts_overlay, marker_x)
 
-        dt_idx, dt_ms, target_rate_hz, target_mean_dt_ms = lsl_interval_ms(target.timestamps_s)
+        dt_idx, dt_ms, target_rate_hz, _ = lsl_interval_ms(target.timestamps_s)
         if dt_ms.size:
-            dt_t_rel = target_t_rel[dt_idx.astype(int)]
-            _update_time_panel(ch.fig_target_dt, 0, dt_t_rel, dt_ms)
+            _set_time_series(ch.opts_target_dt, 0, t_rel[dt_idx.astype(int)], dt_ms)
         else:
-            _update_time_panel(ch.fig_target_dt, 0, None, None)
-    else:
-        _update_time_panel(ch.fig_target_raw, 0, None, None, time_domain_shapes)
-        _update_time_panel(ch.fig_target_filtered, 0, None, None, time_domain_shapes)
-        _set_trace(ch.fig_overlay, 0, [], [])
-        _update_time_panel(ch.fig_target_dt, 0, None, None)
+            ch.opts_target_dt["series"][0]["data"] = []
 
-    # ── Reference time-domain plots ───────────────────────────────────────
+        if target.device_clock_us.size:
+            target_clock_metrics = clock_validation_metrics(
+                target.timestamps_s, target.device_clock_us, clock_scale_to_s=1e-6
+            )
+    else:
+        for opts in (ch.opts_target_raw, ch.opts_target_filtered, ch.opts_overlay):
+            opts["series"][0]["data"] = []
+            _apply_markline(opts, marker_x)
+        ch.opts_target_dt["series"][0]["data"] = []
+
+    # ── Reference time-domain panels ──────────────────────────────────────
     reference_rate_hz = float("nan")
-    ref_t_rel: np.ndarray | None = None
+    reference_clock_metrics: dict = {}
+
     if reference is not None and reference.timestamps_s.size:
         ref_t_rel = reference.timestamps_s - t_end
-        _update_time_panel(ch.fig_reference_raw, 0, ref_t_rel, reference.raw, time_domain_shapes)
-        # Overlay: reference trace (index 1)
-        _set_trace(ch.fig_overlay, 1, ref_t_rel, reference.raw)
+        _set_time_series(ch.opts_reference_raw, 0, ref_t_rel, reference.raw)
+        _set_time_series(ch.opts_overlay, 1, ref_t_rel, reference.raw)
+        _apply_markline(ch.opts_reference_raw, marker_x)
 
         dt_idx, dt_ms, reference_rate_hz, _ = lsl_interval_ms(reference.timestamps_s)
         if dt_ms.size:
-            dt_t_rel = ref_t_rel[dt_idx.astype(int)]
-            _update_time_panel(ch.fig_reference_dt, 0, dt_t_rel, dt_ms)
+            _set_time_series(ch.opts_reference_dt, 0, ref_t_rel[dt_idx.astype(int)], dt_ms)
         else:
-            _update_time_panel(ch.fig_reference_dt, 0, None, None)
+            ch.opts_reference_dt["series"][0]["data"] = []
+
+        if reference.rs485_clock.size:
+            reference_clock_metrics = clock_validation_metrics(
+                reference.timestamps_s, reference.rs485_clock, clock_scale_to_s=1.0
+            )
     else:
-        _update_time_panel(ch.fig_reference_raw, 0, None, None, time_domain_shapes)
-        _set_trace(ch.fig_overlay, 1, [], [])
-        _update_time_panel(ch.fig_reference_dt, 0, None, None)
-
-    # Overlay marker shapes
-    ch.fig_overlay.update_layout(shapes=time_domain_shapes)
-
-    # ── Clock validation metrics ──────────────────────────────────────────
-    target_clock_metrics = (
-        clock_validation_metrics(
-            target.timestamps_s, target.device_clock_us, clock_scale_to_s=1e-6
-        )
-        if target is not None and target.timestamps_s.size and target.device_clock_us.size
-        else {}
-    )
-    reference_clock_metrics = (
-        clock_validation_metrics(
-            reference.timestamps_s, reference.rs485_clock, clock_scale_to_s=1.0
-        )
-        if reference is not None and reference.timestamps_s.size and reference.rs485_clock.size
-        else {}
-    )
+        ch.opts_reference_raw["series"][0]["data"] = []
+        _apply_markline(ch.opts_reference_raw, marker_x)
+        ch.opts_overlay["series"][1]["data"] = []
+        ch.opts_reference_dt["series"][0]["data"] = []
 
     # ── XY correlation ────────────────────────────────────────────────────
     ta = cfg.viewer.xy_correlation.time_alignment
-
-    # Use FigureHandles adapter to keep core/alignment.py unchanged
     _handles_state = state.to_handles_state()
     _handles_proxy = FigureHandles(fig=None, axes={}, artists={}, state=_handles_state)
     xy_reference_shift_s, xy_alignment_mode = compute_xy_reference_time_shift_s(
@@ -518,38 +519,39 @@ def update_charts(
         target_signal=cfg.viewer.xy_correlation.target_signal,
     )
 
-    _update_xy_traces(
-        ch.fig_xy,
-        xy_x, xy_y, xy_t,
+    _update_xy_series(
+        ch.opts_xy,
+        xy_x,
+        xy_y,
+        xy_t,
         window_seconds=cfg.viewer.window_seconds,
         color=style.xy_color,
         alpha_old=style.xy_alpha_old,
         alpha_new=style.xy_alpha_new,
     )
 
-    # XY axis range
-    if xy_x.size > 0:
-        if state.xy_lock_max_span:
-            state.xy_max_span = update_xy_max_span(state.xy_max_span, xy_x, xy_y)
-            span = state.xy_max_span
-            ch.fig_xy.update_xaxes(range=[span["xmin"], span["xmax"]], autorange=False)
-            ch.fig_xy.update_yaxes(range=[span["ymin"], span["ymax"]], autorange=False)
-        else:
-            state.xy_max_span = {}
-            ch.fig_xy.update_xaxes(autorange=True)
-            ch.fig_xy.update_yaxes(autorange=True)
+    # XY axis range (lock-max-span)
+    if xy_x.size > 0 and state.xy_lock_max_span:
+        state.xy_max_span = update_xy_max_span(state.xy_max_span, xy_x, xy_y)
+        span = state.xy_max_span
+        ch.opts_xy["xAxis"].update({"min": span["xmin"], "max": span["xmax"]})
+        ch.opts_xy["yAxis"].update({"min": span["ymin"], "max": span["ymax"]})
+    elif not state.xy_lock_max_span:
+        state.xy_max_span = {}
+        ch.opts_xy["xAxis"].pop("min", None)
+        ch.opts_xy["xAxis"].pop("max", None)
+        ch.opts_xy["yAxis"].pop("min", None)
+        ch.opts_xy["yAxis"].pop("max", None)
 
     xy_lock_label = "max-span lock" if state.xy_lock_max_span else "adaptive"
     clipped = "; clipped" if state.xy_reference_shift_clipped else ""
-    ch.fig_xy.update_layout(
-        title_text=(
-            f"Sensor curve: reference force vs target raw count "
-            f"[{xy_lock_label}; align={xy_alignment_mode}{clipped}; "
-            f"ref_shift={xy_reference_shift_s:+.3f}s]"
-        )
+    ch.opts_xy["title"]["text"] = (
+        f"Sensor curve: reference force vs target raw count  "
+        f"[{xy_lock_label}  align={xy_alignment_mode}{clipped}  "
+        f"ref_shift={xy_reference_shift_s:+.3f}s]"
     )
 
-    # ── Info panel ────────────────────────────────────────────────────────
+    # ── Info panel ─────────────────────────────────────────────────────────
     info_text = render_info_text(
         window=window,
         state=state,
@@ -572,59 +574,53 @@ def update_charts(
     if ch.info_label is not None:
         ch.info_label.set_text(info_text)
 
-    # ── Push all chart updates to the browser ─────────────────────────────
-    for plot_el, _fig in (
-        (ch.plot_target_raw, ch.fig_target_raw),
-        (ch.plot_reference_raw, ch.fig_reference_raw),
-        (ch.plot_target_filtered, ch.fig_target_filtered),
-        (ch.plot_overlay, ch.fig_overlay),
-        (ch.plot_target_dt, ch.fig_target_dt),
-        (ch.plot_reference_dt, ch.fig_reference_dt),
-        (ch.plot_xy, ch.fig_xy),
+    # ── Push all chart updates to the browser ──────────────────────────────
+    for chart_el in (
+        ch.chart_target_raw,
+        ch.chart_reference_raw,
+        ch.chart_target_filtered,
+        ch.chart_overlay,
+        ch.chart_target_dt,
+        ch.chart_reference_dt,
+        ch.chart_xy,
     ):
-        if plot_el is not None:
-            plot_el.update()
+        if chart_el is not None:
+            chart_el.update()
 
 
 def clear_chart_data(ch: ChartHandles) -> None:
-    """Clear all trace data and reset figure titles/ranges.
-
-    Called when the user presses the clear key or resumes from pause.
-    """
-    for fig in (
-        ch.fig_target_raw,
-        ch.fig_reference_raw,
-        ch.fig_target_filtered,
-        ch.fig_target_dt,
-        ch.fig_reference_dt,
+    """Clear all series data and reset XY axis bounds."""
+    for opts in (
+        ch.opts_target_raw,
+        ch.opts_reference_raw,
+        ch.opts_target_filtered,
+        ch.opts_target_dt,
+        ch.opts_reference_dt,
     ):
-        for trace in fig.data:
-            trace.x = []
-            trace.y = []
-        fig.update_layout(shapes=[])
+        for series in opts["series"]:
+            series["data"] = []
+            series.pop("markLine", None)
 
-    # Overlay
-    for trace in ch.fig_overlay.data:
-        trace.x = []
-        trace.y = []
-    ch.fig_overlay.update_layout(shapes=[])
+    for series in ch.opts_overlay["series"]:
+        series["data"] = []
+        series.pop("markLine", None)
 
-    # XY
-    for trace in ch.fig_xy.data:
-        trace.x = []
-        trace.y = []
-    ch.fig_xy.update_xaxes(autorange=True)
-    ch.fig_xy.update_yaxes(autorange=True)
+    for series in ch.opts_xy["series"]:
+        series["data"] = []
 
-    # Push to browser
-    for plot_el in (
-        ch.plot_target_raw,
-        ch.plot_reference_raw,
-        ch.plot_target_filtered,
-        ch.plot_overlay,
-        ch.plot_target_dt,
-        ch.plot_reference_dt,
-        ch.plot_xy,
+    # Reset XY axis to auto-scale
+    for axis in ("xAxis", "yAxis"):
+        ch.opts_xy[axis].pop("min", None)
+        ch.opts_xy[axis].pop("max", None)
+
+    for chart_el in (
+        ch.chart_target_raw,
+        ch.chart_reference_raw,
+        ch.chart_target_filtered,
+        ch.chart_overlay,
+        ch.chart_target_dt,
+        ch.chart_reference_dt,
+        ch.chart_xy,
     ):
-        if plot_el is not None:
-            plot_el.update()
+        if chart_el is not None:
+            chart_el.update()

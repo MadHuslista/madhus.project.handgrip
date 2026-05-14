@@ -1,4 +1,5 @@
-"""Info-panel text rendering for the NiceGUI viewer.
+"""
+Info-panel text rendering for the NiceGUI viewer.
 
 All functions here are **pure**: they accept data and return strings.
 No side effects, no I/O.  The output is consumed by ``viz/panels.py``
@@ -7,6 +8,7 @@ which calls ``info_label.set_text()``.
 The 4-column monospace layout (SOURCE/MODE | TARGET | REFERENCE | METRICS)
 is preserved exactly from the original ``viz/plots.py`` implementation.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -14,10 +16,10 @@ from omegaconf import DictConfig
 
 from lsl_viewer.types import DualWindow, ViewerState
 
-
 # ---------------------------------------------------------------------------
 # Text helpers
 # ---------------------------------------------------------------------------
+
 
 def _format_latest(value: float, suffix: str = "", precision: int = 3) -> str:
     if not np.isfinite(value):
@@ -33,7 +35,7 @@ def _zip_columns(*columns: str, pad: int = 3) -> str:
     rows: list[str] = []
     for row_idx in range(height):
         row_parts = []
-        for lines, width in zip(split_cols, widths):
+        for lines, width in zip(split_cols, widths, strict=False):
             text = lines[row_idx] if row_idx < len(lines) else ""
             row_parts.append(text.ljust(width + pad))
         rows.append("".join(row_parts).rstrip())
@@ -64,7 +66,8 @@ def render_info_text(
     reference_new_samples: int | None = None,
     replay_progress_text: str | None = None,
 ) -> str:
-    """Render the 4-column info panel text.
+    """
+    Render the 4-column info panel text.
 
     Pure function — returns a formatted string suitable for ``<pre>`` rendering.
     All parameters are passed explicitly; no global state is read.

@@ -4,14 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lsl-viewer"
-version = "0.3.0"
+version = "0.4.0"
 description = "Dual-native-stream LSL handgrip force viewer with live, CSV, and XDF replay modes"
 requires-python = ">=3.11"
 dependencies = [
     "hydra-core>=1.3",
     "omegaconf>=2.3",
     "nicegui>=1.4",
-    "plotly>=5.18",
     "numpy>=1.26",
     "pandas>=2.1",
     "mne-lsl>=1.2",

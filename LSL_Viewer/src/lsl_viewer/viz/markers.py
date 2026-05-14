@@ -1,16 +1,20 @@
-"""Calibration-event marker overlay for time-domain panels.
+"""
+Calibration-event marker overlay for time-domain panels.
 
 The viewer reads marker events from an NDJSON file written by
 Handgrip_Calibration.  It is a **read-only** overlay aid; the viewer
 never owns or modifies calibration decisions.
 
-Design changes from original
------------------------------
-* ``_load_marker_events()`` is unchanged (pure loader).
-* ``draw_marker_overlays()`` (Matplotlib axvline) is replaced by
-  ``get_marker_shapes()`` which returns Plotly shape dicts.
-* Result is cached in :class:`~lsl_viewer.types.ViewerState` to prevent
-  re-reading the NDJSON file on every frame (was a bug in the original).
+Design notes (v0.4.0 — ECharts)
+---------------------------------
+* ``_load_marker_events()`` is unchanged (pure NDJSON loader).
+* ``refresh_marker_cache()`` is unchanged (mtime-gated cache, fixes the
+  per-frame re-read bug present in the original Matplotlib implementation).
+* ``get_marker_shapes()`` (Plotly layout shape dicts) is replaced by
+  ``get_marker_x_positions()`` which returns a plain ``list[float]``.
+  Each time-domain panel passes this list to ``_apply_markline()`` in
+  ``charts.py``, which attaches it as an ECharts ``markLine`` entry on
+  the first series — no separate shape layer required.
 """
 from __future__ import annotations
 
@@ -28,11 +32,12 @@ log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Pure NDJSON loader  (unchanged from original viz/markers.py)
+# Pure NDJSON loader  (unchanged from original)
 # ---------------------------------------------------------------------------
 
 def _load_marker_events(cfg: DictConfig) -> list[dict[str, Any]]:
-    """Parse the optional calibration NDJSON marker file.
+    """
+    Parse the optional calibration NDJSON marker file.
 
     Returns an empty list when markers are disabled, the path is unset,
     or the file does not exist.  Malformed lines are silently skipped.
@@ -73,14 +78,14 @@ def _load_marker_events(cfg: DictConfig) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# Cache management (fixes per-frame re-read bug from original)
+# Cache management  (unchanged from v0.3.0 — fixes per-frame re-read bug)
 # ---------------------------------------------------------------------------
 
 def refresh_marker_cache(state: ViewerState, cfg: DictConfig) -> None:
-    """Reload marker events if the NDJSON file has changed since last read.
+    """
+    Reload marker events only when the NDJSON file mtime has changed.
 
-    Only reads from disk when the file modification time differs from the
-    cached value.  Calling this once per render cycle is safe and cheap.
+    Safe and cheap to call once per render cycle.
     """
     if not cfg.calibration_markers.enabled:
         if state.marker_events:
@@ -109,56 +114,43 @@ def refresh_marker_cache(state: ViewerState, cfg: DictConfig) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Plotly shape builder (replaces axvline drawing in original)
+# ECharts marker position helper  (replaces Plotly get_marker_shapes)
 # ---------------------------------------------------------------------------
 
-def get_marker_shapes(
+def get_marker_x_positions(
     state: ViewerState,
     cfg: DictConfig,
     t_end: float,
-    xaxis_refs: list[str],
-) -> list[dict[str, Any]]:
-    """Return Plotly layout shape dicts for calibration markers.
+) -> list[float]:
+    """
+    Return relative x-axis positions for calibration marker lines.
 
-    Each event produces one vertical dashed line per time-domain axis
-    (``target_raw``, ``reference_raw``, ``target_filtered``, ``overlay``).
+    Pure function — reads only ``state.marker_events`` and ``cfg``.
+
+    Each position is ``event.lsl_ts - t_end`` (seconds relative to the
+    current window end), clipped to the visible window.  The list is
+    consumed by ``charts._apply_markline()`` which attaches it as an
+    ECharts ``markLine`` on the first series of each time-domain panel.
 
     Parameters
     ----------
     state:
-        ViewerState with cached ``marker_events``.
+        ``ViewerState`` with a populated ``marker_events`` cache.
     cfg:
-        Hydra config; ``calibration_markers.draw_events`` controls which
-        event types are drawn.
+        Hydra config; ``viewer.window_seconds`` defines the visible range.
     t_end:
         Current end-of-window LSL timestamp (seconds).
-    xaxis_refs:
-        List of Plotly xaxis reference strings (e.g. ``['x', 'x2', 'x3', 'x4']``)
-        identifying the panels that should receive marker lines.
 
     Returns
     -------
-    List of Plotly shape dicts suitable for ``fig.layout.shapes``.
-    """
-    shapes: list[dict[str, Any]] = []
-    window_s = float(cfg.viewer.window_seconds)
+    List of relative x positions (float).  Empty when no events fall
+    within the current window.
 
+    """
+    window_s = float(cfg.viewer.window_seconds)
+    positions: list[float] = []
     for item in state.marker_events:
-        x_pos = float(item["lsl_ts"]) - t_end
-        if x_pos < -window_s or x_pos > 0.5:
-            continue
-        for xref in xaxis_refs:
-            shapes.append(
-                dict(
-                    type="line",
-                    x0=x_pos,
-                    x1=x_pos,
-                    y0=0,
-                    y1=1,
-                    xref=xref,
-                    yref="paper",
-                    line=dict(color="gray", dash="dot", width=0.8),
-                    opacity=0.45,
-                )
-            )
-    return shapes
+        x = float(item["lsl_ts"]) - t_end
+        if -window_s <= x <= 0.5:
+            positions.append(x)
+    return positions
