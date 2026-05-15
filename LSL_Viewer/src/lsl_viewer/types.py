@@ -5,7 +5,7 @@ They are imported by every layer (core, viz, runners) to avoid circular imports.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -84,9 +84,64 @@ class DualReplayData:
 
 @dataclass(slots=True)
 class FigureHandles:
-    """Container for all matplotlib figure objects and mutable render state."""
+    """Legacy container kept for backward compatibility with core/alignment.py.
+
+    The ``state`` dict is still consumed by
+    :func:`~lsl_viewer.core.alignment.compute_xy_reference_time_shift_s`.
+    New code should use :class:`ViewerState` directly.
+    """
 
     fig: Any
     axes: dict[str, Any]
     artists: dict[str, Any]
     state: dict[str, Any]
+
+
+@dataclass
+class ViewerState:
+    """Mutable render state for the NiceGUI viewer.
+
+    Replaces the ``handles.state`` dict from :class:`FigureHandles`.
+    All fields are typed; no dict-key typos possible.
+    """
+
+    # XY axis lock-max-span
+    xy_lock_max_span: bool = False
+    xy_max_span: dict[str, dict[str, float]] = field(default_factory=dict)  # xmin/xmax/ymin/ymax
+    xy_reference_time_shift_s: float = 0.0
+    xy_reference_tail_delta_s: float = 0.0
+    xy_reference_shift_clipped: bool = False
+
+    # Live mode control
+    live_paused: bool = False
+    live_reset_from_latest_window: bool = False
+    target_cutoff_s: float | None = None
+    reference_cutoff_s: float | None = None
+
+    # Replay mode
+    replay_progress: str = ""
+    replay_paused: bool = False
+    replay_finished: bool = False
+
+    # Calibration markers (cached to avoid per-frame file reads)
+    marker_events: list[dict[str, Any]] = field(default_factory=list)
+    marker_file_mtime: float = 0.0
+
+    def to_handles_state(self) -> dict[str, Any]:
+        """Return a dict compatible with core.alignment's FigureHandles.state.
+
+        Used as an adapter when calling
+        :func:`~lsl_viewer.core.alignment.compute_xy_reference_time_shift_s`,
+        which mutates the state dict in-place.
+        """
+        return {
+            "xy_reference_time_shift_s": self.xy_reference_time_shift_s,
+            "xy_reference_tail_delta_s": self.xy_reference_tail_delta_s,
+            "xy_reference_shift_clipped": self.xy_reference_shift_clipped,
+        }
+
+    def sync_from_handles_state(self, state_dict: dict[str, Any]) -> None:
+        """Copy alignment results back from a FigureHandles.state dict."""
+        self.xy_reference_time_shift_s = float(state_dict.get("xy_reference_time_shift_s", 0.0))
+        self.xy_reference_tail_delta_s = float(state_dict.get("xy_reference_tail_delta_s", 0.0))
+        self.xy_reference_shift_clipped = bool(state_dict.get("xy_reference_shift_clipped", False))

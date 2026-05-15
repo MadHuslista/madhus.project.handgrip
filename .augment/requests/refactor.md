@@ -77,3 +77,32 @@ Perfect, I approve the full refactor plan.
 
 Perfect, now please finish anything pending on the refactor process, validate against the refactor plan that the refactored library is aligned with the plan,  and return the finished library as a  downloadable compressed file
 
+
+=======================
+
+Perfect, I approve the Python Refactor Plan. 
+
+# Task 2 & 3: 
+
+## Implement Phase 2 & 3
+-  Please proceed with the refactoring as stated in the **Phase 2 & 3** of the refactor plan.
+-  Organize the implementation of the refactor plan into a logical sequence of subtasks. 
+-  Make sure that the implementation aligns with the `AGENT_PYTHON_GUIDELINES.md`
+-  Start implementing the refactor plan in the order of the subtasks, until the entire **Phase 2 & 3** is implemented.
+
+## Validation
+- After finishing the full refactoring, validate that the refactor code is still aligned with the refactor plan. 
+- Iterate on the refactored code until it is aligned with the plan. Or reach out to me with a reason for the deviation, if the deviation is not trivial or has a valid justification. 
+
+## Communication
+- If any ambiguity arises -which cannot be resolved by the plan- please reach out to me. 
+- When reaching out to me, provide your questions with the options that you are currently evaluating.
+  
+# Deliverable
+1. The refactored lib with the complete refactoring of **Phase 2 & 3** as a downloadable compressed file with the updated library 
+
+
+
+==============================
+
+

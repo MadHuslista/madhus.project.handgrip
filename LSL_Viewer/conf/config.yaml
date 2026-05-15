@@ -56,9 +56,9 @@ viewer:
     lock_max_span: false
     toggle_key: x
 
-    # XY uses a connected LineCollection instead of point markers. Alpha is
-    # computed from sample age across viewer.window_seconds, so the oldest
-    # segments fade out while the newest segments remain prominent.
+    # XY uses connected ECharts line-path buckets instead of point-only scatter.
+    # Alpha is computed from sample age across viewer.window_seconds, so the
+    # oldest line segments fade out while the newest remain prominent.
 
     # raw is recommended for calibration visualisation; filtered remains
     # available for display-only experiments.
@@ -84,6 +84,23 @@ viewer:
   controls:
     clear_key: c
     pause_key: p
+
+  # Browser-rendering controls only. Acquisition buffers and replay data are
+  # kept intact. Disable downsample_enabled to send the full current window to
+  # ECharts, or keep it enabled and tune the per-refresh payload budgets.
+  render:
+    downsample_enabled: true
+    max_points_time_series: 1200
+    max_points_xy: 1500
+
+  # NiceGUI server configuration
+  server:
+    host: "127.0.0.1"
+    port: 8765
+    reload: false
+    show: true    # auto-open browser on start
+    dark: false
+    title: "LSL Viewer"
 
 calibration_markers:
   # Optional marker overlay from Handgrip_Calibration events.ndjson for replay/analysis.
