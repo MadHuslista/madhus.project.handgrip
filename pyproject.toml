@@ -34,3 +34,13 @@ package = false
 "handgrip_calibration"  = {path = "Handgrip_Calibration", editable = true }
 "lsl-bridge"            = {path = "LSL_Bridge",           editable = true }
 "lsl-viewer"            = {path = "LSL_Viewer",           editable = true }
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+
+addopts = [
+  "-ra",
+  "--strict-config",
+  "--strict-markers",
+  "--import-mode=importlib",
+]
