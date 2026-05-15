@@ -55,37 +55,37 @@ class TestUpdateXyMaxSpan:
     def test_empty_span_returns_data_limits(self):
         x = np.array([1.0, 5.0])
         y = np.array([2.0, 8.0])
-        result = update_xy_span({}, x, y, margin_ratio=0.0)
-        assert result["xmin"] == pytest.approx(1.0)
-        assert result["xmax"] == pytest.approx(5.0)
-        assert result["ymin"] == pytest.approx(2.0)
-        assert result["ymax"] == pytest.approx(8.0)
+        result = update_xy_span({}, x, y, lock=True, margin_ratio=0.0)
+        assert result["xAxis"]["min"] == pytest.approx(1.0)
+        assert result["xAxis"]["max"] == pytest.approx(5.0)
+        assert result["yAxis"]["min"] == pytest.approx(2.0)
+        assert result["yAxis"]["max"] == pytest.approx(8.0)
 
     def test_existing_span_only_expands(self):
         x = np.array([2.0, 4.0])
         y = np.array([3.0, 6.0])
-        existing = {"xmin": 0.0, "xmax": 10.0, "ymin": 0.0, "ymax": 20.0}
-        result = update_xy_span(existing, x, y, margin_ratio=0.0)
+        existing = {"xAxis": {"min": 0.0, "max": 10.0}, "yAxis": {"min": 0.0, "max": 20.0}}
+        result = update_xy_span(existing, x, y, lock=True, margin_ratio=0.0)
         # Existing span is larger — should be preserved
-        assert result["xmin"] == pytest.approx(0.0)
-        assert result["xmax"] == pytest.approx(10.0)
-        assert result["ymin"] == pytest.approx(0.0)
-        assert result["ymax"] == pytest.approx(20.0)
+        assert result["xAxis"]["min"] == pytest.approx(0.0)
+        assert result["xAxis"]["max"] == pytest.approx(10.0)
+        assert result["yAxis"]["min"] == pytest.approx(0.0)
+        assert result["yAxis"]["max"] == pytest.approx(20.0)
 
     def test_new_data_outside_existing_expands(self):
         x = np.array([-5.0, 15.0])
         y = np.array([-10.0, 25.0])
-        existing = {"xmin": 0.0, "xmax": 10.0, "ymin": 0.0, "ymax": 20.0}
-        result = update_xy_span(existing, x, y, margin_ratio=0.0)
-        assert result["xmin"] == pytest.approx(-5.0)
-        assert result["xmax"] == pytest.approx(15.0)
-        assert result["ymin"] == pytest.approx(-10.0)
-        assert result["ymax"] == pytest.approx(25.0)
+        existing = {"xAxis": {"min": 0.0, "max": 10.0}, "yAxis": {"min": 0.0, "max": 20.0}}
+        result = update_xy_span(existing, x, y, lock=True, margin_ratio=0.0)
+        assert result["xAxis"]["min"] == pytest.approx(-5.0)
+        assert result["xAxis"]["max"] == pytest.approx(15.0)
+        assert result["yAxis"]["min"] == pytest.approx(-10.0)
+        assert result["yAxis"]["max"] == pytest.approx(25.0)
 
     def test_does_not_mutate_input_dict(self):
-        original = {"xmin": 0.0, "xmax": 10.0, "ymin": 0.0, "ymax": 10.0}
-        original_copy = dict(original)
-        update_xy_span(original, np.array([5.0]), np.array([5.0]))
+        original = {"xAxis": {"min": 0.0, "max": 10.0}, "yAxis": {"min": 0.0, "max": 10.0}}
+        original_copy = {k: dict(v) for k, v in original.items()}
+        update_xy_span(original, np.array([5.0]), np.array([5.0]), lock=True)
         assert original == original_copy
 
 

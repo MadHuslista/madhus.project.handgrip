@@ -1,6 +1,10 @@
-# LSL Viewer v0.5.0
+# LSL Viewer v0.6.0
 
 Dual-native-stream handgrip force viewer — live LSL, CSV replay, and XDF replay modes.
+
+## What changed in v0.6.0 — dataZoom, minor ticks, and axis-span refactor
+
+**v0.6.0 changes:** Interactive zoom and pan (ECharts `dataZoom`) is now enabled on all charts — slider handles appear below time-series panels and on both axes of the XY panel, with inside-scroll zoom available throughout. Minor ticks are shown on all axes, and the y-axis of each time-domain panel uses `scale: true` for auto-range. The XY axis-span helper was renamed `update_xy_span`, its signature extended with an explicit `lock` argument, and its return value changed to a ready-to-merge ECharts options dict (`{xAxis, yAxis}`) — eliminating the `opts_xy["xAxis"].update(…)` fan-out at the call site. Axis limits are rounded to two decimal places in both locked and adaptive modes. The page layout was reorganised so the control bar and XY panel share a 2-column row above the six time-series panels, and both panel heights were increased for better readability.
 
 ## What changed in v0.5.0 — XY-first square ECharts layout
 
@@ -16,14 +20,14 @@ Dual-native-stream handgrip force viewer — live LSL, CSV replay, and XDF repla
 
 **Current backend:** Apache ECharts via NiceGUI's `ui.echart()`. Key improvements:
 
-| Concern | Plotly (v0.3.0) | ECharts (v0.5.0) |
-|---|---|---|
-| Renderer | SVG (DOM node per point) | HTML5 Canvas (pixel buffer) |
-| Update model | `Plotly.react()` + JSON diff | Element-owned `options` + explicit update sink |
-| Large-data path | None | Explicit display-only render budgets |
-| Animation overhead | Always present | `animation: False` throughout |
-| Marker overlay | Separate shape layer | `markLine` on first series |
-| Dependency | `plotly>=5.18` | Built into NiceGUI (ECharts bundled) |
+| Concern            | Plotly (v0.3.0)              | ECharts (v0.6.0)                               |
+| ------------------ | ---------------------------- | ---------------------------------------------- |
+| Renderer           | SVG (DOM node per point)     | HTML5 Canvas (pixel buffer)                    |
+| Update model       | `Plotly.react()` + JSON diff | Element-owned `options` + explicit update sink |
+| Large-data path    | None                         | Explicit display-only render budgets           |
+| Animation overhead | Always present               | `animation: False` throughout                  |
+| Marker overlay     | Separate shape layer         | `markLine` on first series                     |
+| Dependency         | `plotly>=5.18`               | Built into NiceGUI (ECharts bundled)           |
 
 ---
 
@@ -42,7 +46,7 @@ src/lsl_viewer/
 │   ├── replay.py           #   CSV/XDF loaders, window_from_replay
 │   └── stream.py           #   LSL stream connect + fetch
 └── viz/                    # NiceGUI + ECharts rendering layer
-    ├── state.py            #   compute_axis_limits, update_xy_span (pure)
+    ├── state.py            #   compute_axis_limits, update_xy_span, floorf, ceilf (pure)
     ├── dashboard.py        #   render_info_text (pure, 4-column monospace)
     ├── markers.py          #   NDJSON loader + get_marker_x_positions (ECharts)
     ├── charts.py           #   ChartHandles, build_chart_handles, update_charts
@@ -108,10 +112,10 @@ Opens at `http://127.0.0.1:8765` by default (configure via `viewer.server.*`).
 
 ## Keyboard shortcuts
 
-| Key | Action |
-|---|---|
-| `c` | Clear plots |
-| `p` | Pause / resume |
+| Key | Action                  |
+| --- | ----------------------- |
+| `c` | Clear plots             |
+| `p` | Pause / resume          |
 | `x` | Toggle XY lock-max-span |
 
 Handled by `ui.keyboard` (browser key events — OS focus on viewer not required).

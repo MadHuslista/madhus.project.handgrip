@@ -79,7 +79,7 @@ def compute_axis_limits(
 
 
 def update_xy_span(
-    state_span: dict[str, float],
+    state_span: dict[str, dict[str, float]],
     x: np.ndarray,
     y: np.ndarray,
     lock: bool,

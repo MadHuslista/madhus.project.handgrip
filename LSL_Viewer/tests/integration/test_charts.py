@@ -480,10 +480,12 @@ class TestUpdateCharts:
             mode="test", source_name="src", source_type="typ",
         )
         if state.xy_max_span:
-            assert "xmin" in state.xy_max_span
-            assert "xmax" in state.xy_max_span
-            assert "ymin" in state.xy_max_span
-            assert "ymax" in state.xy_max_span
+            assert "xAxis" in state.xy_max_span
+            assert "yAxis" in state.xy_max_span
+            assert "min" in (state.xy_max_span["xAxis"])
+            assert "max" in (state.xy_max_span["xAxis"])
+            assert "min" in (state.xy_max_span["yAxis"])
+            assert "max" in (state.xy_max_span["yAxis"])
 
     def test_xy_lock_span_axis_bounds_set_in_opts(self, cfg):
         ch = build_chart_handles(cfg)
@@ -503,11 +505,10 @@ class TestUpdateCharts:
         state = ViewerState(xy_lock_max_span=True)
         window = DualWindow(target=_make_target(n=50), reference=_make_reference(n=250))
         update_charts(ch, window, state, cfg, mode="t", source_name="s", source_type="t")
-        # Switch to adaptive
+        # Switch to adaptive — state span is cleared, opts still contain current-data bounds
         state.xy_lock_max_span = False
         update_charts(ch, window, state, cfg, mode="t", source_name="s", source_type="t")
-        assert "min" not in ch.opts_xy["xAxis"]
-        assert "max" not in ch.opts_xy["xAxis"]
+        assert state.xy_max_span == {}
 
     def test_replay_progress_text_forwarded(self, cfg):
         """Passing replay_progress_text should not raise (info_label is None)."""

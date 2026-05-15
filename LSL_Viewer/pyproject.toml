@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lsl-viewer"
-version = "0.5.0"
+version = "0.6.0"
 description = "Dual-native-stream LSL handgrip force viewer with live, CSV, and XDF replay modes"
 requires-python = ">=3.11"
 dependencies = [

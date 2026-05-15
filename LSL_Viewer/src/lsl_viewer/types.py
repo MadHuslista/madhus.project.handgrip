@@ -107,7 +107,7 @@ class ViewerState:
 
     # XY axis lock-max-span
     xy_lock_max_span: bool = False
-    xy_max_span: dict[str, float] = field(default_factory=dict)  # xmin/xmax/ymin/ymax
+    xy_max_span: dict[str, dict[str, float]] = field(default_factory=dict)  # xmin/xmax/ymin/ymax
     xy_reference_time_shift_s: float = 0.0
     xy_reference_tail_delta_s: float = 0.0
     xy_reference_shift_clipped: bool = False
