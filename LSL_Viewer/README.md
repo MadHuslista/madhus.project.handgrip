@@ -42,7 +42,7 @@ src/lsl_viewer/
 │   ├── replay.py           #   CSV/XDF loaders, window_from_replay
 │   └── stream.py           #   LSL stream connect + fetch
 └── viz/                    # NiceGUI + ECharts rendering layer
-    ├── state.py            #   compute_axis_limits, update_xy_max_span (pure)
+    ├── state.py            #   compute_axis_limits, update_xy_span (pure)
     ├── dashboard.py        #   render_info_text (pure, 4-column monospace)
     ├── markers.py          #   NDJSON loader + get_marker_x_positions (ECharts)
     ├── charts.py           #   ChartHandles, build_chart_handles, update_charts

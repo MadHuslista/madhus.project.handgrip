@@ -12,6 +12,18 @@ import math
 import numpy as np
 
 
+def floorf(x: float, n: int = 0) -> float:
+    """Round down to a multiple of 10**(-n)."""
+    factor = 10.0**n
+    return math.floor(x * factor) / factor
+
+
+def ceilf(x: float, n: int = 0) -> float:
+    """Round up to a multiple of 10**(-n)."""
+    factor = 10.0**n
+    return math.ceil(x * factor) / factor
+
+
 def compute_axis_limits(
     x: np.ndarray,
     y: np.ndarray,
@@ -66,12 +78,13 @@ def compute_axis_limits(
     return xmin, xmax, ymin, ymax
 
 
-def update_xy_max_span(
+def update_xy_span(
     state_span: dict[str, float],
     x: np.ndarray,
     y: np.ndarray,
+    lock: bool,
     margin_ratio: float = 0.05,
-) -> dict[str, float]:
+) -> dict:
     """Expand the stored XY axis span to include the current data.
 
     Pure function: returns a new dict without mutating ``state_span``.
@@ -82,9 +95,27 @@ def update_xy_max_span(
     if limits is None:
         return dict(state_span)
     xmin, xmax, ymin, ymax = limits
+    yaxis = state_span.get("yAxis", {})
+    xaxis = state_span.get("xAxis", {})
+
+    if lock:
+        return {
+            "yAxis": {
+                "min": min(yaxis.get("min", ymin), ymin),
+                "max": max(yaxis.get("max", ymax), ymax),
+            },
+            "xAxis": {
+                "min": min(xaxis.get("min", xmin), xmin),
+                "max": max(xaxis.get("max", xmax), xmax),
+            },
+        }
     return {
-        "xmin": min(state_span.get("xmin", xmin), xmin),
-        "xmax": max(state_span.get("xmax", xmax), xmax),
-        "ymin": min(state_span.get("ymin", ymin), ymin),
-        "ymax": max(state_span.get("ymax", ymax), ymax),
+        "yAxis": {
+            "min": floorf(ymin, n=2),
+            "max": ceilf(ymax, n=2),
+        },
+        "xAxis": {
+            "min": floorf(xmin, n=2),
+            "max": ceilf(xmax, n=2),
+        },
     }

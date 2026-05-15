@@ -58,7 +58,7 @@ from lsl_viewer.core.timing import clock_validation_metrics, lsl_interval_ms
 from lsl_viewer.types import DualWindow, FigureHandles, ViewerState
 from lsl_viewer.viz.dashboard import render_info_text
 from lsl_viewer.viz.markers import get_marker_x_positions, refresh_marker_cache
-from lsl_viewer.viz.state import update_xy_max_span
+from lsl_viewer.viz.state import update_xy_span
 
 log = logging.getLogger(__name__)
 
@@ -670,17 +670,10 @@ def update_charts(
     )
 
     # XY axis range (lock-max-span)
-    if xy_x.size > 0 and state.xy_lock_max_span:
-        state.xy_max_span = update_xy_max_span(state.xy_max_span, xy_x, xy_y)
-        span = state.xy_max_span
-        opts_xy["xAxis"].update({"min": span["xmin"], "max": span["xmax"]})
-        opts_xy["yAxis"].update({"min": span["ymin"], "max": span["ymax"]})
-    elif not state.xy_lock_max_span:
-        state.xy_max_span = {}
-        opts_xy["xAxis"].pop("min", None)
-        opts_xy["xAxis"].pop("max", None)
-        opts_xy["yAxis"].pop("min", None)
-        opts_xy["yAxis"].pop("max", None)
+    if xy_x.size > 0:
+        span = update_xy_span(state.xy_max_span, xy_x, xy_y, state.xy_lock_max_span)
+        opts_xy.update(span)
+        state.xy_max_span = span if state.xy_lock_max_span else {}
 
     xy_lock_label = "max-span lock" if state.xy_lock_max_span else "adaptive"
     clipped = "; clipped" if state.xy_reference_shift_clipped else ""

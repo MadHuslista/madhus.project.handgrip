@@ -6,7 +6,7 @@ import math
 import numpy as np
 import pytest
 
-from lsl_viewer.viz.state import compute_axis_limits, update_xy_max_span
+from lsl_viewer.viz.state import compute_axis_limits, update_xy_span
 
 
 class TestComputeAxisLimits:
@@ -55,7 +55,7 @@ class TestUpdateXyMaxSpan:
     def test_empty_span_returns_data_limits(self):
         x = np.array([1.0, 5.0])
         y = np.array([2.0, 8.0])
-        result = update_xy_max_span({}, x, y, margin_ratio=0.0)
+        result = update_xy_span({}, x, y, margin_ratio=0.0)
         assert result["xmin"] == pytest.approx(1.0)
         assert result["xmax"] == pytest.approx(5.0)
         assert result["ymin"] == pytest.approx(2.0)
@@ -65,7 +65,7 @@ class TestUpdateXyMaxSpan:
         x = np.array([2.0, 4.0])
         y = np.array([3.0, 6.0])
         existing = {"xmin": 0.0, "xmax": 10.0, "ymin": 0.0, "ymax": 20.0}
-        result = update_xy_max_span(existing, x, y, margin_ratio=0.0)
+        result = update_xy_span(existing, x, y, margin_ratio=0.0)
         # Existing span is larger — should be preserved
         assert result["xmin"] == pytest.approx(0.0)
         assert result["xmax"] == pytest.approx(10.0)
@@ -76,7 +76,7 @@ class TestUpdateXyMaxSpan:
         x = np.array([-5.0, 15.0])
         y = np.array([-10.0, 25.0])
         existing = {"xmin": 0.0, "xmax": 10.0, "ymin": 0.0, "ymax": 20.0}
-        result = update_xy_max_span(existing, x, y, margin_ratio=0.0)
+        result = update_xy_span(existing, x, y, margin_ratio=0.0)
         assert result["xmin"] == pytest.approx(-5.0)
         assert result["xmax"] == pytest.approx(15.0)
         assert result["ymin"] == pytest.approx(-10.0)
@@ -85,7 +85,7 @@ class TestUpdateXyMaxSpan:
     def test_does_not_mutate_input_dict(self):
         original = {"xmin": 0.0, "xmax": 10.0, "ymin": 0.0, "ymax": 10.0}
         original_copy = dict(original)
-        update_xy_max_span(original, np.array([5.0]), np.array([5.0]))
+        update_xy_span(original, np.array([5.0]), np.array([5.0]))
         assert original == original_copy
 
 
