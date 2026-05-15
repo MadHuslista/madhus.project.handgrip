@@ -60,3 +60,57 @@ Use it to persist conventions, exclusions, expected Doxyfile settings, and valid
 - **created_at** : 2026-05-15T00:00:00
 - **updated_at** : 2026-05-15T00:00:00
 - **source_skill** : doxygen-document
+
+### Nested Python functions require same-indent Doxygen comments
+- **what**       : Nested Python functions should be documented with `##` blocks at the exact same indentation level as the nested `def`.
+- **why**        : Correct indentation keeps the comment attached to the intended nested callable in generated Doxygen output.
+- **how**        : For callback factories and closure patterns, insert `## @brief` and relevant `@param`/`@return` lines immediately above each nested function with matching indentation.
+- **when**       : When documenting nested functions in UI callbacks or closure-heavy modules.
+- **created_at** : 2026-05-15T00:00:00
+- **updated_at** : 2026-05-15T00:00:00
+- **source_skill** : doxygen-document
+
+### Public Python APIs should include explicit @param/@return tags
+- **what**       : Public functions, methods, and properties should include explicit `@param` and `@return` tags even when type hints are present.
+- **why**        : Type hints improve static analysis, but Doxygen output completeness and consistency still depends on explicit argument and return documentation.
+- **how**        : Add `## @brief` plus one `@param` line per argument; include `@return` for non-`None` return values and property getters.
+- **when**       : Always, during Python API documentation passes.
+- **created_at** : 2026-05-15T00:00:00
+- **updated_at** : 2026-05-15T00:00:00
+- **source_skill** : doxygen-document
+
+### Python module headers should include @package plus @brief
+- **what**       : Each Python module should start with `## @package ...` and a `@brief` summary, even when a module-level triple-quoted description already exists.
+- **why**        : Explicit package headers improve Doxygen module indexing consistency and avoid relying on parser behavior for plain Python docstrings.
+- **how**        : Add a two-line `##` block directly above the module docstring at file top (`## @package ...` and `#  @brief ...`).
+- **when**       : Always, when documenting Python modules for Doxygen output.
+- **created_at** : 2026-05-15T12:00:00
+- **updated_at** : 2026-05-15T12:00:00
+- **source_skill** : doxygen-document
+
+### Exhaustive passes include private helper functions
+- **what**       : When the user requests exhaustive coverage, underscore-prefixed Python helpers should be documented too.
+- **why**        : Internal helper behavior is part of generated technical docs for maintainers and reviewers.
+- **how**        : Add `## @brief` and matching `@param`/`@return` tags for private helper callables exactly as for public APIs.
+- **when**       : When the user explicitly asks to include private entities.
+- **created_at** : 2026-05-15T12:30:00
+- **updated_at** : 2026-05-15T12:30:00
+- **source_skill** : doxygen-document
+
+### Dataclass field documentation uses class-level @param tags
+- **what**       : Dataclass field intent should be documented with class-level `@param` tags for each field.
+- **why**        : Field-level semantics are otherwise easy to miss in generated module pages.
+- **how**        : Add a class `## @brief` followed by one `@param` line per dataclass attribute.
+- **when**       : Always for dataclasses during Doxygen documentation passes.
+- **created_at** : 2026-05-15T12:30:00
+- **updated_at** : 2026-05-15T12:30:00
+- **source_skill** : doxygen-document
+
+### C++ templates: document @tparam and inline methods in headers
+- **what**       : Header-only C++ template classes should include `@tparam` on the class block and full method docs where methods are defined inline.
+- **why**        : Template APIs are frequently implemented entirely in headers; without inline method docs Doxygen output is incomplete for public interfaces.
+- **how**        : Add `/** @brief ... @tparam T ... */` before the template class and include `@param`/`@return` tags on public inline methods in the same header.
+- **when**       : Always, when documenting C++ template classes in `.h`/`.hpp` files.
+- **created_at** : 2026-05-15T13:00:00
+- **updated_at** : 2026-05-15T13:00:00
+- **source_skill** : doxygen-document
