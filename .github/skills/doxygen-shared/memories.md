@@ -114,3 +114,21 @@ Use it to persist conventions, exclusions, expected Doxyfile settings, and valid
 - **created_at** : 2026-05-15T13:00:00
 - **updated_at** : 2026-05-15T13:00:00
 - **source_skill** : doxygen-document
+
+### Build triage baseline: config and markup warnings dominate
+- **what**       : Current baseline build on Linux (Doxygen 1.9.8) completes successfully with 45 warnings, concentrated in group-title mismatches, unsupported xml/html tags, unknown command usage, and one obsolete Doxyfile tag.
+- **why**        : Establishes that the present gate risk is warning hygiene rather than missing tooling or failed parsing, so remediation should prioritize comment/tag normalization.
+- **how**        : In `/doxygen-build` triage, prioritize fixing `<br>` group title mismatches in firmware files, escaping/rewriting literal angle-bracket tokens (for example `<channel>`), replacing `@hydra` with escaped text, and replacing obsolete `CLASS_DIAGRAMS` config usage.
+- **when**       : Valid for default Doxyfile builds in this repository unless warning totals/categories materially change.
+- **created_at** : 2026-05-15T07:56:24-04:00
+- **updated_at** : 2026-05-15T07:56:24-04:00
+- **source_skill** : doxygen-build
+
+### Strict build cleanup pattern for declaration/definition duplicates
+- **what**       : Strict clean build (0 warnings) achieved by normalizing group markers, escaping literal angle-bracket tokens and @-prefixed text, removing obsolete CLASS_DIAGRAMS, and hiding forward prototypes from Doxygen with `@cond ... @endcond` so only definitions are indexed.
+- **why**        : Prevents false-positive `no matching file member found` and multi-group assignment warnings in C++ files with separate declarations and definitions.
+- **how**        : Use `@ingroup` section markers instead of repeated `@addtogroup` redefinitions, keep implementation section banners as plain comments, and wrap prototype-only declarations in a Doxygen cond block when they duplicate documented definitions.
+- **when**       : Apply when Doxygen emits duplicate-member or no-matching-member warnings in firmware C/C++ modules during strict runs.
+- **created_at** : 2026-05-15T08:09:33-04:00
+- **updated_at** : 2026-05-15T08:09:33-04:00
+- **source_skill** : doxygen-build

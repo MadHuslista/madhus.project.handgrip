@@ -8,8 +8,8 @@
  * The firmware emits the D2 calibration payload expected by the LSL_Bridge 
  * and by the Handgrip_Calibration module:
  *
- *   M2,<schema>,<fw_version>,<git_sha>,<hx711_rate_hz>,<scale_factor>,<scale_offset>,<unit>
- *   D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>
+ *   M2,&lt;schema&gt;,&lt;fw_version&gt;,&lt;git_sha&gt;,&lt;hx711_rate_hz&gt;,&lt;scale_factor&gt;,&lt;scale_offset&gt;,&lt;unit&gt;
+ *   D2,&lt;seq&gt;,&lt;timestamp_us&gt;,&lt;raw_count&gt;,&lt;current_units&gt;,&lt;status&gt;
  *
  * Raw counts are always present so that calibration fits are not contaminated
  * by mutable firmware scale/offset settings. The current_units field is a
@@ -33,7 +33,7 @@
 #include <stdbool.h>
 
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_Definitions                                            */
+/** @ingroup PUBLIC_Definitions                                                */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
@@ -98,25 +98,25 @@
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_Types                                                  */
+/** @ingroup PUBLIC_Types                                                      */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_Data                                                  */
+/** @ingroup PUBLIC_Data                                                       */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_API                                                    */
+/** @ingroup PUBLIC_API                                                        */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_WEAK                                                   */
+/** @ingroup PUBLIC_WEAK                                                       */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 

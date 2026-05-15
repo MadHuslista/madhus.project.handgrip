@@ -273,6 +273,6 @@ class AppConfig:
 def register_config() -> None:
     # @brief Register the structured config schema with Hydra's ConfigStore.
     ##
-    # Must be called before the @hydra.main decorator is evaluated.
+    # Must be called before the \@hydra.main decorator is evaluated.
     cs = ConfigStore.instance()
     cs.store(name="app_config", node=AppConfig)

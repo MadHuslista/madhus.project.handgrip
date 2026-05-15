@@ -32,7 +32,7 @@ _log = logging.getLogger(__name__)
 
 
 def _append_channel(channels: Any, label: str, channel_type: str, unit: str) -> None:
-    """Append a single <channel> element to a LSL descriptor node."""
+    """Append a single &lt;channel&gt; element to a LSL descriptor node."""
     ch = channels.append_child("channel")
     ch.append_child_value("label", str(label))
     ch.append_child_value("type", str(channel_type))
