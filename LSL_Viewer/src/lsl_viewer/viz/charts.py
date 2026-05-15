@@ -208,7 +208,7 @@ def _mk_time_opts(title: str, y_label: str, series: list[dict]) -> dict:
             "nameGap": 28,
             "axisLine": {"show": True},
             "splitLine": _split_line(),
-            "minInterval": 0.1,
+            "minorTick": {"show": True},
         },
         "yAxis": {
             "type": "value",
@@ -216,7 +216,7 @@ def _mk_time_opts(title: str, y_label: str, series: list[dict]) -> dict:
             "axisLine": {"show": True},
             "splitLine": _split_line(),
             "scale": True,
-            "minInterval": 0.1,
+            "minorTick": {"show": True},
         },
         "series": series,
     }
@@ -344,11 +344,13 @@ def _build_xy_opts(cfg: DictConfig) -> dict:
             "nameLocation": "middle",
             "nameGap": 28,
             "splitLine": _split_line(),
+            "minorTick": {"show": True},
         },
         "yAxis": {
             "type": "value",
             "name": cfg.viewer.target_raw_unit_label,
             "splitLine": _split_line(),
+            "minorTick": {"show": True},
         },
         # N_XY_BUCKETS pre-allocated line series — data and colour updated each frame.
         "series": [
