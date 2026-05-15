@@ -23,6 +23,20 @@ Optional arguments accepted in the command:
 
 ## Procedure
 
+### Step 0 — Bootstrap Doxyfile (if missing)
+
+If no `Doxyfile` is found at the repository root:
+1. Inform the user that no `Doxyfile` was found.
+2. Copy `./references/Doxyfile.template` to `<repo_root>/Doxyfile`.
+3. Ask the user to confirm or adjust:
+   - `PROJECT_NAME` and `PROJECT_BRIEF`
+   - `INPUT` directories (seed list is in the template; expand as needed)
+   - `OUTPUT_DIRECTORY`
+   - `HAVE_DOT` (requires Graphviz — verify with `which dot`)
+4. Do **not** proceed to Step 1 until the user has confirmed the Doxyfile.
+
+If a `Doxyfile` already exists, skip this step and proceed to Step 1.
+
 ### Step 1 — Identify Scope
 
 - If the user provided a path or module name, use that as the scope.
@@ -50,8 +64,10 @@ For each file in scope, identify:
 If a construct's correct format is ambiguous, consult:
 - https://www.doxygen.nl/manual/docblocks.html — comment block formats
 - https://www.doxygen.nl/manual/commands.html — special commands (@param, @return, etc.)
+- https://www.doxygen.nl/manual/config.html — Doxyfile configuration options
 
-See also `./references/doxygen-format.md` for quick-reference examples.
+See also `./references/doxygen-format.md` for quick-reference examples  
+and `./references/Doxyfile.template` for the reference Doxyfile configuration.
 
 ### Step 5 — Save New Formatting Notes to Memory
 
