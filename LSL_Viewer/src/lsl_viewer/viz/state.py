@@ -101,12 +101,12 @@ def update_xy_span(
     if lock:
         return {
             "yAxis": {
-                "min": min(yaxis.get("min", ymin), ymin),
-                "max": max(yaxis.get("max", ymax), ymax),
+                "min": round(min(yaxis.get("min", ymin), ymin), 2),
+                "max": round(max(yaxis.get("max", ymax), ymax), 2),
             },
             "xAxis": {
-                "min": min(xaxis.get("min", xmin), xmin),
-                "max": max(xaxis.get("max", xmax), xmax),
+                "min": round(min(xaxis.get("min", xmin), xmin), 2),
+                "max": round(max(xaxis.get("max", xmax), xmax), 2),
             },
         }
     return {
