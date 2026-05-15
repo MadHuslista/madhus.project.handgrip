@@ -117,6 +117,61 @@ def _rgba(color: str, alpha: float) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _datazoom(type: str = "inside") -> list | dict:
+    if type == "inside":
+        return {
+            "type": "inside",
+            "xAxisIndex": [0],
+            "filterMode": "none",
+            "throttle": 100,
+        }
+    if type == "slider":
+        return [
+            {
+                "type": "slider",
+                "show": True,
+                "xAxisIndex": [0],
+            },
+            {
+                "type": "slider",
+                "show": True,
+                "yAxisIndex": [0],
+            },
+            {
+                "type": "inside",
+                "xAxisIndex": [0],
+                "filterMode": "none",
+                "throttle": 100,
+            },
+            {
+                "type": "inside",
+                "yAxisIndex": [0],
+                "filterMode": "none",
+                "throttle": 100,
+            },
+        ]
+    if type == "slider-time":
+        return [
+            {
+                "type": "slider",
+                "show": True,
+                "xAxisIndex": [0],
+            },
+            {
+                "type": "slider",
+                "show": True,
+                "yAxisIndex": [0],
+            },
+            {
+                "type": "inside",
+                "xAxisIndex": [0],
+                "filterMode": "none",
+                "throttle": 100,
+            },
+        ]
+    raise ValueError(f"Unsupported dataZoom type: {type}")
+
+
 def _grid() -> dict:
     return {"left": 58, "right": 18, "top": 48, "bottom": 48}
 
@@ -145,6 +200,7 @@ def _mk_time_opts(title: str, y_label: str, series: list[dict]) -> dict:
         "title": {"text": title, "textStyle": {"fontSize": 11}},
         "grid": _grid(),
         "tooltip": {"trigger": "axis", "axisPointer": {"type": "cross"}},
+        "dataZoom": _datazoom("slider-time"),
         "xAxis": {
             "type": "value",
             "name": "Relative LSL time (s)",
@@ -152,12 +208,15 @@ def _mk_time_opts(title: str, y_label: str, series: list[dict]) -> dict:
             "nameGap": 28,
             "axisLine": {"show": True},
             "splitLine": _split_line(),
+            "minInterval": 0.1,
         },
         "yAxis": {
             "type": "value",
             "name": y_label,
             "axisLine": {"show": True},
             "splitLine": _split_line(),
+            "scale": True,
+            "minInterval": 0.1,
         },
         "series": series,
     }
@@ -278,6 +337,7 @@ def _build_xy_opts(cfg: DictConfig) -> dict:
         },
         "grid": _grid(),
         "tooltip": {"trigger": "axis"},
+        "dataZoom": _datazoom("slider"),
         "xAxis": {
             "type": "value",
             "name": f"Reference force ({force_unit})",
