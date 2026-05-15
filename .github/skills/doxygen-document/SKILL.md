@@ -45,7 +45,7 @@ If a `Doxyfile` already exists, skip this step and proceed to Step 1.
 
 ### Step 2 — Load Internal Memories
 
-Read `./references/memories.md` to recall:
+Read `../doxygen-shared/memories.md` to recall:
 - Previously confirmed comment style choices
 - Project-specific naming or exclusion rules
 - Past user clarifications
@@ -71,8 +71,8 @@ and `./references/Doxyfile.template` for the reference Doxyfile configuration.
 
 ### Step 5 — Save New Formatting Notes to Memory
 
-Append useful rules discovered during the scan to `./references/memories.md`.  
-Each entry must follow this schema (see `./references/memories.md`):
+Append useful rules discovered during the scan to `../doxygen-shared/memories.md`.  
+Each entry must follow this schema (see `../doxygen-shared/memories.md`):
 
 | Field        | Content |
 |-------------|---------|
@@ -82,6 +82,7 @@ Each entry must follow this schema (see `./references/memories.md`):
 | `when`       | The context in which it applies, or `always` |
 | `created_at` | ISO timestamp |
 | `updated_at` | ISO timestamp |
+| `source_skill` | `doxygen-document` |
 
 ### Step 6 — Plan and Clarify
 
@@ -113,7 +114,7 @@ Confirm all of the following:
 
 ### Step 9 — Review and Maintain Memories
 
-Review all entries in `./references/memories.md`:
+Review all entries in `../doxygen-shared/memories.md`:
 
 | Status | Action |
 |--------|--------|
@@ -132,7 +133,16 @@ Review all entries in `./references/memories.md`:
    - Entities documented (new) vs. extended (partial → complete)
    - Files/entities skipped and reason (e.g. auto-generated, third-party)
    - Doxyfile mismatches found (if applicable)
-3. Updated `./references/memories.md`.
+3. Updated `../doxygen-shared/memories.md`.
+
+---
+
+## Collaboration Contract with doxygen-build
+
+- `doxygen-document` is the primary writer for documentation-style memories.
+- `doxygen-build` is the primary writer for build-warning triage memories.
+- Both skills read and write `../doxygen-shared/memories.md`.
+- Neither skill silently edits `Doxyfile` unless explicitly instructed.
 
 ---
 
