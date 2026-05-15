@@ -1,4 +1,8 @@
-"""Signal processing filters for the LSL Bridge target stream.
+# @package lsl_bridge.core.filter
+#  @brief Signal-filter primitives and config-driven processor assembly.
+##
+"""
+Signal processing filters for the LSL Bridge target stream.
 
 This module provides a small library of stateful digital filters and a
 Hydra-config-driven factory (``build_processor``) that assembles them into
@@ -37,14 +41,22 @@ _log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
+# @brief Protocol for processing one value at a given sample time.
 class SampleProcessor(Protocol):
-    def process(self, value: float, sample_time_s: float) -> float:
-        ...
+    # @brief Process one scalar sample.
+    #  @param value Input sample value.
+    #  @param sample_time_s Processing time in seconds.
+    #  @return Processed sample value.
+    def process(self, value: float, sample_time_s: float) -> float: ...
 
 
+# @brief Filter-node protocol used by FilterPipeline.
 class FilterNode(Protocol):
-    def process(self, value: float, sample_time_s: float) -> float:
-        ...
+    # @brief Process one scalar sample.
+    #  @param value Input sample value.
+    #  @param sample_time_s Processing time in seconds.
+    #  @return Processed sample value.
+    def process(self, value: float, sample_time_s: float) -> float: ...
 
 
 # ---------------------------------------------------------------------------
@@ -53,8 +65,10 @@ class FilterNode(Protocol):
 
 
 @dataclass(slots=True)
+# @brief First-order low-pass filter implementation.
 class FirstOrderLowPass:
-    """1-pole RC IIR low-pass filter.
+    """
+    1-pole RC IIR low-pass filter.
 
     .. note::
         Not used in the default configuration; retained for optional filter
@@ -98,8 +112,10 @@ class FirstOrderLowPass:
 
 
 @dataclass(slots=True)
+# @brief Second-order Butterworth biquad low-pass filter.
 class SecondOrderBiquadLowPass:
-    """2nd-order Butterworth biquad IIR low-pass filter.
+    """
+    2nd-order Butterworth biquad IIR low-pass filter.
 
     Coefficients are pre-computed at construction time using the bilinear
     transform so that ``process()`` is a lightweight multiply-accumulate loop
@@ -178,13 +194,7 @@ class SecondOrderBiquadLowPass:
             )
             return self._reset_state(value, sample_time_s)
 
-        y = (
-            self._b0 * value
-            + self._b1 * self._x1
-            + self._b2 * self._x2
-            - self._a1 * self._y1
-            - self._a2 * self._y2
-        )
+        y = self._b0 * value + self._b1 * self._x1 + self._b2 * self._x2 - self._a1 * self._y1 - self._a2 * self._y2
 
         self._x2 = self._x1
         self._x1 = value
@@ -195,8 +205,10 @@ class SecondOrderBiquadLowPass:
 
 
 @dataclass(slots=True)
+# @brief Adaptive baseline drift correction filter.
 class DriftCorrector:
-    """Adaptive baseline drift corrector.
+    """
+    Adaptive baseline drift corrector.
 
     Tracks a slowly-evolving baseline using a 1-pole IIR that only updates
     when the signal is near rest or changing slowly.  The output is the
@@ -222,16 +234,11 @@ class DriftCorrector:
 
     def __post_init__(self) -> None:
         if self.baseline_cutoff_hz <= 0.0:
-            raise ValueError(
-                f"baseline_cutoff_hz must be > 0. Received {self.baseline_cutoff_hz}"
-            )
+            raise ValueError(f"baseline_cutoff_hz must be > 0. Received {self.baseline_cutoff_hz}")
         if self.rest_band < 0.0:
             raise ValueError(f"rest_band must be >= 0. Received {self.rest_band}")
         if self.stable_slope_threshold_per_s < 0.0:
-            raise ValueError(
-                "stable_slope_threshold_per_s must be >= 0. "
-                f"Received {self.stable_slope_threshold_per_s}"
-            )
+            raise ValueError(f"stable_slope_threshold_per_s must be >= 0. Received {self.stable_slope_threshold_per_s}")
         if self.warmup_samples < 0:
             raise ValueError(f"warmup_samples must be >= 0. Received {self.warmup_samples}")
         self._tau = 1.0 / (2.0 * math.pi * self.baseline_cutoff_hz)
@@ -277,20 +284,30 @@ class DriftCorrector:
 # ---------------------------------------------------------------------------
 
 
+# @brief Identity processor that forwards values unchanged.
 class IdentityProcessor:
     """Pass-through processor; useful for testing pipeline wiring."""
 
+    # @brief Return the unmodified input value.
+    #  @param value Input sample value.
+    #  @param sample_time_s Processing time in seconds.
+    #  @return Input sample value.
     def process(self, value: float, sample_time_s: float) -> float:
         _ = sample_time_s
         return value
 
 
+# @brief Left-to-right chain of filter nodes.
 class FilterPipeline:
     """Ordered chain of FilterNode instances applied left-to-right."""
 
     def __init__(self, filters: list[FilterNode]) -> None:
         self._filters = filters
 
+    # @brief Process one sample through all configured filter nodes.
+    #  @param value Input sample value.
+    #  @param sample_time_s Processing time in seconds.
+    #  @return Filtered output value.
     def process(self, value: float, sample_time_s: float) -> float:
         y = value
         for f in self._filters:
@@ -298,23 +315,30 @@ class FilterPipeline:
         return y
 
     @property
+    # @brief Snapshot list of currently configured filter nodes.
+    #  @return Copy of filter-node sequence.
     def filters(self) -> list[FilterNode]:
         return list(self._filters)
 
 
+# @brief Adapter exposing configured filter pipeline via Processor contract.
 class ProcessorAdapter:
     """Assembles a ``FilterPipeline`` from a Hydra ``DictConfig``."""
 
     def __init__(self, cfg: DictConfig) -> None:
         filters_cfg = list(cfg.filters) if cfg.get("filters") is not None else []
-        self._pipeline = FilterPipeline(
-            [_build_filter_node(f_cfg) for f_cfg in filters_cfg]
-        )
+        self._pipeline = FilterPipeline([_build_filter_node(f_cfg) for f_cfg in filters_cfg])
 
+    # @brief Process one sample through the configured pipeline.
+    #  @param value Input sample value.
+    #  @param sample_time_s Processing time in seconds.
+    #  @return Filtered output value.
     def process(self, value: float, sample_time_s: float) -> float:
         return self._pipeline.process(value, sample_time_s)
 
     @property
+    # @brief Expose current filter-node list.
+    #  @return Copy of configured filter nodes.
     def filters(self) -> list[FilterNode]:
         return self._pipeline.filters
 
@@ -324,6 +348,9 @@ class ProcessorAdapter:
 # ---------------------------------------------------------------------------
 
 
+# @brief Build a single filter node from one config stanza.
+#  @param filter_cfg Hydra filter configuration object.
+#  @return Concrete FilterNode instance.
 def _build_filter_node(filter_cfg: DictConfig) -> FilterNode:
     """Instantiate a single filter node from its config stanza."""
     filter_type = str(filter_cfg.type)
@@ -349,9 +376,7 @@ def _build_filter_node(filter_cfg: DictConfig) -> FilterNode:
         return DriftCorrector(
             baseline_cutoff_hz=float(filter_cfg.get("baseline_cutoff_hz", 0.02)),
             rest_band=float(filter_cfg.get("rest_band", 5.0)),
-            stable_slope_threshold_per_s=float(
-                filter_cfg.get("stable_slope_threshold_per_s", 5.0)
-            ),
+            stable_slope_threshold_per_s=float(filter_cfg.get("stable_slope_threshold_per_s", 5.0)),
             warmup_samples=int(filter_cfg.get("warmup_samples", 20)),
             reset_on_gap_s=float(filter_cfg.get("reset_on_gap_s", 1.0)),
             min_dt_s=float(filter_cfg.get("min_dt_s", 1e-6)),
@@ -363,8 +388,12 @@ def _build_filter_node(filter_cfg: DictConfig) -> FilterNode:
     raise ValueError(f"Unsupported filter type: {filter_type!r}")
 
 
+# @brief Build configured processor adapter and log resulting chain.
+#  @param cfg Processing subtree from Hydra configuration.
+#  @return ProcessorAdapter ready for per-sample processing.
 def build_processor(cfg: DictConfig) -> ProcessorAdapter:
-    """Public factory called by ``core/processing.py`` via importlib.
+    """
+    Public factory called by ``core/processing.py`` via importlib.
 
     Args:
         cfg: The ``processing`` sub-tree of the Hydra config.
@@ -372,6 +401,7 @@ def build_processor(cfg: DictConfig) -> ProcessorAdapter:
     Returns:
         A ``ProcessorAdapter`` whose ``process(value, sample_time_s)`` method
         applies the configured filter chain.
+
     """
     processor = ProcessorAdapter(cfg)
     _log.info(

@@ -1,4 +1,8 @@
-"""LSL StreamOutlet construction for the LSL Bridge.
+# @package lsl_bridge.io.lsl_outlets
+#  @brief StreamInfo and StreamOutlet builders for target/reference streams.
+##
+"""
+LSL StreamOutlet construction for the LSL Bridge.
 
 Builds the two data outlets (HandgripTarget, HandgripReference) and provides
 helper utilities for populating LSL stream descriptors.
@@ -47,8 +51,13 @@ def _append_metadata(desc: Any, metadata: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 
 
+# @brief Resolve source_id for the target outlet.
+#  @param cfg Full Hydra configuration.
+#  @param port_meta Enumerated target serial metadata.
+#  @return Stable source identifier string for the target stream.
 def build_target_source_id(cfg: DictConfig, port_meta: dict[str, Any]) -> str:
-    """Resolve the LSL source_id for the target stream.
+    """
+    Resolve the LSL source_id for the target stream.
 
     Prefers the explicit ``streams.target.source_id`` from config; falls back
     to the USB serial number, then a sanitised device path.
@@ -59,6 +68,7 @@ def build_target_source_id(cfg: DictConfig, port_meta: dict[str, Any]) -> str:
 
     Returns:
         A stable, unique-ish LSL source_id string.
+
     """
     explicit = cfg.streams.target.get("source_id")
     if explicit:
@@ -75,8 +85,13 @@ def build_target_source_id(cfg: DictConfig, port_meta: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
+# @brief Build the HandgripTarget LSL outlet.
+#  @param cfg Full Hydra configuration.
+#  @param source_id Source identifier string for StreamInfo.
+#  @return Configured StreamOutlet for target samples.
 def build_target_outlet(cfg: DictConfig, source_id: str) -> StreamOutlet:
-    """Construct the HandgripTarget LSL outlet.
+    """
+    Construct the HandgripTarget LSL outlet.
 
     Channel count is derived from ``cfg.streams.target.channels`` so it
     stays in sync with the config without hard-coding.
@@ -87,6 +102,7 @@ def build_target_outlet(cfg: DictConfig, source_id: str) -> StreamOutlet:
 
     Returns:
         A ready ``StreamOutlet`` instance.
+
     """
     stream_cfg = cfg.streams.target
     n_channels = len(stream_cfg.channels)
@@ -109,10 +125,7 @@ def build_target_outlet(cfg: DictConfig, source_id: str) -> StreamOutlet:
             "payload_schema": stream_cfg.payload_schema,
             "sampling_model": "target_native_irregular",
             "timestamp_policy": cfg.target_timestamping.policy,
-            "clock_semantics": (
-                "LSL timestamp is synchronization authority; "
-                "device_clock_us is diagnostic"
-            ),
+            "clock_semantics": ("LSL timestamp is synchronization authority; device_clock_us is diagnostic"),
             "fit_signal": "target_raw_count",
         },
     )
@@ -131,14 +144,19 @@ def build_target_outlet(cfg: DictConfig, source_id: str) -> StreamOutlet:
     return outlet
 
 
+# @brief Build the HandgripReference LSL outlet.
+#  @param cfg Full Hydra configuration.
+#  @return Configured StreamOutlet for reference samples.
 def build_reference_outlet(cfg: DictConfig) -> StreamOutlet:
-    """Construct the HandgripReference LSL outlet.
+    """
+    Construct the HandgripReference LSL outlet.
 
     Args:
         cfg: Full Hydra ``DictConfig``.
 
     Returns:
         A ready ``StreamOutlet`` instance.
+
     """
     stream_cfg = cfg.streams.reference
     source_id = (

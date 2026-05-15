@@ -1,3 +1,6 @@
+# @package lsl_bridge.app
+#  @brief LSL Bridge application orchestration entry point.
+##
 """
 LSL Bridge application entry point.
 
@@ -86,6 +89,9 @@ def _open_reference_sink(cfg: DictConfig) -> ReferenceCsvSink | None:
 
 
 @hydra.main(version_base=None, config_path=f"{LIBRARY_ROOT}/conf", config_name="config")
+# @brief Run the Hydra-driven LSL bridge lifecycle.
+#  @param cfg Fully merged Hydra configuration.
+#  @return None.
 def app(cfg: DictConfig) -> None:
     """
     Main bridge application, driven by Hydra config.
@@ -240,6 +246,8 @@ def app(cfg: DictConfig) -> None:
 # ---------------------------------------------------------------------------
 
 
+# @brief Return the installed LSL Bridge package version.
+#  @return Semantic version string, or "unknown" if unavailable.
 def _bridge_version() -> str:
     try:
         from lsl_bridge import __version__
@@ -253,6 +261,8 @@ def _bridge_version() -> str:
 # ---------------------------------------------------------------------------
 
 
+# @brief CLI entry point for module and console-script execution.
+#  @return Process exit status code.
 def main() -> int:
     """Wrapper called by the ``lsl-bridge`` console script and ``__main__.py``."""
     try:

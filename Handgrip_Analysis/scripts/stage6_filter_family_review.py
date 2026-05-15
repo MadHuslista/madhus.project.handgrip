@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# @package scripts.stage6_filter_family_review
+# @brief Stage 6b multi-signal filter-family ranking workflow.
+
 """Stage 6b — Filter family review: multi-signal ranking with composite score."""
 from __future__ import annotations
 
@@ -25,6 +28,11 @@ matplotlib.use("Agg")
 log = logging.getLogger(__name__)
 
 
+# @brief Read a required non-empty string value from Hydra config.
+# @param cfg Hydra configuration object.
+# @param key Config key to validate.
+# @return The required value converted to string.
+# @throws ValueError Raised when key is missing or empty.
 def _require_str(cfg: DictConfig, key: str) -> str:
     value = cfg.get(key)
     if value is None or not str(value).strip():
@@ -32,6 +40,11 @@ def _require_str(cfg: DictConfig, key: str) -> str:
     return str(value)
 
 
+# @brief Read a required non-empty list of strings from Hydra config.
+# @param cfg Hydra configuration object.
+# @param key Config key to validate.
+# @return Sanitized non-empty list of string values.
+# @throws ValueError Raised when key is missing or contains no values.
 def _require_list(cfg: DictConfig, key: str) -> list[str]:
     raw = cfg.get(key)
     if raw is None:
@@ -42,6 +55,9 @@ def _require_list(cfg: DictConfig, key: str) -> list[str]:
     return values
 
 
+# @brief Execute Stage 6b filter-family assessment and ranking.
+# @param cfg Hydra configuration object.
+# @return None.
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)

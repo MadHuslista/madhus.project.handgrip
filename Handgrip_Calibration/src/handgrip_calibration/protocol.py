@@ -24,6 +24,9 @@ class Trial:
 
 
 def generate_static_trials(protocol: ProtocolConfig) -> list[Trial]:
+    # @brief Generate static staircase trial descriptors.
+    #  @param protocol Protocol configuration defining levels and repeats.
+    #  @return Ordered list of trial descriptors with inferred direction labels.
     """Generate staircase trials from the configured force levels.
 
     Direction is inferred locally from neighboring levels and is used later for

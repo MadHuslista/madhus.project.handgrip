@@ -1,3 +1,5 @@
+# @package handgrip_calibration.protocol_analysis
+#  @brief Post-hoc summaries for the calibration protocol suite.
 """Post-hoc summaries for the calibration protocol suite."""
 
 from __future__ import annotations
@@ -13,6 +15,9 @@ from .export import read_ndjson
 
 
 def load_manifest(path: str | Path) -> dict[str, Any]:
+    # @brief Load a session manifest from disk.
+    #  @param path Manifest file path.
+    #  @return Parsed manifest dictionary, or an empty dictionary if missing.
     path = Path(path)
     if not path.exists():
         return {}
@@ -21,12 +26,18 @@ def load_manifest(path: str | Path) -> dict[str, Any]:
 
 
 def event_time(event: dict[str, Any]) -> float:
+    # @brief Extract event time with LSL-time preference.
+    #  @param event Marker event record.
+    #  @return Event timestamp in seconds.
     if event.get("lsl_time") is not None:
         return float(event["lsl_time"])
     return float(event.get("host_time_unix", np.nan))
 
 
 def read_frames(session_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFrame, list[dict[str, Any]]]:
+    # @brief Load target/reference frames and marker events for a session.
+    #  @param session_dir Session directory.
+    #  @return Tuple of target frame, reference frame, and event records.
     session_dir = Path(session_dir)
     target = pd.read_csv(session_dir / "target.csv") if (session_dir / "target.csv").exists() else pd.DataFrame()
     reference = pd.read_csv(session_dir / "reference.csv") if (session_dir / "reference.csv").exists() else pd.DataFrame()
@@ -80,6 +91,9 @@ def _stream_row(name: str, df: pd.DataFrame, preferred: list[str]) -> dict[str, 
 
 
 def stream_health_table(session_dir: str | Path) -> pd.DataFrame:
+    # @brief Build per-stream health metrics for a session.
+    #  @param session_dir Session directory.
+    #  @return DataFrame containing stream-level sampling and value statistics.
     target, reference, _ = read_frames(session_dir)
     return pd.DataFrame([
         _stream_row("target", target, ["raw", "target_raw_count", "target_current_units"]),
@@ -88,6 +102,9 @@ def stream_health_table(session_dir: str | Path) -> pd.DataFrame:
 
 
 def event_count_table(session_dir: str | Path) -> pd.DataFrame:
+    # @brief Count event occurrences in a session marker log.
+    #  @param session_dir Session directory.
+    #  @return DataFrame of event names and counts.
     _, _, events = read_frames(session_dir)
     if not events:
         return pd.DataFrame()
@@ -96,6 +113,9 @@ def event_count_table(session_dir: str | Path) -> pd.DataFrame:
 
 
 def hold_quality_summary(dataset: pd.DataFrame) -> dict[str, Any]:
+    # @brief Summarize hold-quality metrics from a calibration dataset.
+    #  @param dataset Calibration hold dataset.
+    #  @return Summary dictionary of accepted-hold and quality statistics.
     if dataset.empty:
         return {}
     out: dict[str, Any] = {
@@ -111,6 +131,9 @@ def hold_quality_summary(dataset: pd.DataFrame) -> dict[str, Any]:
 
 
 def hysteresis_summary(dataset: pd.DataFrame) -> pd.DataFrame:
+    # @brief Compare ascending and descending hold behavior by force level.
+    #  @param dataset Calibration hold dataset.
+    #  @return DataFrame with directional deltas for each force level.
     if dataset.empty or "direction" not in dataset.columns or "target_force_nominal_N" not in dataset.columns:
         return pd.DataFrame()
     rows: list[dict[str, Any]] = []
@@ -129,6 +152,9 @@ def hysteresis_summary(dataset: pd.DataFrame) -> pd.DataFrame:
 
 
 def creep_zero_return_summary(session_dir: str | Path) -> pd.DataFrame:
+    # @brief Summarize creep and zero-return phases from marker windows.
+    #  @param session_dir Session directory.
+    #  @return DataFrame with phase durations and force trend metrics.
     _target, reference, events = read_frames(session_dir)
     if reference.empty or not events:
         return pd.DataFrame()
@@ -167,6 +193,9 @@ def creep_zero_return_summary(session_dir: str | Path) -> pd.DataFrame:
 
 
 def dynamic_summary(session_dir: str | Path) -> pd.DataFrame:
+    # @brief Summarize dynamic ramp and squeeze trial durations.
+    #  @param session_dir Session directory.
+    #  @return DataFrame with dynamic trial metadata and durations.
     _, _, events = read_frames(session_dir)
     if not events:
         return pd.DataFrame()

@@ -69,6 +69,11 @@ def _render_raw_log_entry(frame: MeasurementFrame, max_chars: int) -> str:
     return truncate_text(' | '.join(parts), max_chars)
 
 
+## @brief Render interpreted log entry.
+#
+#  @param frame Parameter description.
+#  @param max_chars Parameter description.
+#  @return Result produced by this function.
 def _render_interpreted_log_entry(frame: MeasurementFrame, max_chars: int) -> str:
     import json
     interpreted = frame.interpreted
@@ -91,6 +96,7 @@ def _render_interpreted_log_entry(frame: MeasurementFrame, max_chars: int) -> st
 # ---------------------------------------------------------------------------
 
 @dataclass
+## @brief Represents the RuntimeSettings component.
 class RuntimeSettings:
     """Holds the subset of settings that the UI may change after startup.
 
@@ -110,6 +116,7 @@ class RuntimeSettings:
 # ---------------------------------------------------------------------------
 
 @dataclass
+## @brief Represents the AppState component.
 class AppState:
     """Central mutable runtime state shared between worker, UI, and I/O subsystems."""
 
@@ -150,6 +157,10 @@ class AppState:
         except Exception:
             return ''
 
+    ## @brief Build board profile snapshot.
+    #
+    #  @param self Parameter description.
+    #  @return Constructed object for this operation.
     def build_board_profile_snapshot(self) -> dict[str, Any]:
         """Build a compact board/config snapshot for calibration manifests."""
         cfg = self.cfg
@@ -186,6 +197,10 @@ class AppState:
             },
         }
 
+    ## @brief Push event.
+    #
+    #  @param self Parameter description.
+    #  @param message Parameter description.
     def push_event(self, message: str) -> None:
         """Append a timestamped event to the event log and propagate to I/O subsystems."""
         ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
@@ -197,6 +212,11 @@ class AppState:
             self.ipc_publisher.publish_event(message)
         LOGGER.info(message)
 
+    ## @brief Clear signal trace.
+    #
+    #  @param self Parameter description.
+    #  @param reason Parameter description.
+    #  @param reset_session_counters Parameter description.
     def clear_signal_trace(self, *, reason: str, reset_session_counters: bool = False) -> None:
         """Clear the plot history and reset sampling rate windows."""
         window_size = int(self.cfg.ui.sampling_rate_window_samples)
@@ -213,6 +233,11 @@ class AppState:
             self.display_sampling_stats.reset_window(window_size)
         self.push_event(f'Cleared plotted signal trace ({reason})')
 
+    ## @brief Filter frames by max sampling rate.
+    #
+    #  @param self Parameter description.
+    #  @param frames Parameter description.
+    #  @return Result produced by this function.
     def filter_frames_by_max_sampling_rate(
         self, frames: list[MeasurementFrame]
     ) -> list[MeasurementFrame]:
@@ -239,11 +264,20 @@ class AppState:
         self.sampling_stats.add_dropped_samples(dropped)
         return kept
 
+    ## @brief Record acquisition frames.
+    #
+    #  @param self Parameter description.
+    #  @param frames Parameter description.
     def record_acquisition_frames(self, frames: list[MeasurementFrame]) -> None:
         """Record full-rate acquisition timing before GUI display throttling."""
         for frame in frames:
             self.sampling_stats.record_processed_frame(frame.host_ts)
 
+    ## @brief Filter frames for ui.
+    #
+    #  @param self Parameter description.
+    #  @param frames Parameter description.
+    #  @return Result produced by this function.
     def filter_frames_for_ui(
         self, frames: list[MeasurementFrame]
     ) -> list[MeasurementFrame]:
@@ -270,6 +304,10 @@ class AppState:
                 self._last_ui_frame_ts = latest.host_ts
         return kept
 
+    ## @brief Push frames.
+    #
+    #  @param self Parameter description.
+    #  @param frames Parameter description.
     def push_frames(self, frames: list[MeasurementFrame]) -> None:
         """Store frames in history and append rendered entries to UI log queues."""
         if not frames:
@@ -286,6 +324,10 @@ class AppState:
         for frame in frames:
             self.display_sampling_stats.record_processed_frame(frame.host_ts)
 
+    ## @brief Push frame.
+    #
+    #  @param self Parameter description.
+    #  @param frame Parameter description.
     def push_frame(self, frame: MeasurementFrame) -> None:
         """Store a single frame (convenience wrapper)."""
         self.push_frames([frame])

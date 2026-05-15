@@ -1,3 +1,6 @@
+# @package handgrip_analysis.stage6_report
+# @brief Markdown reporting helpers for Stage 6 review and design decisions.
+
 """Markdown reporting for the Stage 6 review + design decision."""
 from __future__ import annotations
 
@@ -24,6 +27,9 @@ _TRIAL_RE = re.compile(r"trial(?P<num>\d+)")
 _SESSION_RE = re.compile(r"(?P<session>20\d{6})")
 
 
+# @brief Compute median over finite values.
+# @param values Input scalar sequence.
+# @return Median value or None when no finite values exist.
 def _median(values: Iterable[float]) -> float | None:
     arr = pd.to_numeric(pd.Series(list(values)), errors="coerce").dropna()
     if arr.empty:
@@ -31,6 +37,10 @@ def _median(values: Iterable[float]) -> float | None:
     return float(arr.median())
 
 
+# @brief Compute most common rounded value.
+# @param values Input scalar sequence.
+# @param ndigits Decimal precision for rounding before mode.
+# @return Modal rounded value or None when no finite values exist.
 def _most_common_rounded(values: Iterable[float], ndigits: int = 3) -> float | None:
     arr = pd.to_numeric(pd.Series(list(values)), errors="coerce").dropna()
     if arr.empty:
@@ -39,6 +49,10 @@ def _most_common_rounded(values: Iterable[float], ndigits: int = 3) -> float | N
     return float(rounded.mode().iloc[0])
 
 
+# @brief Format path relative to base when possible.
+# @param path Input path or None.
+# @param base Base directory for relative conversion.
+# @return Relative or absolute path string, or None.
 def _safe_rel(path: Path | None, base: Path) -> str | None:
     if path is None:
         return None
@@ -48,6 +62,9 @@ def _safe_rel(path: Path | None, base: Path) -> str | None:
         return str(path)
 
 
+# @brief Build stable dedupe key for trial identity.
+# @param trial Trial specification.
+# @return Tuple identity key.
 def _trial_identity_key(trial: TrialSpec) -> tuple[str, str, str, str, str, str]:
     """Return a stable dedupe key for merged manifest/context trials."""
     return (
@@ -60,10 +77,17 @@ def _trial_identity_key(trial: TrialSpec) -> tuple[str, str, str, str, str, str]
     )
 
 
+# @brief Check whether any Stage 1-5 context rows are present.
+# @param trials Trial sequence.
+# @return True when Stage 1-5 rows exist.
 def _has_context_rows(trials: Sequence[TrialSpec]) -> bool:
     return any(trial.stage in _STAGE_CONTEXT_STAGES for trial in trials)
 
 
+# @brief Build candidate Stage 1-5 context manifest paths.
+# @param all_trials Current Stage 6 trial sequence.
+# @param cfg Stage configuration.
+# @return Ordered list of candidate manifest paths.
 def _candidate_context_manifest_paths(all_trials: Sequence[TrialSpec], cfg: StageConfig) -> list[Path]:
     """
     Return likely manifests containing Stage 1–5 context rows.
@@ -123,6 +147,9 @@ def _candidate_context_manifest_paths(all_trials: Sequence[TrialSpec], cfg: Stag
     return unique
 
 
+# @brief Infer original Stage 1-5 trial identity from reused Stage 6 path.
+# @param trial Stage 6 trial specification.
+# @return Inferred TrialSpec or None when inference is not possible.
 def _infer_original_stage_trial(trial: TrialSpec) -> TrialSpec | None:
     """
     Infer the original Stage 1–5 identity from a reused Stage 6 capture path.
@@ -166,6 +193,10 @@ def _infer_original_stage_trial(trial: TrialSpec) -> TrialSpec | None:
     )
 
 
+# @brief Merge current trials with discovered Stage 1-5 context trials.
+# @param all_trials Current trial sequence.
+# @param cfg Stage configuration.
+# @return Tuple of merged trials and loaded context-manifest paths.
 def resolve_stage_context_trials(
     all_trials: Sequence[TrialSpec], cfg: StageConfig
 ) -> tuple[list[TrialSpec], list[Path]]:
@@ -207,6 +238,10 @@ def resolve_stage_context_trials(
     return merged, loaded_sources
 
 
+# @brief Compute concise Stage 1-5 context insights for Stage 6 report.
+# @param all_trials Current trial sequence.
+# @param cfg Stage configuration.
+# @return Stage-keyed context insight dictionary.
 def collect_stage_context(all_trials: Sequence[TrialSpec], cfg: StageConfig) -> dict[str, dict[str, Any]]:
     """
     Compute concise Stage 1–5 insights from manifest or discovered context.
@@ -283,6 +318,9 @@ def collect_stage_context(all_trials: Sequence[TrialSpec], cfg: StageConfig) -> 
     return context
 
 
+# @brief Resolve LSL_Bridge config path from StageConfig hints.
+# @param cfg Stage configuration.
+# @return Config path or None.
 def resolve_lsl_bridge_config(cfg: StageConfig) -> Path | None:
     if getattr(cfg, "lsl_bridge_config", None) is not None:
         return Path(cfg.lsl_bridge_config)  # type: ignore[arg-type]
@@ -294,6 +332,9 @@ def resolve_lsl_bridge_config(cfg: StageConfig) -> Path | None:
     return None
 
 
+# @brief Load current LSL_Bridge processing context for report.
+# @param cfg Stage configuration.
+# @return Dictionary with availability, path, and processing config.
 def load_lsl_bridge_context(cfg: StageConfig) -> dict[str, Any]:
     path = resolve_lsl_bridge_config(cfg)
     if path is None or not path.exists():
@@ -306,6 +347,9 @@ def load_lsl_bridge_context(cfg: StageConfig) -> dict[str, Any]:
     return {"available": True, "path": str(path), "current_processing": processing}
 
 
+# @brief Build markdown bullet insights from stage-context summary.
+# @param stage_context Stage-keyed context dictionary.
+# @return List of markdown lines.
 def _insight_lines(stage_context: Mapping[str, dict[str, Any]]) -> list[str]:
     lines: list[str] = []
     labels = {
@@ -347,6 +391,13 @@ def _insight_lines(stage_context: Mapping[str, dict[str, Any]]) -> list[str]:
     return lines
 
 
+# @brief Build and write complete Stage 6 markdown recommendation report.
+# @param outdir Stage output directory.
+# @param cfg Stage configuration.
+# @param all_trials Full trial sequence used for context resolution.
+# @param artifact_tables Stage 6 artifact tables.
+# @param figure_paths Generated figure-path mapping.
+# @return Dictionary of generated report artifact paths.
 def write_stage6_report(
     *,
     outdir: Path,

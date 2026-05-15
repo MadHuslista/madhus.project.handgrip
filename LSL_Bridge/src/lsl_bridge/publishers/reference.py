@@ -1,4 +1,8 @@
-"""RS485 IPC reference stream publisher for the LSL Bridge.
+# @package lsl_bridge.publishers.reference
+#  @brief Background RS485 IPC consumer and LSL reference publisher.
+##
+"""
+RS485 IPC reference stream publisher for the LSL Bridge.
 
 ``RS485IpcReferencePublisher`` subscribes to the RS485_GUI ZMQ PUB socket,
 decodes ``rs485.measurement.v1`` JSON messages, and republishes the data as
@@ -43,8 +47,10 @@ except ImportError:  # optional runtime dependency
 _log = logging.getLogger(__name__)
 
 
+# @brief Publish canonical RS485 reference samples to LSL from IPC messages.
 class RS485IpcReferencePublisher:
-    """Subscribes to RS485_GUI IPC and republishes canonical reference LSL.
+    """
+    Subscribes to RS485_GUI IPC and republishes canonical reference LSL.
 
     Args:
         cfg:    Full Hydra ``DictConfig``.
@@ -52,6 +58,7 @@ class RS485IpcReferencePublisher:
                 ``None`` if the reference stream is disabled.
         sink:   Optional ``ReferenceCsvSink`` for local persistence.
         events: ``ComponentEventOutlet`` for structured operational events.
+
     """
 
     def __init__(
@@ -80,12 +87,16 @@ class RS485IpcReferencePublisher:
     # Public lifecycle
     # ------------------------------------------------------------------
 
+    # @brief Connect IPC transport and launch publisher thread.
+    #  @return None.
     def start(self) -> None:
-        """Connect the ZMQ socket and start the background publisher thread.
+        """
+        Connect the ZMQ socket and start the background publisher thread.
 
         Raises:
             RuntimeError: If the reference stream is enabled but no outlet was
                           provided, or if ``pyzmq`` is not installed.
+
         """
         if not self.enabled:
             _log.info("Reference RS485 IPC publisher disabled.")
@@ -127,6 +138,8 @@ class RS485IpcReferencePublisher:
             self._cfg.rs485_ipc.topic,
         )
 
+    # @brief Stop publisher thread and release socket resources.
+    #  @return None.
     def stop(self) -> None:
         """Signal the background thread to stop and wait for it to exit."""
         self._stop_event.set()
@@ -227,7 +240,8 @@ class RS485IpcReferencePublisher:
     # ------------------------------------------------------------------
 
     def _decode_record(self, record: dict[str, Any]) -> ReferenceSample:
-        """Decode one RS485 IPC JSON record into a ``ReferenceSample``.
+        """
+        Decode one RS485 IPC JSON record into a ``ReferenceSample``.
 
         Only the canonical ``rs485.measurement.v1`` field names are accepted.
         Legacy aliases (``rs485_raw``, ``rs485_clock``, ``status_word``) have
@@ -243,6 +257,7 @@ class RS485IpcReferencePublisher:
 
         Raises:
             ValueError: For schema mismatch or missing required fields.
+
         """
         expected = str(self._cfg.rs485_ipc.expected_schema)
         actual_schema = str(record.get("schema", ""))

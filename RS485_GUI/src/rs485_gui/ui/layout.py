@@ -30,6 +30,12 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
+## @brief Run ui page.
+#
+#  @param app_state Parameter description.
+#  @param connect_fn Parameter description.
+#  @param disconnect_fn Parameter description.
+#  @return Result produced by this function.
 def run_ui_page(app_state: AppState, *, connect_fn: Any, disconnect_fn: Any) -> None:
     """Construct the NiceGUI page and register the refresh timer.
 
@@ -111,6 +117,8 @@ def run_ui_page(app_state: AppState, *, connect_fn: Any, disconnect_fn: Any) -> 
             )
 
         with ui.row().classes('gap-2 mt-4'):
+            ## @brief Refresh port list.
+            #
             def refresh_port_list() -> None:
                 ports = filter_excluded_ports(
                     cfg, enumerate_ports(list(cfg.serial.port_hints))
@@ -125,6 +133,8 @@ def run_ui_page(app_state: AppState, *, connect_fn: Any, disconnect_fn: Any) -> 
                 suffix = f' (excluded: {excluded})' if excluded else ''
                 app_state.push_event(f'Refreshed port list: {len(options)} ports found{suffix}')
 
+            ## @brief Sync form to state.
+            #
             def sync_form_to_state() -> None:
                 app_state.serial_cfg.port = str(port_select.value or '')
                 app_state.serial_cfg.baudrate = int(baud_select.value)
@@ -147,6 +157,8 @@ def run_ui_page(app_state: AppState, *, connect_fn: Any, disconnect_fn: Any) -> 
                 except Exception:
                     pass
 
+            ## @brief On connect.
+            #
             def on_connect() -> None:
                 sync_form_to_state()
                 try:
@@ -155,6 +167,8 @@ def run_ui_page(app_state: AppState, *, connect_fn: Any, disconnect_fn: Any) -> 
                     app_state.status_text = f'Connect failed: {exc}'
                     app_state.push_event(f'Connect failed: {exc}')
 
+            ## @brief On disconnect.
+            #
             def on_disconnect() -> None:
                 disconnect_fn()
                 app_state.push_event('Disconnected by user')
@@ -201,6 +215,8 @@ def run_ui_page(app_state: AppState, *, connect_fn: Any, disconnect_fn: Any) -> 
 
         plot_cache = {'version': -1, 'signal_key': None, 'mode': None}
 
+        ## @brief On signal change.
+        #
         def on_signal_change() -> None:
             cfg.ui.plot_signal_key = str(signal_select.value)
             plot_cache['version'] = -1
@@ -260,7 +276,13 @@ def run_ui_page(app_state: AppState, *, connect_fn: Any, disconnect_fn: Any) -> 
         advanced_action_buttons = []
         with ui.column().classes('w-full gap-2'):
             for command_meta in COMMAND_METADATA:
+                ## @brief Make handler.
+                #
+                #  @param name Parameter description.
+                #  @return Result produced by this function.
                 def _make_handler(name: str) -> Any:
+                    ## @brief Handler.
+                    #
                     def _handler() -> None:
                         if app_state.transport is None:
                             ui.notify('Not connected')

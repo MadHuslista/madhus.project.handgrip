@@ -1,3 +1,6 @@
+# @package handgrip_analysis.stages.stage6_filters
+# @brief Stage 6 filter review and design analyzer over repeated trials.
+
 """Stage 6 — combined filter review + design over repeated rest/dynamic trials."""
 
 from __future__ import annotations
@@ -27,12 +30,18 @@ from .common import base_metrics, flatten_sampling
 log = logging.getLogger(__name__)
 
 
+# @brief Extract DSP configuration from StageConfig or use defaults.
+# @param cfg Stage configuration.
+# @return DSPConfig instance.
 def _get_dsp_cfg(cfg: StageConfig) -> DSPConfig:
     if hasattr(cfg, "dsp") and isinstance(cfg.dsp, DSPConfig):
         return cfg.dsp
     return DSPConfig()
 
 
+# @brief Extract Stage 6 scoring configuration or use defaults.
+# @param cfg Stage configuration.
+# @return Stage6ScoringConfig instance.
 def _get_scoring_cfg(cfg: StageConfig) -> Stage6ScoringConfig:
     """Extract Stage6ScoringConfig from StageConfig, or use defaults."""
     if hasattr(cfg, "stage6_scoring") and isinstance(cfg.stage6_scoring, Stage6ScoringConfig):
@@ -40,25 +49,41 @@ def _get_scoring_cfg(cfg: StageConfig) -> Stage6ScoringConfig:
     return Stage6ScoringConfig()
 
 
+# @brief Load filter candidate specs from StageConfig.
+# @param cfg Stage configuration.
+# @return List of filter specification dictionaries.
+# @throws ValueError Raised when filter_config is missing.
 def _filter_specs(cfg: StageConfig) -> list[dict[str, Any]]:
     if cfg.filter_config is None:
         raise ValueError("Stage 6 requires filter_config=<path>")
     return load_filter_specs(cfg.filter_config)
 
 
+# @brief Build a filter-name to spec mapping.
+# @param cfg Stage configuration.
+# @return Mapping of filter names to specs.
 def _spec_map(cfg: StageConfig) -> dict[str, dict[str, Any]]:
     return {str(spec["name"]): spec for spec in _filter_specs(cfg)}
 
 
+# @brief Classify whether a trial is rest/static-like.
+# @param spec Trial specification.
+# @return True when trial appears to be rest/static.
 def _is_rest_trial(spec: TrialSpec) -> bool:
     text = " ".join([spec.stage, spec.condition, spec.trial_type]).lower()
     return "rest" in text or "noise" in text or "static" in text
 
 
+# @brief Classify whether a trial is dynamic-like.
+# @param spec Trial specification.
+# @return True when trial is not rest/static.
 def _is_dynamic_trial(spec: TrialSpec) -> bool:
     return not _is_rest_trial(spec)
 
 
+# @brief Rank dynamic trial preference for representative-trial selection.
+# @param spec Trial specification.
+# @return Tuple sortable preference key.
 def _dynamic_preference(spec: TrialSpec) -> tuple[int, str]:
     text = " ".join([spec.condition, spec.trial_type]).lower()
     if "ramp_hold" in text or ("ramp" in text and "hold" in text):
@@ -70,6 +95,9 @@ def _dynamic_preference(spec: TrialSpec) -> tuple[int, str]:
     return (3, text)
 
 
+# @brief Pick the representative dynamic trial from Stage 6 results.
+# @param results Trial result list.
+# @return Representative TrialResult or None.
 def choose_representative_dynamic_trial(results: list[TrialResult]) -> TrialResult | None:
     dynamic_results = [result for result in results if str(result.metrics.get("trial_kind", "")).lower() == "dynamic"]
     if not dynamic_results:
@@ -80,6 +108,10 @@ def choose_representative_dynamic_trial(results: list[TrialResult]) -> TrialResu
     return dynamic_results[0]
 
 
+# @brief Evaluate every candidate filter on one Stage 6 trial.
+# @param spec Trial specification.
+# @param cfg Stage configuration.
+# @return TrialResult with scalar metrics and filter_metrics table.
 def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     """
     Evaluate every candidate filter on one rest or dynamic trial.
@@ -201,6 +233,10 @@ REVIEW_METRIC_COLUMNS = [
 ]
 
 
+# @brief Aggregate and score per-filter review metrics across trials.
+# @param df Per-trial filter metrics DataFrame.
+# @param cfg Stage configuration.
+# @return Ranked per-filter review DataFrame.
 def _score_filter_rows(df: pd.DataFrame, cfg: StageConfig) -> pd.DataFrame:
     rows = []
     for filter_name, group in df.groupby("filter", dropna=False):
@@ -242,6 +278,9 @@ def _score_filter_rows(df: pd.DataFrame, cfg: StageConfig) -> pd.DataFrame:
     return out
 
 
+# @brief Compute representative-trial design fidelity score (lower is better).
+# @param row Row mapping with design metrics.
+# @return Weighted normalized design score.
 def _design_weighted_score(row: Mapping[str, Any]) -> float:
     """
     Representative-trial fidelity score; lower is better.
@@ -271,6 +310,10 @@ def _design_weighted_score(row: Mapping[str, Any]) -> float:
     return score / weight_sum if weight_sum else float("nan")
 
 
+# @brief Build representative-trial design assessment table.
+# @param results Trial result list.
+# @param cfg Stage configuration.
+# @return Ranked design-assessment DataFrame.
 def build_stage6_design_assessment(results: list[TrialResult], cfg: StageConfig) -> pd.DataFrame:
     representative = choose_representative_dynamic_trial(results)
     if representative is None:
@@ -289,6 +332,9 @@ def build_stage6_design_assessment(results: list[TrialResult], cfg: StageConfig)
     return filter_df
 
 
+# @brief Normalize a numeric series to [0, 1] while preserving NaNs.
+# @param series Input numeric series.
+# @return Normalized numeric series.
 def _normalized(series: pd.Series) -> pd.Series:
     values = pd.to_numeric(series, errors="coerce")
     finite = values[np.isfinite(values)]
@@ -301,6 +347,10 @@ def _normalized(series: pd.Series) -> pd.Series:
     return (values - lo) / (hi - lo)
 
 
+# @brief Merge review and design tables into final decision ranking.
+# @param review_ranking Review-ranked DataFrame.
+# @param design_assessment Representative-trial design DataFrame.
+# @return Final merged decision table.
 def build_stage6_decision_table(review_ranking: pd.DataFrame, design_assessment: pd.DataFrame) -> pd.DataFrame:
     if review_ranking.empty and design_assessment.empty:
         return pd.DataFrame()
@@ -355,6 +405,10 @@ def build_stage6_decision_table(review_ranking: pd.DataFrame, design_assessment:
     return merged
 
 
+# @brief Summarize Stage 6 results and inject ranking summary.
+# @param results Trial result list.
+# @param cfg Stage configuration.
+# @return Condition summary list.
 def summarize_trials(results: list[TrialResult], cfg: StageConfig) -> list[ConditionSummary]:
     summaries = aggregate_condition_results(
         results,
@@ -382,6 +436,10 @@ def summarize_trials(results: list[TrialResult], cfg: StageConfig) -> list[Condi
     return summaries
 
 
+# @brief Build Stage 6 artifact tables for review and design passes.
+# @param results Trial result list.
+# @param cfg Stage configuration.
+# @return Dictionary of Stage 6 artifact DataFrames.
 def stage6_artifact_tables(results: list[TrialResult], cfg: StageConfig) -> dict[str, pd.DataFrame]:
     """Return Stage 6 artifact tables for both review and design passes."""
     filter_tables = [result.tables.get("filter_metrics") for result in results if "filter_metrics" in result.tables]
@@ -403,6 +461,10 @@ def stage6_artifact_tables(results: list[TrialResult], cfg: StageConfig) -> dict
     }
 
 
+# @brief Select the final filter row and resolve its full spec.
+# @param decision_table Final Stage 6 decision table.
+# @param cfg Stage configuration.
+# @return Selected filter dictionary including filter_spec.
 def select_final_filter(decision_table: pd.DataFrame, cfg: StageConfig) -> dict[str, Any]:
     if decision_table.empty:
         return {}
@@ -411,6 +473,10 @@ def select_final_filter(decision_table: pd.DataFrame, cfg: StageConfig) -> dict[
     return {**top, "filter_spec": spec}
 
 
+# @brief Map selected filter to an LSL_Bridge processing config snippet.
+# @param selected Selected filter dictionary.
+# @param sample_rate_hz Fallback sample rate in Hz.
+# @return Processing snippet dictionary.
 def lsl_bridge_processing_snippet(selected: Mapping[str, Any], sample_rate_hz: float = 100.0) -> dict[str, Any]:
     """
     Translate the chosen Handgrip_Analysis filter into an LSL_Bridge config snippet.
@@ -462,6 +528,10 @@ def lsl_bridge_processing_snippet(selected: Mapping[str, Any], sample_rate_hz: f
     return snippet
 
 
+# @brief Build markdown acceptance report for Stage 6 review ranking.
+# @param ranking Filter ranking DataFrame.
+# @param cfg Stage configuration.
+# @return Markdown report text.
 def filter_acceptance_markdown(ranking: pd.DataFrame, cfg: StageConfig) -> str:
     lines: list[str] = [
         "# Stage 6 Filter Acceptance Report",

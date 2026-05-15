@@ -29,6 +29,30 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
+## @brief Build refresh callback.
+#
+#  @param app_state Parameter description.
+#  @param status_label Parameter description.
+#  @param connection_badge Parameter description.
+#  @param raw_log_area Parameter description.
+#  @param interpreted_log_area Parameter description.
+#  @param event_log_area Parameter description.
+#  @param plot Parameter description.
+#  @param sampling_rate_label Parameter description.
+#  @param signal_metadata_label Parameter description.
+#  @param board_cfg_preview Parameter description.
+#  @param signal_select Parameter description.
+#  @param mode_select Parameter description.
+#  @param baud_select Parameter description.
+#  @param address_input Parameter description.
+#  @param parity_select Parameter description.
+#  @param stopbits_select Parameter description.
+#  @param active_freq_select Parameter description.
+#  @param advanced_actions_expansion Parameter description.
+#  @param advanced_action_buttons Parameter description.
+#  @param plot_cache Parameter description.
+#  @param refresh_counter Parameter description.
+#  @return Constructed object for this operation.
 def build_refresh_callback(
     app_state: AppState,
     *,
@@ -57,6 +81,8 @@ def build_refresh_callback(
 
     cfg = app_state.cfg
 
+    ## @brief Refresh ui.
+    #
     def refresh_ui() -> None:
         refresh_counter['count'] += 1
         count = refresh_counter['count']

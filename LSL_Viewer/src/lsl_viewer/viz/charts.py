@@ -1,45 +1,22 @@
-"""
-ECharts option builders and per-frame chart updaters.
-
-Replaces the Plotly implementation (v0.3.0) with Apache ECharts via
-NiceGUI's ``ui.echart()`` element.  The architectural change is a charting
-*backend* swap only — the module boundary, ``ChartHandles`` interface, and
-``update_charts`` / ``clear_chart_data`` signatures are unchanged from the
-callers' perspective.
-
-Why ECharts over Plotly for real-time streaming
-------------------------------------------------
-* **Canvas rendering** — ECharts renders to an HTML5 canvas pixel buffer by
-  default.  Plotly uses SVG (one DOM node per visible data point), which is
-  slower to repaint for high-rate live time-series lines.
-* **Explicit element-owned options** — the NiceGUI ``ui.echart`` element is
-  treated as the authoritative mutable chart sink.  The Python-side option
-  dictionaries remain as pure construction models until bound to UI elements.
-* **Render budgeting** — raw acquisition windows stay intact, while only a
-  bounded display representation is sent to the browser on each refresh.
-* **``animation: False``** — eliminates transition overhead for real-time
-  updates; essential for sub-100 ms refresh cycles.
-
-Correctness-first ECharts policy
---------------------------------
-ECharts ``large`` mode is intentionally disabled by default.  The viewer first
-limits browser payload size via explicit downsampling, then lets normal ECharts
-line/scatter rendering handle the bounded data.  This avoids silently changing
-feature support for paired ``[x, y]`` data, marker overlays, and XY fading.
-
-Marker overlays
----------------
-Calibration event markers are rendered as ECharts ``markLine`` entries
-attached to the first series of each time-domain panel — no separate shape
-layer needed.
-
-XY faded line collection
-------------------------
-The N_XY_BUCKETS=20 pre-allocated series approach is preserved, but each bucket
-is now a line-path series without ``None`` separators.  This keeps the XY
-correlation as a connected curve while avoiding renderer-specific line-gap
-behaviour and preserving stable ECharts series identity across updates.
-"""
+# @file
+# @brief ECharts option builders and per-frame chart updaters.
+##
+# Replaces the Plotly implementation with Apache ECharts via NiceGUI's
+# ui.echart() element. The architectural change is a charting backend swap
+# only - the module boundary, ChartHandles interface, and update_charts() /
+# clear_chart_data() signatures are unchanged from the caller's perspective.
+##
+# Why ECharts over Plotly for real-time streaming:
+# - Canvas rendering keeps repaints cheap for high-rate live time-series lines.
+# - The NiceGUI ui.echart element is the authoritative mutable chart sink.
+# - Render budgeting keeps raw acquisition windows intact.
+# - animation: False eliminates transition overhead for real-time updates.
+##
+# Correctness-first ECharts policy:
+# - large mode is intentionally disabled by default.
+# - Explicit downsampling limits browser payload size first.
+# - Marker overlays use markLine entries on the first series of each panel.
+# - XY correlation uses pre-allocated line-path buckets without None separators.
 
 from __future__ import annotations
 
@@ -98,6 +75,9 @@ _CSS_NAMED: dict[str, tuple[int, int, int]] = {
 
 
 def _css_to_rgb(color: str) -> tuple[int, int, int]:
+    # @brief Convert a CSS color string to RGB.
+    # @param color CSS color value.
+    # @return RGB tuple.
     color = color.strip()
     if color.startswith("#"):
         h = color.lstrip("#")
@@ -108,6 +88,10 @@ def _css_to_rgb(color: str) -> tuple[int, int, int]:
 
 
 def _rgba(color: str, alpha: float) -> str:
+    # @brief Convert a CSS color string to rgba().
+    # @param color CSS color value.
+    # @param alpha Alpha channel in [0, 1].
+    # @return rgba() CSS string.
     r, g, b = _css_to_rgb(color)
     return f"rgba({r},{g},{b},{alpha:.3f})"
 
@@ -118,6 +102,9 @@ def _rgba(color: str, alpha: float) -> str:
 
 
 def _datazoom(type: str = "inside") -> list | dict:
+    # @brief Build a preset ECharts dataZoom configuration.
+    # @param type Preset selector.
+    # @return dataZoom config object.
     if type == "inside":
         return {
             "type": "inside",
@@ -173,15 +160,24 @@ def _datazoom(type: str = "inside") -> list | dict:
 
 
 def _grid() -> dict:
+    # @brief Return the common chart grid geometry.
+    # @return ECharts grid configuration.
     return {"left": 58, "right": 18, "top": 48, "bottom": 48}
 
 
 def _split_line() -> dict:
+    # @brief Return the shared axis split-line styling.
+    # @return ECharts splitLine configuration.
     return {"lineStyle": {"color": "rgba(200,200,200,0.55)"}}
 
 
 def _mk_series(name: str, color: str, width: float = 1.0, dash: str = "solid") -> dict:
-    """Single ECharts line series with correctness-first realtime defaults."""
+    # @brief Build a single ECharts line series with realtime defaults.
+    # @param name Series name.
+    # @param color Series color.
+    # @param width Line width.
+    # @param dash Line dash style.
+    # @return ECharts series dict.
     return {
         "type": "line",
         "name": name,
@@ -194,7 +190,11 @@ def _mk_series(name: str, color: str, width: float = 1.0, dash: str = "solid") -
 
 
 def _mk_time_opts(title: str, y_label: str, series: list[dict]) -> dict:
-    """Base ECharts options for a time-domain panel."""
+    # @brief Build base ECharts options for a time-domain panel.
+    # @param title Panel title.
+    # @param y_label Y-axis label.
+    # @param series Series list.
+    # @return ECharts option dict.
     return {
         "animation": False,
         "title": {"text": title, "textStyle": {"fontSize": 11}},
@@ -229,13 +229,10 @@ def _mk_time_opts(title: str, y_label: str, series: list[dict]) -> dict:
 
 @dataclass
 class ChartHandles:
-    """
-    Holds all ECharts option dicts and their NiceGUI ui.echart elements.
-
-    Option dicts are mutated in-place on each render cycle.  The ``chart_*``
-    and ``info_label`` attributes are ``None`` until ``viz/panels.py``
-    creates the page and fills them in.
-    """
+    # @brief Hold all ECharts option dicts and their NiceGUI ui.echart elements.
+    ##
+    # Option dicts are mutated in-place on each render cycle. The chart_*
+    # and info_label attributes are None until viz/panels.py creates the page.
 
     opts_target_raw: dict
     opts_reference_raw: dict
@@ -264,6 +261,9 @@ class ChartHandles:
 
 
 def _build_target_raw_opts(cfg: DictConfig) -> dict:
+    # @brief Build options for the target raw panel.
+    # @param cfg Hydra configuration.
+    # @return ECharts option dict.
     s = cfg.viewer.style
     force_unit = cfg.viewer.force_unit_label
     return _mk_time_opts(
@@ -274,6 +274,9 @@ def _build_target_raw_opts(cfg: DictConfig) -> dict:
 
 
 def _build_reference_raw_opts(cfg: DictConfig) -> dict:
+    # @brief Build options for the reference raw panel.
+    # @param cfg Hydra configuration.
+    # @return ECharts option dict.
     s = cfg.viewer.style
     force_unit = cfg.viewer.force_unit_label
     return _mk_time_opts(
@@ -284,6 +287,9 @@ def _build_reference_raw_opts(cfg: DictConfig) -> dict:
 
 
 def _build_target_filtered_opts(cfg: DictConfig) -> dict:
+    # @brief Build options for the target filtered panel.
+    # @param cfg Hydra configuration.
+    # @return ECharts option dict.
     s = cfg.viewer.style
     force_unit = cfg.viewer.force_unit_label
     return _mk_time_opts(
@@ -294,6 +300,9 @@ def _build_target_filtered_opts(cfg: DictConfig) -> dict:
 
 
 def _build_overlay_opts(cfg: DictConfig) -> dict:
+    # @brief Build options for the overlay panel.
+    # @param cfg Hydra configuration.
+    # @return ECharts option dict.
     s = cfg.viewer.style
     force_unit = cfg.viewer.force_unit_label
     return _mk_time_opts(
@@ -307,6 +316,9 @@ def _build_overlay_opts(cfg: DictConfig) -> dict:
 
 
 def _build_target_dt_opts(cfg: DictConfig) -> dict:
+    # @brief Build options for the target timing panel.
+    # @param cfg Hydra configuration.
+    # @return ECharts option dict.
     s = cfg.viewer.style
     dt_unit = cfg.viewer.dt_unit_label
     return _mk_time_opts(
@@ -317,6 +329,9 @@ def _build_target_dt_opts(cfg: DictConfig) -> dict:
 
 
 def _build_reference_dt_opts(cfg: DictConfig) -> dict:
+    # @brief Build options for the reference timing panel.
+    # @param cfg Hydra configuration.
+    # @return ECharts option dict.
     s = cfg.viewer.style
     dt_unit = cfg.viewer.dt_unit_label
     return _mk_time_opts(
@@ -327,6 +342,9 @@ def _build_reference_dt_opts(cfg: DictConfig) -> dict:
 
 
 def _build_xy_opts(cfg: DictConfig) -> dict:
+    # @brief Build options for the XY correlation panel.
+    # @param cfg Hydra configuration.
+    # @return ECharts option dict.
     s = cfg.viewer.style
     force_unit = cfg.viewer.force_unit_label
     return {
@@ -377,12 +395,9 @@ def _build_xy_opts(cfg: DictConfig) -> dict:
 
 
 def build_chart_handles(cfg: DictConfig) -> ChartHandles:
-    """
-    Create all ECharts option dicts with pre-allocated series.
-
-    Called *before* the NiceGUI page is built.  ``viz/panels.py`` fills in
-    the ``chart_*`` element references once ``ui.echart()`` is called.
-    """
+    # @brief Create all ECharts option dicts with pre-allocated series.
+    # @param cfg Hydra configuration.
+    # @return ChartHandles bundle with unbound option dicts.
     return ChartHandles(
         opts_target_raw=_build_target_raw_opts(cfg),
         opts_reference_raw=_build_reference_raw_opts(cfg),
@@ -416,14 +431,12 @@ def bind_chart_element(
     chart_attr: str,
     chart_el: Any,
 ) -> Any:
-    """
-    Bind one NiceGUI EChart element as the authoritative option owner.
-
-    NiceGUI updates are pushed from the element's ``options`` property, so the
-    ChartHandles option reference is immediately re-bound to that same object.
-    This keeps pure tests working before page construction while avoiding
-    hidden reliance on pre-bind dictionary identity at runtime.
-    """
+    # @brief Bind one NiceGUI EChart element as the authoritative option owner.
+    # @param ch Chart handle bundle.
+    # @param options_attr Attribute name for the option dict.
+    # @param chart_attr Attribute name for the NiceGUI chart element.
+    # @param chart_el NiceGUI EChart element.
+    # @return The bound chart element.
     if not hasattr(chart_el, "options"):
         raise TypeError(f"{chart_attr} must expose an .options mapping")
     setattr(ch, chart_attr, chart_el)
@@ -432,7 +445,11 @@ def bind_chart_element(
 
 
 def chart_options(ch: ChartHandles, options_attr: str, chart_attr: str) -> dict:
-    """Return the authoritative mutable options for a chart slot."""
+    # @brief Return the authoritative mutable options for a chart slot.
+    # @param ch Chart handle bundle.
+    # @param options_attr Attribute name for the option dict.
+    # @param chart_attr Attribute name for the chart element.
+    # @return Mutable option dict.
     chart_el = getattr(ch, chart_attr)
     if chart_el is None:
         return getattr(ch, options_attr)
@@ -442,12 +459,15 @@ def chart_options(ch: ChartHandles, options_attr: str, chart_attr: str) -> dict:
 
 
 def iter_chart_elements(ch: ChartHandles) -> tuple[Any, ...]:
-    """Return all bound chart elements in stable visual order."""
+    # @brief Return all bound chart elements in stable visual order.
+    # @param ch Chart handle bundle.
+    # @return Tuple of chart elements.
     return tuple(getattr(ch, chart_attr) for _, chart_attr in _CHART_BINDINGS)
 
 
 def push_chart_updates(ch: ChartHandles) -> None:
-    """Push all bound chart option changes to the browser."""
+    # @brief Push all bound chart option changes to the browser.
+    # @param ch Chart handle bundle.
     for chart_el in iter_chart_elements(ch):
         if chart_el is not None:
             chart_el.update()
@@ -459,7 +479,9 @@ def push_chart_updates(ch: ChartHandles) -> None:
 
 
 def _apply_markline(opts: dict, x_positions: list[float]) -> None:
-    """Attach calibration-marker vertical lines to the first series."""
+    # @brief Attach calibration-marker vertical lines to the first series.
+    # @param opts ECharts option dict.
+    # @param x_positions Relative x-axis positions for marker lines.
     markline: dict = {
         "silent": True,
         "symbol": "none",
@@ -475,7 +497,9 @@ def _apply_markline(opts: dict, x_positions: list[float]) -> None:
 # ---------------------------------------------------------------------------
 
 def _render_downsample_enabled(cfg: DictConfig) -> bool:
-    """Return whether display-only downsampling is enabled in config."""
+    # @brief Return whether display-only downsampling is enabled in config.
+    # @param cfg Hydra configuration.
+    # @return True when render downsampling is enabled.
     try:
         return bool(cfg.viewer.render.downsample_enabled)
     except Exception:
@@ -483,7 +507,11 @@ def _render_downsample_enabled(cfg: DictConfig) -> bool:
 
 
 def _render_max_points(cfg: DictConfig, key: str, default: int) -> int | None:
-    """Read a positive render budget, or return None when downsampling is disabled."""
+    # @brief Read a positive render budget, or return None when disabled.
+    # @param cfg Hydra configuration.
+    # @param key Render-budget field name.
+    # @param default Fallback budget.
+    # @return Positive point budget or None.
     if not _render_downsample_enabled(cfg):
         return None
     try:
@@ -499,12 +527,11 @@ def downsample_for_render(
     *,
     max_points: int | None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Return an optionally bounded display-only subset of paired data.
-
-    The acquisition arrays are not modified.  Set ``max_points=None`` to disable
-    downsampling and send the full current window to the browser.
-    """
+    # @brief Return an optionally bounded display-only subset of paired data.
+    # @param x X values.
+    # @param y Y values.
+    # @param max_points Maximum number of points to keep, or None.
+    # @return Downsampled x and y arrays.
     if max_points is None or x.size <= max_points:
         return x, y
     idx = np.linspace(0, x.size - 1, max_points, dtype=np.int64)
@@ -518,7 +545,12 @@ def downsample_xy_for_render(
     *,
     max_points: int | None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return an optionally bounded display-only subset of XY points/timestamps."""
+    # @brief Return an optionally bounded display-only subset of XY points/timestamps.
+    # @param x X values.
+    # @param y Y values.
+    # @param t Timestamp values.
+    # @param max_points Maximum number of points to keep, or None.
+    # @return Downsampled x, y, and t arrays.
     if max_points is None or x.size <= max_points:
         return x, y, t
     idx = np.linspace(0, x.size - 1, max_points, dtype=np.int64)
@@ -533,7 +565,12 @@ def _set_time_series(
     *,
     max_points: int | None,
 ) -> None:
-    """Replace one time-domain series with optionally bounded [t, y] entries."""
+    # @brief Replace one time-domain series with optionally bounded [t, y] entries.
+    # @param opts ECharts option dict.
+    # @param series_idx Series index to update.
+    # @param t_rel Relative timestamps.
+    # @param y Series values.
+    # @param max_points Maximum number of points to keep, or None.
     if t_rel is not None and t_rel.size > 0 and y is not None and y.size > 0:
         plot_t, plot_y = downsample_for_render(t_rel, y, max_points=max_points)
         opts["series"][series_idx]["data"] = np.column_stack([plot_t, plot_y]).tolist()
@@ -553,7 +590,16 @@ def _update_xy_series(
     alpha_new: float,
     max_points: int | None,
 ) -> None:
-    """Fill the N_XY_BUCKETS pre-allocated line series with faded path segments."""
+    # @brief Fill the N_XY_BUCKETS pre-allocated line series with faded path segments.
+    # @param opts ECharts option dict.
+    # @param x X values.
+    # @param y Y values.
+    # @param t Timestamp values.
+    # @param window_seconds XY fade window in seconds.
+    # @param color Base series color.
+    # @param alpha_old Alpha for oldest bucket.
+    # @param alpha_new Alpha for newest bucket.
+    # @param max_points Maximum number of points to keep, or None.
     if x.size == 0:
         for i in range(N_XY_BUCKETS):
             opts["series"][i]["data"] = []
@@ -610,7 +656,17 @@ def update_charts(
     reference_new_samples: int | None = None,
     replay_progress_text: str | None = None,
 ) -> None:
-    """Update all ECharts option dicts for one render cycle, then push to browser."""
+    # @brief Update all ECharts option dicts for one render cycle.
+    # @param ch Chart handle bundle.
+    # @param window Current dual window.
+    # @param state Viewer state.
+    # @param cfg Hydra configuration.
+    # @param mode Current mode string.
+    # @param source_name Data source name.
+    # @param source_type Data source type.
+    # @param target_new_samples Optional target sample count since last tick.
+    # @param reference_new_samples Optional reference sample count since last tick.
+    # @param replay_progress_text Optional replay progress text.
     target = window.target
     reference = window.reference
     style = cfg.viewer.style
@@ -773,7 +829,8 @@ def update_charts(
 
 
 def clear_chart_data(ch: ChartHandles) -> None:
-    """Clear all series data and reset XY axis bounds."""
+    # @brief Clear all series data and reset XY axis bounds.
+    # @param ch Chart handle bundle.
     opts_target_raw = chart_options(ch, "opts_target_raw", "chart_target_raw")
     opts_reference_raw = chart_options(ch, "opts_reference_raw", "chart_reference_raw")
     opts_target_filtered = chart_options(ch, "opts_target_filtered", "chart_target_filtered")

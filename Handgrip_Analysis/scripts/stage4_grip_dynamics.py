@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# @package scripts.stage4_grip_dynamics
+# @brief Stage 4 grip dynamics event-detection analysis.
+
 """Stage 4 — Grip dynamics: event detection and metrics."""
 from __future__ import annotations
 
@@ -19,6 +22,11 @@ matplotlib.use("Agg")
 log = logging.getLogger(__name__)
 
 
+# @brief Read a required non-empty string value from Hydra config.
+# @param cfg Hydra configuration object.
+# @param key Config key to validate.
+# @return The required value converted to string.
+# @throws ValueError Raised when key is missing or empty.
 def _require_str(cfg: DictConfig, key: str) -> str:
     value = cfg.get(key)
     if value is None or not str(value).strip():
@@ -26,6 +34,11 @@ def _require_str(cfg: DictConfig, key: str) -> str:
     return str(value)
 
 
+# @brief Read a required non-empty list of strings from Hydra config.
+# @param cfg Hydra configuration object.
+# @param key Config key to validate.
+# @return Sanitized non-empty list of string values.
+# @throws ValueError Raised when key is missing or contains no values.
 def _require_list(cfg: DictConfig, key: str) -> list[str]:
     raw = cfg.get(key)
     if raw is None:
@@ -36,6 +49,9 @@ def _require_list(cfg: DictConfig, key: str) -> list[str]:
     return values
 
 
+# @brief Execute Stage 4 grip dynamics analysis and persist outputs.
+# @param cfg Hydra configuration object.
+# @return None.
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)

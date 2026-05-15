@@ -1,3 +1,6 @@
+# @package handgrip_analysis.stages.stage3_drift
+# @brief Stage 3 loaded drift and creep analyzer.
+
 """Stage 3 — loaded drift / creep analysis."""
 from __future__ import annotations
 
@@ -9,6 +12,10 @@ from ..io import load_capture, sampling_summary
 from .common import base_metrics, flatten_sampling, summarize_default
 
 
+# @brief Analyze one Stage 3 drift/creep trial.
+# @param spec Trial specification.
+# @param cfg Stage configuration.
+# @return TrialResult with drift metrics.
 def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     cap = load_capture(spec.path, time_source=cfg.time_source)
     channel = spec.channel or cfg.channel
@@ -39,5 +46,9 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     return TrialResult(spec=spec, metrics=metrics)
 
 
+# @brief Summarize Stage 3 trial results by condition.
+# @param results Trial result list.
+# @param cfg Stage configuration.
+# @return Condition summary list.
 def summarize_trials(results: list[TrialResult], cfg: StageConfig) -> list[ConditionSummary]:
     return summarize_default(results, cfg)

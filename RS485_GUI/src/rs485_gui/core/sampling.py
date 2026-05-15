@@ -28,6 +28,7 @@ except Exception:
 
 
 @dataclass
+## @brief Represents the SamplingStats component.
 class SamplingStats:
     """Rolling window of inter-frame intervals with outlier rejection.
 
@@ -40,12 +41,20 @@ class SamplingStats:
     last_processed_ts: float | None = None
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
+    ## @brief Reset window.
+    #
+    #  @param self Parameter description.
+    #  @param window_size Parameter description.
     def reset_window(self, window_size: int) -> None:
         """Clear the rolling inter-frame window; preserve total counters."""
         with self._lock:
             self.window_dts_s = deque(maxlen=max(2, int(window_size)))
             self.last_processed_ts = None
 
+    ## @brief Reset all.
+    #
+    #  @param self Parameter description.
+    #  @param window_size Parameter description.
     def reset_all(self, window_size: int) -> None:
         """Clear both the rolling window and the total counters."""
         with self._lock:
@@ -54,18 +63,34 @@ class SamplingStats:
             self.dropped_samples_max_rate = 0
             self.last_processed_ts = None
 
+    ## @brief Record received samples.
+    #
+    #  @param self Parameter description.
+    #  @param count Parameter description.
     def record_received_samples(self, count: int) -> None:
         with self._lock:
             self.received_samples += int(count)
 
+    ## @brief Add dropped samples.
+    #
+    #  @param self Parameter description.
+    #  @param count Parameter description.
     def add_dropped_samples(self, count: int) -> None:
         with self._lock:
             self.dropped_samples_max_rate += int(count)
 
+    ## @brief Get last processed ts.
+    #
+    #  @param self Parameter description.
+    #  @return Retrieved value for this request.
     def get_last_processed_ts(self) -> float | None:
         with self._lock:
             return self.last_processed_ts
 
+    ## @brief Record processed frame.
+    #
+    #  @param self Parameter description.
+    #  @param host_ts Parameter description.
     def record_processed_frame(self, host_ts: float) -> None:
         with self._lock:
             if self.last_processed_ts is not None:
@@ -74,6 +99,13 @@ class SamplingStats:
                     self.window_dts_s.append(dt)
             self.last_processed_ts = host_ts
 
+    ## @brief Snapshot.
+    #
+    #  @param self Parameter description.
+    #  @param outlier_low_ratio Parameter description.
+    #  @param outlier_high_ratio Parameter description.
+    #  @param outlier_min_samples Parameter description.
+    #  @return Result produced by this function.
     def snapshot(
         self,
         *,

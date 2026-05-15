@@ -34,11 +34,16 @@ except Exception:  # pragma: no cover — optional dependency
     zmq = None  # type: ignore[assignment]
 
 
+## @brief Represents the MeasurementFramePublisher component.
 class MeasurementFramePublisher:
     """Best-effort ZeroMQ PUB-socket publisher for decoded RS485 frames."""
 
     SCHEMA = 'rs485.measurement.v1'
 
+    ## @brief Init.
+    #
+    #  @param self Parameter description.
+    #  @param cfg Parameter description.
     def __init__(self, cfg: DictConfig) -> None:
         self.cfg = cfg
         self.enabled = bool(cfg.ipc.enabled)
@@ -112,6 +117,9 @@ class MeasurementFramePublisher:
             self.bind, self.topic, self.event_topic, self.signal_key,
         )
 
+    ## @brief Stop.
+    #
+    #  @param self Parameter description.
     def stop(self) -> None:
         """Close the ZMQ socket.  Idempotent if already stopped."""
         with self._lock:
@@ -156,6 +164,11 @@ class MeasurementFramePublisher:
                         )
         self._log_status_if_due()
 
+    ## @brief Publish event.
+    #
+    #  @param self Parameter description.
+    #  @param event Parameter description.
+    #  @param payload Variadic keyword arguments.
     def publish_event(self, event: str, **payload: Any) -> None:
         """Publish a structured operational event on the event topic.
 
@@ -234,6 +247,9 @@ class MeasurementFramePublisher:
             'board_profile': frame.board_profile or self.board_profile,
         }
 
+    ## @brief Log status if due.
+    #
+    #  @param self Parameter description.
     def _log_status_if_due(self) -> None:
         interval_s = float(self.cfg.ipc.log_every_s)
         if interval_s <= 0:

@@ -57,11 +57,20 @@ def combine_s32_from_words(low_word: int, high_word: int) -> int:
     return value
 
 
+## @brief Decode status word.
+#
+#  @param value Parameter description.
+#  @return Result produced by this function.
 def decode_status_word(value: int) -> list[str]:
     """Decode the board status bitfield into a list of active flag names."""
     return [label for bit, label in STATUS_FLAGS.items() if value & (1 << bit)]
 
 
+## @brief Apply decimal.
+#
+#  @param value Parameter description.
+#  @param decimal_code Parameter description.
+#  @return Result produced by this function.
 def apply_decimal(value: int | None, decimal_code: int) -> float | None:
     """Scale an integer register value by the board decimal-point code."""
     if value is None:
@@ -160,6 +169,13 @@ def decode_modbus_measurement(
     )
 
 
+## @brief Extract registers from modbus response.
+#
+#  @param frame Parameter description.
+#  @param slave_id Parameter description.
+#  @param function_code Parameter description.
+#  @param register_count Parameter description.
+#  @return Result produced by this function.
 def extract_registers_from_modbus_response(
     frame: bytes,
     slave_id: int,
@@ -202,6 +218,16 @@ def extract_registers_from_modbus_response(
     return [(data[i] << 8) | data[i + 1] for i in range(0, len(data), 2)]
 
 
+## @brief Decode active send modbus response.
+#
+#  @param frame Parameter description.
+#  @param host_ts Parameter description.
+#  @param host_lsl_ts Parameter description.
+#  @param slave_id Parameter description.
+#  @param function_code Parameter description.
+#  @param register_count Parameter description.
+#  @param diagnostics Parameter description.
+#  @return Result produced by this function.
 def decode_active_send_modbus_response(
     frame: bytes,
     host_ts: float,
@@ -251,6 +277,12 @@ def truncate_text(text: str, max_chars: int) -> str:
     return f'{text[:keep]} ... (+{omitted} chars)'
 
 
+## @brief Build log text.
+#
+#  @param items Parameter description.
+#  @param separator Parameter description.
+#  @param max_total_chars Parameter description.
+#  @return Constructed object for this operation.
 def build_log_text(items: list[str], separator: str, max_total_chars: int) -> str:
     """Join *items* with *separator*, truncating once *max_total_chars* is exceeded."""
     if max_total_chars <= 0:

@@ -79,6 +79,9 @@ def load_app_config(argv: list[str] | None = None) -> DictConfig:
     return cfg
 
 
+## @brief Configure logging.
+#
+#  @param cfg Parameter description.
 def configure_logging(cfg: DictConfig) -> None:
     """Set up the root logger with a stream handler and optional file handler.
 

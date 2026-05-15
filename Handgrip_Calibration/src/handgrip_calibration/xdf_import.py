@@ -99,6 +99,12 @@ def _write_marker_stream(stream: dict[str, Any], output_events: Path, *, session
 
 
 def import_xdf(xdf_path: str | Path, session_dir: str | Path, config: AppConfig, *, session_id: str | None = None) -> Path:
+    # @brief Import an XDF recording into canonical calibration session files.
+    #  @param xdf_path Input XDF file path.
+    #  @param session_dir Output session directory path.
+    #  @param config Application configuration containing stream mappings.
+    #  @param session_id Optional session id override for emitted markers.
+    #  @return Output session directory path.
     """Import an XDF file into canonical target/reference CSV + marker NDJSON files."""
 
     pyxdf = _import_pyxdf()

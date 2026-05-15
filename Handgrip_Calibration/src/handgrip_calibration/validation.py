@@ -1,3 +1,5 @@
+# @package handgrip_calibration.validation
+#  @brief Independent protocol validation utilities.
 """Independent protocol validation utilities.
 
 The primary fitter selects a model from static calibration holds. This module is
@@ -24,7 +26,6 @@ from .report import _candidate_predict
 from .segmentation import segment_accepted_holds
 
 log = logging.getLogger(__name__)
-
 
 
 def _metrics(y_true: np.ndarray, y_pred: np.ndarray, *, operating_range_N: float) -> dict[str, Any]:
@@ -83,6 +84,11 @@ def _thresholds(config: AppConfig) -> dict[str, float]:
 
 
 def validate_session_against_model(holdout_session_dir: str | Path, model_fit_result: str | Path, config: AppConfig) -> dict[str, Any]:
+    # @brief Validate an independent holdout session against an existing fitted model.
+    #  @param holdout_session_dir Path to the holdout session directory.
+    #  @param model_fit_result Path to an existing fit_result.json artifact.
+    #  @param config Application configuration with validation thresholds.
+    #  @return Validation result dictionary with metrics and pass/fail recommendation.
     """Validate a holdout session against an existing ``fit_result.json``.
 
     The holdout session is segmented using accepted static holds, but no model is

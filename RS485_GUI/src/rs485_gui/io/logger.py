@@ -30,9 +30,14 @@ from rs485_gui.models import MeasurementFrame
 LOGGER = logging.getLogger(__name__)
 
 
+## @brief Represents the SignalFileLogger component.
 class SignalFileLogger:
     """Thread-safe writer for the four acquisition log files."""
 
+    ## @brief Init.
+    #
+    #  @param self Parameter description.
+    #  @param cfg Parameter description.
     def __init__(self, cfg: DictConfig) -> None:
         self.cfg = cfg
         self.enabled = bool(cfg.logger.enabled)
@@ -87,6 +92,9 @@ class SignalFileLogger:
             ])
             self._flush_unlocked()
 
+    ## @brief Close.
+    #
+    #  @param self Parameter description.
     def close(self) -> None:
         """Flush and close all open log files."""
         with self._lock:
@@ -159,10 +167,18 @@ class SignalFileLogger:
             if should_flush:
                 self._flush_unlocked()
 
+    ## @brief Write frame.
+    #
+    #  @param self Parameter description.
+    #  @param frame Parameter description.
     def write_frame(self, frame: MeasurementFrame) -> None:
         """Write a single frame (convenience wrapper)."""
         self.write_frames([frame])
 
+    ## @brief Write event.
+    #
+    #  @param self Parameter description.
+    #  @param line Parameter description.
     def write_event(self, line: str) -> None:
         """Append one event line to the event log."""
         if not self.enabled:

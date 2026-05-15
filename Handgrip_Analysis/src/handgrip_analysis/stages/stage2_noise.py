@@ -1,3 +1,6 @@
+# @package handgrip_analysis.stages.stage2_noise
+# @brief Stage 2 stationary rest-noise analyzer.
+
 """Stage 2 — stationary rest noise characterisation."""
 from __future__ import annotations
 
@@ -11,6 +14,9 @@ from ..io import FILTERED_COLUMN, load_capture, sampling_summary
 from .common import base_metrics, flatten_sampling, summarize_default
 
 
+# @brief Extract DSP configuration from StageConfig or use defaults.
+# @param cfg Stage configuration.
+# @return DSPConfig instance.
 def _get_dsp_cfg(cfg: StageConfig) -> DSPConfig:
     """Extract or build DSPConfig from StageConfig."""
     if hasattr(cfg, "dsp") and isinstance(cfg.dsp, DSPConfig):
@@ -18,6 +24,11 @@ def _get_dsp_cfg(cfg: StageConfig) -> DSPConfig:
     return DSPConfig()
 
 
+# @brief Compute bandpower metrics over configured bands.
+# @param f Frequency axis.
+# @param pxx PSD values.
+# @param bands Band definitions.
+# @return Dictionary of bandpower metrics.
 def _bandpower_metrics(f: np.ndarray, pxx: np.ndarray, bands: tuple[tuple[float, float], ...]) -> dict[str, float]:
     out: dict[str, float] = {}
     for lo, hi in bands[:4]:
@@ -26,6 +37,12 @@ def _bandpower_metrics(f: np.ndarray, pxx: np.ndarray, bands: tuple[tuple[float,
     return out
 
 
+# @brief Compute per-channel Stage 2 metrics and spectral tables.
+# @param y Channel signal values.
+# @param fs Sampling frequency in Hz.
+# @param cfg Stage configuration.
+# @param prefix Channel key prefix.
+# @return Tuple of scalar metrics and named tables.
 def _channel_metrics(y: np.ndarray, fs: float, cfg: StageConfig, prefix: str) -> tuple[dict[str, float], dict[str, pd.DataFrame]]:
     dsp = _get_dsp_cfg(cfg)
     f, pxx = welch_psd(
@@ -72,6 +89,10 @@ def _channel_metrics(y: np.ndarray, fs: float, cfg: StageConfig, prefix: str) ->
     return metrics, tables
 
 
+# @brief Analyze one Stage 2 static-noise trial.
+# @param spec Trial specification.
+# @param cfg Stage configuration.
+# @return TrialResult with static-noise metrics and tables.
 def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     cap = load_capture(spec.path, time_source=cfg.time_source)
     channels = cfg.channels or (spec.channel or cfg.channel,)
@@ -91,5 +112,9 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     return TrialResult(spec=spec, metrics=metrics, tables=tables)
 
 
+# @brief Summarize Stage 2 trial results by condition.
+# @param results Trial result list.
+# @param cfg Stage configuration.
+# @return Condition summary list.
 def summarize_trials(results: list[TrialResult], cfg: StageConfig) -> list[ConditionSummary]:
     return summarize_default(results, cfg)

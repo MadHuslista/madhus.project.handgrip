@@ -1,18 +1,13 @@
-"""NiceGUI page layout for the LSL Viewer.
-
-Builds the browser-rendered page: info panel, 3×2 time-series grid,
-full-width XY scatter panel, and keyboard/button controls.
-
-Changes from v0.3.0 (Plotly → ECharts)
-----------------------------------------
-* ``ui.plotly(ch.fig_*)`` replaced with ``ui.echart(ch.opts_*)``.
-* Handle attributes renamed ``plot_*`` → ``chart_*`` to match the
-  ``ChartHandles`` dataclass in ``viz/charts.py``.
-* All control callbacks and keyboard handling are unchanged.
-
-Keyboard shortcuts fire on browser key events via ``ui.keyboard`` —
-OS focus on the viewer window is **never required**.
-"""
+# @file
+# @brief NiceGUI page layout for the LSL Viewer.
+##
+# Builds the browser-rendered page: info panel, 3x2 time-series grid,
+# full-width XY scatter panel, and keyboard/button controls.
+##
+# Changes from v0.3.0 (Plotly -> ECharts):
+# - ui.plotly(ch.fig_*) replaced with ui.echart(ch.opts_*).
+# - Handle attributes renamed plot_* -> chart_*.
+# - All control callbacks and keyboard handling are unchanged.
 
 from __future__ import annotations
 
@@ -38,7 +33,9 @@ _XY_H = "h-150"  # XY scatter (slightly taller for aspect ratio)
 
 
 def _on_clear(state: ViewerState, ch: ChartHandles) -> None:
-    """Clear plots and arm the post-clear cutoff (key 'c' or button)."""
+    # @brief Clear plots and arm the post-clear cutoff.
+    # @param state Viewer state.
+    # @param ch Chart handle bundle.
     clear_chart_data(ch)
     state.live_reset_from_latest_window = True
     state.xy_max_span = {}
@@ -51,7 +48,11 @@ def _on_pause_toggle(
     pause_btn: Any,
     is_replay: bool = False,
 ) -> None:
-    """Toggle pause/resume (key 'p' or button)."""
+    # @brief Toggle pause/resume.
+    # @param state Viewer state.
+    # @param ch Chart handle bundle.
+    # @param pause_btn Pause button widget.
+    # @param is_replay Whether replay mode is active.
     if is_replay:
         state.replay_paused = not state.replay_paused
         pause_btn.set_text("Resume (p)" if state.replay_paused else "Pause (p)")
@@ -66,7 +67,9 @@ def _on_pause_toggle(
 
 
 def _on_xy_lock_toggle(state: ViewerState, lock_btn: Any) -> None:
-    """Toggle XY axis lock-max-span (key 'x' or button)."""
+    # @brief Toggle XY axis lock-max-span.
+    # @param state Viewer state.
+    # @param lock_btn Lock button widget.
     state.xy_lock_max_span = not state.xy_lock_max_span
     if not state.xy_lock_max_span:
         state.xy_max_span = {}
@@ -87,14 +90,12 @@ def build_page_layout(
     mode: str = "live",
     is_replay: bool = False,
 ) -> None:
-    """Build the NiceGUI page and store ``ui.echart`` references into *ch*.
-
-    Must be called inside a ``@ui.page``-decorated function.
-
-    Side effects
-    ------------
-    Assigns ``ch.chart_*`` and ``ch.info_label`` to the created UI elements.
-    """
+    # @brief Build the NiceGUI page and store ui.echart references into ch.
+    # @param cfg Hydra configuration.
+    # @param ch Chart handle bundle.
+    # @param state Viewer state.
+    # @param mode Display mode label.
+    # @param is_replay Whether replay controls should be enabled.
     with ui.column().classes("w-full gap-2 p-2"):
         # ── Header ────────────────────────────────────────────────────────
         with ui.row().classes("items-center gap-4"):
@@ -178,6 +179,7 @@ def build_page_layout(
             )
 
         # ── Keyboard shortcuts (browser key events — no OS focus needed) ──
+        # @brief Browser keyboard handler for page-level shortcuts.
         def _on_key(e: Any) -> None:
             if getattr(e, "action", None) != "keydown":
                 return

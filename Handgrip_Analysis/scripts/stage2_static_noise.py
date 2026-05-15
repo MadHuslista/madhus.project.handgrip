@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# @package scripts.stage2_static_noise
+# @brief Stage 2 stationary noise characterization analysis.
+
 """Stage 2 — Stationary rest noise characterisation."""
 from __future__ import annotations
 
@@ -25,6 +28,11 @@ matplotlib.use("Agg")
 log = logging.getLogger(__name__)
 
 
+# @brief Read a required non-empty string value from Hydra config.
+# @param cfg Hydra configuration object.
+# @param key Config key to validate.
+# @return The required value converted to string.
+# @throws ValueError Raised when key is missing or empty.
 def _require_str(cfg: DictConfig, key: str) -> str:
     value = cfg.get(key)
     if value is None or not str(value).strip():
@@ -32,6 +40,11 @@ def _require_str(cfg: DictConfig, key: str) -> str:
     return str(value)
 
 
+# @brief Compute channel summary metrics and spectral artifacts for Stage 2.
+# @param y Signal vector for one channel.
+# @param fs Sampling rate in Hz.
+# @param bands Frequency band definitions.
+# @return Tuple of summary dict, peak table, PSD arrays, and Allan arrays.
 def channel_summary(
     y: np.ndarray, fs: float, bands: list
 ) -> tuple[dict, pd.DataFrame, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -65,6 +78,9 @@ def channel_summary(
     return summary, peak_df, f, pxx, tau, adev
 
 
+# @brief Execute Stage 2 static-noise analysis and write outputs.
+# @param cfg Hydra configuration object.
+# @return None.
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)

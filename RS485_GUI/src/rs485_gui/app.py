@@ -54,6 +54,9 @@ def _cfg_to_serial_settings(cfg: DictConfig) -> SerialSettings:
     )
 
 
+## @brief Disconnect state.
+#
+#  @param app_state Parameter description.
 def disconnect_state(app_state: AppState) -> None:
     """Tear down the active acquisition session cleanly."""
     if app_state.ipc_publisher is not None:
@@ -85,6 +88,9 @@ def disconnect_state(app_state: AppState) -> None:
         app_state.signal_logger.close()
 
 
+## @brief Connect state.
+#
+#  @param app_state Parameter description.
 def connect_state(app_state: AppState) -> None:
     """Start a new acquisition session."""
     selected_port = str(app_state.serial_cfg.port or '')
@@ -200,6 +206,9 @@ def connect_state(app_state: AppState) -> None:
         )
 
 
+## @brief Start ipc publisher.
+#
+#  @param app_state Parameter description.
 def _start_ipc_publisher(app_state: AppState) -> None:
     """Bind the IPC ZMQ endpoint; create the publisher object if needed."""
     if not bool(app_state.cfg.ipc.enabled):
@@ -276,6 +285,8 @@ def run_app(cfg: DictConfig) -> None:
                 f'signal_key={cfg.ipc.signal_key}'
             )
 
+    ## @brief Cleanup.
+    #
     def cleanup() -> None:
         disconnect_state(app_state)
         if app_state.ipc_publisher is not None:
@@ -302,6 +313,8 @@ def run_app(cfg: DictConfig) -> None:
         cleanup()
 
 
+## @brief Main.
+#
 def main() -> None:
     """CLI entry point registered in ``pyproject.toml``."""
     cfg = load_app_config()

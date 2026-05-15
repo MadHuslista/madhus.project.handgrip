@@ -80,6 +80,9 @@ def _canonical_value(df: pd.DataFrame, preferred: str, fallback: str = "raw") ->
 
 
 def load_session_frames(session_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFrame, list[dict[str, Any]], dict[str, Any]]:
+    # @brief Load target/reference frames, events, and manifest for a session.
+    #  @param session_dir Session directory path.
+    #  @return Tuple of target frame, reference frame, events list, and manifest dictionary.
     """Load target/reference CSVs, events, and manifest from a session directory."""
 
     session_dir = Path(session_dir)
@@ -100,6 +103,10 @@ def load_session_frames(session_dir: str | Path) -> tuple[pd.DataFrame, pd.DataF
 
 
 def segment_accepted_holds(session_dir: str | Path, config: AppConfig | None = None) -> pd.DataFrame:
+    # @brief Build calibration rows from accepted static hold windows.
+    #  @param session_dir Session directory path.
+    #  @param config Optional application config for fit/quality thresholds.
+    #  @return DataFrame with one row per segmented accepted hold.
     """Build one calibration-dataset row per accepted static hold."""
 
     session_dir = Path(session_dir)

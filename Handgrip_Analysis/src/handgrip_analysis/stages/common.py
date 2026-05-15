@@ -1,3 +1,6 @@
+# @package handgrip_analysis.stages.common
+# @brief Shared helper utilities for stage analyzers.
+
 """Common helpers for stage analyzers."""
 from __future__ import annotations
 
@@ -10,6 +13,9 @@ from ..aggregation import aggregate_condition_results
 from ..domain import ConditionSummary, StageConfig, TrialResult, TrialSpec
 
 
+# @brief Build common per-trial metadata metrics.
+# @param spec Trial specification.
+# @return Dictionary of shared scalar metrics.
 def base_metrics(spec: TrialSpec) -> dict[str, object]:
     return {
         "capture_file": spec.path.name,
@@ -17,6 +23,9 @@ def base_metrics(spec: TrialSpec) -> dict[str, object]:
     }
 
 
+# @brief Convert arbitrary value to finite float or NaN.
+# @param value Input scalar value.
+# @return Finite float value or NaN.
 def finite_or_nan(value: object) -> float:
     try:
         out = float(value)
@@ -25,10 +34,18 @@ def finite_or_nan(value: object) -> float:
     return out if np.isfinite(out) else float("nan")
 
 
+# @brief Flatten a sampling metrics mapping with a prefix.
+# @param prefix Prefix for output keys.
+# @param sampling Sampling metrics mapping.
+# @return Flattened prefixed metrics dictionary.
 def flatten_sampling(prefix: str, sampling: Mapping[str, object]) -> dict[str, float]:
     return {f"{prefix}_{k}": finite_or_nan(v) for k, v in sampling.items()}
 
 
+# @brief Run default condition aggregation over trial results.
+# @param results Trial results sequence.
+# @param cfg Stage configuration.
+# @return Condition summary list.
 def summarize_default(results: Sequence[TrialResult], cfg: StageConfig) -> list[ConditionSummary]:
     return aggregate_condition_results(
         results,
@@ -38,6 +55,11 @@ def summarize_default(results: Sequence[TrialResult], cfg: StageConfig) -> list[
     )
 
 
+# @brief Compute compact scalar metrics from a numeric table.
+# @param prefix Prefix for generated metric keys.
+# @param df Input DataFrame.
+# @param value_col Optional numeric column used for max/median summaries.
+# @return Dictionary of compact numeric metrics.
 def numeric_table_to_metrics(prefix: str, df: pd.DataFrame, value_col: str | None = None) -> dict[str, float]:
     """
     Return compact numeric metrics from a table.

@@ -89,6 +89,10 @@ def get_plot_signal_key(cfg: DictConfig) -> str:
     return str(getattr(cfg.ui, 'plot_signal_key', default_key))
 
 
+## @brief Get plot signal label.
+#
+#  @param cfg Parameter description.
+#  @return Retrieved value for this request.
 def get_plot_signal_label(cfg: DictConfig) -> str:
     """Return a human-readable label for the currently configured plot signal."""
     signal_key = get_plot_signal_key(cfg)
@@ -96,11 +100,19 @@ def get_plot_signal_label(cfg: DictConfig) -> str:
     return str(meta.get('label', signal_key))
 
 
+## @brief Get plot signal options.
+#
+#  @return Retrieved value for this request.
 def get_plot_signal_options() -> dict[str, str]:
     """Return a ``{key: label}`` dict suitable for a NiceGUI select widget."""
     return {key: meta.get('label', key) for key, meta in SIGNAL_DEFINITIONS.items()}
 
 
+## @brief Extract signal value.
+#
+#  @param frame Parameter description.
+#  @param signal_key Parameter description.
+#  @return Result produced by this function.
 def extract_signal_value(frame: MeasurementFrame, signal_key: str) -> float | None:
     """Extract a numeric signal value from *frame.interpreted*.
 
@@ -115,6 +127,11 @@ def extract_signal_value(frame: MeasurementFrame, signal_key: str) -> float | No
         return None
 
 
+## @brief Extract plot value.
+#
+#  @param frame Parameter description.
+#  @param cfg Parameter description.
+#  @return Result produced by this function.
 def extract_plot_value(frame: MeasurementFrame, cfg: DictConfig) -> float | None:
     """Convenience wrapper that extracts the currently configured plot signal."""
     return extract_signal_value(frame, get_plot_signal_key(cfg))
@@ -206,6 +223,11 @@ def format_rate(value: float | None) -> str:
     return f'{value:.3f} Hz'
 
 
+## @brief Get target sampling rate hz.
+#
+#  @param cfg Parameter description.
+#  @param mode Parameter description.
+#  @return Retrieved value for this request.
 def get_target_sampling_rate_hz(
     cfg: DictConfig, mode: str
 ) -> float | None:

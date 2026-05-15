@@ -6,7 +6,7 @@ import json
 import logging
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +40,9 @@ class MarkerEvent:
     lsl_time: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        # @brief Convert marker event to JSON-ready dictionary.
+        #  @param self Marker event instance.
+        #  @return Dictionary without empty optional fields.
         """Return a JSON-compatible dictionary without empty optional fields."""
 
         data = asdict(self)

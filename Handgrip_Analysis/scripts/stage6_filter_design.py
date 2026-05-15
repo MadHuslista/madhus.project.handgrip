@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# @package scripts.stage6_filter_design
+# @brief Stage 6a filter design benchmark for a single signal.
+
 """Stage 6a — Filter design: single-signal candidate benchmark."""
 from __future__ import annotations
 
@@ -24,6 +27,11 @@ matplotlib.use("Agg")
 log = logging.getLogger(__name__)
 
 
+# @brief Read a required non-empty string value from Hydra config.
+# @param cfg Hydra configuration object.
+# @param key Config key to validate.
+# @return The required value converted to string.
+# @throws ValueError Raised when key is missing or empty.
 def _require_str(cfg: DictConfig, key: str) -> str:
     value = cfg.get(key)
     if value is None or not str(value).strip():
@@ -31,6 +39,9 @@ def _require_str(cfg: DictConfig, key: str) -> str:
     return str(value)
 
 
+# @brief Execute Stage 6a filter design benchmark and save outputs.
+# @param cfg Hydra configuration object.
+# @return None.
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)

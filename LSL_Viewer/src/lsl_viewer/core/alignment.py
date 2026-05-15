@@ -1,10 +1,8 @@
-"""
-XY correlation time-alignment and reference-interpolation logic.
-
-All functions are **pure**: they operate only on numpy arrays and dicts.
-No side effects, no I/O.  The ``FigureHandles.state`` dict is accepted as a
-parameter (not imported) so the unit tests need not construct a real figure.
-"""
+# @file
+# @brief XY correlation time-alignment and reference interpolation for the viewer.
+#
+# Pure functions only: no I/O, no global state mutation, no stream-buffer edits.
+# Time shifts here are display-only and affect XY rendering logic, not acquisition.
 
 from __future__ import annotations
 
@@ -23,7 +21,9 @@ log = logging.getLogger(__name__)
 
 
 def _latest_finite_timestamp(values: np.ndarray) -> float:
-    """Return the last finite value in *values*, or nan."""
+    # @brief Return the latest finite timestamp from an array.
+    # @param values Input timestamp array.
+    # @return Last finite value, or nan when no finite value exists.
     arr = np.asarray(values, dtype=np.float64)
     finite = arr[np.isfinite(arr)]
     return float(finite[-1]) if finite.size else float("nan")
@@ -47,43 +47,19 @@ def compute_xy_reference_time_shift_s(
     snap_threshold_s: float,
     smoothing_alpha: float,
 ) -> tuple[float, str]:
-    """
-    Return the display-only reference time shift for the live XY plot.
-
-    The native stream buffers and LSL/XDF timestamps are never modified.
-    This function only determines the timebase used by the *live* XY panel.
-
-    Parameters
-    ----------
-    handles:
-        Figure state container (mutated: ``xy_reference_time_shift_s``,
-        ``xy_reference_tail_delta_s``, ``xy_reference_shift_clipped``).
-    target / reference:
-        Current window data; may be ``None`` if a stream has no data yet.
-    alignment_mode:
-        One of ``"raw_lsl"``, ``"off"``, ``"none"``, ``"manual"``,
-        ``"tail_aligned_lsl"``, ``"auto_tail"``, ``"auto"``.
-    window_seconds:
-        Viewer window duration; used as the default ``max_auto_shift_s``.
-    manual_reference_shift_s:
-        Fixed shift applied when ``alignment_mode == "manual"``.
-    max_auto_shift_s:
-        Clip magnitude of auto-computed shift; ``None`` means use ``window_seconds``.
-    min_auto_shift_s:
-        Shifts smaller than this are rounded to zero (dead-band).
-    snap_threshold_s:
-        If the correction changes by more than this amount, snap immediately
-        instead of smoothing (avoids seconds-long tail-alignment lag).
-    smoothing_alpha:
-        EWA smoothing coefficient in ``[0, 1]``.  ``1.0`` = no smoothing.
-
-    Returns
-    -------
-    (shift_s, mode_label):
-        ``shift_s`` is the seconds to add to reference LSL timestamps for
-        display purposes; ``mode_label`` is a short diagnostic string.
-
-    """
+    # @brief Compute the display-only reference time shift for live XY rendering.
+    # @param handles Mutable state container for shift diagnostics.
+    # @param target Current target window, or None when not yet available.
+    # @param reference Current reference window, or None when not yet available.
+    # @param alignment_mode One of: raw_lsl/off/none, manual, tail_aligned_lsl/auto_tail/auto.
+    # @param window_seconds Viewer window duration used as default auto-shift clip.
+    # @param manual_reference_shift_s Fixed shift applied when mode is manual.
+    # @param max_auto_shift_s Maximum absolute auto shift; None means window_seconds.
+    # @param min_auto_shift_s Dead-band below which shifts are forced to zero.
+    # @param snap_threshold_s Change threshold for snap vs smoothed updates.
+    # @param smoothing_alpha EWMA smoothing factor in [0, 1].
+    # @return (shift_s, mode_label), where mode_label is one of:
+    #         raw_lsl, manual, tail_aligned_hold, tail_aligned_snap, tail_aligned_lsl.
     mode = alignment_mode.strip().lower()
 
     if mode in {"off", "none", "raw_lsl"}:
@@ -149,36 +125,19 @@ def interpolate_reference_to_target(
     reference_time_shift_s: float = 0.0,
     target_signal: str = "raw",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Return XY samples with reference interpolated onto target timestamps.
-
-    Output layout (matching original viewer convention):
-    ``x`` = reference/RS485 force at target timestamps (interpolated);
-    ``y`` = target handgrip signal (raw or filtered);
-    ``t`` = target timestamps used for XY pairing (for time-fading the LineCollection).
-
-    ``reference_time_shift_s`` is a display-only correction applied to the
-    reference LSL timestamps before interpolation.  Native buffers are unchanged.
-
-    Parameters
-    ----------
-    target / reference:
-        Current window data.
-    max_reference_gap_s:
-        Maximum gap in the reference stream before a target point is excluded
-        from the XY correlation display.
-    reference_time_shift_s:
-        Seconds to add to reference timestamps for alignment purposes.
-    target_signal:
-        Which target channel to use on the y-axis: ``"raw"`` or ``"filtered"``.
-
-    Returns
-    -------
-    (x, y, t):
-        Three 1-D float64 arrays of identical length.  Empty on any error or
-        when no overlapping data exists.
-
-    """
+    # @brief Build XY pairs by interpolating reference samples on target timestamps.
+    #
+    # Output convention:
+    # - x: interpolated reference signal
+    # - y: target signal (raw or filtered)
+    # - t: target timestamps used for pairing/fading
+    #
+    # @param target Current target window, or None.
+    # @param reference Current reference window, or None.
+    # @param max_reference_gap_s Maximum nearest-neighbor gap allowed for valid XY points.
+    # @param reference_time_shift_s Display-only shift applied to reference timestamps.
+    # @param target_signal Target channel selector: raw or filtered.
+    # @return (x, y, t) float64 arrays; returns empty arrays on invalid or non-overlapping data.
     _empty = (
         np.array([], dtype=np.float64),
         np.array([], dtype=np.float64),

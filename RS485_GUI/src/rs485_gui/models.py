@@ -11,6 +11,7 @@ from typing import Any
 
 
 @dataclass
+## @brief Represents the SerialSettings component.
 class SerialSettings:
     """Snapshot of active serial-port parameters."""
 
@@ -23,6 +24,7 @@ class SerialSettings:
 
 
 @dataclass
+## @brief Represents the MeasurementFrame component.
 class MeasurementFrame:
     """One decoded measurement snapshot from the acquisition board.
 
@@ -48,6 +50,7 @@ class MeasurementFrame:
 
 
 @dataclass
+## @brief Represents the PortInfo component.
 class PortInfo:
     """Metadata for a discovered serial port, with a relevance score."""
 
@@ -61,6 +64,7 @@ class PortInfo:
 
 
 @dataclass
+## @brief Represents the ActiveSendStats component.
 class ActiveSendStats:
     """Running counters for the active-send binary parser.
 

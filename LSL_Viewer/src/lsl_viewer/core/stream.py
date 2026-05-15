@@ -1,12 +1,11 @@
-"""
-LSL stream connection and live window fetching.
-
-This module is part of the **imperative shell**: it performs real I/O
-(network connections to LSL streams, data reads from the mne-lsl buffer).
-
-The layout-from-config helpers and label validation are also here because
-they depend on the config structure rather than on any pure math.
-"""
+# @file
+# @brief LSL stream connection and live window fetching.
+##
+# This module is part of the imperative shell: it performs real I/O
+# (network connections to LSL streams, data reads from the mne-lsl buffer).
+##
+# The layout-from-config helpers and label validation are also here because
+# they depend on the config structure rather than on any pure math.
 
 from __future__ import annotations
 
@@ -31,7 +30,9 @@ log = logging.getLogger(__name__)
 
 
 def target_layout_from_cfg(cfg: DictConfig) -> StreamLayout:
-    """Build a StreamLayout from the channels.target config section."""
+    # @brief Build a StreamLayout from the channels.target config section.
+    # @param cfg Hydra configuration.
+    # @return Target stream layout.
     return StreamLayout(
         clock_label=str(cfg.channels.target.clock_label),
         raw_label=str(cfg.channels.target.raw_label),
@@ -40,7 +41,9 @@ def target_layout_from_cfg(cfg: DictConfig) -> StreamLayout:
 
 
 def reference_layout_from_cfg(cfg: DictConfig) -> StreamLayout:
-    """Build a StreamLayout from the channels.reference config section."""
+    # @brief Build a StreamLayout from the channels.reference config section.
+    # @param cfg Hydra configuration.
+    # @return Reference stream layout.
     return StreamLayout(
         clock_label=str(cfg.channels.reference.clock_label),
         raw_label=str(cfg.channels.reference.raw_label),
@@ -49,7 +52,10 @@ def reference_layout_from_cfg(cfg: DictConfig) -> StreamLayout:
 
 
 def validate_labels(ch_names: list[str], layout: StreamLayout, role: str) -> None:
-    """Raise if any required channel label is absent from the stream."""
+    # @brief Raise if any required channel label is absent from the stream.
+    # @param ch_names Channel names reported by the stream.
+    # @param layout Required stream layout.
+    # @param role Human-readable stream role used in errors.
     missing = [label for label in layout.picks if label not in ch_names]
     if missing:
         raise RuntimeError(f"{role} stream is missing required channels {missing}. Available channels: {ch_names}")
@@ -61,17 +67,9 @@ def validate_labels(ch_names: list[str], layout: StreamLayout, role: str) -> Non
 
 
 def build_streams(cfg: DictConfig):
-    """
-    Connect to the target and reference LSL streams.
-
-    Requires mne-lsl; raises a clear ``RuntimeError`` if not installed so the
-    error is shown before any LSL network activity starts.
-
-    Returns
-    -------
-    (target_stream, reference_stream, target_layout, reference_layout)
-
-    """
+    # @brief Connect to the target and reference LSL streams.
+    # @param cfg Hydra configuration.
+    # @return Tuple of target stream, reference stream, target layout, and reference layout.
     try:
         from mne_lsl.stream import StreamLSL  # type: ignore[import]
     except ImportError as exc:
@@ -151,7 +149,11 @@ def build_streams(cfg: DictConfig):
 def _stream_data_to_window(
     data: np.ndarray, ts: np.ndarray, role: str
 ) -> TargetWindow | ReferenceWindow | None:
-    """Validate shape and wrap raw stream arrays into a typed window object."""
+    # @brief Validate shape and wrap raw stream arrays into a typed window object.
+    # @param data Stream data matrix.
+    # @param ts Stream timestamps.
+    # @param role Stream role used in warnings.
+    # @return Typed window object or None.
     if ts.size == 0:
         return None
     timestamps = np.asarray(ts, dtype=np.float64)
@@ -191,6 +193,10 @@ def _stream_data_to_window(
 
 
 def _slice_target_window(window: TargetWindow, t_start: float) -> TargetWindow | None:
+    # @brief Slice a target window from a given start time.
+    # @param window Source target window.
+    # @param t_start Inclusive start timestamp.
+    # @return Sliced target window or None.
     mask = np.asarray(window.timestamps_s) >= float(t_start)
     if not np.any(mask):
         return None
@@ -205,6 +211,10 @@ def _slice_target_window(window: TargetWindow, t_start: float) -> TargetWindow |
 def _slice_reference_window(
     window: ReferenceWindow, t_start: float
 ) -> ReferenceWindow | None:
+    # @brief Slice a reference window from a given start time.
+    # @param window Source reference window.
+    # @param t_start Inclusive start timestamp.
+    # @return Sliced reference window or None.
     mask = np.asarray(window.timestamps_s) >= float(t_start)
     if not np.any(mask):
         return None
@@ -222,13 +232,13 @@ def fetch_live_window(
     target_layout: StreamLayout,
     reference_layout: StreamLayout,
 ) -> DualWindow | None:
-    """
-    Read the current buffer from both LSL streams and return a DualWindow.
-
-    The two streams are sampled independently.  The returned window covers
-    the common visible interval ``[t_end - window_seconds, t_end]`` aligned
-    on the latest timestamp seen across both streams.
-    """
+    # @brief Read the current buffer from both LSL streams and return a DualWindow.
+    # @param target_stream Connected target stream object.
+    # @param reference_stream Connected reference stream object.
+    # @param cfg Hydra configuration.
+    # @param target_layout Target stream layout.
+    # @param reference_layout Reference stream layout.
+    # @return DualWindow covering the current shared visible interval, or None.
     target_data, target_ts = target_stream.get_data(
         winsize=cfg.viewer.target_window_samples,
         picks=target_layout.picks,

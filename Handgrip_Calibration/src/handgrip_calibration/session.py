@@ -7,7 +7,7 @@ import os
 import shutil
 import socket
 import subprocess
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -68,6 +68,11 @@ class SessionManager:
     """
 
     def __init__(self, config: AppConfig, *, session_id: str | None = None) -> None:
+        # @brief Initialize a session manager and canonical output paths.
+        #  @param self SessionManager instance.
+        #  @param config Application configuration.
+        #  @param session_id Optional explicit session id.
+        #  @return None.
         self.config = config
         self.session_id = session_id or self.make_session_id()
         root = config.session.root_dir / self.session_id
@@ -105,6 +110,10 @@ class SessionManager:
         return self.paths
 
     def manifest_dict(self, *, extra_manifest: dict[str, Any] | None = None) -> dict[str, Any]:
+        # @brief Build the session manifest payload.
+        #  @param self SessionManager instance.
+        #  @param extra_manifest Optional extra metadata to merge into manifest extra section.
+        #  @return Manifest dictionary ready for YAML serialization.
         """Build the session manifest as a plain dictionary."""
 
         package_root = Path(__file__).resolve().parents[1]
@@ -132,12 +141,19 @@ class SessionManager:
         }
 
     def write_manifest(self, *, extra_manifest: dict[str, Any] | None = None) -> None:
+        # @brief Persist the session manifest YAML file.
+        #  @param self SessionManager instance.
+        #  @param extra_manifest Optional extra metadata to include in manifest.
+        #  @return None.
         """Write `session_manifest.yaml`."""
 
         with self.paths.manifest.open("w", encoding="utf-8") as fh:
             yaml.safe_dump(self.manifest_dict(extra_manifest=extra_manifest), fh, sort_keys=False, allow_unicode=True)
 
     def copy_component_configs(self) -> None:
+        # @brief Copy configured component snapshots into the session folder.
+        #  @param self SessionManager instance.
+        #  @return None.
         """Copy configured component files into the session folder.
 
         Missing snapshot files are intentionally ignored. This avoids failing a

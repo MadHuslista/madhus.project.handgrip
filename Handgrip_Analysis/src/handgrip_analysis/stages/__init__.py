@@ -1,3 +1,6 @@
+# @package handgrip_analysis.stages
+# @brief Trial-aware stage analyzer registry.
+
 """Trial-aware stage analyzer registry."""
 from __future__ import annotations
 
@@ -16,6 +19,10 @@ STAGE_MODULES = {
 }
 
 
+# @brief Resolve and import the stage analyzer module for a stage key.
+# @param stage Stage identifier string.
+# @return Imported Python module implementing the stage analysis entry points.
+# @throws ValueError Raised when the stage key is unsupported.
 def get_stage_module(stage: str) -> ModuleType:
     try:
         path = STAGE_MODULES[stage]

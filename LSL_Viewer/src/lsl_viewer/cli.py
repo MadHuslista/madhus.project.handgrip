@@ -1,19 +1,17 @@
-"""Command-line entry point for the handgrip realtime viewer.
-
-This module owns the ``@hydra.main`` decorator and is the only place where
-all subsystems are composed together.  It deliberately contains no business
-logic: its sole responsibility is to read configuration, configure logging,
-and dispatch to the correct mode runner.
-
-Structured config registration must happen before ``@hydra.main`` is
-evaluated, which is why ``register_config()`` is called at import time.
-
-Changes from v0.2.0
--------------------
-* Runner imports updated: ``runners.live`` / ``runners.replay``
-  → ``viz.app`` (NiceGUI-based runners).
-* ``matplotlib`` / ``PyQt5`` are no longer imported anywhere in the package.
-"""
+# @file
+# @brief Command-line entry point for the handgrip realtime viewer.
+##
+# This module owns the @hydra.main decorator and is the only place where all
+# subsystems are composed together. It deliberately contains no business
+# logic: its sole responsibility is to read configuration, configure logging,
+# and dispatch to the correct mode runner.
+##
+# Structured config registration must happen before @hydra.main is evaluated,
+# which is why register_config() is called at import time.
+##
+# @note Runner imports were updated from runners.live / runners.replay to
+# viz.app (NiceGUI-based runners), and matplotlib / PyQt5 are no longer
+# imported anywhere in the package.
 from __future__ import annotations
 
 import logging
@@ -41,12 +39,9 @@ register_config()
 
 @hydra.main(version_base=None, config_path=f"{LIBRARY_ROOT}/conf", config_name="config")
 def app(cfg: DictConfig) -> int:
-    """Main Hydra entry point.
-
-    Hydra resolves ``conf/config.yaml`` (and any CLI overrides) before calling
-    this function.  The resolved ``cfg`` is passed as a ``DictConfig`` that
-    fully matches the :class:`~lsl_viewer.config.AppConfig` schema.
-    """
+    # @brief Main Hydra entry point.
+    # @param cfg Resolved Hydra configuration matching AppConfig.
+    # @return Process exit code.
     # ── Logging ───────────────────────────────────────────────────────────
     # Called after Hydra init so we append handlers rather than replace them.
     configure_logging(

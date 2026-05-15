@@ -1,4 +1,8 @@
-"""Operational event marker stream for the LSL Bridge.
+# @package lsl_bridge.publishers.events
+#  @brief LSL marker outlet for bridge operational events.
+##
+"""
+Operational event marker stream for the LSL Bridge.
 
 ``ComponentEventOutlet`` publishes a sparse LSL marker stream
 (``HandgripComponentEvents``) that records component-level state
@@ -25,11 +29,14 @@ from pylsl import IRREGULAR_RATE, StreamInfo, StreamOutlet, cf_string, local_clo
 _log = logging.getLogger(__name__)
 
 
+# @brief Publish structured component events to a dedicated LSL marker stream.
 class ComponentEventOutlet:
-    """Publishes structured JSON markers to a LSL string stream.
+    """
+    Publishes structured JSON markers to a LSL string stream.
 
     Args:
         cfg: Full Hydra ``DictConfig``.  Uses ``component_events``.
+
     """
 
     def __init__(self, cfg: DictConfig) -> None:
@@ -60,14 +67,20 @@ class ComponentEventOutlet:
             cfg.component_events.source_id,
         )
 
+    # @brief Emit one JSON event marker if the outlet is enabled.
+    #  @param event Event name token.
+    #  @param payload Additional keyword fields serialized into the record.
+    #  @return None.
     def emit(self, event: str, **payload: Any) -> None:
-        """Push a JSON event marker to the LSL stream.
+        """
+        Push a JSON event marker to the LSL stream.
 
         If the outlet is disabled or not yet initialised, this is a no-op.
 
         Args:
             event:   Short event name (e.g. ``"bridge_start"``).
             **payload: Arbitrary key/value pairs serialised into the JSON body.
+
         """
         if self._outlet is None:
             return

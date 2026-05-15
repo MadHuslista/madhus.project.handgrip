@@ -1,3 +1,6 @@
+# @package handgrip_analysis.stages.stage4_dynamics
+# @brief Stage 4 grip dynamics and event metrics analyzer.
+
 """Stage 4 — grip dynamics and event metrics."""
 from __future__ import annotations
 
@@ -10,12 +13,19 @@ from ..io import load_capture, sampling_summary
 from .common import base_metrics, flatten_sampling, summarize_default
 
 
+# @brief Extract DSP configuration from StageConfig or use defaults.
+# @param cfg Stage configuration.
+# @return DSPConfig instance.
 def _get_dsp_cfg(cfg: StageConfig) -> DSPConfig:
     if hasattr(cfg, "dsp") and isinstance(cfg.dsp, DSPConfig):
         return cfg.dsp
     return DSPConfig()
 
 
+# @brief Analyze one Stage 4 dynamics trial.
+# @param spec Trial specification.
+# @param cfg Stage configuration.
+# @return TrialResult with event metrics and optional PSD tables.
 def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     dsp = _get_dsp_cfg(cfg)
     cap = load_capture(spec.path, time_source=cfg.time_source)
@@ -67,5 +77,9 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     return TrialResult(spec=spec, metrics=metrics, tables=tables)
 
 
+# @brief Summarize Stage 4 trial results by condition.
+# @param results Trial result list.
+# @param cfg Stage configuration.
+# @return Condition summary list.
 def summarize_trials(results: list[TrialResult], cfg: StageConfig) -> list[ConditionSummary]:
     return summarize_default(results, cfg)

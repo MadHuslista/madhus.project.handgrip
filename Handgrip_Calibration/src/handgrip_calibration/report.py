@@ -107,6 +107,9 @@ def _selected_candidate(fit: dict[str, Any], candidates: list[dict[str, Any]]) -
 
 
 def generate_plots(session_dir: str | Path) -> list[Path]:
+    # @brief Generate diagnostic plots for a calibration session.
+    #  @param session_dir Session directory path.
+    #  @return List of generated plot file paths.
     """Generate diagnostic plots from session files.
 
     Plots are intentionally simple and independent. This keeps the report useful
@@ -338,6 +341,9 @@ def _safe_json_excerpt(data: Any, limit: int = 6000) -> str:
 
 
 def generate_report(session_dir: str | Path) -> Path:
+    # @brief Generate Markdown and HTML calibration reports for a session.
+    #  @param session_dir Session directory path.
+    #  @return Path to the generated HTML report.
     """Generate Markdown and HTML calibration reports.
 
     The report is intentionally protocol-aware. Some sections will be marked as

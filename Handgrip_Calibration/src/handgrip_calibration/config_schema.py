@@ -1,3 +1,5 @@
+# @package handgrip_calibration.config_schema
+#  @brief Configuration loading and validation for Handgrip_Calibration.
 """Configuration loading and validation for Handgrip_Calibration.
 
 All configuration is expressed as immutable, self-validating frozen
@@ -70,7 +72,12 @@ class StreamConfig:
     required: bool = True
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any], *, key: str) -> "StreamConfig":
+    def from_mapping(cls, data: Mapping[str, Any], *, key: str) -> StreamConfig:
+        # @brief Build a stream configuration object from a mapping.
+        #  @param cls StreamConfig class.
+        #  @param data Stream configuration mapping.
+        #  @param key Stream key used for validation messages.
+        #  @return Validated StreamConfig instance.
         if not isinstance(data, Mapping):
             raise ConfigError(f"streams.{key} must be a mapping")
         name = data.get("name")
@@ -106,7 +113,11 @@ class MarkerConfig:
     write_ndjson: bool = True
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "MarkerConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> MarkerConfig:
+        # @brief Build marker configuration from a mapping.
+        #  @param cls MarkerConfig class.
+        #  @param data Marker configuration mapping or None.
+        #  @return Validated MarkerConfig instance.
         data = data or {}
         return cls(
             stream_name=str(data.get("stream_name", cls.stream_name)),
@@ -159,7 +170,7 @@ class ProtocolConfig:
     validate_existing_only: bool = False
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "ProtocolConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> ProtocolConfig:
         data = data or {}
         baseline = data.get("baseline", {}) or {}
         preload = data.get("preload", {}) or {}
@@ -267,7 +278,7 @@ class CreepZeroReturnConfig:
     )
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "CreepZeroReturnConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> CreepZeroReturnConfig:
         data = data or {}
         defaults = cls()
         force_levels = [float(x) for x in data.get("force_levels_N", defaults.force_levels_N)]
@@ -311,7 +322,7 @@ class RampSpec:
     speed_N_per_s: float = 5.0
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any]) -> "RampSpec":
+    def from_mapping(cls, data: Mapping[str, Any]) -> RampSpec:
         return cls(
             label=str(data.get("label", "slow")),
             count=int(data.get("count", 0)),
@@ -330,7 +341,7 @@ class SqueezeSpec:
     rest_s: float = 3.0
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any]) -> "SqueezeSpec":
+    def from_mapping(cls, data: Mapping[str, Any]) -> SqueezeSpec:
         return cls(
             label=str(data.get("label", "fast_squeeze")),
             count=int(data.get("count", 0)),
@@ -360,7 +371,7 @@ class DynamicValidationConfig:
     )
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "DynamicValidationConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> DynamicValidationConfig:
         data = data or {}
         defaults = cls()
         ramp_list = data.get("ramps")
@@ -413,8 +424,9 @@ class HoldoutValidationThresholds:
     max_bias_N: float | None = None
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "HoldoutValidationThresholds":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> HoldoutValidationThresholds:
         data = data or {}
+
         def _opt_float(key: str) -> float | None:
             val = data.get(key)
             return float(val) if val is not None else None
@@ -449,7 +461,7 @@ class QualityConfig:
     quality_emit_period_s: float = 1.0
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "QualityConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> QualityConfig:
         data = data or {}
         cfg = cls(
             **{k: data.get(k, getattr(cls, k)) for k in cls.__dataclass_fields__}  # type: ignore[arg-type]
@@ -502,7 +514,7 @@ class FitSelectionConfig:
     min_cv_coverage_fraction: float = 0.50
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "FitSelectionConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> FitSelectionConfig:
         data = data or {}
         cfg = cls(
             **{k: data.get(k, getattr(cls, k)) for k in cls.__dataclass_fields__}  # type: ignore[arg-type]
@@ -530,7 +542,7 @@ class FitRobustConfig:
     min_weight: float = 0.05
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "FitRobustConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> FitRobustConfig:
         data = data or {}
         cfg = cls(
             huber_epsilon=float(data.get("huber_epsilon", 1.35)),
@@ -566,7 +578,7 @@ class FitMultipointConfig:
     max_knots: int = 12
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "FitMultipointConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> FitMultipointConfig:
         data = data or {}
         cfg = cls(
             min_points=int(data.get("min_points", 5)),
@@ -602,7 +614,7 @@ class FitDiagnosticsConfig:
     drift_time_column: str = "t_mid_lsl"
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "FitDiagnosticsConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> FitDiagnosticsConfig:
         data = data or {}
         return cls(
             enable_odr_affine=bool(data.get("enable_odr_affine", True)),
@@ -648,7 +660,7 @@ class FitConfig:
     diagnostics: FitDiagnosticsConfig = field(default_factory=FitDiagnosticsConfig)
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "FitConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> FitConfig:
         data = data or {}
         raw_candidates = data.get("candidate_models")
         if raw_candidates is None:
@@ -731,7 +743,7 @@ class SessionConfig:
     copy_component_configs: list[Path] = field(default_factory=list)
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any] | None) -> "SessionConfig":
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> SessionConfig:
         data = data or {}
         return cls(
             root_dir=Path(str(data.get("root_dir", "data/calibration"))).expanduser(),
@@ -770,7 +782,7 @@ class AppConfig:
     holdout_thresholds: HoldoutValidationThresholds
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "AppConfig":
+    def from_dict(cls, data: Mapping[str, Any]) -> AppConfig:
         streams_raw = data.get("streams", {})
         if not isinstance(streams_raw, Mapping):
             raise ConfigError("streams must be a mapping")
@@ -802,6 +814,9 @@ class AppConfig:
 
 
 def load_config(path: str | Path) -> AppConfig:
+    # @brief Load and validate an application YAML configuration.
+    #  @param path Path to the YAML configuration file.
+    #  @return Validated application configuration object.
     """Load and validate a YAML configuration file.
 
     Uses the Hydra compose API when ``hydra-core`` is installed so that
@@ -847,6 +862,9 @@ def load_config(path: str | Path) -> AppConfig:
 
 
 def dump_yaml(data: Mapping[str, Any], path: str | Path) -> None:
+    # @brief Dump a mapping to YAML with stable key order.
+    #  @param data Mapping data to serialize.
+    #  @param path Output YAML file path.
     """Write a YAML file with stable key order."""
     import yaml
 

@@ -1,3 +1,6 @@
+# @package handgrip_analysis.stages.stage5_interference
+# @brief Stage 5 interference comparison analyzer.
+
 """Stage 5 — interference comparison with condition replicates."""
 from __future__ import annotations
 
@@ -11,12 +14,19 @@ from ..io import load_capture, sampling_summary
 from .common import base_metrics, flatten_sampling, summarize_default
 
 
+# @brief Extract DSP configuration from StageConfig or use defaults.
+# @param cfg Stage configuration.
+# @return DSPConfig instance.
 def _get_dsp_cfg(cfg: StageConfig) -> DSPConfig:
     if hasattr(cfg, "dsp") and isinstance(cfg.dsp, DSPConfig):
         return cfg.dsp
     return DSPConfig()
 
 
+# @brief Analyze one Stage 5 interference trial.
+# @param spec Trial specification.
+# @param cfg Stage configuration.
+# @return TrialResult with interference metrics and spectral tables.
 def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     dsp = _get_dsp_cfg(cfg)
     cap = load_capture(spec.path, time_source=cfg.time_source)
@@ -68,5 +78,9 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     return TrialResult(spec=spec, metrics=metrics, tables=tables)
 
 
+# @brief Summarize Stage 5 trial results by condition.
+# @param results Trial result list.
+# @param cfg Stage configuration.
+# @return Condition summary list.
 def summarize_trials(results: list[TrialResult], cfg: StageConfig) -> list[ConditionSummary]:
     return summarize_default(results, cfg)

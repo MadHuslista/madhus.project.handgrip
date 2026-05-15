@@ -1,13 +1,12 @@
-"""
-Info-panel text rendering for the NiceGUI viewer.
-
-All functions here are **pure**: they accept data and return strings.
-No side effects, no I/O.  The output is consumed by ``viz/panels.py``
-which calls ``info_label.set_text()``.
-
-The 4-column monospace layout (SOURCE/MODE | TARGET | REFERENCE | METRICS)
-is preserved exactly from the original ``viz/plots.py`` implementation.
-"""
+# @file
+# @brief Info-panel text rendering for the NiceGUI viewer.
+##
+# All functions here are pure: they accept data and return strings. No side
+# effects, no I/O. The output is consumed by viz/panels.py which calls
+# info_label.set_text().
+##
+# The 4-column monospace layout (SOURCE/MODE | TARGET | REFERENCE | METRICS)
+# is preserved exactly from the original viz/plots.py implementation.
 from __future__ import annotations
 
 import numpy as np
@@ -21,13 +20,21 @@ from lsl_viewer.types import DualWindow, ViewerState
 
 
 def _format_latest(value: float, suffix: str = "", precision: int = 3) -> str:
+    # @brief Format the latest numeric value for display.
+    # @param value Numeric value to format.
+    # @param suffix Text appended after the formatted value.
+    # @param precision Number of decimal places.
+    # @return Formatted string or "nan".
     if not np.isfinite(value):
         return "nan"
     return f"{value:.{precision}f}{suffix}"
 
 
 def _zip_columns(*columns: str, pad: int = 3) -> str:
-    """Horizontally concatenate multi-line text columns."""
+    # @brief Horizontally concatenate multi-line text columns.
+    # @param columns Column strings to combine.
+    # @param pad Minimum spacing between columns.
+    # @return Combined multi-line text.
     split_cols = [col.splitlines() for col in columns]
     widths = [max((len(line) for line in lines), default=0) for lines in split_cols]
     height = max((len(lines) for lines in split_cols), default=0)
@@ -65,12 +72,25 @@ def render_info_text(
     reference_new_samples: int | None = None,
     replay_progress_text: str | None = None,
 ) -> str:
-    """
-    Render the 4-column info panel text.
-
-    Pure function — returns a formatted string suitable for ``<pre>`` rendering.
-    All parameters are passed explicitly; no global state is read.
-    """
+    # @brief Render the 4-column info panel text.
+    # @param window Current target/reference window bundle.
+    # @param state Mutable viewer state.
+    # @param cfg Hydra configuration.
+    # @param mode Current viewer mode string.
+    # @param source_name Data source name.
+    # @param source_type Data source type.
+    # @param xy_reference_shift_s Display-only reference shift.
+    # @param xy_alignment_mode XY alignment mode label.
+    # @param marker_count Number of marker events visible.
+    # @param target_rate_hz Estimated target rate.
+    # @param reference_rate_hz Estimated reference rate.
+    # @param target_clock_metrics Target timing metrics.
+    # @param reference_clock_metrics Reference timing metrics.
+    # @param xy_pair_count Number of XY pairs rendered.
+    # @param target_new_samples Optional target sample count since last tick.
+    # @param reference_new_samples Optional reference sample count since last tick.
+    # @param replay_progress_text Optional replay progress text.
+    # @return Combined info panel text.
     target = window.target
     reference = window.reference
     force_unit = cfg.viewer.force_unit_label

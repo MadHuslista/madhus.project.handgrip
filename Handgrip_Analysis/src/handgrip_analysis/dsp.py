@@ -1,3 +1,6 @@
+# @package handgrip_analysis.dsp
+# @brief Pure DSP functions for handgrip sensor signal analysis.
+
 """
 DSP functions for handgrip sensor signal analysis.
 
@@ -68,6 +71,12 @@ TAIL_FRACTION: float = 0.80
 # ---------------------------------------------------------------------------
 
 
+##
+# @brief Summary information for one dominant PSD peak.
+# @param frequency_hz Peak frequency in Hz.
+# @param psd Peak PSD value in linear units.
+# @param prominence_db Peak prominence in dB over local background.
+# @param alias_hint Optional mains-alias interpretation note.
 @dataclass(slots=True)
 class PeakInfo:
     frequency_hz: float
@@ -76,6 +85,11 @@ class PeakInfo:
     alias_hint: str | None = None
 
 
+##
+# @brief Sample-index boundaries for a detected transient event.
+# @param start_idx Inclusive start index of the event window.
+# @param peak_idx Index of the event peak sample.
+# @param end_idx Inclusive end index of the event window.
 @dataclass(slots=True)
 class EventWindow:
     start_idx: int
@@ -88,6 +102,10 @@ class EventWindow:
 # ---------------------------------------------------------------------------
 
 
+##
+# @brief Compute an outlier-robust standard deviation estimate using MAD.
+# @param x Input samples.
+# @return Gaussian-consistent robust standard deviation estimate.
 def robust_std(x: np.ndarray) -> float:
     """
     MAD-based outlier-robust standard deviation (consistent estimator).
@@ -101,6 +119,12 @@ def robust_std(x: np.ndarray) -> float:
     return float(MAD_CONSISTENCY_CONSTANT * mad)
 
 
+##
+# @brief Compute centered rolling mean, std, and slope time series.
+# @param y Input signal samples.
+# @param fs Sampling rate in Hz.
+# @param window_s Rolling window duration in seconds.
+# @return Tuple of arrays: (rolling mean, rolling std, rolling slope).
 def rolling_mean_std_slope(
     y: np.ndarray,
     fs: float,
@@ -131,6 +155,14 @@ def rolling_mean_std_slope(
     return means, stds, slopes
 
 
+##
+# @brief Suggest earliest stable time using rolling-variability thresholds.
+# @param time_s Time vector in seconds.
+# @param stds Rolling standard deviation series.
+# @param slopes Rolling slope series.
+# @param tail_fraction Fraction used to estimate settled-tail thresholds.
+# @param threshold_multiplier Multiplier applied to tail medians.
+# @return Mapping containing suggested time and derived thresholds.
 def suggest_ready_time(
     time_s: np.ndarray,
     stds: np.ndarray,
@@ -189,6 +221,14 @@ def suggest_ready_time(
 # Spectral analysis
 # ---------------------------------------------------------------------------
 
+##
+# @brief Compute Welch PSD with adaptive segment sizing.
+# @param y Input signal.
+# @param fs Sampling rate in Hz.
+# @param max_nperseg Upper bound for segment length.
+# @param min_nperseg Lower bound for segment length.
+# @param window Welch window name.
+# @return Tuple (frequency_hz, psd).
 def welch_psd(
     y: np.ndarray,
     fs: float,
@@ -231,6 +271,11 @@ def welch_psd(
     return f, pxx
 
 
+##
+# @brief Infer whether a PSD peak may be a mains-frequency alias.
+# @param fs Sampling rate in Hz.
+# @param peak_hz Peak frequency in Hz.
+# @return Alias hint string when likely, else None.
 def alias_hint(fs: float, peak_hz: float) -> str | None:
     """Flag if a PSD peak is a plausible mains alias (50 or 60 Hz)."""
     if not np.isfinite(fs) or fs <= 0:
@@ -243,6 +288,14 @@ def alias_hint(fs: float, peak_hz: float) -> str | None:
     return "; ".join(hints) if hints else None
 
 
+##
+# @brief Extract the most prominent spectral peaks from a PSD curve.
+# @param f Frequency vector in Hz.
+# @param pxx PSD vector.
+# @param fs Sampling rate in Hz for alias-hint logic.
+# @param prominence_db Minimum required prominence in dB.
+# @param max_peaks Maximum number of peaks to return.
+# @return List of PeakInfo entries sorted by descending PSD.
 def dominant_psd_peaks(
     f: np.ndarray,
     pxx: np.ndarray,
@@ -291,6 +344,13 @@ def dominant_psd_peaks(
     return info
 
 
+##
+# @brief Integrate PSD power within a frequency band.
+# @param f Frequency vector in Hz.
+# @param pxx PSD vector aligned to f.
+# @param low_hz Lower integration bound in Hz.
+# @param high_hz Upper integration bound in Hz.
+# @return Band power estimate, or NaN when integration is not possible.
 def bandpower(f: np.ndarray, pxx: np.ndarray, low_hz: float, high_hz: float) -> float:
     """Trapezoidal integration of PSD within [low_hz, high_hz]."""
     if f.size == 0:
@@ -305,6 +365,12 @@ def bandpower(f: np.ndarray, pxx: np.ndarray, low_hz: float, high_hz: float) -> 
 # Noise characterisation
 # ---------------------------------------------------------------------------
 
+##
+# @brief Compute Allan deviation curve over averaging times.
+# @param y Input signal.
+# @param fs Sampling rate in Hz.
+# @param taus Optional tau grid in seconds.
+# @return Tuple of arrays (tau_s, allan_deviation).
 def allan_deviation(
     y: np.ndarray,
     fs: float,
@@ -336,6 +402,11 @@ def allan_deviation(
     return np.asarray(tau_out, dtype=float), np.asarray(adev_out, dtype=float)
 
 
+##
+# @brief Fit a first-order trend model to a signal.
+# @param y Input signal.
+# @param time_s Time vector in seconds.
+# @return Tuple (slope, intercept).
 def linear_trend(y: np.ndarray, time_s: np.ndarray) -> tuple[float, float]:
     """Fit a linear trend and return (slope, intercept)."""
     coeff = np.polyfit(time_s, y, 1)
@@ -346,6 +417,16 @@ def linear_trend(y: np.ndarray, time_s: np.ndarray) -> tuple[float, float]:
 # Event detection and metrics
 # ---------------------------------------------------------------------------
 
+##
+# @brief Detect above-threshold transient events in a signal.
+# @param y Input signal.
+# @param fs Sampling rate in Hz.
+# @param baseline_s Baseline duration for robust threshold estimation.
+# @param threshold_sigma Sigma multiplier above baseline.
+# @param min_duration_s Minimum accepted event duration.
+# @param merge_gap_s Maximum off-gap duration merged into events.
+# @param pad_s Symmetric padding added around accepted windows.
+# @return List of detected EventWindow intervals.
 def detect_events(
     y: np.ndarray,
     fs: float,
@@ -422,6 +503,12 @@ def detect_events(
     return windows
 
 
+##
+# @brief Compute per-event metrics table from detected windows.
+# @param y Input signal.
+# @param time_s Time vector in seconds.
+# @param events Detected event windows.
+# @return DataFrame with one row per event and derived dynamic metrics.
 def event_metrics(
     y: np.ndarray,
     time_s: np.ndarray,
@@ -466,6 +553,17 @@ def event_metrics(
     return pd.DataFrame(rows)
 
 
+##
+# @brief Summarize the dominant event using scalar benchmarking metrics.
+# @param y Input signal.
+# @param time_s Time vector in seconds.
+# @param fs Sampling rate in Hz.
+# @param baseline_s Baseline duration for event detection.
+# @param threshold_sigma Sigma threshold for event detection.
+# @param min_duration_s Minimum accepted event duration.
+# @param merge_gap_s Gap duration used to merge nearby detections.
+# @param pad_s Padding added around accepted detections.
+# @return Flat dictionary of dominant-event summary metrics.
 def best_event_metrics(
     y: np.ndarray,
     time_s: np.ndarray,
@@ -556,6 +654,12 @@ def best_event_metrics(
 # Filter application
 # ---------------------------------------------------------------------------
 
+##
+# @brief Apply one declarative filter specification to a signal.
+# @param y Input signal samples.
+# @param fs Sampling rate in Hz.
+# @param spec Filter specification mapping.
+# @return Filtered signal samples.
 def apply_filter_spec(y: np.ndarray, fs: float, spec: dict[str, Any]) -> np.ndarray:
     """
     Apply a filter specified as a dict to signal *y*.
@@ -640,6 +744,10 @@ def apply_filter_spec(y: np.ndarray, fs: float, spec: dict[str, Any]) -> np.ndar
     raise ValueError(f"Unsupported filter type: {filter_type!r}")
 
 
+##
+# @brief Load filter-candidate specifications from a YAML file.
+# @param path Path to YAML file containing a `filters` list.
+# @return List of filter specification mappings.
 def load_filter_specs(path: str | Path) -> list[dict[str, Any]]:
     """Load a YAML filter candidate file and return the list of filter dicts."""
     with Path(path).open("r", encoding="utf-8") as f:

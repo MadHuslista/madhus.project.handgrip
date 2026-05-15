@@ -39,6 +39,7 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
+## @brief Represents the ActiveSendBoardTransport component.
 class ActiveSendBoardTransport(BoardTransport):
     """Receives and decodes binary active-send push frames from the board.
 
@@ -48,6 +49,10 @@ class ActiveSendBoardTransport(BoardTransport):
     calibration QA.
     """
 
+    ## @brief Init.
+    #
+    #  @param self Parameter description.
+    #  @param app_state Parameter description.
     def __init__(self, app_state: AppState) -> None:
         self.app_state = app_state
         self.ser: serial.Serial | None = None
@@ -79,6 +84,9 @@ class ActiveSendBoardTransport(BoardTransport):
         if self.ser is not None:
             self.ser.reset_input_buffer()
 
+    ## @brief Disconnect.
+    #
+    #  @param self Parameter description.
     def disconnect(self) -> None:
         if self.ser and self.ser.is_open:
             self.ser.close()
@@ -88,6 +96,10 @@ class ActiveSendBoardTransport(BoardTransport):
         self._last_assigned_sample_lsl_ts = None
         self._force_timestamp_reanchor = False
 
+    ## @brief Read frames.
+    #
+    #  @param self Parameter description.
+    #  @return Result produced by this function.
     def read_frames(self) -> list[MeasurementFrame]:
         """Read one batch of active-send frames and return decoded frames.
 
@@ -102,6 +114,10 @@ class ActiveSendBoardTransport(BoardTransport):
         frame_bytes_batch, diagnostics = self._read_modbus_response_frames_batch()
         return self._decode_batch(frame_bytes_batch, diagnostics)
 
+    ## @brief Send command.
+    #
+    #  @param self Parameter description.
+    #  @param command_name Parameter description.
     def send_command(self, command_name: str) -> None:
         raise RuntimeError(
             'Board commands are only available in Modbus RTU mode (device.mode=modbus_rtu).'
@@ -151,6 +167,10 @@ class ActiveSendBoardTransport(BoardTransport):
             stats.recovery_events, reason, dropped_buffer, pending,
         )
 
+    ## @brief Maybe log active warning.
+    #
+    #  @param self Parameter description.
+    #  @param message Parameter description.
     def _maybe_log_active_warning(self, message: str) -> None:
         stats = self.app_state.active_send_stats
         cfg = self.app_state.cfg.active_send
@@ -181,6 +201,9 @@ class ActiveSendBoardTransport(BoardTransport):
         stats.warning_suppressed += 1
         self._maybe_recover_active_stream('warning_threshold')
 
+    ## @brief Update active watermarks.
+    #
+    #  @param self Parameter description.
     def _update_active_watermarks(self) -> None:
         stats = self.app_state.active_send_stats
         stats.max_buffer_len = max(stats.max_buffer_len, len(self.binary_buffer))
@@ -190,6 +213,15 @@ class ActiveSendBoardTransport(BoardTransport):
             except Exception:
                 pass
 
+    ## @brief Extract modbus response frames.
+    #
+    #  @param self Parameter description.
+    #  @param header Parameter description.
+    #  @param expected_len Parameter description.
+    #  @param bad_hex_limit Parameter description.
+    #  @param max_buffer_bytes Parameter description.
+    #  @param max_frames Parameter description.
+    #  @return Result produced by this function.
     def _extract_modbus_response_frames(
         self,
         *,
@@ -220,6 +252,10 @@ class ActiveSendBoardTransport(BoardTransport):
                 f'to keep buffer <= {max_buffer_bytes}'
             )
 
+        ## @brief Find next crc valid header.
+        #
+        #  @param start_pos Parameter description.
+        #  @return Result produced by this function.
         def _find_next_crc_valid_header(start_pos: int = 0) -> int | None:
             pos = max(0, start_pos)
             while True:
@@ -297,6 +333,10 @@ class ActiveSendBoardTransport(BoardTransport):
 
         return frames
 
+    ## @brief Read modbus response frames batch.
+    #
+    #  @param self Parameter description.
+    #  @return Result produced by this function.
     def _read_modbus_response_frames_batch(self) -> tuple[list[bytes], dict[str, Any]]:
         """Read bytes from serial, extract CRC-valid frames, return batch + diagnostics."""
         if self.ser is None:

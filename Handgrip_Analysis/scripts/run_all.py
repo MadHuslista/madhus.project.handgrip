@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# @package scripts.run_all
+# @brief Batch dispatcher routing manifest rows to stage scripts.
+
 """
 Batch dispatcher — routes manifest rows to the appropriate stage script.
 
@@ -32,6 +35,9 @@ STAGE_TO_SCRIPT: dict[str, str] = {
 }
 
 
+# @brief Run all manifest rows by dispatching each stage to its script.
+# @param cfg Hydra configuration object.
+# @return None.
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)

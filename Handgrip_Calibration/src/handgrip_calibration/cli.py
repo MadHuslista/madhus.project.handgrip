@@ -9,8 +9,8 @@ from pathlib import Path
 
 from .config_schema import ConfigError, load_config
 from .fitting import fit_session
-from .lsl_io import preflight_streams
 from .logging_setup import configure_logging
+from .lsl_io import preflight_streams
 from .recorder import CalibrationRecorder
 from .report import generate_report
 from .segmentation import segment_accepted_holds
@@ -180,6 +180,8 @@ def _add_common_flags(parser: argparse.ArgumentParser, *, dry_run: bool = False,
 
 
 def build_parser() -> argparse.ArgumentParser:
+    # @brief Build the top-level command-line parser and subcommands.
+    #  @return Configured argparse parser instance.
     parser = argparse.ArgumentParser(
         prog="handgrip-cal",
         description=(
@@ -327,6 +329,9 @@ Exit codes:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # @brief CLI entry point for command dispatch.
+    #  @param argv Optional argument vector; when None uses process argv.
+    #  @return Process exit code.
     parser = build_parser()
     args = parser.parse_args(argv)
 

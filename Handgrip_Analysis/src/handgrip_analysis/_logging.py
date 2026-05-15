@@ -1,3 +1,6 @@
+# @package handgrip_analysis._logging
+# @brief Centralised logging setup for the handgrip-analysis package.
+
 """
 Centralised logging setup for the handgrip-analysis package.
 
@@ -17,6 +20,10 @@ import sys
 from pathlib import Path
 
 
+# @brief Configure root logging with console and optional file handlers.
+# @param level Logging level string (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+# @param log_file Optional log file path; when set, file output is enabled.
+# @return None.
 def setup_logging(
     level: str = "INFO",
     log_file: str | Path | None = None,

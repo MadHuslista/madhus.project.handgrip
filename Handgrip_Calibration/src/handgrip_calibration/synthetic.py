@@ -14,6 +14,10 @@ from .export import append_ndjson, ensure_dir
 
 
 def generate_demo_session(output_root: str | Path, *, seed: int = 42) -> Path:
+    # @brief Generate a complete synthetic calibration session folder.
+    #  @param output_root Root directory where the demo session is created.
+    #  @param seed Random seed for reproducible synthetic signals.
+    #  @return Path to the generated demo session directory.
     """Create a complete synthetic session folder.
 
     The generated data mimics the real architecture: a ~95 Hz irregular target

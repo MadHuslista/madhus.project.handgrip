@@ -27,6 +27,10 @@ except Exception:
 LOGGER = logging.getLogger(__name__)
 
 
+## @brief Build plot figure.
+#
+#  @param app_state Parameter description.
+#  @return Constructed object for this operation.
 def build_plot_figure(app_state: AppState) -> go.Figure:
     """Build a Plotly Figure from the current frame history in *app_state*."""
     fig = go.Figure()

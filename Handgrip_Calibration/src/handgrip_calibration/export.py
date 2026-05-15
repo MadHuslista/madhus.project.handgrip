@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
 
 def ensure_dir(path: str | Path) -> Path:
+    # @brief Create a directory path if needed.
+    #  @param path Directory path to create.
+    #  @return Path object for the created/existing directory.
     """Create a directory and return it as a :class:`Path`."""
 
     path = Path(path)
@@ -17,6 +21,9 @@ def ensure_dir(path: str | Path) -> Path:
 
 
 def json_default(value: Any) -> Any:
+    # @brief Convert non-JSON-native objects into JSON-compatible values.
+    #  @param value Value to serialize.
+    #  @return JSON-compatible representation.
     """JSON serializer for dataclasses and pathlib paths."""
 
     if is_dataclass(value):
@@ -29,6 +36,9 @@ def json_default(value: Any) -> Any:
 
 
 def append_ndjson(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
+    # @brief Append records to an NDJSON log file.
+    #  @param path NDJSON output file path.
+    #  @param rows Iterable of row dictionaries to append.
     """Append rows to an NDJSON file.
 
     NDJSON is used for event/quality logs because it is append-friendly and can
@@ -43,6 +53,9 @@ def append_ndjson(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
 
 
 def read_ndjson(path: str | Path) -> list[dict[str, Any]]:
+    # @brief Read an NDJSON file into Python dictionaries.
+    #  @param path NDJSON input file path.
+    #  @return Parsed row dictionaries, or an empty list when the file is missing.
     """Read an NDJSON file into a list of dictionaries."""
 
     path = Path(path)
@@ -62,6 +75,9 @@ def read_ndjson(path: str | Path) -> list[dict[str, Any]]:
 
 
 def write_json(path: str | Path, data: Any) -> None:
+    # @brief Write a stable, human-readable JSON file.
+    #  @param path Output JSON path.
+    #  @param data Serializable data object.
     """Write stable, human-readable JSON."""
 
     path = Path(path)

@@ -1,3 +1,6 @@
+# @package handgrip_analysis.pipeline
+# @brief Validation, planning, and execution pipeline for trial-aware analysis.
+
 """Validation → plan → execute pipeline for trial-aware analysis."""
 from __future__ import annotations
 
@@ -25,6 +28,14 @@ STANDARD_ARTIFACT_FILENAMES = {
 }
 
 
+# @brief Build an analysis plan for a selected stage and trial subset.
+# @param trials All manifest trials.
+# @param stage Stage key to run.
+# @param outdir Output directory path.
+# @param condition Optional condition filter.
+# @param trial_type Optional trial-type filter.
+# @return AnalysisPlan describing selected trials and output path.
+# @throws StageExecutionError Raised when no trials match requested filters.
 def build_analysis_plan(
     trials: Sequence[TrialSpec],
     *,
@@ -42,6 +53,10 @@ def build_analysis_plan(
     return AnalysisPlan(stage=stage, trials=tuple(selected), outdir=Path(outdir))
 
 
+# @brief Execute stage analyzers for every trial in a plan.
+# @param plan Precomputed analysis plan.
+# @param cfg Stage configuration.
+# @return Tuple of trial results and condition summaries.
 def execute_plan(plan: AnalysisPlan, cfg: StageConfig) -> tuple[list[TrialResult], list[ConditionSummary]]:
     """Execute trial analyzers and aggregate their results."""
     module = get_stage_module(plan.stage)
@@ -53,6 +68,9 @@ def execute_plan(plan: AnalysisPlan, cfg: StageConfig) -> tuple[list[TrialResult
     return results, summaries
 
 
+# @brief Merge per-trial named tables into stage-level tables.
+# @param results Sequence of trial results.
+# @return Dictionary of table name to concatenated DataFrame.
 def _collect_named_tables(results: Sequence[TrialResult]) -> dict[str, pd.DataFrame]:
     tables: dict[str, list[pd.DataFrame]] = {}
     for result in results:
@@ -68,6 +86,9 @@ def _collect_named_tables(results: Sequence[TrialResult]) -> dict[str, pd.DataFr
     return {name: pd.concat(frames, ignore_index=True) for name, frames in tables.items() if frames}
 
 
+# @brief Create the standard Phase 3 output directory structure.
+# @param outdir Stage output root.
+# @return Dictionary of standard directory names to paths.
 def _ensure_phase3_directories(outdir: Path) -> dict[str, Path]:
     """Create the standard Phase 3 directory family."""
     dirs = {
@@ -88,6 +109,12 @@ def _ensure_phase3_directories(outdir: Path) -> dict[str, Path]:
     return dirs
 
 
+# @brief Write Stage 6-specific artifact tables and acceptance report.
+# @param outdir Stage output root.
+# @param cfg Stage configuration.
+# @param results Sequence of trial results.
+# @param paths Mutable artifact path dictionary to update.
+# @return In-memory Stage 6 artifact tables.
 def _write_stage6_tables(
     outdir: Path,
     cfg: StageConfig,
@@ -112,6 +139,13 @@ def _write_stage6_tables(
     return tables
 
 
+# @brief Write all standard artifacts for a completed stage execution.
+# @param plan Executed analysis plan.
+# @param cfg Stage configuration.
+# @param results Trial-level results.
+# @param summaries Condition-level summaries.
+# @param all_trials Optional full manifest trial set for Stage 6 context.
+# @return Dictionary mapping artifact keys to filesystem paths.
 def write_stage_outputs(
     plan: AnalysisPlan,
     cfg: StageConfig,
@@ -181,6 +215,14 @@ def write_stage_outputs(
     return paths
 
 
+# @brief Run full manifest pipeline: load, plan, execute, and write outputs.
+# @param manifest_path Trial manifest CSV path.
+# @param stage Stage key to run.
+# @param outdir Output directory path.
+# @param cfg Optional stage configuration override.
+# @param condition Optional condition filter.
+# @param trial_type Optional trial-type filter.
+# @return Dictionary of generated artifact paths.
 def run_manifest_analysis(
     *,
     manifest_path: str | Path,

@@ -1,3 +1,6 @@
+# @package handgrip_analysis.config
+# @brief Structured configuration dataclasses for handgrip-analysis.
+
 """
 Structured configuration dataclasses for handgrip-analysis.
 

@@ -32,10 +32,12 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
+## @brief Represents the ModbusError component.
 class ModbusError(RuntimeError):
     """Raised on any Modbus RTU protocol violation."""
 
 
+## @brief Represents the MinimalModbusRTU component.
 class MinimalModbusRTU:
     """Minimal Modbus RTU master for function codes 0x03 (read) and 0x06 (write).
 
@@ -43,6 +45,12 @@ class MinimalModbusRTU:
     shared between the worker thread and the command handler without races.
     """
 
+    ## @brief Init.
+    #
+    #  @param self Parameter description.
+    #  @param serial_port Parameter description.
+    #  @param slave_id Parameter description.
+    #  @param inter_frame_gap_s Parameter description.
     def __init__(
         self,
         serial_port: serial.Serial,
@@ -54,6 +62,10 @@ class MinimalModbusRTU:
         self.inter_frame_gap_s = inter_frame_gap_s
         self.lock = threading.Lock()
 
+    ## @brief Effective inter frame gap s.
+    #
+    #  @param self Parameter description.
+    #  @return Result produced by this function.
     def _effective_inter_frame_gap_s(self) -> float:
         configured = max(0.0, float(self.inter_frame_gap_s))
         try:
@@ -64,6 +76,12 @@ class MinimalModbusRTU:
         protocol_gap_s = 3.5 * (11.0 / float(baud))
         return max(configured, protocol_gap_s, 0.0005)
 
+    ## @brief Read exact with deadline.
+    #
+    #  @param self Parameter description.
+    #  @param size Parameter description.
+    #  @param deadline Parameter description.
+    #  @return Result produced by this function.
     def _read_exact_with_deadline(self, size: int, deadline: float) -> bytes:
         buf = bytearray()
         while len(buf) < size:
@@ -74,6 +92,12 @@ class MinimalModbusRTU:
                 buf.extend(chunk)
         return bytes(buf)
 
+    ## @brief Exchange.
+    #
+    #  @param self Parameter description.
+    #  @param payload Parameter description.
+    #  @param expected_function Parameter description.
+    #  @return Result produced by this function.
     def _exchange(self, payload: bytes, expected_function: int) -> bytes:
         frame = payload + crc16_modbus(payload).to_bytes(2, byteorder='little')
         timeout = max(0.01, float(getattr(self.ser, 'timeout', 0.2) or 0.2))
@@ -142,6 +166,12 @@ class MinimalModbusRTU:
             )
         return response
 
+    ## @brief Read holding registers.
+    #
+    #  @param self Parameter description.
+    #  @param address Parameter description.
+    #  @param count Parameter description.
+    #  @return Result produced by this function.
     def read_holding_registers(
         self, address: int, count: int
     ) -> tuple[list[int], bytes, bytes]:
@@ -166,6 +196,12 @@ class MinimalModbusRTU:
         values = [(data[i] << 8) | data[i + 1] for i in range(0, len(data), 2)]
         return values, payload, response
 
+    ## @brief Write single register.
+    #
+    #  @param self Parameter description.
+    #  @param address Parameter description.
+    #  @param value Parameter description.
+    #  @return Result produced by this function.
     def write_single_register(
         self, address: int, value: int
     ) -> tuple[bytes, bytes]:
@@ -182,6 +218,7 @@ class MinimalModbusRTU:
         return payload, response
 
 
+## @brief Represents the ModbusBoardTransport component.
 class ModbusBoardTransport(BoardTransport):
     """Polling Modbus RTU transport.
 
@@ -189,12 +226,19 @@ class ModbusBoardTransport(BoardTransport):
     single decoded :class:`~rs485_gui.models.MeasurementFrame`.
     """
 
+    ## @brief Init.
+    #
+    #  @param self Parameter description.
+    #  @param app_state Parameter description.
     def __init__(self, app_state: AppState) -> None:
         self.app_state = app_state
         self.ser: serial.Serial | None = None
         self.client: MinimalModbusRTU | None = None
         self._last_host_ts: float | None = None
 
+    ## @brief Connect.
+    #
+    #  @param self Parameter description.
     def connect(self) -> None:
         cfg = self.app_state.serial_cfg
         self.ser = serial.Serial(
@@ -211,15 +255,26 @@ class ModbusBoardTransport(BoardTransport):
             inter_frame_gap_s=float(self.app_state.cfg.serial.inter_frame_gap_s),
         )
 
+    ## @brief Disconnect.
+    #
+    #  @param self Parameter description.
     def disconnect(self) -> None:
         if self.ser and self.ser.is_open:
             self.ser.close()
         self.ser = None
         self.client = None
 
+    ## @brief Read frames.
+    #
+    #  @param self Parameter description.
+    #  @return Result produced by this function.
     def read_frames(self) -> list[MeasurementFrame]:
         return [self._read_once()]
 
+    ## @brief Read once.
+    #
+    #  @param self Parameter description.
+    #  @return Result produced by this function.
     def _read_once(self) -> MeasurementFrame:
         if self.client is None:
             raise RuntimeError('Transport not connected')
@@ -268,6 +323,10 @@ class ModbusBoardTransport(BoardTransport):
         frame.board_profile = self.app_state.build_board_profile_snapshot()
         return frame
 
+    ## @brief Send command.
+    #
+    #  @param self Parameter description.
+    #  @param command_name Parameter description.
     def send_command(self, command_name: str) -> None:
         if self.client is None:
             raise RuntimeError('Transport not connected')

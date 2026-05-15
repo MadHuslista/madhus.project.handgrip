@@ -22,8 +22,8 @@ from typing import Any
 
 from .config_schema import AppConfig
 from .export import append_ndjson
-from .lsl_io import CsvStreamRecorder, summarize_stats
 from .logging_setup import configure_logging
+from .lsl_io import CsvStreamRecorder, summarize_stats
 from .markers import MarkerLogger
 from .protocol import Trial, generate_static_trials
 from .session import SessionManager, SessionPaths
@@ -35,6 +35,12 @@ class CalibrationRecorder:
     """Orchestrate one live calibration recording session."""
 
     def __init__(self, config: AppConfig, *, session_id: str | None = None, yes: bool = False) -> None:
+        # @brief Initialize a live calibration recorder workflow.
+        #  @param self CalibrationRecorder instance.
+        #  @param config Application configuration.
+        #  @param session_id Optional explicit session id.
+        #  @param yes Skip interactive operator prompts when true.
+        #  @return None.
         self.config = config
         self.yes = yes
         self.manager = SessionManager(config, session_id=session_id)
@@ -220,6 +226,9 @@ class CalibrationRecorder:
                     self._timed_wait(squeeze.rest_s, message=f"Resting {squeeze.rest_s:g}s before next squeeze...")
 
     def run_protocol(self) -> SessionPaths:  # pragma: no cover - interactive/live workflow
+        # @brief Execute the configured live protocol and persist all artifacts.
+        #  @param self CalibrationRecorder instance.
+        #  @return Session paths for the recorded session.
         """Run the configured live recording protocol."""
 
         protocol = self.config.protocol

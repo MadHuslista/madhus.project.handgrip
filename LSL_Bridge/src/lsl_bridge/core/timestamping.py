@@ -1,4 +1,8 @@
-"""Timestamp resolution for the LSL Bridge target stream.
+# @package lsl_bridge.core.timestamping
+#  @brief Timestamp resolution policies for target stream publication.
+##
+"""
+Timestamp resolution for the LSL Bridge target stream.
 
 LSL timestamps are the synchronisation authority.  Device timestamps
 (``device_clock_us``) are kept as diagnostic channels only.
@@ -38,8 +42,10 @@ from lsl_bridge.types import ParsedTargetSample
 _log = logging.getLogger(__name__)
 
 
+# @brief Resolve processor-domain sample time values.
 class SampleTimeResolver:
-    """Resolve the filter-domain time for a target sample.
+    """
+    Resolve the filter-domain time for a target sample.
 
     The filter chain needs a monotonically increasing time in seconds.
     This resolver produces that time from either the LSL timestamp or
@@ -48,6 +54,7 @@ class SampleTimeResolver:
 
     Args:
         cfg: Full Hydra ``DictConfig``.  Uses ``processing.timestamp_source``.
+
     """
 
     def __init__(self, cfg: DictConfig) -> None:
@@ -55,6 +62,9 @@ class SampleTimeResolver:
         self._last_device_clock_us: int | None = None
         self._last_resolved_time_s: float = 0.0
 
+    # @brief Resolve processing time for one parsed sample.
+    #  @param sample Parsed target sample record.
+    #  @return Filter-domain time in seconds.
     def resolve(self, sample: ParsedTargetSample) -> float:
         """Return the filter-domain time for *sample* in seconds."""
         if self._source == "lsl":
@@ -78,12 +88,15 @@ class SampleTimeResolver:
         return self._last_resolved_time_s
 
 
+# @brief Resolve publication timestamps in the LSL clock domain.
 class TargetTimestampResolver:
-    """Map device-clock values into the LSL clock domain.
+    """
+    Map device-clock values into the LSL clock domain.
 
     Args:
         cfg:    Full Hydra ``DictConfig``.  Uses ``target_timestamping``.
         events: ``ComponentEventOutlet`` for structured anchor-reset events.
+
     """
 
     def __init__(self, cfg: DictConfig, events: object) -> None:
@@ -102,8 +115,13 @@ class TargetTimestampResolver:
         self._last_resolved_lsl_s: float | None = None
         self._events = events
 
+    # @brief Resolve LSL timestamp for one outgoing target sample.
+    #  @param sample Parsed target sample record.
+    #  @param arrival_lsl_time Host receive timestamp in LSL clock.
+    #  @return Monotonic LSL timestamp in seconds.
     def resolve(self, sample: ParsedTargetSample, arrival_lsl_time: float) -> float:
-        """Return the LSL timestamp to stamp *sample* with.
+        """
+        Return the LSL timestamp to stamp *sample* with.
 
         Args:
             sample:           Parsed D2 sample (provides ``device_clock_us``).
@@ -111,6 +129,7 @@ class TargetTimestampResolver:
 
         Returns:
             LSL timestamp (seconds, LSL epoch) to be used for this sample.
+
         """
         if self._policy == "host_receive":
             return self._monotonic_lsl(float(arrival_lsl_time))
@@ -198,7 +217,8 @@ class TargetTimestampResolver:
         )
 
     def _monotonic_lsl(self, candidate_lsl_s: float) -> float:
-        """Return a non-decreasing LSL timestamp.
+        """
+        Return a non-decreasing LSL timestamp.
 
         LSL accepts explicit timestamps, but downstream consumers should never
         receive a backward jump.  This guard is intentionally tiny: it does not

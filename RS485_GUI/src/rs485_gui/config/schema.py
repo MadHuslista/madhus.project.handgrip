@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 
 
 @dataclass
+## @brief Represents the SessionConfig component.
 class SessionConfig:
     #: Optional calibration session id propagated to logs and IPC.
     #: Set only when you want GUI logs/IPC to carry a specific recording session id.
@@ -20,12 +21,14 @@ class SessionConfig:
 
 
 @dataclass
+## @brief Represents the AppConfig component.
 class AppConfig:
     log_level: str = 'INFO'
     worker_join_timeout_s: float = 1.5
 
 
 @dataclass
+## @brief Represents the UiConfig component.
 class UiConfig:
     page_title: str = 'High-Speed Acquisition Instrument GUI'
     host: str = '127.0.0.1'
@@ -66,6 +69,7 @@ class UiConfig:
 
 
 @dataclass
+## @brief Represents the LoggerConfig component.
 class LoggerConfig:
     enabled: bool = True
     directory: str = './logs'
@@ -81,6 +85,7 @@ class LoggerConfig:
 
 
 @dataclass
+## @brief Represents the IpcConfig component.
 class IpcConfig:
     enabled: bool = True
     transport: str = 'zmq_pub'
@@ -100,6 +105,7 @@ class IpcConfig:
 
 
 @dataclass
+## @brief Represents the SerialConfig component.
 class SerialConfig:
     default_port: str = ''
     excluded_ports: list[str] = field(default_factory=list)
@@ -115,6 +121,7 @@ class SerialConfig:
 
 
 @dataclass
+## @brief Represents the DeviceConfig component.
 class DeviceConfig:
     mode: str = 'active_send'
     slave_address: int = 1
@@ -128,6 +135,7 @@ class DeviceConfig:
 
 
 @dataclass
+## @brief Represents the ActiveSendConfig component.
 class ActiveSendConfig:
     timestamp_policy: str = 'batch_end_anchored'
     default_parser_profile: str = 'modbus_rtu_response_11regs'
@@ -156,6 +164,7 @@ class ActiveSendConfig:
 
 
 @dataclass
+## @brief Represents the LoggingConfig component.
 class LoggingConfig:
     """Per-module log level overrides (new in v0.2 refactor).
 
@@ -175,6 +184,7 @@ class LoggingConfig:
 
 
 @dataclass
+## @brief Represents the Rs485GuiConfig component.
 class Rs485GuiConfig:
     """Root structured config for rs485_gui.
 

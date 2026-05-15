@@ -18,6 +18,9 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
+## @brief Acquisition worker.
+#
+#  @param app_state Parameter description.
 def acquisition_worker(app_state: AppState) -> None:
     """Main loop executed by the acquisition worker thread.
 

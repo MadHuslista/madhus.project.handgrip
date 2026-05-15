@@ -1,4 +1,8 @@
-"""Serial port utilities for the LSL Bridge.
+# @package lsl_bridge.io.serial_utils
+#  @brief Serial utility helpers for target device connection setup.
+##
+"""
+Serial port utilities for the LSL Bridge.
 
 Provides two small helpers used by the main serial read loop in ``app.py``:
 
@@ -20,8 +24,12 @@ from serial.tools import list_ports
 _log = logging.getLogger(__name__)
 
 
+# @brief Look up USB metadata for a configured serial port.
+#  @param port_name Device path such as /dev/ttyUSB0.
+#  @return Dictionary with enumerated metadata fields for the target port.
 def find_port_metadata(port_name: str) -> dict[str, Any]:
-    """Return USB metadata for *port_name* from the system port enumeration.
+    """
+    Return USB metadata for *port_name* from the system port enumeration.
 
     Args:
         port_name: Device path as a string (e.g. ``"/dev/ttyUSB1"``).
@@ -31,6 +39,7 @@ def find_port_metadata(port_name: str) -> dict[str, Any]:
         ``pid``, ``serial_number``, ``manufacturer``, ``product``.
         If the port is not found in the enumeration, returns
         ``{"device": port_name}`` so callers never receive ``None``.
+
     """
     for port in list_ports.comports():
         if port.device == port_name:
@@ -48,8 +57,13 @@ def find_port_metadata(port_name: str) -> dict[str, Any]:
     return {"device": port_name}
 
 
+# @brief Drain serial input bytes during startup settle window.
+#  @param ser Open pyserial instance.
+#  @param startup_settle_s Settle duration in seconds.
+#  @return None.
 def settle_serial_input(ser: Serial, startup_settle_s: float) -> None:
-    """Drain the UART input buffer during the startup settle window.
+    """
+    Drain the UART input buffer during the startup settle window.
 
     Reads and discards lines until *startup_settle_s* seconds have elapsed,
     then performs a final ``reset_input_buffer()`` to flush any partial line.
@@ -58,6 +72,7 @@ def settle_serial_input(ser: Serial, startup_settle_s: float) -> None:
         ser:               Open ``Serial`` instance.
         startup_settle_s:  Duration in seconds.  Values ≤ 0 are treated as
                            no settle (immediate ``reset_input_buffer``).
+
     """
     ser.reset_input_buffer()
     deadline = time.monotonic() + max(0.0, startup_settle_s)

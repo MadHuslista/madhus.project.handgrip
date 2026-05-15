@@ -21,20 +21,20 @@ Implemented candidate models
 from __future__ import annotations
 
 import logging
-import time
-
 import math
+import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from ._utils import finite_or_none as _finite_or_none
 from .config_schema import AppConfig, FitConfig
 from .export import append_ndjson, write_json
 from .segmentation import segment_accepted_holds
-from ._utils import finite_or_none as _finite_or_none
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +76,9 @@ class CandidateResult:
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        # @brief Serialize candidate fit results into a dictionary.
+        #  @param self Candidate result instance.
+        #  @return Dictionary representation suitable for JSON export.
         return asdict(self)
 
 
@@ -106,6 +109,9 @@ class CalibrationFitResult:
     notes: list[str]
 
     def to_dict(self) -> dict[str, Any]:
+        # @brief Serialize selected fit result to legacy-compatible dictionary form.
+        #  @param self Selected fit result instance.
+        #  @return Dictionary representation including force_N compatibility fields.
         data = asdict(self)
         data["force_N"] = {"a": data.pop("force_N_a"), "b": data.pop("force_N_b")}
         return data
@@ -161,7 +167,6 @@ class _ModelSpec:
     parameters: dict[str, Any]
     firmware_export: dict[str, Any] | None
     notes: list[str] = field(default_factory=list)
-
 
 
 def _r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -852,6 +857,10 @@ def _ranking(candidates: list[CandidateResult]) -> list[dict[str, Any]]:
 
 
 def fit_candidates_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> tuple[pd.DataFrame, list[CandidateResult], list[str]]:
+    # @brief Fit all configured candidate models on a calibration dataset.
+    #  @param dataset Segmented calibration hold dataset.
+    #  @param config Application configuration including fit settings.
+    #  @return Tuple of fitted frame, candidate results, and fit-stage notes.
     """Fit all configured candidate models from a calibration hold dataset."""
 
     data, notes = _prepare_fit_data(dataset, config)
@@ -968,6 +977,10 @@ def _result_from_candidate(selected: CandidateResult, candidates: list[Candidate
 
 
 def fit_model_selection_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> tuple[pd.DataFrame, CalibrationFitResult, list[CandidateResult]]:
+    # @brief Fit candidates and select the deployment model.
+    #  @param dataset Segmented calibration hold dataset.
+    #  @param config Application configuration including model-selection settings.
+    #  @return Tuple of fitted frame, selected fit result, and all candidate results.
     """Fit all candidates, select the deployment model, and return all results."""
 
     fit_frame, candidates, notes = fit_candidates_from_dataset(dataset, config)
@@ -977,6 +990,10 @@ def fit_model_selection_from_dataset(dataset: pd.DataFrame, config: AppConfig) -
 
 
 def fit_affine_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> CalibrationFitResult:
+    # @brief Deprecated affine-fit compatibility wrapper.
+    #  @param dataset Segmented calibration hold dataset.
+    #  @param config Application configuration.
+    #  @return Selected calibration fit result.
     """Deprecated. Use ``fit_model_selection_from_dataset()`` instead.
 
     Will be removed in v0.3.0.
@@ -993,6 +1010,10 @@ def fit_affine_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> Calibra
 
 
 def fit_session(session_dir: str | Path, config: AppConfig) -> tuple[pd.DataFrame, CalibrationFitResult]:
+    # @brief Segment a session, fit candidates, and persist fit artifacts.
+    #  @param session_dir Session directory path.
+    #  @param config Application configuration.
+    #  @return Tuple of segmented dataset and selected fit result.
     """Segment a session, fit all candidates, and write fit artifacts.
 
     Written files:

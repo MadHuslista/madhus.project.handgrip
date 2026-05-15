@@ -1,4 +1,8 @@
-"""LSL Bridge — Handgrip system publisher (schema v2).
+# @package lsl_bridge
+#  @brief Package root for LSL Bridge stream publisher components.
+##
+"""
+LSL Bridge — Handgrip system publisher (schema v2).
 
 Publishes two native LSL streams consumed by Handgrip_Calibration:
   * HandgripTarget   — Arduino/HX711 D2 frames (irregular, ~93-100 Hz)

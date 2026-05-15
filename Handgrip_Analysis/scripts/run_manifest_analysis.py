@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# @package scripts.run_manifest_analysis
+# @brief Run Phase 1 manifest-driven multi-trial analysis.
+
 """
 Run Phase 1 manifest-driven multi-trial analysis.
 
@@ -15,5 +18,7 @@ from __future__ import annotations
 
 from handgrip_analysis._cli.manifest import main
 
+# @brief CLI entrypoint for manifest-driven analysis.
+# @return None.
 if __name__ == "__main__":
     main()

@@ -83,6 +83,9 @@ def _labels_from_info(info: Any) -> list[str]:
 
 
 def resolve_stream(config: StreamConfig) -> tuple[Any, ResolvedStream]:
+    # @brief Resolve a single LSL stream from configuration constraints.
+    #  @param config Stream resolution configuration.
+    #  @return Tuple of raw StreamInfo object and resolved metadata.
     """Resolve one LSL stream based on name/type/source constraints."""
 
     pylsl = _import_pylsl()
@@ -110,6 +113,9 @@ def resolve_stream(config: StreamConfig) -> tuple[Any, ResolvedStream]:
 
 
 def preflight_streams(streams: dict[str, StreamConfig]) -> dict[str, ResolvedStream]:
+    # @brief Resolve all configured streams for readiness checks.
+    #  @param streams Mapping of stream keys to stream configurations.
+    #  @return Mapping of resolved stream metadata for successfully resolved streams.
     """Resolve all configured LSL streams and return their metadata."""
 
     resolved: dict[str, ResolvedStream] = {}
@@ -124,6 +130,10 @@ def preflight_streams(streams: dict[str, StreamConfig]) -> dict[str, ResolvedStr
 
 
 def resolve_channel_indices(labels: list[str], channel_map: dict[str, list[str | int]]) -> dict[str, int]:
+    # @brief Resolve configured channel aliases into concrete indices.
+    #  @param labels Published LSL channel labels.
+    #  @param channel_map Canonical-to-candidate channel mapping.
+    #  @return Mapping from canonical channel names to channel indices.
     """Resolve canonical channel names to numeric LSL sample indices.
 
     Each channel map value may contain multiple candidates. String candidates are
@@ -173,6 +183,9 @@ class CsvStreamRecorder(threading.Thread):
         self._inlet = None
 
     def run(self) -> None:  # pragma: no cover - requires live LSL
+        # @brief Record resolved LSL samples into canonical CSV rows.
+        #  @param self Recorder thread instance.
+        #  @return None.
         try:
             info, meta = resolve_stream(self.config)
             pylsl = _import_pylsl()
@@ -211,6 +224,9 @@ class CsvStreamRecorder(threading.Thread):
 
 
 def summarize_stats(stats: Iterable[CsvStreamRecorder]) -> dict[str, dict[str, Any]]:
+    # @brief Build JSON-friendly stats for active stream recorders.
+    #  @param stats Iterable of recorder instances.
+    #  @return Nested statistics dictionary keyed by recorder stream key.
     """Return JSON-friendly recording stats for a collection of recorders."""
 
     return {
