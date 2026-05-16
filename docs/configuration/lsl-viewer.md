@@ -1,0 +1,37 @@
+# LSL Viewer Configuration Reference
+
+**Status:** Canonical root configuration reference  
+**Component:** `LSL_Viewer`  
+**Detailed component doc:** `LSL_Viewer/docs/configuration.md`  
+**Config source:** `LSL_Viewer/conf/config.yaml`
+
+## Summary
+
+The viewer config controls live/replay mode, LSL stream discovery, channel labels, XY correlation alignment, UI refresh, browser rendering, and replay file paths. Rendering/downsampling settings are display-only and do not alter acquisition data.
+
+## Configuration table
+
+| Key | Type | Default | Allowed range / values | Operational impact | When to change | Failure risk |
+| --- | ---- | ------- | ---------------------- | ------------------ | -------------- | ------------ |
+| `mode` | string | `live` | `live`, `live_with_reference_validation`, `csv_replay`, `xdf_replay` where supported. | Selects viewer runner. | Live monitoring vs replay. | Unsupported mode or wrong inputs. |
+| `streams.target.name` | string | `HandgripTarget` | Must match bridge target stream. | Target stream discovery. | Only coordinated stream migration. | Viewer cannot find target. |
+| `streams.target.buffer_samples` | int | `1600` | Positive integer. | Target ring buffer length. | Longer windows or memory tuning. | Insufficient history or memory waste. |
+| `streams.reference.name` | string | `HandgripReference` | Must match bridge reference stream. | Reference stream discovery. | Only coordinated stream migration. | Viewer cannot find reference. |
+| `streams.reference.expected_rate_hz` | float | `500.0` | Expected reference Hz. | Buffer/timing expectations. | Board profile changes. | Misleading timing/gap diagnostics. |
+| `channels.target.clock_label` | string | `device_clock_us` | Channel label in target stream. | Target timing display. | If bridge channels change. | Missing timing channel. |
+| `channels.target.raw_label` | string | `target_raw_count` | Channel label in target stream. | Primary target plot and XY input. | If bridge channels change. | Wrong/missing target plot. |
+| `channels.target.filtered_label` | string | `target_filtered_units` | Optional channel label. | Filtered display if stream provides it. | If bridge processing output changes. | Missing filtered plot. |
+| `channels.reference.raw_label` | string | `reference_force_N` | Reference force channel label. | Reference plot and XY reference value. | If bridge reference channels change. | Wrong reference force. |
+| `viewer.window_seconds` | float | `10.0` | Positive seconds. | Visible time window. | Operator preference. | Too little/too much context. |
+| `viewer.refresh_s` | float | `0.05` | Positive seconds. | UI refresh cadence. | Performance/UX tuning. | Browser lag or sluggish UI. |
+| `viewer.xy_correlation.lock_max_span` | bool | `false` | `true`/`false`. | Axis behavior for XY plot. | Diagnose force range changes. | Misleading scaling if misunderstood. |
+| `viewer.xy_correlation.target_signal` | string | `raw` | `raw`, `filtered` if available. | Selects target signal for XY plot. | Compare raw vs processed. | Fitting intuition wrong if target signal differs. |
+| `viewer.xy_correlation.time_alignment.mode` | string | `raw_lsl` | `raw_lsl`, `tail_aligned_lsl`, supported manual modes. | Reference/target pairing in XY plot. | Diagnose lag. | Visual lag or false correlation if wrong. |
+| `viewer.render.downsample_enabled` | bool | `true` | `true`/`false`. | Browser display payload size. | UI performance. | Misinterpreted as acquisition downsampling. |
+| `viewer.render.max_points_xy` | int | `1500` | Positive integer. | XY plot render density. | Large windows/performance. | Slow browser if too high; lost visual detail if too low. |
+| `viewer.server.port` | int | `8765` | Free TCP port. | NiceGUI/browser port. | Port conflict. | App fails to bind. |
+| `calibration_markers.enabled` | bool | `false` | `true`/`false`. | Marker overlay from calibration events. | Replay/session review. | Missing markers if expected. |
+| `reference.target_csv_path` | path | `./data/target_handgrip_samples_v2.csv` | Existing CSV path for replay. | CSV replay target input. | Replay saved bridge CSVs. | Replay fails if missing/wrong. |
+| `reference.reference_csv_path` | path | `./data/reference_rs485_samples_v2.csv` | Existing CSV path for replay. | CSV replay reference input. | Replay saved bridge CSVs. | Replay fails if missing/wrong. |
+| `reference.xdf_path` | path/null | `null` | XDF file path. | XDF replay input. | Replay LSL recordings. | Replay fails if missing pyxdf/path. |
+| `logging.log_file` | path | `handgrip_realtime_viewer.log` | Writable path. | Viewer diagnostics. | Debug UI/stream discovery. | Missing logs. |

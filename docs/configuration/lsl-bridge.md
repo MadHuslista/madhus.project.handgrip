@@ -1,0 +1,41 @@
+# LSL Bridge Configuration Reference
+
+**Status:** Canonical root configuration reference  
+**Component:** `LSL_Bridge`  
+**Detailed component doc:** `LSL_Bridge/docs/configuration.md`  
+**Config source:** `LSL_Bridge/conf/config.yaml`
+
+## Summary
+
+`LSL_Bridge/conf/config.yaml` controls the target serial parser, reference IPC subscriber, stream metadata, timestamping policy, CSV sinks, component event stream, and optional processing pipeline.
+
+## Configuration table
+
+| Key | Type | Default | Allowed range / values | Operational impact | When to change | Failure risk |
+| --- | ---- | ------- | ---------------------- | ------------------ | -------------- | ------------ |
+| `schema.version` | string | `handgrip_lsl_bridge.v2` | Stable schema label. | Documents config compatibility. | Only during breaking config migration. | Confusing provenance. |
+| `session.session_id` | string/null | `null` | Any stable session label. | Propagates to stream/session metadata. | During named experiments. | Harder traceability if omitted. |
+| `streams.target.enabled` | bool | `true` | `true`/`false`. | Publishes target stream. | Target-only/diagnostic variations. | Viewer/calibration target missing. |
+| `streams.target.name` | string | `HandgripTarget` | Must match viewer/calibration configs. | LSL target stream discovery. | Only with coordinated downstream migration. | Downstream tools fail to find target. |
+| `streams.target.nominal_srate` | float | `0.0` | `0.0` for irregular; positive if fixed. | LSL metadata. | Only if target rate becomes fixed and validated. | Misleading timing assumptions. |
+| `streams.target.payload_schema` | string | `D2` | Current value `D2`. | Declares target firmware schema. | Only during firmware/parser migration. | Parser/channel mismatch. |
+| `streams.reference.enabled` | bool | `true` | `true`/`false`. | Publishes reference stream. | Target-only debugging. | Calibration cannot run without reference. |
+| `streams.reference.name` | string | `HandgripReference` | Must match viewer/calibration configs. | LSL reference stream discovery. | Only with coordinated downstream migration. | Downstream tools fail to find reference. |
+| `streams.reference.nominal_srate` | float | `500.0` | Positive Hz or config-supported value. | Reference stream metadata. | If board profile changes. | Misleading sample-rate assumptions. |
+| `component_events.enabled` | bool | `true` | `true`/`false`. | Publishes diagnostic marker stream. | Disable only in special demos/tests. | Lost gap/connect diagnostics. |
+| `component_events.name` | string | `HandgripComponentEvents` | Must match diagnostics docs. | Event stream discovery. | Only with coordinated migration. | Marker consumers miss events. |
+| `rs485_ipc.enabled` | bool | `true` | `true`/`false`. | Enables reference IPC subscriber. | Target-only quickstart. | Reference stream missing. |
+| `rs485_ipc.connect` | string | `tcp://127.0.0.1:5557` | ZMQ endpoint. | Connects to RS485 GUI publisher. | Port/host topology changes. | No reference data. |
+| `rs485_ipc.topic` | string | `rs485.measurement.v1` | Must match RS485 GUI topic. | IPC contract. | Only coordinated migration. | Reference frames ignored. |
+| `serial.port` | string | `/dev/ttyUSB1` | Arduino serial path. | Connects to target firmware. | Every host/bench setup. | Wrong/no target stream. |
+| `serial.baudrate` | int | `115200` | Must match firmware `SERIAL_BAUD_RATE`. | UART speed. | Only coordinated firmware change. | Garbled/no target data. |
+| `target_timestamping.policy` | string | `device_clock_anchor` | `device_clock_anchor`, `host_receive` where supported. | Chooses target LSL timestamp policy. | Timing diagnosis or fallback. | Drift or wrong alignment if misunderstood. |
+| `target_timestamping.max_anchor_drift_s` | float | `0.05` | Nonnegative seconds. | Re-anchor threshold. | Tune timing stability. | Excessive reanchors or hidden drift. |
+| `protocol.data_prefix` | string | `D2` | Must match firmware prefix. | Parser data frame prefix. | Only during firmware schema migration. | Parser drops all target lines. |
+| `protocol.metadata_prefix` | string | `M2` | Must match firmware prefix. | Parser metadata prefix. | Only during firmware schema migration. | Missing metadata. |
+| `processing.filters` | list | one enabled low-pass candidate config | Valid processing stages. | Deploy validated Stage 6 filter. | Signal distortion if unvalidated. |
+| `csv.target.enabled` | bool | `true` | `true`/`false`. | Writes target CSV. | Disable only when not recording via bridge CSV. | Lost target debug/export file. |
+| `csv.target.path` | path | `LSL_Bridge/data/target_handgrip_samples_v2.csv` | Writable path. | Target CSV sink. | Organize outputs. | Overwrite or path confusion. |
+| `csv.reference.enabled` | bool | `true` | `true`/`false`. | Writes reference CSV. | Disable only when not needed. | Lost reference debug/export file. |
+| `csv.reference.path` | path | `LSL_Bridge/data/reference_rs485_samples_v2.csv` | Writable path. | Reference CSV sink. | Organize outputs. | Overwrite or path confusion. |
+| `logging.file` | path | `LSL_Bridge/logs/lsl_bridge.log` | Writable path. | Bridge log output. | Session-specific logging. | Missing diagnostics. |
