@@ -23,40 +23,15 @@ flowchart TD
     Calibration -->|Calibration Data/Files| Analysis(Handgrip_Analysis)
 ```
 
-```text
-Physical force
-  │
-  ├── Target chain
-  │     Handgrip sensor(s)
-  │       → HX711 / Arduino Nano firmware
-  │       → USB serial D2/M2 frames
-  │       → LSL_Bridge
-  │       → LSL stream: HandgripTarget
-  │
-  └── Reference chain
-        PM58 load cell
-          → high-speed acquisition board
-          → RS485 / USB-RS485
-          → RS485_GUI
-          → ZeroMQ IPC topic: rs485.measurement.v1
-          → LSL_Bridge
-          → LSL stream: HandgripReference
-
-HandgripTarget + HandgripReference
-  → LSL_Viewer for live/replay inspection
-  → Handgrip_Calibration for protocol recording, fitting, and reports
-  → Handgrip_Analysis for offline signal characterization and filter design
-```
-
 ### Modules
 
 Following the system architecture, here are the entry points and purposes for each module:
 
-- [PM58 Load Cell & Acquisition Board](docs/workflows/physical_setup.md): Physical sensing and wiring stack for the setup of the reference-force acquisition board. 
-- [RS485_GUI](RS485_GUI/docs/index.md): GUI tool for connecting to the PM58 acquisition board via Modbus Active-Send mode over RS485. Provides streaming to the LSL_Bridge layer on real-time, along with live value monitoring. 
-- [Handgrip_Firmware](Handgrip_Firmware/docs/index.md): Arduino Nano firmware that samples the Handgrip's HX711 load-cell data, timestamps frames, and emits calibration-ready telemetry over UART serial. 
-- [LSL_Bridge](LSL_Bridge/docs/index.md): Middleware that ingests handgrip(target)/PM58(reference) sources and publishes synchronized Lab Streaming Layer streams (`HandgripTarget`, `HandgripReference`). 
-- [LSL_Viewer](LSL_Viewer/docs/index.md): Real-time dashboard for synchronized real time stream monitoring, timing inspection, and XY correlation quality checks. 
+- [PM58 Load Cell & Acquisition Board](docs/workflows/physical_setup.md): Physical sensing and wiring stack for the reference-force acquisition board. 
+- [RS485_GUI](RS485_GUI/docs/index.md): GUI tool for connecting to the PM58 acquisition board and stream to the LSL_Bridge layer on real-time. 
+- [Handgrip_Firmware](Handgrip_Firmware/docs/index.md): Firmware that samples the Handgrip's HX711 load-cell data ready telemetry over for UART serial. 
+- [LSL_Bridge](LSL_Bridge/docs/index.md): Middleware that ingests both signals and publishes a synchronized Lab Streaming Layer streams (`HandgripTarget`, `HandgripReference`). 
+- [LSL_Viewer](LSL_Viewer/docs/index.md): Real-time dashboard for synchronized real time stream monitoring.
 - [Handgrip_Calibration](Handgrip_Calibration/docs/index.md): Calibration workflow that maps raw ADC counts into Newtons using reference-device ground truth. Evalautes multiple mathematical models to find the best fit, and returns report with model and exact parameters, with charts justification
 - [Handgrip_Analysis](Handgrip_Analysis/docs/index.md): Frequency analysis for noise/drift/dynamics of the Handgrip's calibrated force signal. Evalulate an extensible set of predefined DSP filters, and returns exact filter parameters to be set on the LSL_Bridge filtered channel for production real-time streaming. 
 
