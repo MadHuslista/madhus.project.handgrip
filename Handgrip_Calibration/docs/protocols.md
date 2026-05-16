@@ -10,91 +10,62 @@
 
 ## Audience
 
-Read this document if you need to:
-
-- choose the right calibration protocol,
-- understand which protocol is canonical,
-- run a calibration session consistently,
-- update protocol defaults,
-- explain why older static-staircase references are no longer the main workflow.
-
-## Status
-
-| Field                 | Value                                               |
-| --------------------- | --------------------------------------------------- |
-| Canonical             | Yes                                                 |
-| Component             | `Handgrip_Calibration`                              |
-| Primary protocol      | `conf/protocol_static_reversible_staircase_v3.yaml` |
-| Legacy/basic protocol | `conf/protocol_static_staircase.yaml`               |
-| Required path fix     | `../RS485_GUI/config/config.yaml`                   |
+Read this document if you need to choose a calibration protocol, add a protocol, explain why v3 is primary, or preserve legacy compatibility without confusing operators.
 
 ## Protocol decision table
 
-| Protocol file                                  | Status                        | Use for                                                                   | Avoid using for                                                           |
-| ---------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `protocol_reference_verification.yaml`         | Canonical pre-check           | Verify reference board/PM58 chain before main calibration                 | Primary target model fit.                                                 |
-| `protocol_static_reversible_staircase_v3.yaml` | **Canonical primary**         | Main calibration fit dataset using reversible up/down static holds        | Quick smoke-only validation when time is extremely constrained.           |
-| `protocol_holdout_verification.yaml`           | Canonical validation          | Independent post-fit holdout validation                                   | Training/refitting the primary model.                                     |
-| `protocol_low_force_refinement.yaml`           | Optional refinement           | Improve low-force region if the primary fit shows weak low-force behavior | First-run calibration unless low-force accuracy is specifically required. |
-| `protocol_creep_zero_return.yaml`              | Optional diagnostic           | Quantify creep, zero return, and baseline recovery                        | Primary gain/offset fitting.                                              |
-| `protocol_dynamic_validation.yaml`             | Optional diagnostic           | Ramps/squeezes, lag, hysteresis, dynamic behavior                         | Static fit parameter estimation.                                          |
-| `protocol_fast_smoke_test.yaml`                | Developer/operator smoke test | Fast sanity test before a full session                                    | Final calibration report.                                                 |
-| `protocol_static_staircase.yaml`               | Legacy/basic baseline         | Compatibility with older docs or short static-only baseline               | Recommended handoff workflow.                                             |
-| `template.yaml`                                | Authoring template            | Creating new protocol configs                                             | Direct operator run unless filled out.                                    |
+| Protocol file | Status | Use for | Avoid using for |
+| --- | --- | --- | --- |
+| `protocol_reference_verification.yaml` | Canonical pre-check | Verify reference board/PM58 chain before primary calibration. | Primary model fitting. |
+| `protocol_static_reversible_staircase_v3.yaml` | **Canonical primary** | Main calibration fit dataset using reversible up/down static holds. | Quick smoke-only checks. |
+| `protocol_holdout_verification.yaml` | Canonical validation | Independent post-fit holdout validation. | Training/refitting the primary model. |
+| `protocol_low_force_refinement.yaml` | Optional refinement | Improve low-force region if the primary fit is weak near zero. | First-run calibration unless low-force accuracy is specifically required. |
+| `protocol_creep_zero_return.yaml` | Optional diagnostic | Quantify creep, zero return, and baseline recovery. | Primary gain/offset fitting. |
+| `protocol_dynamic_validation.yaml` | Optional diagnostic | Ramps, squeezes, lag, hysteresis, dynamic behavior. | Static fit parameter estimation. |
+| `protocol_fast_smoke_test.yaml` | Developer/operator smoke test | Fast sanity test before a full session. | Final calibration report. |
+| `protocol_static_staircase.yaml` | Legacy/basic baseline | Compatibility with older docs or short static-only baseline. | Recommended handoff workflow. |
+| `template.yaml` | Authoring template | Create new protocol configs. | Direct operator run unless filled out. |
 
-## Canonical calibration sequence
-
-Recommended full workflow:
+## Canonical sequence
 
 ```bash
 cd Handgrip_Calibration
-
-handgrip-cal preflight --config conf/protocol_static_reversible_staircase_v3.yaml
-handgrip-cal record --config conf/protocol_reference_verification.yaml
-handgrip-cal record --config conf/protocol_static_reversible_staircase_v3.yaml
-handgrip-cal fit data/calibration/<fit_session_id> --config conf/protocol_static_reversible_staircase_v3.yaml
-handgrip-cal report data/calibration/<fit_session_id> --config conf/protocol_static_reversible_staircase_v3.yaml
-handgrip-cal record --config conf/protocol_holdout_verification.yaml
-handgrip-cal validate-holdout data/calibration/<holdout_session_id> \
+uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase_v3.yaml
+uv run handgrip-cal record --config conf/protocol_reference_verification.yaml
+uv run handgrip-cal record --config conf/protocol_static_reversible_staircase_v3.yaml
+uv run handgrip-cal fit data/calibration/<fit_session_id> --config conf/protocol_static_reversible_staircase_v3.yaml
+uv run handgrip-cal report data/calibration/<fit_session_id> --config conf/protocol_static_reversible_staircase_v3.yaml
+uv run handgrip-cal record --config conf/protocol_holdout_verification.yaml
+uv run handgrip-cal validate-holdout data/calibration/<holdout_session_id> \
   --model data/calibration/<fit_session_id>/fit_result.json \
   --config conf/protocol_holdout_verification.yaml
-handgrip-cal report data/calibration/<holdout_session_id> --config conf/protocol_holdout_verification.yaml
+uv run handgrip-cal report data/calibration/<holdout_session_id> --config conf/protocol_holdout_verification.yaml
 ```
 
-## CLI default policy
+## What v3 should contain
 
-Recommended source behavior:
+The v3 primary protocol should provide:
 
-- `handgrip-cal record` default config should be:
+- baseline / zero state,
+- preload or mechanical conditioning cycles,
+- static holds across the intended force range,
+- ascending and descending directions,
+- repeats where practical,
+- enough stable tail duration for fitting,
+- marker events for segmentation,
+- quality gates for reference gaps, slope, standard deviation, and target sample count.
+
+## Legacy label policy
+
+Use this wording consistently:
 
 ```text
-conf/protocol_static_reversible_staircase_v3.yaml
-```
-
-not:
-
-```text
-conf/protocol_static_staircase.yaml
-```
-
-Reason:
-
-- v3 is the documented primary calibration workflow,
-- v3 captures reversible up/down static holds,
-- v3 better supports model-selection and hysteresis/return-path checks,
-- older static-staircase docs should not silently control the default handoff behavior.
-
-If the source default is not changed immediately, all operator docs must explicitly pass:
-
-```bash
---config conf/protocol_static_reversible_staircase_v3.yaml
+protocol_static_staircase.yaml is legacy/basic baseline. It is retained for compatibility and short baseline checks, but it is not the recommended handoff workflow.
 ```
 
 ## Component config snapshot paths
 
-Each protocol should snapshot relevant component configs for reproducibility.
-
-Correct RS485 GUI path:
+Each production protocol should copy the component configs needed for provenance:
 
 ```yaml
 session:
@@ -104,37 +75,34 @@ session:
     - ../RS485_GUI/config/config.yaml
 ```
 
-Deprecated/stale path:
+The stale path below should not appear in current configs or docs:
 
 ```yaml
-- ../RS485_GUI/config.yaml
+- stale RS485 GUI root-level config path
 ```
 
-The stale path should not appear in calibration configs or canonical docs.
+## Adding a protocol
 
-## Why `protocol_static_staircase.yaml` is legacy/basic
+Use `template.yaml` as the starting point and document:
 
-`protocol_static_staircase.yaml` can still be useful for:
-
-- backward compatibility,
-- short static-only baseline experiments,
-- comparing old and new calibration behavior,
-- regression tests against older sessions.
-
-It should not be the default recommended operator workflow because v3 carries the current intended calibration design.
+| Section | Required decision |
+| --- | --- |
+| `metadata` | Human-readable protocol name, version, purpose. |
+| `session` | Output root, config snapshots, operator prompts. |
+| `lsl` | Required target/reference streams and channel aliases. |
+| `events` / `steps` | Protocol marker sequence and hold definitions. |
+| `quality` | Minimum samples, gap limits, stable-window rules. |
+| `fit` | Whether this protocol is fit-producing, validation-only, or diagnostic. |
+| `report` | Expected report sections and plots. |
 
 ## Validation checklist
 
 ```bash
-# Confirm stale config snapshot path is gone.
-rg "\.\./RS485_GUI/config\.yaml" Handgrip_Calibration/conf || true
-
-# Confirm canonical config path is present.
-rg "\.\./RS485_GUI/config/config\.yaml" Handgrip_Calibration/conf
-
-# Confirm CLI record default uses v3.
-rg "protocol_static_reversible_staircase_v3.yaml" Handgrip_Calibration/src/handgrip_calibration/cli.py
-
-# Confirm legacy protocol is clearly labelled in docs.
+rg "protocol_static_reversible_staircase_v3.yaml" Handgrip_Calibration/README.md Handgrip_Calibration/docs docs/workflows/handgrip-calibration.md
 rg "legacy|basic baseline" Handgrip_Calibration/docs/protocols.md
+rg "\.\./RS485_GUI/config/config\.yaml" Handgrip_Calibration/conf
+if rg "\.\./RS485_GUI/config\.yaml" Handgrip_Calibration/conf Handgrip_Calibration/docs; then
+  echo "ERROR: stale RS485 config path found" >&2
+  exit 1
+fi
 ```
