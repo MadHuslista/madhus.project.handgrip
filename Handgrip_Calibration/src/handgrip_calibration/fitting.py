@@ -180,7 +180,9 @@ def _r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
 
 
-def _fit_metrics(y_true: np.ndarray, y_pred: np.ndarray, *, n_parameters: int, operating_range_N: float) -> FitMetrics:
+def _fit_metrics(
+    y_true: np.ndarray, y_pred: np.ndarray, *, n_parameters: int, operating_range_N: float
+) -> FitMetrics:
     valid = np.isfinite(y_true) & np.isfinite(y_pred)
     n = int(np.count_nonzero(valid))
     if n == 0:
@@ -228,10 +230,17 @@ def _prepare_fit_data(dataset: pd.DataFrame, config: AppConfig) -> tuple[_FitDat
         fit_points = pd.DataFrame()
     if fit_points.empty:
         fit_points = dataset.copy()
-        notes.append("No quality-accepted points found; fitted all operator-accepted segmented holds.")
+        notes.append(
+            "No quality-accepted points found; fitted all operator-accepted segmented holds."
+        )
 
-    if "target_raw_median" not in fit_points.columns or "reference_force_median_N" not in fit_points.columns:
-        raise ValueError("calibration_dataset.csv must contain target_raw_median and reference_force_median_N")
+    if (
+        "target_raw_median" not in fit_points.columns
+        or "reference_force_median_N" not in fit_points.columns
+    ):
+        raise ValueError(
+            "calibration_dataset.csv must contain target_raw_median and reference_force_median_N"
+        )
 
     x_all = fit_points["target_raw_median"].to_numpy(dtype=float)
     y_all = fit_points["reference_force_median_N"].to_numpy(dtype=float)
@@ -240,8 +249,12 @@ def _prepare_fit_data(dataset: pd.DataFrame, config: AppConfig) -> tuple[_FitDat
     if len(fit_points) < 2:
         raise ValueError("At least two valid calibration points are required for model fitting")
 
-    if "t_mid_lsl" not in fit_points.columns and {"t_start_lsl", "t_end_lsl"}.issubset(fit_points.columns):
-        fit_points["t_mid_lsl"] = 0.5 * (fit_points["t_start_lsl"].astype(float) + fit_points["t_end_lsl"].astype(float))
+    if "t_mid_lsl" not in fit_points.columns and {"t_start_lsl", "t_end_lsl"}.issubset(
+        fit_points.columns
+    ):
+        fit_points["t_mid_lsl"] = 0.5 * (
+            fit_points["t_start_lsl"].astype(float) + fit_points["t_end_lsl"].astype(float)
+        )
 
     x = fit_points["target_raw_median"].to_numpy(dtype=float)
     y = fit_points["reference_force_median_N"].to_numpy(dtype=float)
@@ -257,7 +270,9 @@ def _prepare_fit_data(dataset: pd.DataFrame, config: AppConfig) -> tuple[_FitDat
         target_std = fit_points["target_raw_std"].to_numpy(dtype=float)
     else:
         target_std = np.full_like(x, config.fit.target_raw_noise_floor)
-    target_std = np.where(np.isfinite(target_std), np.abs(target_std), config.fit.target_raw_noise_floor)
+    target_std = np.where(
+        np.isfinite(target_std), np.abs(target_std), config.fit.target_raw_noise_floor
+    )
     target_sigma = np.maximum(target_std, config.fit.target_raw_noise_floor)
     return _FitData(fit_points, x, y, sample_weight_sigma, target_sigma), notes
 
@@ -284,7 +299,9 @@ def _linear_solve(X: np.ndarray, y: np.ndarray, *, sigma: np.ndarray | None = No
     return beta
 
 
-def _affine_spec(a: float, b: float, *, model_id: str, family: str, notes: list[str] | None = None) -> _ModelSpec:
+def _affine_spec(
+    a: float, b: float, *, model_id: str, family: str, notes: list[str] | None = None
+) -> _ModelSpec:
     def predict(_frame: pd.DataFrame, x: np.ndarray) -> np.ndarray:
         return a * x + b
 
@@ -319,7 +336,9 @@ def _fit_affine_wls(data: _FitData, cfg: FitConfig) -> _ModelSpec:
     if not cfg.weighted_by_reference_noise:
         return _fit_affine_ols(data, cfg)
     coeff = np.polyfit(data.x, data.y, deg=1, w=_sigma_to_polyfit_weights(data.sample_weight_sigma))
-    return _affine_spec(float(coeff[0]), float(coeff[1]), model_id="affine_wls", family="affine_weighted")
+    return _affine_spec(
+        float(coeff[0]), float(coeff[1]), model_id="affine_wls", family="affine_weighted"
+    )
 
 
 def _mad_scale(values: np.ndarray) -> float:
@@ -333,19 +352,29 @@ def _mad_scale(values: np.ndarray) -> float:
 
 def _fit_affine_huber(data: _FitData, cfg: FitConfig) -> _ModelSpec:
     X = np.column_stack([data.x, np.ones_like(data.x)])
-    beta = _linear_solve(X, data.y, sigma=data.sample_weight_sigma if cfg.weighted_by_reference_noise else None)
+    beta = _linear_solve(
+        X, data.y, sigma=data.sample_weight_sigma if cfg.weighted_by_reference_noise else None
+    )
     residuals = data.y - X @ beta
     scale = _mad_scale(residuals)
     if not math.isfinite(scale) or scale <= 0:
         scale = float(np.std(residuals)) if len(residuals) > 1 else cfg.reference_noise_floor_N
-    delta = cfg.robust.huber_delta_N if cfg.robust.huber_delta_N is not None else cfg.robust.huber_epsilon * max(scale, cfg.reference_noise_floor_N)
+    delta = (
+        cfg.robust.huber_delta_N
+        if cfg.robust.huber_delta_N is not None
+        else cfg.robust.huber_epsilon * max(scale, cfg.reference_noise_floor_N)
+    )
     delta = max(float(delta), cfg.reference_noise_floor_N)
     robust_weights = np.ones_like(data.y, dtype=float)
-    sigma_base = data.sample_weight_sigma if cfg.weighted_by_reference_noise else np.ones_like(data.y)
+    sigma_base = (
+        data.sample_weight_sigma if cfg.weighted_by_reference_noise else np.ones_like(data.y)
+    )
     for _ in range(cfg.robust.max_iter):
         residuals = data.y - X @ beta
         abs_r = np.abs(residuals)
-        robust_weights = np.where(abs_r <= delta, 1.0, delta / np.maximum(abs_r, np.finfo(float).eps))
+        robust_weights = np.where(
+            abs_r <= delta, 1.0, delta / np.maximum(abs_r, np.finfo(float).eps)
+        )
         robust_weights = np.clip(robust_weights, cfg.robust.min_weight, 1.0)
         combined_sigma = sigma_base / np.sqrt(robust_weights)
         new_beta = _linear_solve(X, data.y, sigma=combined_sigma)
@@ -354,7 +383,9 @@ def _fit_affine_huber(data: _FitData, cfg: FitConfig) -> _ModelSpec:
             break
         beta = new_beta
 
-    spec = _affine_spec(float(beta[0]), float(beta[1]), model_id="affine_huber", family="affine_robust")
+    spec = _affine_spec(
+        float(beta[0]), float(beta[1]), model_id="affine_huber", family="affine_robust"
+    )
     return _ModelSpec(
         model_id=spec.model_id,
         family=spec.family,
@@ -362,16 +393,26 @@ def _fit_affine_huber(data: _FitData, cfg: FitConfig) -> _ModelSpec:
         diagnostic_only=spec.diagnostic_only,
         deployable_to_firmware=spec.deployable_to_firmware,
         predict=spec.predict,
-        parameters={**spec.parameters, "huber_delta_N": float(delta), "robust_weights": robust_weights.tolist()},
+        parameters={
+            **spec.parameters,
+            "huber_delta_N": float(delta),
+            "robust_weights": robust_weights.tolist(),
+        },
         firmware_export={**(spec.firmware_export or {}), "robust_training_only": True},
-        notes=["Robust weights are used only during fitting; exported firmware equation remains affine."],
+        notes=[
+            "Robust weights are used only during fitting; exported firmware equation remains affine."
+        ],
     )
 
 
 def _fit_quadratic_wls(data: _FitData, cfg: FitConfig) -> _ModelSpec:
     if len(data.x) < 3:
         raise ValueError("quadratic_wls requires at least three calibration points")
-    weights = _sigma_to_polyfit_weights(data.sample_weight_sigma) if cfg.weighted_by_reference_noise else None
+    weights = (
+        _sigma_to_polyfit_weights(data.sample_weight_sigma)
+        if cfg.weighted_by_reference_noise
+        else None
+    )
     coeff = np.polyfit(data.x, data.y, deg=2, w=weights)
     a2, a1, a0 = [float(c) for c in coeff]
 
@@ -393,9 +434,14 @@ def _fit_quadratic_wls(data: _FitData, cfg: FitConfig) -> _ModelSpec:
     )
 
 
-def _aggregate_multipoint_knots(frame: pd.DataFrame, cfg: FitConfig) -> tuple[np.ndarray, np.ndarray]:
+def _aggregate_multipoint_knots(
+    frame: pd.DataFrame, cfg: FitConfig
+) -> tuple[np.ndarray, np.ndarray]:
     aggregate_by = cfg.multipoint.aggregate_by
-    if aggregate_by in frame.columns and frame[aggregate_by].dropna().nunique() >= cfg.multipoint.min_points:
+    if (
+        aggregate_by in frame.columns
+        and frame[aggregate_by].dropna().nunique() >= cfg.multipoint.min_points
+    ):
         grouped = frame.groupby(aggregate_by, dropna=True).agg(
             target_raw_median=("target_raw_median", "median"),
             reference_force_median_N=("reference_force_median_N", "median"),
@@ -436,7 +482,9 @@ def _is_monotone(values: np.ndarray, *, tol: float = 1e-9) -> bool:
 def _fit_piecewise_linear_monotone(data: _FitData, cfg: FitConfig) -> _ModelSpec:
     xk, yk = _aggregate_multipoint_knots(data.frame, cfg)
     if len(xk) < cfg.multipoint.min_points:
-        raise ValueError(f"piecewise_linear_monotone requires at least {cfg.multipoint.min_points} knots")
+        raise ValueError(
+            f"piecewise_linear_monotone requires at least {cfg.multipoint.min_points} knots"
+        )
     if not _is_monotone(yk):
         raise ValueError("piecewise_linear_monotone rejected: knot forces are not monotone")
 
@@ -458,14 +506,20 @@ def _fit_piecewise_linear_monotone(data: _FitData, cfg: FitConfig) -> _ModelSpec
         diagnostic_only=False,
         deployable_to_firmware=True,
         predict=predict,
-        parameters={"x_raw_knots": xk.tolist(), "force_N_knots": yk.tolist(), "extrapolation": cfg.multipoint.extrapolation},
+        parameters={
+            "x_raw_knots": xk.tolist(),
+            "force_N_knots": yk.tolist(),
+            "extrapolation": cfg.multipoint.extrapolation,
+        },
         firmware_export={
             "type": "monotone_piecewise_linear_lookup_table",
             "x_raw_knots": xk.tolist(),
             "force_N_knots": yk.tolist(),
             "extrapolation": cfg.multipoint.extrapolation,
         },
-        notes=["Use only inside the calibrated raw-count range unless extrapolation is explicitly changed."],
+        notes=[
+            "Use only inside the calibrated raw-count range unless extrapolation is explicitly changed."
+        ],
     )
 
 
@@ -484,7 +538,9 @@ def _fit_odr_affine(data: _FitData, cfg: FitConfig) -> _ModelSpec:
     if len(x) < 3:
         raise ValueError("odr_affine requires at least three calibration points")
     sx2 = float(np.nanmedian(np.maximum(data.target_sigma, cfg.target_raw_noise_floor) ** 2))
-    sy2 = float(np.nanmedian(np.maximum(data.sample_weight_sigma, cfg.reference_noise_floor_N) ** 2))
+    sy2 = float(
+        np.nanmedian(np.maximum(data.sample_weight_sigma, cfg.reference_noise_floor_N) ** 2)
+    )
     if sx2 <= 0 or sy2 <= 0:
         raise ValueError("odr_affine requires positive x/y uncertainty estimates")
     lam = sy2 / sx2
@@ -500,7 +556,13 @@ def _fit_odr_affine(data: _FitData, cfg: FitConfig) -> _ModelSpec:
     disc = (syy - lam * sxx) ** 2 + 4.0 * lam * sxy**2
     a = (syy - lam * sxx + math.sqrt(max(disc, 0.0))) / (2.0 * sxy)
     b = y_bar - a * x_bar
-    spec = _affine_spec(float(a), float(b), model_id="odr_affine", family="affine_odr", notes=["Diagnostic errors-in-variables affine fit using Deming regression."])
+    spec = _affine_spec(
+        float(a),
+        float(b),
+        model_id="odr_affine",
+        family="affine_odr",
+        notes=["Diagnostic errors-in-variables affine fit using Deming regression."],
+    )
     return _ModelSpec(
         model_id=spec.model_id,
         family=spec.family,
@@ -508,7 +570,11 @@ def _fit_odr_affine(data: _FitData, cfg: FitConfig) -> _ModelSpec:
         diagnostic_only=True,
         deployable_to_firmware=True,
         predict=spec.predict,
-        parameters={**spec.parameters, "variance_ratio_y_over_x": float(lam), "method": "deming_regression"},
+        parameters={
+            **spec.parameters,
+            "variance_ratio_y_over_x": float(lam),
+            "method": "deming_regression",
+        },
         firmware_export=spec.firmware_export,
         notes=spec.notes,
     )
@@ -518,7 +584,11 @@ def _fit_hysteresis_affine(data: _FitData, cfg: FitConfig) -> _ModelSpec:
     col = cfg.diagnostics.hysteresis_direction_column
     if col not in data.frame.columns:
         raise ValueError(f"hysteresis diagnostic requires column {col!r}")
-    directions = [d for d in sorted(data.frame[col].dropna().astype(str).unique()) if d.lower() not in {"flat", "none", "nan"}]
+    directions = [
+        d
+        for d in sorted(data.frame[col].dropna().astype(str).unique())
+        if d.lower() not in {"flat", "none", "nan"}
+    ]
     if len(directions) < 2:
         raise ValueError("hysteresis diagnostic requires at least two non-flat directions")
     params: dict[str, dict[str, float]] = {}
@@ -527,14 +597,20 @@ def _fit_hysteresis_affine(data: _FitData, cfg: FitConfig) -> _ModelSpec:
         if np.count_nonzero(mask) < 2:
             continue
         coeff = np.polyfit(data.x[mask], data.y[mask], deg=1)
-        params[direction] = {"a": float(coeff[0]), "b": float(coeff[1]), "n": int(np.count_nonzero(mask))}
+        params[direction] = {
+            "a": float(coeff[0]),
+            "b": float(coeff[1]),
+            "n": int(np.count_nonzero(mask)),
+        }
     if len(params) < 2:
         raise ValueError("hysteresis diagnostic had fewer than two fit-capable directions")
     fallback = np.polyfit(data.x, data.y, deg=1)
 
     def predict(frame: pd.DataFrame, x: np.ndarray) -> np.ndarray:
         out = np.empty_like(x, dtype=float)
-        dirs = frame[col].astype(str).to_numpy() if col in frame.columns else np.array([""] * len(x))
+        dirs = (
+            frame[col].astype(str).to_numpy() if col in frame.columns else np.array([""] * len(x))
+        )
         for i, (xx, direction) in enumerate(zip(x, dirs)):
             p = params.get(str(direction))
             if p is None:
@@ -550,9 +626,14 @@ def _fit_hysteresis_affine(data: _FitData, cfg: FitConfig) -> _ModelSpec:
         diagnostic_only=True,
         deployable_to_firmware=False,
         predict=predict,
-        parameters={"directions": params, "fallback_affine": {"a": float(fallback[0]), "b": float(fallback[1])}},
+        parameters={
+            "directions": params,
+            "fallback_affine": {"a": float(fallback[0]), "b": float(fallback[1])},
+        },
         firmware_export=None,
-        notes=["Diagnostic only: if this wins materially, inspect fixture hysteresis before encoding direction-dependent firmware behavior."],
+        notes=[
+            "Diagnostic only: if this wins materially, inspect fixture hysteresis before encoding direction-dependent firmware behavior."
+        ],
     )
 
 
@@ -566,14 +647,23 @@ def _fit_drift_affine(data: _FitData, cfg: FitConfig) -> _ModelSpec:
     t0 = float(np.nanmedian(t))
     tc = t - t0
     X = np.column_stack([data.x, np.ones_like(data.x), tc])
-    beta = _linear_solve(X, data.y, sigma=data.sample_weight_sigma if cfg.weighted_by_reference_noise else None)
+    beta = _linear_solve(
+        X, data.y, sigma=data.sample_weight_sigma if cfg.weighted_by_reference_noise else None
+    )
     a, b, c = [float(v) for v in beta]
 
     def predict(frame: pd.DataFrame, x: np.ndarray) -> np.ndarray:
         if col in frame.columns:
             tt = frame[col].to_numpy(dtype=float) - t0
         elif {"t_start_lsl", "t_end_lsl"}.issubset(frame.columns):
-            tt = 0.5 * (frame["t_start_lsl"].to_numpy(dtype=float) + frame["t_end_lsl"].to_numpy(dtype=float)) - t0
+            tt = (
+                0.5
+                * (
+                    frame["t_start_lsl"].to_numpy(dtype=float)
+                    + frame["t_end_lsl"].to_numpy(dtype=float)
+                )
+                - t0
+            )
         else:
             tt = np.zeros_like(x)
         return a * x + b + c * tt
@@ -587,7 +677,9 @@ def _fit_drift_affine(data: _FitData, cfg: FitConfig) -> _ModelSpec:
         predict=predict,
         parameters={"a": a, "b": b, "drift_N_per_s": c, "time_center_lsl": t0},
         firmware_export=None,
-        notes=["Diagnostic only: prefer fixing/measuring drift before baking time into the calibration model."],
+        notes=[
+            "Diagnostic only: prefer fixing/measuring drift before baking time into the calibration model."
+        ],
     )
 
 
@@ -665,7 +757,9 @@ def _cross_validate(model_id: str, data: _FitData, cfg: FitConfig) -> dict[str, 
     for train_mask, test_mask in folds:
         try:
             spec = _FITTERS[model_id](_subset_data(data, train_mask), cfg)
-            pred = spec.predict(data.frame.loc[test_mask].copy().reset_index(drop=True), data.x[test_mask])
+            pred = spec.predict(
+                data.frame.loc[test_mask].copy().reset_index(drop=True), data.x[test_mask]
+            )
             finite = np.isfinite(pred)
             if not np.any(finite):
                 continue
@@ -694,8 +788,12 @@ def _cross_validate(model_id: str, data: _FitData, cfg: FitConfig) -> dict[str, 
         "cv_rmse_N": cv_rmse,
         "cv_mae_N": float(np.mean(np.abs(residuals))),
         "cv_max_abs_error_N": float(np.max(np.abs(residuals))),
-        "cv_max_abs_error_percent_range": float(100.0 * np.max(np.abs(residuals)) / cfg.operating_range_N),
-        "cv_rmse_se_N": float(np.std(fold_rmses, ddof=1) / math.sqrt(len(fold_rmses))) if len(fold_rmses) > 1 else None,
+        "cv_max_abs_error_percent_range": float(
+            100.0 * np.max(np.abs(residuals)) / cfg.operating_range_N
+        ),
+        "cv_rmse_se_N": float(np.std(fold_rmses, ddof=1) / math.sqrt(len(fold_rmses)))
+        if len(fold_rmses) > 1
+        else None,
         "cv_fold_count": int(successful_folds),
         "cv_point_count": point_count,
         "cv_coverage_fraction": float(point_count / len(data.y)),
@@ -723,9 +821,17 @@ def _monotonicity_rejection(spec: _ModelSpec, data: _FitData, cfg: FitConfig) ->
     return None
 
 
-def _score_candidate(metrics: FitMetrics, cv: dict[str, float | int | None], spec: _ModelSpec, rejection_reasons: list[str], cfg: FitConfig) -> float:
+def _score_candidate(
+    metrics: FitMetrics,
+    cv: dict[str, float | int | None],
+    spec: _ModelSpec,
+    rejection_reasons: list[str],
+    cfg: FitConfig,
+) -> float:
     cv_rmse = cv.get("cv_rmse_N")
-    cv_rmse_value = float(cv_rmse) if cv_rmse is not None and math.isfinite(float(cv_rmse)) else metrics.rmse_N
+    cv_rmse_value = (
+        float(cv_rmse) if cv_rmse is not None and math.isfinite(float(cv_rmse)) else metrics.rmse_N
+    )
     error_score = cv_rmse_value / cfg.operating_range_N
     max_error_score = metrics.max_abs_error_N / cfg.operating_range_N
     score = (
@@ -742,13 +848,19 @@ def _score_candidate(metrics: FitMetrics, cv: dict[str, float | int | None], spe
 
 def _candidate_from_spec(spec: _ModelSpec, data: _FitData, cfg: FitConfig) -> CandidateResult:
     y_pred = spec.predict(data.frame, data.x)
-    metrics = _fit_metrics(data.y, y_pred, n_parameters=spec.n_parameters, operating_range_N=cfg.operating_range_N)
+    metrics = _fit_metrics(
+        data.y, y_pred, n_parameters=spec.n_parameters, operating_range_N=cfg.operating_range_N
+    )
     cv = _cross_validate(spec.model_id, data, cfg)
     rejection_reasons: list[str] = []
     if metrics.n_points < max(2, min(spec.n_parameters + 1, len(data.y))):
         rejection_reasons.append("too_few_finite_predictions")
     coverage = cv.get("cv_coverage_fraction")
-    if coverage is not None and float(coverage) < cfg.selection.min_cv_coverage_fraction and cv.get("cv_fold_count", 0):
+    if (
+        coverage is not None
+        and float(coverage) < cfg.selection.min_cv_coverage_fraction
+        and cv.get("cv_fold_count", 0)
+    ):
         rejection_reasons.append("insufficient_cross_validation_coverage")
     if spec.diagnostic_only and not cfg.selection.allow_diagnostics_as_primary:
         rejection_reasons.append("diagnostic_only_model")
@@ -783,11 +895,17 @@ def _with_likelihoods(candidates: list[CandidateResult], cfg: FitConfig) -> list
     if not eligible:
         eligible = candidates
     scores = np.array([c.selection_score for c in eligible], dtype=float)
-    scores = np.where(np.isfinite(scores), scores, np.nanmax(scores[np.isfinite(scores)]) + 10.0 if np.any(np.isfinite(scores)) else 10.0)
+    scores = np.where(
+        np.isfinite(scores),
+        scores,
+        np.nanmax(scores[np.isfinite(scores)]) + 10.0 if np.any(np.isfinite(scores)) else 10.0,
+    )
     raw = np.exp(-(scores - np.nanmin(scores)))
     denom = float(np.sum(raw)) if float(np.sum(raw)) > 0 else 1.0
     likelihood_by_id = {c.model_id: float(v / denom) for c, v in zip(eligible, raw)}
-    return [replace(c, selection_likelihood=likelihood_by_id.get(c.model_id, 0.0)) for c in candidates]
+    return [
+        replace(c, selection_likelihood=likelihood_by_id.get(c.model_id, 0.0)) for c in candidates
+    ]
 
 
 def _select_candidate(candidates: list[CandidateResult], cfg: FitConfig) -> CandidateResult:
@@ -802,7 +920,9 @@ def _select_candidate(candidates: list[CandidateResult], cfg: FitConfig) -> Cand
 
     eligible = [c for c in candidates if c.accepted_for_deployment]
     if not eligible:
-        fallback = [c for c in candidates if c.model_id in {"affine_wls", "affine_ols", "affine_huber"}]
+        fallback = [
+            c for c in candidates if c.model_id in {"affine_wls", "affine_ols", "affine_huber"}
+        ]
         if fallback:
             return sorted(fallback, key=lambda c: c.selection_score)[0]
         return sorted(candidates, key=lambda c: c.selection_score)[0]
@@ -815,11 +935,19 @@ def _select_candidate(candidates: list[CandidateResult], cfg: FitConfig) -> Cand
     best_se = best.cv_metrics.get("cv_rmse_se_N")
     if best_cv is None:
         return best
-    tolerance = float(best_se) if best_se is not None and math.isfinite(float(best_se)) else max(0.02 * float(best_cv), 1e-12)
+    tolerance = (
+        float(best_se)
+        if best_se is not None and math.isfinite(float(best_se))
+        else max(0.02 * float(best_cv), 1e-12)
+    )
     within: list[CandidateResult] = []
     for c in eligible:
         cv_rmse = c.cv_metrics.get("cv_rmse_N")
-        metric = float(cv_rmse) if cv_rmse is not None and math.isfinite(float(cv_rmse)) else c.metrics.rmse_N
+        metric = (
+            float(cv_rmse)
+            if cv_rmse is not None and math.isfinite(float(cv_rmse))
+            else c.metrics.rmse_N
+        )
         if metric <= float(best_cv) + tolerance:
             within.append(c)
     if not within:
@@ -831,32 +959,40 @@ def _select_candidate(candidates: list[CandidateResult], cfg: FitConfig) -> Cand
         "quadratic_wls": 3,
         "piecewise_linear_monotone": 4,
     }
-    return sorted(within, key=lambda c: (c.n_parameters, family_order.get(c.model_id, 99), c.selection_score))[0]
+    return sorted(
+        within, key=lambda c: (c.n_parameters, family_order.get(c.model_id, 99), c.selection_score)
+    )[0]
 
 
 def _ranking(candidates: list[CandidateResult]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for rank, c in enumerate(sorted(candidates, key=lambda c: c.selection_score), start=1):
-        rows.append({
-            "rank": rank,
-            "model_id": c.model_id,
-            "model_family": c.model_family,
-            "accepted_for_deployment": c.accepted_for_deployment,
-            "diagnostic_only": c.diagnostic_only,
-            "selection_score": _finite_or_none(c.selection_score),
-            "selection_likelihood": _finite_or_none(c.selection_likelihood),
-            "rmse_N": _finite_or_none(c.metrics.rmse_N),
-            "cv_rmse_N": _finite_or_none(c.cv_metrics.get("cv_rmse_N")),
-            "max_abs_error_N": _finite_or_none(c.metrics.max_abs_error_N),
-            "max_abs_error_percent_range": _finite_or_none(c.metrics.max_abs_error_percent_range),
-            "r2": _finite_or_none(c.metrics.r2),
-            "n_parameters": c.n_parameters,
-            "rejection_reasons": c.rejection_reasons,
-        })
+        rows.append(
+            {
+                "rank": rank,
+                "model_id": c.model_id,
+                "model_family": c.model_family,
+                "accepted_for_deployment": c.accepted_for_deployment,
+                "diagnostic_only": c.diagnostic_only,
+                "selection_score": _finite_or_none(c.selection_score),
+                "selection_likelihood": _finite_or_none(c.selection_likelihood),
+                "rmse_N": _finite_or_none(c.metrics.rmse_N),
+                "cv_rmse_N": _finite_or_none(c.cv_metrics.get("cv_rmse_N")),
+                "max_abs_error_N": _finite_or_none(c.metrics.max_abs_error_N),
+                "max_abs_error_percent_range": _finite_or_none(
+                    c.metrics.max_abs_error_percent_range
+                ),
+                "r2": _finite_or_none(c.metrics.r2),
+                "n_parameters": c.n_parameters,
+                "rejection_reasons": c.rejection_reasons,
+            }
+        )
     return rows
 
 
-def fit_candidates_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> tuple[pd.DataFrame, list[CandidateResult], list[str]]:
+def fit_candidates_from_dataset(
+    dataset: pd.DataFrame, config: AppConfig
+) -> tuple[pd.DataFrame, list[CandidateResult], list[str]]:
     # @brief Fit all configured candidate models on a calibration dataset.
     #  @param dataset Segmented calibration hold dataset.
     #  @param config Application configuration including fit settings.
@@ -868,7 +1004,10 @@ def fit_candidates_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> tup
     for model_id in config.fit.candidate_models:
         if model_id == "odr_affine" and not config.fit.diagnostics.enable_odr_affine:
             continue
-        if model_id == "hysteresis_affine_diagnostic" and not config.fit.diagnostics.enable_hysteresis:
+        if (
+            model_id == "hysteresis_affine_diagnostic"
+            and not config.fit.diagnostics.enable_hysteresis
+        ):
             continue
         if model_id == "drift_affine_diagnostic" and not config.fit.diagnostics.enable_drift:
             continue
@@ -892,37 +1031,44 @@ def fit_candidates_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> tup
                 aicc=float("nan"),
                 bic=float("nan"),
             )
-            candidates.append(CandidateResult(
-                model_id=model_id,
-                model_family="unavailable",
-                parameters={},
-                n_parameters=0,
-                deployable_to_firmware=False,
-                diagnostic_only=model_id.endswith("_diagnostic") or model_id == "odr_affine",
-                metrics=failed_metrics,
-                cv_metrics={
-                    "cv_rmse_N": None,
-                    "cv_mae_N": None,
-                    "cv_max_abs_error_N": None,
-                    "cv_max_abs_error_percent_range": None,
-                    "cv_rmse_se_N": None,
-                    "cv_fold_count": 0,
-                    "cv_point_count": 0,
-                    "cv_coverage_fraction": 0.0,
-                },
-                selection_score=float("inf"),
-                selection_likelihood=0.0,
-                accepted_for_deployment=False,
-                rejection_reasons=["fit_failed"],
-                firmware_export=None,
-                notes=[str(exc)],
-            ))
+            candidates.append(
+                CandidateResult(
+                    model_id=model_id,
+                    model_family="unavailable",
+                    parameters={},
+                    n_parameters=0,
+                    deployable_to_firmware=False,
+                    diagnostic_only=model_id.endswith("_diagnostic") or model_id == "odr_affine",
+                    metrics=failed_metrics,
+                    cv_metrics={
+                        "cv_rmse_N": None,
+                        "cv_mae_N": None,
+                        "cv_max_abs_error_N": None,
+                        "cv_max_abs_error_percent_range": None,
+                        "cv_rmse_se_N": None,
+                        "cv_fold_count": 0,
+                        "cv_point_count": 0,
+                        "cv_coverage_fraction": 0.0,
+                    },
+                    selection_score=float("inf"),
+                    selection_likelihood=0.0,
+                    accepted_for_deployment=False,
+                    rejection_reasons=["fit_failed"],
+                    firmware_export=None,
+                    notes=[str(exc)],
+                )
+            )
     if not candidates:
         raise ValueError("No fit candidates were evaluated")
     return data.frame, _with_likelihoods(candidates, config.fit), notes
 
 
-def _result_from_candidate(selected: CandidateResult, candidates: list[CandidateResult], notes: list[str], config: AppConfig) -> CalibrationFitResult:
+def _result_from_candidate(
+    selected: CandidateResult,
+    candidates: list[CandidateResult],
+    notes: list[str],
+    config: AppConfig,
+) -> CalibrationFitResult:
     params = selected.parameters
     a: float | None = None
     b: float | None = None
@@ -937,7 +1083,9 @@ def _result_from_candidate(selected: CandidateResult, candidates: list[Candidate
         a0 = float(params["a0"])
         a = a1
         b = a0
-        notes.append("Selected model is quadratic; force_N.a/b are only a legacy linear component. Use model_parameters for deployment.")
+        notes.append(
+            "Selected model is quadratic; force_N.a/b are only a legacy linear component. Use model_parameters for deployment."
+        )
     elif selected.model_id == "piecewise_linear_monotone":
         xk = np.asarray(params.get("x_raw_knots", []), dtype=float)
         yk = np.asarray(params.get("force_N_knots", []), dtype=float)
@@ -945,7 +1093,9 @@ def _result_from_candidate(selected: CandidateResult, candidates: list[Candidate
             coeff = np.polyfit(xk, yk, deg=1)
             a = float(coeff[0])
             b = float(coeff[1])
-            notes.append("Selected model is multipoint; force_N.a/b are only a least-squares legacy approximation. Use knot table for deployment.")
+            notes.append(
+                "Selected model is multipoint; force_N.a/b are only a least-squares legacy approximation. Use knot table for deployment."
+            )
 
     threshold = config.fit.residual_threshold_percent_operating_range
     result_notes = list(notes)
@@ -954,9 +1104,14 @@ def _result_from_candidate(selected: CandidateResult, candidates: list[Candidate
             "Residual threshold exceeded. Inspect residual plots; improve static holds or use nonlinear correction only if repeatability is verified."
         )
     if selected.rejection_reasons:
-        result_notes.append(f"Selected model has gate warnings: {', '.join(selected.rejection_reasons)}")
+        result_notes.append(
+            f"Selected model has gate warnings: {', '.join(selected.rejection_reasons)}"
+        )
 
-    firmware = selected.firmware_export or {"type": "none", "warning": "Selected model has no firmware export."}
+    firmware = selected.firmware_export or {
+        "type": "none",
+        "warning": "Selected model has no firmware export.",
+    }
     return CalibrationFitResult(
         schema="handgrip_fit_result.v2",
         model=selected.model_id,
@@ -976,7 +1131,9 @@ def _result_from_candidate(selected: CandidateResult, candidates: list[Candidate
     )
 
 
-def fit_model_selection_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> tuple[pd.DataFrame, CalibrationFitResult, list[CandidateResult]]:
+def fit_model_selection_from_dataset(
+    dataset: pd.DataFrame, config: AppConfig
+) -> tuple[pd.DataFrame, CalibrationFitResult, list[CandidateResult]]:
     # @brief Fit candidates and select the deployment model.
     #  @param dataset Segmented calibration hold dataset.
     #  @param config Application configuration including model-selection settings.
@@ -999,6 +1156,7 @@ def fit_affine_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> Calibra
     Will be removed in v0.3.0.
     """
     import warnings
+
     warnings.warn(
         "fit_affine_from_dataset() is deprecated. "
         "Use fit_model_selection_from_dataset() instead. Will be removed in v0.3.0.",
@@ -1009,7 +1167,9 @@ def fit_affine_from_dataset(dataset: pd.DataFrame, config: AppConfig) -> Calibra
     return result
 
 
-def fit_session(session_dir: str | Path, config: AppConfig) -> tuple[pd.DataFrame, CalibrationFitResult]:
+def fit_session(
+    session_dir: str | Path, config: AppConfig
+) -> tuple[pd.DataFrame, CalibrationFitResult]:
     # @brief Segment a session, fit candidates, and persist fit artifacts.
     #  @param session_dir Session directory path.
     #  @param config Application configuration.
@@ -1028,37 +1188,43 @@ def fit_session(session_dir: str | Path, config: AppConfig) -> tuple[pd.DataFram
     _, result, candidates = fit_model_selection_from_dataset(dataset, config)
     write_json(session_dir / "fit_result.json", result.to_dict())
     write_json(session_dir / "fit_candidates.json", [c.to_dict() for c in candidates])
-    write_json(session_dir / "model_selection_report.json", {
-        "schema": "handgrip_model_selection_report.v1",
-        "selected_model_id": result.selected_model_id,
-        "selected_model_family": result.selected_model_family,
-        "selection_likelihood": result.selection_likelihood,
-        "passes_residual_threshold": result.passes_residual_threshold,
-        "residual_threshold_percent_range": result.residual_threshold_percent_range,
-        "ranking": result.model_ranking,
-    })
+    write_json(
+        session_dir / "model_selection_report.json",
+        {
+            "schema": "handgrip_model_selection_report.v1",
+            "selected_model_id": result.selected_model_id,
+            "selected_model_family": result.selected_model_family,
+            "selection_likelihood": result.selection_likelihood,
+            "passes_residual_threshold": result.passes_residual_threshold,
+            "residual_threshold_percent_range": result.residual_threshold_percent_range,
+            "ranking": result.model_ranking,
+        },
+    )
     # Persist fit-stage events into the same event log used by the recorder. This
     # makes the full lifecycle auditable even when fitting/reporting are run
     # after the live acquisition process has stopped.
-    append_ndjson(session_dir / "events.ndjson", [
-        {
-            "event": "calibration_candidate_selected",
-            "session_id": session_dir.name,
-            "host_time_unix": time.time(),
-            "phase": "fit",
-            "payload": {
-                "selected_model_id": result.selected_model_id,
-                "selected_model_family": result.selected_model_family,
-                "selection_likelihood": result.selection_likelihood,
-                "passes_residual_threshold": result.passes_residual_threshold,
+    append_ndjson(
+        session_dir / "events.ndjson",
+        [
+            {
+                "event": "calibration_candidate_selected",
+                "session_id": session_dir.name,
+                "host_time_unix": time.time(),
+                "phase": "fit",
+                "payload": {
+                    "selected_model_id": result.selected_model_id,
+                    "selected_model_family": result.selected_model_family,
+                    "selection_likelihood": result.selection_likelihood,
+                    "passes_residual_threshold": result.passes_residual_threshold,
+                },
             },
-        },
-        {
-            "event": "firmware_constants_exported",
-            "session_id": session_dir.name,
-            "host_time_unix": time.time(),
-            "phase": "fit",
-            "payload": result.recommended_firmware_constants,
-        },
-    ])
+            {
+                "event": "firmware_constants_exported",
+                "session_id": session_dir.name,
+                "host_time_unix": time.time(),
+                "phase": "fit",
+                "payload": result.recommended_firmware_constants,
+            },
+        ],
+    )
     return dataset, result

@@ -173,12 +173,7 @@ def interpolate_reference_to_target(
     if ref_t.size < 2:
         return _empty
 
-    inside = (
-        (target_t >= ref_t[0])
-        & (target_t <= ref_t[-1])
-        & np.isfinite(target_y)
-        & np.isfinite(target_t)
-    )
+    inside = (target_t >= ref_t[0]) & (target_t <= ref_t[-1]) & np.isfinite(target_y) & np.isfinite(target_t)
     if not np.any(inside):
         return _empty
 
@@ -198,9 +193,5 @@ def interpolate_reference_to_target(
     selected_t = candidate_t[valid_gap]
     selected_target_y = candidate_target_y[valid_gap]
     ref_at_target = np.interp(selected_t, ref_t, ref_y)
-    finite = (
-        np.isfinite(ref_at_target)
-        & np.isfinite(selected_target_y)
-        & np.isfinite(selected_t)
-    )
+    finite = np.isfinite(ref_at_target) & np.isfinite(selected_target_y) & np.isfinite(selected_t)
     return ref_at_target[finite], selected_target_y[finite], selected_t[finite]

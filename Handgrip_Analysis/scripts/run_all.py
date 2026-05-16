@@ -10,6 +10,7 @@ Manifest CSV columns: stage, label, path [, channel]
 Supported stage values:
     stage1, stage2, stage3, stage4, stage5, stage6_design, stage6_review
 """
+
 from __future__ import annotations
 
 import logging
@@ -82,14 +83,17 @@ def main(cfg: DictConfig) -> None:
         if result.returncode != 0:
             log.error(
                 "run_all: script %s failed for label %r (exit code %d)",
-                script_name, label, result.returncode,
+                script_name,
+                label,
+                result.returncode,
             )
         else:
             dispatched += 1
 
     log.info(
         "run_all: complete — %d dispatched, %d skipped",
-        dispatched, skipped,
+        dispatched,
+        skipped,
     )
 
 

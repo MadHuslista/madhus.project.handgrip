@@ -6,6 +6,7 @@ device.read_register_count, device.command_register) so that alternate firmware
 variants can be supported without code changes.  The values below remain as
 authoritative defaults.
 """
+
 from __future__ import annotations
 
 # ---------------------------------------------------------------------------
@@ -65,9 +66,9 @@ ACTIVE_SEND_FREQ_CODE_TO_VALUE: dict[int, int] = {
 # ---------------------------------------------------------------------------
 
 PARITY_CODE_TO_VALUE: dict[int, str] = {
-    0: 'N',
-    1: 'E',
-    2: 'O',
+    0: "N",
+    1: "E",
+    2: "O",
 }
 
 # ---------------------------------------------------------------------------
@@ -75,16 +76,16 @@ PARITY_CODE_TO_VALUE: dict[int, str] = {
 # ---------------------------------------------------------------------------
 
 UNIT_CODE_TO_LABEL: dict[int, str] = {
-    0: 'none',
-    1: 'g',
-    2: 'kg',
-    3: 't',
-    4: 'N',
-    5: 'pa',
-    6: 'kPa',
-    7: 'MPa',
-    8: 'N·m',
-    9: 'kN',
+    0: "none",
+    1: "g",
+    2: "kg",
+    3: "t",
+    4: "N",
+    5: "pa",
+    6: "kPa",
+    7: "MPa",
+    8: "N·m",
+    9: "kN",
 }
 
 # ---------------------------------------------------------------------------
@@ -104,18 +105,18 @@ DECIMAL_CODE_TO_DIGITS: dict[int, int] = {
 # ---------------------------------------------------------------------------
 
 STATUS_FLAGS: dict[int, str] = {
-    0: 'data_valid',
-    1: 'peak_detecting',
-    2: 'rom_fault',
-    3: 'adc_fault',
-    4: 'adc_signal_too_large',
-    5: 'gross_overload',
-    6: 'power_on_zero_failed',
-    7: 'tare_condition_not_met',
-    8: 'zero_range_exceeded',
-    9: 'relay1_active',
-    10: 'relay2_active',
-    11: 'relay3_active',
+    0: "data_valid",
+    1: "peak_detecting",
+    2: "rom_fault",
+    3: "adc_fault",
+    4: "adc_signal_too_large",
+    5: "gross_overload",
+    6: "power_on_zero_failed",
+    7: "tare_condition_not_met",
+    8: "zero_range_exceeded",
+    9: "relay1_active",
+    10: "relay2_active",
+    11: "relay3_active",
 }
 
 # ---------------------------------------------------------------------------
@@ -123,14 +124,14 @@ STATUS_FLAGS: dict[int, str] = {
 # ---------------------------------------------------------------------------
 
 COMMANDS: dict[str, int] = {
-    'tare_temp': 1,
-    'tare_save': 2,
-    'cancel_tare': 3,
-    'zero_temp': 4,
-    'zero_save': 5,
-    'clear_peak': 6,
-    'calibration': 7,
-    'factory_reset': 9,
+    "tare_temp": 1,
+    "tare_save": 2,
+    "cancel_tare": 3,
+    "zero_temp": 4,
+    "zero_save": 5,
+    "clear_peak": 6,
+    "calibration": 7,
+    "factory_reset": 9,
 }
 
 # ---------------------------------------------------------------------------
@@ -139,52 +140,52 @@ COMMANDS: dict[str, int] = {
 
 COMMAND_METADATA: list[dict[str, str]] = [
     {
-        'name': 'tare_temp',
-        'title': 'Temporary tare',
-        'description': 'Applies tare without retaining it across power loss.',
-        'manual_equivalent': 'tPEEL / long-press tare key',
+        "name": "tare_temp",
+        "title": "Temporary tare",
+        "description": "Applies tare without retaining it across power loss.",
+        "manual_equivalent": "tPEEL / long-press tare key",
     },
     {
-        'name': 'tare_save',
-        'title': 'Saved tare',
-        'description': 'Applies tare and preserves it across power cycles.',
-        'manual_equivalent': 'SPEEL',
+        "name": "tare_save",
+        "title": "Saved tare",
+        "description": "Applies tare and preserves it across power cycles.",
+        "manual_equivalent": "SPEEL",
     },
     {
-        'name': 'cancel_tare',
-        'title': 'Cancel tare',
-        'description': 'Clears the currently stored tare value.',
-        'manual_equivalent': 'CPEEL',
+        "name": "cancel_tare",
+        "title": "Cancel tare",
+        "description": "Clears the currently stored tare value.",
+        "manual_equivalent": "CPEEL",
     },
     {
-        'name': 'zero_temp',
-        'title': 'Temporary zero',
-        'description': 'Performs a temporary zero action without saving it after power loss.',
-        'manual_equivalent': 'SZEro / long-press zero key',
+        "name": "zero_temp",
+        "title": "Temporary zero",
+        "description": "Performs a temporary zero action without saving it after power loss.",
+        "manual_equivalent": "SZEro / long-press zero key",
     },
     {
-        'name': 'zero_save',
-        'title': 'Saved zero calibration',
-        'description': 'Stores the current zero point persistently.',
-        'manual_equivalent': 'CZEro / 200.ZE',
+        "name": "zero_save",
+        "title": "Saved zero calibration",
+        "description": "Stores the current zero point persistently.",
+        "manual_equivalent": "CZEro / 200.ZE",
     },
     {
-        'name': 'clear_peak',
-        'title': 'Clear peak',
-        'description': 'Clears the captured peak value.',
-        'manual_equivalent': 'REMAX / long-press ENT',
+        "name": "clear_peak",
+        "title": "Clear peak",
+        "description": "Clears the captured peak value.",
+        "manual_equivalent": "REMAX / long-press ENT",
     },
     {
-        'name': 'calibration',
-        'title': 'Enter calibration flow',
-        'description': 'Triggers the calibration command pathway exposed by the board.',
-        'manual_equivalent': 'C2.CAL / calibration interface',
+        "name": "calibration",
+        "title": "Enter calibration flow",
+        "description": "Triggers the calibration command pathway exposed by the board.",
+        "manual_equivalent": "C2.CAL / calibration interface",
     },
     {
-        'name': 'factory_reset',
-        'title': 'Factory reset',
-        'description': 'Restores factory-default parameters on the instrument.',
-        'manual_equivalent': '116.FA Restore factory settings',
+        "name": "factory_reset",
+        "title": "Factory reset",
+        "description": "Restores factory-default parameters on the instrument.",
+        "manual_equivalent": "116.FA Restore factory settings",
     },
 ]
 
@@ -193,14 +194,14 @@ COMMAND_METADATA: list[dict[str, str]] = [
 # ---------------------------------------------------------------------------
 
 DEFAULT_PORT_HINTS: list[str] = [
-    'USB',
-    'RS485',
-    'FTDI',
-    'CH340',
-    'CP210',
-    'PL2303',
-    'ttyUSB',
-    'ttyACM',
+    "USB",
+    "RS485",
+    "FTDI",
+    "CH340",
+    "CP210",
+    "PL2303",
+    "ttyUSB",
+    "ttyACM",
 ]
 
 # ---------------------------------------------------------------------------
@@ -210,4 +211,4 @@ DEFAULT_PORT_HINTS: list[str] = [
 #: The sole supported active-send parser profile.  ASCII/hex profiles were
 #: removed because they do not provide the 11-register payload required for
 #: calibration QA (see refactor plan §6.1).
-ACTIVE_SEND_PARSER_PROFILE: str = 'modbus_rtu_response_11regs'
+ACTIVE_SEND_PARSER_PROFILE: str = "modbus_rtu_response_11regs"

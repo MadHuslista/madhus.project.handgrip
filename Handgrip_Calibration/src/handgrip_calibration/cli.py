@@ -89,8 +89,12 @@ def _cmd_fit(args: argparse.Namespace) -> int:
         log.info("[DRY-RUN] Would fit models for session in %s", args.session_dir)
         return 0
     dataset, result = fit_session(args.session_dir, cfg)
-    log.info("Fit complete — %d points, model=%s", result.metrics.n_points, result.selected_model_id)
-    log.info("  family=%s, likelihood=%.3f", result.selected_model_family, result.selection_likelihood)
+    log.info(
+        "Fit complete — %d points, model=%s", result.metrics.n_points, result.selected_model_id
+    )
+    log.info(
+        "  family=%s, likelihood=%.3f", result.selected_model_family, result.selection_likelihood
+    )
     if result.force_N_a is not None and result.force_N_b is not None:
         log.info(
             "  affine-compatible: force_N = %.12g * raw + %.12g",
@@ -153,7 +157,9 @@ def _cmd_demo_data(args: argparse.Namespace) -> int:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def _add_common_flags(parser: argparse.ArgumentParser, *, dry_run: bool = False, yes: bool = False) -> None:
+def _add_common_flags(
+    parser: argparse.ArgumentParser, *, dry_run: bool = False, yes: bool = False
+) -> None:
     """Add shared operational flags to a subcommand parser."""
     parser.add_argument(
         "--log-level",
@@ -299,8 +305,7 @@ Exit codes:
     p = sub.add_parser(
         "import-xdf",
         help=(
-            "Convert an XDF recording into canonical target/reference CSV "
-            "and events.ndjson files."
+            "Convert an XDF recording into canonical target/reference CSV and events.ndjson files."
         ),
     )
     p.add_argument("xdf_path")

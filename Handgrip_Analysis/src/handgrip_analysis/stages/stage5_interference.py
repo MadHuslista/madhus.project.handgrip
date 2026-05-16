@@ -2,6 +2,7 @@
 # @brief Stage 5 interference comparison analyzer.
 
 """Stage 5 — interference comparison with condition replicates."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -33,13 +34,16 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     channel = spec.channel or cfg.channel
     y = cap.series(channel)  # type: ignore[arg-type]
     f, pxx = welch_psd(
-        y, cap.fs_estimate_hz,
+        y,
+        cap.fs_estimate_hz,
         max_nperseg=dsp.welch.max_nperseg,
         min_nperseg=dsp.welch.min_nperseg,
         window=dsp.welch.window,
     )
     peaks = dominant_psd_peaks(
-        f, pxx, cap.fs_estimate_hz,
+        f,
+        pxx,
+        cap.fs_estimate_hz,
         prominence_db=dsp.psd_peaks.prominence_db,
         max_peaks=dsp.psd_peaks.max_peaks,
     )

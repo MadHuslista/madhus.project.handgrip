@@ -5,6 +5,7 @@ Exercises the full load → DSP → filter chain with in-memory data,
 verifying that all components compose correctly without file I/O
 (except for a temporary CSV written to tmp_path).
 """
+
 from __future__ import annotations
 
 from pathlib import Path

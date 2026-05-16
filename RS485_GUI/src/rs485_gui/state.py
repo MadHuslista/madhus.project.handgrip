@@ -15,6 +15,7 @@ and eliminates the ``cfg.device.slave_address = int(...)`` anti-pattern.
 
 Dependency chain: models, core/*, io/*, transport/base
 """
+
 from __future__ import annotations
 
 import threading
@@ -42,61 +43,67 @@ LOGGER = logging.getLogger(__name__)
 # Log-entry renderers (moved here to keep core/codec pure)
 # ---------------------------------------------------------------------------
 
+
 def _render_raw_log_entry(frame: MeasurementFrame, max_chars: int) -> str:
     import json
+
     raw = frame.raw_transport
-    diagnostics = raw.get('diagnostics', {}) if isinstance(raw.get('diagnostics'), dict) else {}
-    response_hex = raw.get('response_hex')
-    request_hex = raw.get('request_hex')
+    diagnostics = raw.get("diagnostics", {}) if isinstance(raw.get("diagnostics"), dict) else {}
+    response_hex = raw.get("response_hex")
+    request_hex = raw.get("request_hex")
     parts = [frame.host_ts_iso, frame.mode]
     if response_hex:
-        parts.append(f'rx={truncate_text(str(response_hex), max(32, max_chars // 2))}')
+        parts.append(f"rx={truncate_text(str(response_hex), max(32, max_chars // 2))}")
     if request_hex:
-        parts.append(f'tx={truncate_text(str(request_hex), max(32, max_chars // 3))}')
-    if 'frame_length_bytes' in raw:
-        parts.append(f'len={raw["frame_length_bytes"]}')
+        parts.append(f"tx={truncate_text(str(request_hex), max(32, max_chars // 3))}")
+    if "frame_length_bytes" in raw:
+        parts.append(f"len={raw['frame_length_bytes']}")
     if diagnostics:
         parts.append(
-            'diag='
-            f'parsed:{diagnostics.get("frames_ok", "?")},'
-            f'delivered:{diagnostics.get("frames_delivered", "?")},'
-            f'dropped:{diagnostics.get("frames_dropped_backlog", "?")},'
-            f'resync:{diagnostics.get("header_resyncs", "?")},'
-            f'discard:{diagnostics.get("discarded_bytes", "?")}'
+            "diag="
+            f"parsed:{diagnostics.get('frames_ok', '?')},"
+            f"delivered:{diagnostics.get('frames_delivered', '?')},"
+            f"dropped:{diagnostics.get('frames_dropped_backlog', '?')},"
+            f"resync:{diagnostics.get('header_resyncs', '?')},"
+            f"discard:{diagnostics.get('discarded_bytes', '?')}"
         )
     if len(parts) == 2:
-        parts.append(truncate_text(json.dumps(raw, ensure_ascii=False, separators=(',', ':')), max_chars))
-    return truncate_text(' | '.join(parts), max_chars)
+        parts.append(
+            truncate_text(json.dumps(raw, ensure_ascii=False, separators=(",", ":")), max_chars)
+        )
+    return truncate_text(" | ".join(parts), max_chars)
 
 
-## @brief Render interpreted log entry.
+# @brief Render interpreted log entry.
 #
 #  @param frame Parameter description.
 #  @param max_chars Parameter description.
 #  @return Result produced by this function.
 def _render_interpreted_log_entry(frame: MeasurementFrame, max_chars: int) -> str:
     import json
+
     interpreted = frame.interpreted
     summary = {
-        'ts': frame.host_ts_iso,
-        'mode': frame.mode,
-        'gross': interpreted.get('gross_value'),
-        'net': interpreted.get('net_value'),
-        'peak': interpreted.get('peak_value'),
-        'raw': interpreted.get('raw_value'),
-        'unit': interpreted.get('unit_label'),
-        'status': interpreted.get('status_flags'),
-        'parsed_from': interpreted.get('parsed_from'),
+        "ts": frame.host_ts_iso,
+        "mode": frame.mode,
+        "gross": interpreted.get("gross_value"),
+        "net": interpreted.get("net_value"),
+        "peak": interpreted.get("peak_value"),
+        "raw": interpreted.get("raw_value"),
+        "unit": interpreted.get("unit_label"),
+        "status": interpreted.get("status_flags"),
+        "parsed_from": interpreted.get("parsed_from"),
     }
-    return truncate_text(json.dumps(summary, ensure_ascii=False, separators=(',', ':')), max_chars)
+    return truncate_text(json.dumps(summary, ensure_ascii=False, separators=(",", ":")), max_chars)
 
 
 # ---------------------------------------------------------------------------
 # RuntimeSettings — UI-writable config subset
 # ---------------------------------------------------------------------------
 
+
 @dataclass
-## @brief Represents the RuntimeSettings component.
+# @brief Represents the RuntimeSettings component.
 class RuntimeSettings:
     """Holds the subset of settings that the UI may change after startup.
 
@@ -105,9 +112,10 @@ class RuntimeSettings:
     state invisible to the logger / IPC publisher unless they re-read config
     on every frame).
     """
+
     slave_address: int = 1
     active_send_frequency_code: int = 8
-    plot_signal_key: str = 'net_value'
+    plot_signal_key: str = "net_value"
     clear_plot_on_connect: bool = True
 
 
@@ -115,8 +123,9 @@ class RuntimeSettings:
 # AppState
 # ---------------------------------------------------------------------------
 
+
 @dataclass
-## @brief Represents the AppState component.
+# @brief Represents the AppState component.
 class AppState:
     """Central mutable runtime state shared between worker, UI, and I/O subsystems."""
 
@@ -125,8 +134,8 @@ class AppState:
     mode: str
     runtime: RuntimeSettings = field(default_factory=RuntimeSettings)
     connected: bool = False
-    connection_label: str = 'DISCONNECTED'
-    status_text: str = 'Idle'
+    connection_label: str = "DISCONNECTED"
+    status_text: str = "Idle"
     stop_event: threading.Event = field(default_factory=threading.Event)
     worker_thread: threading.Thread | None = None
     transport: BoardTransport | None = None
@@ -136,7 +145,7 @@ class AppState:
     interpreted_log: deque[str] = field(default_factory=lambda: deque(maxlen=500))
     event_log: deque[str] = field(default_factory=lambda: deque(maxlen=500))
     frame_history: deque[MeasurementFrame] = field(default_factory=lambda: deque(maxlen=5000))
-    parse_profile: str = 'modbus_rtu_response_11regs'
+    parse_profile: str = "modbus_rtu_response_11regs"
     signal_logger: SignalFileLogger | None = None
     ipc_publisher: MeasurementFramePublisher | None = None
     active_send_stats: ActiveSendStats = field(default_factory=ActiveSendStats)
@@ -153,11 +162,11 @@ class AppState:
     def get_session_id(self) -> str:
         """Return the optional calibration session identifier."""
         try:
-            return str(getattr(self.cfg.session, 'session_id', '') or '')
+            return str(getattr(self.cfg.session, "session_id", "") or "")
         except Exception:
-            return ''
+            return ""
 
-    ## @brief Build board profile snapshot.
+    # @brief Build board profile snapshot.
     #
     #  @param self Parameter description.
     #  @return Constructed object for this operation.
@@ -166,45 +175,45 @@ class AppState:
         cfg = self.cfg
         rt = self.runtime
         return {
-            'schema': 'rs485_board_profile.v2',
-            'device_name': 'HighSpeedAcquisitionInstrument',
-            'reference_role': 'calibration_reference',
-            'recommended_unit': 'N',
-            'serial': {
-                'port': str(self.serial_cfg.port),
-                'baudrate': int(self.serial_cfg.baudrate),
-                'parity': str(self.serial_cfg.parity),
-                'stopbits': int(self.serial_cfg.stopbits),
-                'bytesize': int(self.serial_cfg.bytesize),
+            "schema": "rs485_board_profile.v2",
+            "device_name": "HighSpeedAcquisitionInstrument",
+            "reference_role": "calibration_reference",
+            "recommended_unit": "N",
+            "serial": {
+                "port": str(self.serial_cfg.port),
+                "baudrate": int(self.serial_cfg.baudrate),
+                "parity": str(self.serial_cfg.parity),
+                "stopbits": int(self.serial_cfg.stopbits),
+                "bytesize": int(self.serial_cfg.bytesize),
             },
-            'device': {
-                'mode': str(self.mode),
-                'slave_address': int(rt.slave_address),
-                'active_send_frequency_code': int(rt.active_send_frequency_code),
-                'poll_interval_s': float(cfg.device.poll_interval_s),
+            "device": {
+                "mode": str(self.mode),
+                "slave_address": int(rt.slave_address),
+                "active_send_frequency_code": int(rt.active_send_frequency_code),
+                "poll_interval_s": float(cfg.device.poll_interval_s),
             },
-            'active_send': {
-                'timestamp_policy': str(cfg.active_send.timestamp_policy),
-                'parser_profile': str(cfg.active_send.default_parser_profile),
-                'frame_register_count': int(cfg.active_send.frame_register_count),
-                'delivery_window_s': float(cfg.active_send.delivery_window_s),
-                'max_frames_per_delivery': int(cfg.active_send.max_frames_per_delivery),
+            "active_send": {
+                "timestamp_policy": str(cfg.active_send.timestamp_policy),
+                "parser_profile": str(cfg.active_send.default_parser_profile),
+                "frame_register_count": int(cfg.active_send.frame_register_count),
+                "delivery_window_s": float(cfg.active_send.delivery_window_s),
+                "max_frames_per_delivery": int(cfg.active_send.max_frames_per_delivery),
             },
-            'ipc': {
-                'topic': str(cfg.ipc.topic),
-                'signal_key': str(cfg.ipc.signal_key),
-                'publish_after_max_rate_filter': bool(cfg.ipc.publish_after_max_rate_filter),
+            "ipc": {
+                "topic": str(cfg.ipc.topic),
+                "signal_key": str(cfg.ipc.signal_key),
+                "publish_after_max_rate_filter": bool(cfg.ipc.publish_after_max_rate_filter),
             },
         }
 
-    ## @brief Push event.
+    # @brief Push event.
     #
     #  @param self Parameter description.
     #  @param message Parameter description.
     def push_event(self, message: str) -> None:
         """Append a timestamped event to the event log and propagate to I/O subsystems."""
-        ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
-        line = f'[{ts}] {message}'
+        ts = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        line = f"[{ts}] {message}"
         self.event_log.appendleft(line)
         if self.signal_logger is not None and self.signal_logger.enabled:
             self.signal_logger.write_event(line)
@@ -212,7 +221,7 @@ class AppState:
             self.ipc_publisher.publish_event(message)
         LOGGER.info(message)
 
-    ## @brief Clear signal trace.
+    # @brief Clear signal trace.
     #
     #  @param self Parameter description.
     #  @param reason Parameter description.
@@ -231,9 +240,9 @@ class AppState:
         else:
             self.sampling_stats.reset_window(window_size)
             self.display_sampling_stats.reset_window(window_size)
-        self.push_event(f'Cleared plotted signal trace ({reason})')
+        self.push_event(f"Cleared plotted signal trace ({reason})")
 
-    ## @brief Filter frames by max sampling rate.
+    # @brief Filter frames by max sampling rate.
     #
     #  @param self Parameter description.
     #  @param frames Parameter description.
@@ -264,7 +273,7 @@ class AppState:
         self.sampling_stats.add_dropped_samples(dropped)
         return kept
 
-    ## @brief Record acquisition frames.
+    # @brief Record acquisition frames.
     #
     #  @param self Parameter description.
     #  @param frames Parameter description.
@@ -273,14 +282,12 @@ class AppState:
         for frame in frames:
             self.sampling_stats.record_processed_frame(frame.host_ts)
 
-    ## @brief Filter frames for ui.
+    # @brief Filter frames for ui.
     #
     #  @param self Parameter description.
     #  @param frames Parameter description.
     #  @return Result produced by this function.
-    def filter_frames_for_ui(
-        self, frames: list[MeasurementFrame]
-    ) -> list[MeasurementFrame]:
+    def filter_frames_for_ui(self, frames: list[MeasurementFrame]) -> list[MeasurementFrame]:
         """Return a display-rate-limited subset for browser/UI rendering only."""
         if not frames:
             return frames
@@ -297,14 +304,15 @@ class AppState:
         self._last_ui_frame_ts = last_ts
         if not kept:
             latest = frames[-1]
-            if self._last_ui_frame_ts is None or (
-                latest.host_ts - self._last_ui_frame_ts
-            ) >= min_dt * 0.5:
+            if (
+                self._last_ui_frame_ts is None
+                or (latest.host_ts - self._last_ui_frame_ts) >= min_dt * 0.5
+            ):
                 kept.append(latest)
                 self._last_ui_frame_ts = latest.host_ts
         return kept
 
-    ## @brief Push frames.
+    # @brief Push frames.
     #
     #  @param self Parameter description.
     #  @param frames Parameter description.
@@ -324,7 +332,7 @@ class AppState:
         for frame in frames:
             self.display_sampling_stats.record_processed_frame(frame.host_ts)
 
-    ## @brief Push frame.
+    # @brief Push frame.
     #
     #  @param self Parameter description.
     #  @param frame Parameter description.
@@ -337,8 +345,10 @@ class AppState:
 # Internal factory helper (avoids forward-reference issues with dataclass fields)
 # ---------------------------------------------------------------------------
 
+
 def _make_sampling_stats() -> SamplingStats:
     from rs485_gui.core.sampling import SamplingStats
+
     return SamplingStats()
 
 

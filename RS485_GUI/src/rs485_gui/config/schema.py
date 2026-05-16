@@ -7,13 +7,14 @@ is NOT initialised (see loader.py for the reason).
 Instantiating ``Rs485GuiConfig()`` gives a fully populated default config
 that matches the intent of ``config/config.yaml``.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
 
 @dataclass
-## @brief Represents the SessionConfig component.
+# @brief Represents the SessionConfig component.
 class SessionConfig:
     #: Optional calibration session id propagated to logs and IPC.
     #: Set only when you want GUI logs/IPC to carry a specific recording session id.
@@ -21,17 +22,17 @@ class SessionConfig:
 
 
 @dataclass
-## @brief Represents the AppConfig component.
+# @brief Represents the AppConfig component.
 class AppConfig:
-    log_level: str = 'INFO'
+    log_level: str = "INFO"
     worker_join_timeout_s: float = 1.5
 
 
 @dataclass
-## @brief Represents the UiConfig component.
+# @brief Represents the UiConfig component.
 class UiConfig:
-    page_title: str = 'High-Speed Acquisition Instrument GUI'
-    host: str = '127.0.0.1'
+    page_title: str = "High-Speed Acquisition Instrument GUI"
+    host: str = "127.0.0.1"
     port: int = 8088
     refresh_interval_s: float = 0.1
     plot_height_px: int = 360
@@ -43,8 +44,8 @@ class UiConfig:
     max_retained_event_entries: int = 500
     max_plot_points: int = 3000
     max_render_plot_points: int = 700
-    default_plot_signal_key: str = 'net_value'
-    plot_signal_key: str = 'net_value'
+    default_plot_signal_key: str = "net_value"
+    plot_signal_key: str = "net_value"
     clear_plot_on_connect: bool = True
     sampling_rate_window_samples: int = 5000
     sampling_rate_outlier_low_ratio: float = 0.25
@@ -64,35 +65,35 @@ class UiConfig:
     board_config_update_every_n_refreshes: int = 10
     controls_update_every_n_refreshes: int = 10
     plot_skip_if_unchanged: bool = True
-    plot_trace_type: str = 'scattergl'
+    plot_trace_type: str = "scattergl"
     light_mode: bool = True
 
 
 @dataclass
-## @brief Represents the LoggerConfig component.
+# @brief Represents the LoggerConfig component.
 class LoggerConfig:
     enabled: bool = True
-    directory: str = './logs'
-    write_mode: str = 'overwrite'
-    raw_signal_filename: str = 'raw_signal.ndjson'
-    interpreted_signal_filename: str = 'interpreted_signal.ndjson'
-    gui_signal_filename: str = 'gui_signal.csv'
+    directory: str = "./logs"
+    write_mode: str = "overwrite"
+    raw_signal_filename: str = "raw_signal.ndjson"
+    interpreted_signal_filename: str = "interpreted_signal.ndjson"
+    gui_signal_filename: str = "gui_signal.csv"
     debug_log_to_file: bool = True
-    debug_log_filename: str = 'acquisition_debug.log'
-    event_log_filename: str = 'event.log'
+    debug_log_filename: str = "acquisition_debug.log"
+    event_log_filename: str = "event.log"
     flush_every_n_batches: int = 25
     flush_interval_s: float = 1.0
 
 
 @dataclass
-## @brief Represents the IpcConfig component.
+# @brief Represents the IpcConfig component.
 class IpcConfig:
     enabled: bool = True
-    transport: str = 'zmq_pub'
-    bind: str = 'tcp://127.0.0.1:5557'
-    topic: str = 'rs485.measurement.v1'
-    event_topic: str = 'rs485.event.v1'
-    signal_key: str = 'net_value'
+    transport: str = "zmq_pub"
+    bind: str = "tcp://127.0.0.1:5557"
+    topic: str = "rs485.measurement.v1"
+    event_topic: str = "rs485.event.v1"
+    signal_key: str = "net_value"
     send_hwm: int = 2000
     linger_ms: int = 0
     drop_on_backpressure: bool = True
@@ -105,25 +106,34 @@ class IpcConfig:
 
 
 @dataclass
-## @brief Represents the SerialConfig component.
+# @brief Represents the SerialConfig component.
 class SerialConfig:
-    default_port: str = ''
+    default_port: str = ""
     excluded_ports: list[str] = field(default_factory=list)
     default_baudrate: int = 460800
-    default_parity: str = 'N'
+    default_parity: str = "N"
     default_stopbits: int = 1
     bytesize: int = 8
     timeout_s: float = 0.2
     inter_frame_gap_s: float = 0.001
-    port_hints: list[str] = field(default_factory=lambda: [
-        'USB', 'RS485', 'FTDI', 'CH340', 'CP210', 'PL2303', 'ttyUSB', 'ttyACM',
-    ])
+    port_hints: list[str] = field(
+        default_factory=lambda: [
+            "USB",
+            "RS485",
+            "FTDI",
+            "CH340",
+            "CP210",
+            "PL2303",
+            "ttyUSB",
+            "ttyACM",
+        ]
+    )
 
 
 @dataclass
-## @brief Represents the DeviceConfig component.
+# @brief Represents the DeviceConfig component.
 class DeviceConfig:
-    mode: str = 'active_send'
+    mode: str = "active_send"
     slave_address: int = 1
     active_send_frequency_code: int = 8
     poll_interval_s: float = 0.001
@@ -135,12 +145,12 @@ class DeviceConfig:
 
 
 @dataclass
-## @brief Represents the ActiveSendConfig component.
+# @brief Represents the ActiveSendConfig component.
 class ActiveSendConfig:
-    timestamp_policy: str = 'batch_end_anchored'
-    default_parser_profile: str = 'modbus_rtu_response_11regs'
+    timestamp_policy: str = "batch_end_anchored"
+    default_parser_profile: str = "modbus_rtu_response_11regs"
     default_numeric_index: int = 0
-    default_hex_word_endianness: str = 'big'
+    default_hex_word_endianness: str = "big"
     read_timeout_s: float = 0.5
     delivery_window_s: float = 0.010
     max_frames_per_delivery: int = 16
@@ -164,7 +174,7 @@ class ActiveSendConfig:
 
 
 @dataclass
-## @brief Represents the LoggingConfig component.
+# @brief Represents the LoggingConfig component.
 class LoggingConfig:
     """Per-module log level overrides (new in v0.2 refactor).
 
@@ -179,12 +189,13 @@ class LoggingConfig:
             rs485_gui.transport.active_send: DEBUG
             rs485_gui.io.publisher: WARNING
     """
-    root_level: str = 'INFO'
+
+    root_level: str = "INFO"
     module_levels: dict = field(default_factory=dict)
 
 
 @dataclass
-## @brief Represents the Rs485GuiConfig component.
+# @brief Represents the Rs485GuiConfig component.
 class Rs485GuiConfig:
     """Root structured config for rs485_gui.
 
@@ -193,6 +204,7 @@ class Rs485GuiConfig:
     re-executes the module when serving the root page, which would trigger a
     ``GlobalHydra`` re-initialisation crash on the second execution.
     """
+
     session: SessionConfig = field(default_factory=SessionConfig)
     app: AppConfig = field(default_factory=AppConfig)
     ui: UiConfig = field(default_factory=UiConfig)

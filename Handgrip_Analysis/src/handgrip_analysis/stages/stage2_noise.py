@@ -2,6 +2,7 @@
 # @brief Stage 2 stationary rest-noise analyzer.
 
 """Stage 2 — stationary rest noise characterisation."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -43,17 +44,22 @@ def _bandpower_metrics(f: np.ndarray, pxx: np.ndarray, bands: tuple[tuple[float,
 # @param cfg Stage configuration.
 # @param prefix Channel key prefix.
 # @return Tuple of scalar metrics and named tables.
-def _channel_metrics(y: np.ndarray, fs: float, cfg: StageConfig, prefix: str) -> tuple[dict[str, float], dict[str, pd.DataFrame]]:
+def _channel_metrics(
+    y: np.ndarray, fs: float, cfg: StageConfig, prefix: str
+) -> tuple[dict[str, float], dict[str, pd.DataFrame]]:
     dsp = _get_dsp_cfg(cfg)
     f, pxx = welch_psd(
-        y, fs,
+        y,
+        fs,
         max_nperseg=dsp.welch.max_nperseg,
         min_nperseg=dsp.welch.min_nperseg,
         window=dsp.welch.window,
     )
     tau, adev = allan_deviation(y, fs)
     peaks = dominant_psd_peaks(
-        f, pxx, fs,
+        f,
+        pxx,
+        fs,
         prominence_db=dsp.psd_peaks.prominence_db,
         max_peaks=dsp.psd_peaks.max_peaks,
     )

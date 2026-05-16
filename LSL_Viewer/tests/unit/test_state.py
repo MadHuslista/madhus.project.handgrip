@@ -1,4 +1,5 @@
 """Unit tests for viz.state — pure axis-limit helpers."""
+
 from __future__ import annotations
 
 import math
@@ -15,9 +16,7 @@ class TestComputeAxisLimits:
         assert result is None
 
     def test_returns_none_when_all_nan(self):
-        result = compute_axis_limits(
-            np.array([float("nan")]), np.array([float("nan")])
-        )
+        result = compute_axis_limits(np.array([float("nan")]), np.array([float("nan")]))
         assert result is None
 
     def test_uniform_data_adds_span(self):

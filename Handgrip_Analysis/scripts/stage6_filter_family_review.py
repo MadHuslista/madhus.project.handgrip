@@ -3,6 +3,7 @@
 # @brief Stage 6b multi-signal filter-family ranking workflow.
 
 """Stage 6b — Filter family review: multi-signal ranking with composite score."""
+
 from __future__ import annotations
 
 import logging
@@ -80,11 +81,17 @@ def main(cfg: DictConfig) -> None:
 
     # Report raw rest PSD peaks
     peaks = dominant_psd_peaks(f_rest_raw, p_rest_raw, fs_rest)
-    peak_df = pd.DataFrame([
-        {"frequency_hz": p.frequency_hz, "psd": p.psd,
-         "prominence_db": p.prominence_db, "alias_hint": p.alias_hint or ""}
-        for p in peaks
-    ])
+    peak_df = pd.DataFrame(
+        [
+            {
+                "frequency_hz": p.frequency_hz,
+                "psd": p.psd,
+                "prominence_db": p.prominence_db,
+                "alias_hint": p.alias_hint or "",
+            }
+            for p in peaks
+        ]
+    )
     peak_df.to_csv(outdir / "rest_psd_peaks.csv", index=False)
 
     # Load all dynamic captures and compute raw metrics
@@ -93,7 +100,9 @@ def main(cfg: DictConfig) -> None:
         cap = load_capture(path, time_source=cfg.io.time_source)
         t, y, fs = cap.time_s, cap.series("raw"), cap.fs_estimate_hz
         raw_m = best_event_metrics(
-            y, t, fs,
+            y,
+            t,
+            fs,
             baseline_s=ev_cfg.baseline_s,
             threshold_sigma=ev_cfg.threshold_sigma,
             min_duration_s=ev_cfg.min_duration_s,
@@ -124,7 +133,9 @@ def main(cfg: DictConfig) -> None:
         peak_errs, rise_errs, time_errs, slope_devs = [], [], [], []
         for path, (t, y, fs, raw_m) in raw_dynamic.items():
             filt_m = best_event_metrics(
-                apply_filter_spec(y, fs, spec), t, fs,
+                apply_filter_spec(y, fs, spec),
+                t,
+                fs,
                 baseline_s=ev_cfg.baseline_s,
                 threshold_sigma=ev_cfg.threshold_sigma,
                 min_duration_s=ev_cfg.min_duration_s,
@@ -135,16 +146,10 @@ def main(cfg: DictConfig) -> None:
             row[f"{label}_peak_error"] = filt_m["peak_value"] - raw_m["peak_value"]
             row[f"{label}_peak_time_shift_s"] = filt_m["peak_time_s"] - raw_m["peak_time_s"]
             row[f"{label}_rise_shift_s"] = filt_m["rise_10_90_s"] - raw_m["rise_10_90_s"]
-            dfdt_ratio = (
-                filt_m["max_dfdt"] / raw_m["max_dfdt"]
-                if raw_m["max_dfdt"]
-                else float("nan")
-            )
+            dfdt_ratio = filt_m["max_dfdt"] / raw_m["max_dfdt"] if raw_m["max_dfdt"] else float("nan")
             row[f"{label}_max_dfdt_ratio"] = dfdt_ratio
             peak_errs.append(abs(row[f"{label}_peak_error"]) / max(abs(raw_m["peak_value"]), 1.0))
-            rise_errs.append(
-                abs(row[f"{label}_rise_shift_s"]) / max(abs(raw_m["rise_10_90_s"]), 1e-6)
-            )
+            rise_errs.append(abs(row[f"{label}_rise_shift_s"]) / max(abs(raw_m["rise_10_90_s"]), 1e-6))
             time_errs.append(abs(row[f"{label}_peak_time_shift_s"]) / 0.1)
             slope_devs.append(abs(1.0 - dfdt_ratio) if pd.notna(dfdt_ratio) else float("nan"))
 

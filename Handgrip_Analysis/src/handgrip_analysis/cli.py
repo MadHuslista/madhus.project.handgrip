@@ -13,6 +13,7 @@ The CLI intentionally keeps side effects at the boundary:
 It accepts conventional flags and the project-friendly ``key=value`` style used
 by Hydra, without depending on Hydra for the Phase 2 package entry points.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -194,7 +195,9 @@ def build_stage_parser() -> argparse.ArgumentParser:
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("overrides", nargs="*", help="Optional key=value overrides, e.g. stage=stage2 manifest=... outdir=...")
+    parser.add_argument(
+        "overrides", nargs="*", help="Optional key=value overrides, e.g. stage=stage2 manifest=... outdir=..."
+    )
     parser.add_argument("--stage", default=None, help="Stage to run, e.g. stage1 ... stage6")
     parser.add_argument("--manifest", default=None, help="Trial manifest CSV path")
     parser.add_argument("--outdir", default=None, help="Output directory")
@@ -202,7 +205,9 @@ def build_stage_parser() -> argparse.ArgumentParser:
     parser.add_argument("--trial-type", dest="trial_type", default=None, help="Optional trial_type filter")
     parser.add_argument("--time-source", dest="time_source", default=None, choices=["auto", "device", "lsl", "host"])
     parser.add_argument("--channel", default=None)
-    parser.add_argument("--channels", default=None, help="Comma-separated channel list for stages that support multiple channels")
+    parser.add_argument(
+        "--channels", default=None, help="Comma-separated channel list for stages that support multiple channels"
+    )
     parser.add_argument("--filter-config", dest="filter_config", default=None)
     parser.add_argument("--lsl-bridge-root", dest="lsl_bridge_root", default=None)
     parser.add_argument("--lsl-bridge-config", dest="lsl_bridge_config", default=None)
@@ -226,7 +231,9 @@ def stage_main(argv: list[str] | None = None) -> int:
     trial_type = _pop_value("trial_type", args, overrides)
     log_level = _pop_value("log_level", args, overrides, _nested_get(overrides, ("logging", "level"), "INFO"))
 
-    missing = [name for name, value in {"stage": stage, "manifest": manifest, "outdir": outdir}.items() if value in (None, "")]
+    missing = [
+        name for name, value in {"stage": stage, "manifest": manifest, "outdir": outdir}.items() if value in (None, "")
+    ]
     if missing:
         parser.error("Missing required argument(s): " + ", ".join(missing))
 
@@ -264,7 +271,9 @@ def build_run_all_parser() -> argparse.ArgumentParser:
     parser.add_argument("overrides", nargs="*", help="Optional key=value overrides, e.g. manifest=... base_outdir=...")
     parser.add_argument("--manifest", default=None, help="Trial manifest CSV path")
     parser.add_argument("--base-outdir", dest="base_outdir", default=None, help="Base output directory")
-    parser.add_argument("--stages", default=None, help="Comma-separated stages to run; default: all stages present in manifest")
+    parser.add_argument(
+        "--stages", default=None, help="Comma-separated stages to run; default: all stages present in manifest"
+    )
     parser.add_argument("--time-source", dest="time_source", default=None, choices=["auto", "device", "lsl", "host"])
     parser.add_argument("--channel", default=None)
     parser.add_argument("--channels", default=None)

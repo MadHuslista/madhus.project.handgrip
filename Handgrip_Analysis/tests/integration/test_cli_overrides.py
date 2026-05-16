@@ -1,4 +1,5 @@
 """Integration tests for unprefixed Hydra CLI overrides in stage scripts."""
+
 from __future__ import annotations
 
 import subprocess

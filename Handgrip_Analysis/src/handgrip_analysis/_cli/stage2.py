@@ -2,6 +2,7 @@
 # @brief Package-native CLI entrypoint for Stage 2 analysis.
 
 """Entry point for ha-stage2: runs Stage 2 (static noise) analysis via the package-native pipeline."""
+
 from __future__ import annotations
 
 import sys

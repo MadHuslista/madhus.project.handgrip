@@ -72,8 +72,7 @@ class SampleTimeResolver:
 
         if self._source != "device_clock_us":
             raise ValueError(
-                f"Unsupported processing.timestamp_source={self._source!r}. "
-                "Expected 'lsl' or 'device_clock_us'."
+                f"Unsupported processing.timestamp_source={self._source!r}. Expected 'lsl' or 'device_clock_us'."
             )
 
         if self._last_device_clock_us is None:
@@ -103,12 +102,8 @@ class TargetTimestampResolver:
         self._policy = str(cfg.target_timestamping.policy)
         self._max_gap_s = float(cfg.target_timestamping.max_gap_s)
         self._reset_on_nonmonotonic = bool(cfg.target_timestamping.reset_on_nonmonotonic)
-        self._max_anchor_drift_s = float(
-            cfg.target_timestamping.get("max_anchor_drift_s", 0.0)
-        )
-        self._monotonic_epsilon_s = float(
-            cfg.target_timestamping.get("monotonic_epsilon_s", 1e-9)
-        )
+        self._max_anchor_drift_s = float(cfg.target_timestamping.get("max_anchor_drift_s", 0.0))
+        self._monotonic_epsilon_s = float(cfg.target_timestamping.get("monotonic_epsilon_s", 1e-9))
         self._anchor_device_us: int | None = None
         self._anchor_lsl_s: float | None = None
         self._last_device_us: int | None = None
@@ -136,8 +131,7 @@ class TargetTimestampResolver:
 
         if self._policy != "device_clock_anchor":
             raise ValueError(
-                "Only target_timestamping.policy=host_receive|device_clock_anchor "
-                "is supported in schema v2"
+                "Only target_timestamping.policy=host_receive|device_clock_anchor is supported in schema v2"
             )
 
         if self._anchor_device_us is None or self._anchor_lsl_s is None:
@@ -169,9 +163,7 @@ class TargetTimestampResolver:
                 return self._monotonic_lsl(float(arrival_lsl_time))
 
         self._last_device_us = sample.device_clock_us
-        predicted_lsl_s = self._anchor_lsl_s + (
-            sample.device_clock_us - self._anchor_device_us
-        ) / 1_000_000.0
+        predicted_lsl_s = self._anchor_lsl_s + (sample.device_clock_us - self._anchor_device_us) / 1_000_000.0
 
         # Firmware clocks are useful for cadence, but they are not guaranteed to
         # be metrology-grade clocks.  If the anchored device-clock prediction
@@ -227,7 +219,6 @@ class TargetTimestampResolver:
         """
         if self._last_resolved_lsl_s is not None:
             min_next = self._last_resolved_lsl_s + max(0.0, self._monotonic_epsilon_s)
-            if candidate_lsl_s < min_next:
-                candidate_lsl_s = min_next
+            candidate_lsl_s = max(candidate_lsl_s, min_next)
         self._last_resolved_lsl_s = float(candidate_lsl_s)
         return float(candidate_lsl_s)

@@ -48,9 +48,6 @@ def build_processor(cfg: DictConfig) -> Processor:
     module = importlib.import_module(module_name)
     processor = module.build_processor(cfg.processing)
     if not hasattr(processor, "process"):
-        raise TypeError(
-            f"processing module {module_name!r} returned an object "
-            "without a process() method"
-        )
+        raise TypeError(f"processing module {module_name!r} returned an object without a process() method")
     _log.debug("Processor loaded: %s", type(processor).__name__)
     return processor

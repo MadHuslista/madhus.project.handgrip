@@ -102,9 +102,7 @@ def build_page_layout(
             ui.label("LSL Viewer").classes("text-lg font-bold")
             ui.label(f"mode: {mode}").classes("text-sm bg-blue-100 text-blue-800 px-2 py-0.5 rounded")
             if is_replay:
-                ui.label("REPLAY").classes(
-                    "text-sm bg-orange-100 text-orange-800 px-2 py-0.5 rounded"
-                )
+                ui.label("REPLAY").classes("text-sm bg-orange-100 text-orange-800 px-2 py-0.5 rounded")
 
         # ── 1 × 2 time-series grid ────────────────────────────────────────
         with ui.grid(columns=2).classes("w-full gap-2"):

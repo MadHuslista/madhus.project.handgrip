@@ -2,6 +2,7 @@
 # @brief Stage 1 startup warm-up and stabilization analyzer.
 
 """Stage 1 — startup warm-up / zero stabilisation."""
+
 from __future__ import annotations
 
 import numpy as np

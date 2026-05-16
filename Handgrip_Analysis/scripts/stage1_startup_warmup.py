@@ -3,6 +3,7 @@
 # @brief Stage 1 startup warm-up and zero stabilization analysis.
 
 """Stage 1 — Startup warm-up / zero stabilisation analysis."""
+
 from __future__ import annotations
 
 import logging
@@ -52,9 +53,7 @@ def main(cfg: DictConfig) -> None:
     cap = load_capture(input_path, time_source=cfg.io.time_source)
     y = cap.series(cfg.analysis.channel)
 
-    means, stds, slopes = rolling_mean_std_slope(
-        y, cap.fs_estimate_hz, cfg.analysis.warmup_window_s
-    )
+    means, stds, slopes = rolling_mean_std_slope(y, cap.fs_estimate_hz, cfg.analysis.warmup_window_s)
     ready = suggest_ready_time(cap.time_s, stds, slopes)
 
     n_tail = max(10, len(means) // 10)

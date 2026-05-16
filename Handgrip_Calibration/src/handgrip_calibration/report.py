@@ -74,7 +74,11 @@ def _candidate_predict(candidate: dict[str, Any], frame: pd.DataFrame, x: np.nda
         dirs = params.get("directions", {}) or {}
         fallback = params.get("fallback_affine", {}) or {}
         out = np.empty_like(x, dtype=float)
-        direction_values = frame["direction"].astype(str).to_numpy() if "direction" in frame.columns else np.array([""] * len(x))
+        direction_values = (
+            frame["direction"].astype(str).to_numpy()
+            if "direction" in frame.columns
+            else np.array([""] * len(x))
+        )
         for i, (xx, direction) in enumerate(zip(x, direction_values)):
             p = dirs.get(str(direction), fallback)
             if "a" not in p or "b" not in p:
@@ -86,7 +90,10 @@ def _candidate_predict(candidate: dict[str, Any], frame: pd.DataFrame, x: np.nda
         if "t_mid_lsl" in frame.columns:
             t = frame["t_mid_lsl"].to_numpy(dtype=float)
         elif {"t_start_lsl", "t_end_lsl"}.issubset(frame.columns):
-            t = 0.5 * (frame["t_start_lsl"].to_numpy(dtype=float) + frame["t_end_lsl"].to_numpy(dtype=float))
+            t = 0.5 * (
+                frame["t_start_lsl"].to_numpy(dtype=float)
+                + frame["t_end_lsl"].to_numpy(dtype=float)
+            )
         else:
             t = np.full_like(x, float(params.get("time_center_lsl", 0.0)))
         tc = t - float(params.get("time_center_lsl", np.nanmedian(t)))
@@ -94,7 +101,9 @@ def _candidate_predict(candidate: dict[str, Any], frame: pd.DataFrame, x: np.nda
     return np.full_like(x, np.nan, dtype=float)
 
 
-def _selected_candidate(fit: dict[str, Any], candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _selected_candidate(
+    fit: dict[str, Any], candidates: list[dict[str, Any]]
+) -> dict[str, Any] | None:
     selected_id = fit.get("selected_model_id") or fit.get("model")
     for candidate in candidates:
         if candidate.get("model_id") == selected_id:
@@ -102,7 +111,11 @@ def _selected_candidate(fit: dict[str, Any], candidates: list[dict[str, Any]]) -
     # Backward-compatible fallback for old affine-only fit_result.json.
     coeff = fit.get("force_N", {}) if isinstance(fit, dict) else {}
     if coeff.get("a") is not None and coeff.get("b") is not None:
-        return {"model_id": "affine_legacy", "parameters": {"a": coeff["a"], "b": coeff["b"]}, "metrics": fit.get("metrics", {})}
+        return {
+            "model_id": "affine_legacy",
+            "parameters": {"a": coeff["a"], "b": coeff["b"]},
+            "metrics": fit.get("metrics", {}),
+        }
     return None
 
 
@@ -130,7 +143,11 @@ def generate_plots(session_dir: str | Path) -> list[Path]:
         reference = pd.read_csv(reference_csv)
         if "timestamp_lsl" in target and "raw" in target and not target.empty:
             plt.figure(figsize=(10, 4))
-            plt.plot(target["timestamp_lsl"] - target["timestamp_lsl"].iloc[0], target["raw"], label="target raw")
+            plt.plot(
+                target["timestamp_lsl"] - target["timestamp_lsl"].iloc[0],
+                target["raw"],
+                label="target raw",
+            )
             plt.xlabel("Time since target start [s]")
             plt.ylabel("Target raw / units")
             plt.title("Target time series")
@@ -140,7 +157,11 @@ def generate_plots(session_dir: str | Path) -> list[Path]:
             generated.append(out)
         if "timestamp_lsl" in reference and "raw" in reference and not reference.empty:
             plt.figure(figsize=(10, 4))
-            plt.plot(reference["timestamp_lsl"] - reference["timestamp_lsl"].iloc[0], reference["raw"], label="reference raw/force")
+            plt.plot(
+                reference["timestamp_lsl"] - reference["timestamp_lsl"].iloc[0],
+                reference["raw"],
+                label="reference raw/force",
+            )
             plt.xlabel("Time since reference start [s]")
             plt.ylabel("Reference force / raw")
             plt.title("Reference time series")
@@ -170,7 +191,9 @@ def generate_plots(session_dir: str | Path) -> list[Path]:
             for candidate in candidates:
                 if candidate.get("parameters") and candidate.get("model_family") != "unavailable":
                     # Keep the comparison readable: plot deployable candidates and the selected candidate.
-                    is_selected = candidate.get("model_id") == (fit.get("selected_model_id") or fit.get("model"))
+                    is_selected = candidate.get("model_id") == (
+                        fit.get("selected_model_id") or fit.get("model")
+                    )
                     if not (candidate.get("deployable_to_firmware") or is_selected):
                         continue
                     y_grid = _candidate_predict(candidate, grid_frame, x_grid)
@@ -206,9 +229,14 @@ def generate_plots(session_dir: str | Path) -> list[Path]:
             plt.axhline(0, linestyle="--", linewidth=1)
             plotted = 0
             for candidate in candidates:
-                if not candidate.get("parameters") or candidate.get("model_family") == "unavailable":
+                if (
+                    not candidate.get("parameters")
+                    or candidate.get("model_family") == "unavailable"
+                ):
                     continue
-                if not candidate.get("deployable_to_firmware") and candidate.get("model_id") != (fit.get("selected_model_id") or fit.get("model")):
+                if not candidate.get("deployable_to_firmware") and candidate.get("model_id") != (
+                    fit.get("selected_model_id") or fit.get("model")
+                ):
                     continue
                 pred = _candidate_predict(candidate, dataset, x)
                 if np.count_nonzero(np.isfinite(pred)) >= 2:
@@ -230,11 +258,13 @@ def generate_plots(session_dir: str | Path) -> list[Path]:
             for candidate in candidates:
                 metrics = candidate.get("metrics", {}) or {}
                 if metrics.get("rmse_N") is not None:
-                    rows.append({
-                        "model_id": candidate.get("model_id"),
-                        "rmse_N": metrics.get("rmse_N"),
-                        "max_abs_error_N": metrics.get("max_abs_error_N"),
-                    })
+                    rows.append(
+                        {
+                            "model_id": candidate.get("model_id"),
+                            "rmse_N": metrics.get("rmse_N"),
+                            "max_abs_error_N": metrics.get("max_abs_error_N"),
+                        }
+                    )
             metric_df = pd.DataFrame(rows).dropna()
             if not metric_df.empty:
                 metric_df = metric_df.sort_values("rmse_N")
@@ -253,7 +283,10 @@ def generate_plots(session_dir: str | Path) -> list[Path]:
 
             # Plot 5: model likelihoods / decision weights.
             likelihood_rows = [
-                {"model_id": c.get("model_id"), "selection_likelihood": c.get("selection_likelihood", 0.0)}
+                {
+                    "model_id": c.get("model_id"),
+                    "selection_likelihood": c.get("selection_likelihood", 0.0),
+                }
                 for c in candidates
                 if c.get("selection_likelihood", 0.0) is not None
             ]
@@ -288,7 +321,11 @@ def generate_plots(session_dir: str | Path) -> list[Path]:
             if "direction" in dataset.columns:
                 plt.figure(figsize=(7, 4))
                 for direction, group in dataset.groupby("direction"):
-                    plt.scatter(group["reference_force_median_N"], group["target_raw_median"], label=str(direction))
+                    plt.scatter(
+                        group["reference_force_median_N"],
+                        group["target_raw_median"],
+                        label=str(direction),
+                    )
                 plt.xlabel("Reference force [N]")
                 plt.ylabel("Target raw median")
                 plt.title("Ascending/descending hold comparison")
@@ -313,24 +350,29 @@ def _candidate_table(candidates: list[dict[str, Any]]) -> str:
     for c in candidates:
         m = c.get("metrics", {}) or {}
         cv = c.get("cv_metrics", {}) or {}
-        rows.append({
-            "model": c.get("model_id"),
-            "family": c.get("model_family"),
-            "deploy": c.get("accepted_for_deployment"),
-            "likelihood": c.get("selection_likelihood"),
-            "RMSE_N": m.get("rmse_N"),
-            "CV_RMSE_N": cv.get("cv_rmse_N"),
-            "MaxAbs_N": m.get("max_abs_error_N"),
-            "R2": m.get("r2"),
-            "rejections": ";".join(c.get("rejection_reasons", [])),
-        })
+        rows.append(
+            {
+                "model": c.get("model_id"),
+                "family": c.get("model_family"),
+                "deploy": c.get("accepted_for_deployment"),
+                "likelihood": c.get("selection_likelihood"),
+                "RMSE_N": m.get("rmse_N"),
+                "CV_RMSE_N": cv.get("cv_rmse_N"),
+                "MaxAbs_N": m.get("max_abs_error_N"),
+                "R2": m.get("r2"),
+                "rejections": ";".join(c.get("rejection_reasons", [])),
+            }
+        )
     return pd.DataFrame(rows).to_markdown(index=False) + "\n"
 
 
 def _dict_table(data: dict[str, Any]) -> str:
     if not data:
         return "_No data available._\n"
-    return pd.DataFrame([{"metric": k, "value": v} for k, v in data.items()]).to_markdown(index=False) + "\n"
+    return (
+        pd.DataFrame([{"metric": k, "value": v} for k, v in data.items()]).to_markdown(index=False)
+        + "\n"
+    )
 
 
 def _safe_json_excerpt(data: Any, limit: int = 6000) -> str:
@@ -356,19 +398,37 @@ def generate_report(session_dir: str | Path) -> Path:
     manifest = _load_yaml(session_dir / "session_manifest.yaml")
     fit = _load_json(session_dir / "fit_result.json") or {}
     validation = _load_json(session_dir / "holdout_validation.json") or {}
-    candidates_raw = _load_json(session_dir / "fit_candidates.json") if (session_dir / "fit_candidates.json").exists() else []
+    candidates_raw = (
+        _load_json(session_dir / "fit_candidates.json")
+        if (session_dir / "fit_candidates.json").exists()
+        else []
+    )
     candidates = candidates_raw if isinstance(candidates_raw, list) else []
     events = read_ndjson(session_dir / "events.ndjson")
-    dataset = pd.read_csv(session_dir / "calibration_dataset.csv") if (session_dir / "calibration_dataset.csv").exists() else pd.DataFrame()
-    holdout_predictions = pd.read_csv(session_dir / "holdout_predictions.csv") if (session_dir / "holdout_predictions.csv").exists() else pd.DataFrame()
+    dataset = (
+        pd.read_csv(session_dir / "calibration_dataset.csv")
+        if (session_dir / "calibration_dataset.csv").exists()
+        else pd.DataFrame()
+    )
+    holdout_predictions = (
+        pd.read_csv(session_dir / "holdout_predictions.csv")
+        if (session_dir / "holdout_predictions.csv").exists()
+        else pd.DataFrame()
+    )
     plots = generate_plots(session_dir)
 
     session = manifest.get("session", {})
     protocol = manifest.get("protocol", {})
     metrics = fit.get("metrics", {}) if isinstance(fit, dict) else {}
     coeff = fit.get("force_N", {}) if isinstance(fit, dict) else {}
-    selected_model = fit.get("selected_model_id", fit.get("model", "unknown")) if isinstance(fit, dict) else "unknown"
-    model_family = fit.get("selected_model_family", "unknown") if isinstance(fit, dict) else "unknown"
+    selected_model = (
+        fit.get("selected_model_id", fit.get("model", "unknown"))
+        if isinstance(fit, dict)
+        else "unknown"
+    )
+    model_family = (
+        fit.get("selected_model_family", "unknown") if isinstance(fit, dict) else "unknown"
+    )
     firmware = fit.get("recommended_firmware_constants", {}) if isinstance(fit, dict) else {}
     stream_table = stream_health_table(session_dir)
     counts_table = event_count_table(session_dir)
@@ -379,7 +439,9 @@ def generate_report(session_dir: str | Path) -> Path:
 
     deployment_recommendation = "insufficient_evidence"
     if validation:
-        deployment_recommendation = validation.get("firmware_deployment_recommendation", deployment_recommendation)
+        deployment_recommendation = validation.get(
+            "firmware_deployment_recommendation", deployment_recommendation
+        )
     elif fit:
         deployment_recommendation = "fit_available_but_holdout_validation_missing"
 
@@ -392,11 +454,21 @@ def generate_report(session_dir: str | Path) -> Path:
         f"- **Operator:** {session.get('operator', 'unknown')}",
         f"- **Purpose:** {session.get('purpose', 'unknown')}",
         f"- **Protocol:** `{protocol.get('name', 'unknown')}` / type `{protocol.get('protocol_type', 'unknown')}`",
-        f"- **Selected model:** `{selected_model}` ({model_family})" if fit else "- **Selected model:** not fitted in this session",
-        f"- **Model-selection likelihood:** {fit.get('selection_likelihood', float('nan')):.3f}" if isinstance(fit.get("selection_likelihood"), (int, float)) else "- **Model-selection likelihood:** not available",
-        f"- **Affine-compatible equation:** `force_N = {coeff.get('a', float('nan')):.12g} * raw + {coeff.get('b', float('nan')):.12g}`" if coeff else "- **Affine-compatible equation:** not available",
-        f"- **RMSE:** {metrics.get('rmse_N', float('nan')):.6g} N" if metrics else "- **RMSE:** not available",
-        f"- **Max abs error:** {metrics.get('max_abs_error_N', float('nan')):.6g} N" if metrics else "- **Max abs error:** not available",
+        f"- **Selected model:** `{selected_model}` ({model_family})"
+        if fit
+        else "- **Selected model:** not fitted in this session",
+        f"- **Model-selection likelihood:** {fit.get('selection_likelihood', float('nan')):.3f}"
+        if isinstance(fit.get("selection_likelihood"), (int, float))
+        else "- **Model-selection likelihood:** not available",
+        f"- **Affine-compatible equation:** `force_N = {coeff.get('a', float('nan')):.12g} * raw + {coeff.get('b', float('nan')):.12g}`"
+        if coeff
+        else "- **Affine-compatible equation:** not available",
+        f"- **RMSE:** {metrics.get('rmse_N', float('nan')):.6g} N"
+        if metrics
+        else "- **RMSE:** not available",
+        f"- **Max abs error:** {metrics.get('max_abs_error_N', float('nan')):.6g} N"
+        if metrics
+        else "- **Max abs error:** not available",
         f"- **Residual threshold pass:** {fit.get('passes_residual_threshold', 'unknown') if fit else 'not evaluated'}",
         f"- **Firmware deployment recommendation:** `{deployment_recommendation}`",
         "",
@@ -404,7 +476,21 @@ def generate_report(session_dir: str | Path) -> Path:
         "",
         "This section verifies acquisition integrity before treating the RS485 reference as ground truth.",
         "",
-        _table(stream_table, ["stream", "n_samples", "duration_s", "sample_rate_hz", "max_gap_s", "value_col", "mean", "std", "min", "max"]),
+        _table(
+            stream_table,
+            [
+                "stream",
+                "n_samples",
+                "duration_s",
+                "sample_rate_hz",
+                "max_gap_s",
+                "value_col",
+                "mean",
+                "std",
+                "min",
+                "max",
+            ],
+        ),
         "",
         "### Event counts",
         "",
@@ -416,11 +502,20 @@ def generate_report(session_dir: str | Path) -> Path:
         "",
         "### Accepted hold dataset",
         "",
-        _table(dataset, [
-            "trial_id", "target_force_nominal_N", "direction", "target_raw_median",
-            "reference_force_median_N", "reference_force_std_N", "reference_slope_N_s",
-            "accepted_by_quality", "quality_rejection_reason",
-        ]),
+        _table(
+            dataset,
+            [
+                "trial_id",
+                "target_force_nominal_N",
+                "direction",
+                "target_raw_median",
+                "reference_force_median_N",
+                "reference_force_std_N",
+                "reference_slope_N_s",
+                "accepted_by_quality",
+                "quality_rejection_reason",
+            ],
+        ),
         "",
         "## 3. Holdout accuracy summary",
         "",
@@ -434,22 +529,53 @@ def generate_report(session_dir: str | Path) -> Path:
         "",
         "### Holdout predictions",
         "",
-        _table(holdout_predictions, [
-            "trial_id", "target_force_nominal_N", "direction", "reference_force_median_N",
-            "predicted_force_N", "holdout_residual_N", "accepted_by_quality",
-        ]),
+        _table(
+            holdout_predictions,
+            [
+                "trial_id",
+                "target_force_nominal_N",
+                "direction",
+                "reference_force_median_N",
+                "predicted_force_N",
+                "holdout_residual_N",
+                "accepted_by_quality",
+            ],
+        ),
         "",
         "## 4. Hysteresis / reversibility summary",
         "",
-        _table(hyst, ["force_N", "n_ascending", "n_descending", "target_raw_delta_desc_minus_asc", "reference_force_delta_desc_minus_asc_N"]),
+        _table(
+            hyst,
+            [
+                "force_N",
+                "n_ascending",
+                "n_descending",
+                "target_raw_delta_desc_minus_asc",
+                "reference_force_delta_desc_minus_asc_N",
+            ],
+        ),
         "",
         "## 5. Creep / zero-return summary",
         "",
-        _table(creep, ["phase", "target_force_N", "duration_s", "n_reference_samples", "reference_start_mean_N", "reference_end_mean_N", "delta_end_minus_start_N", "slope_N_per_s"]),
+        _table(
+            creep,
+            [
+                "phase",
+                "target_force_N",
+                "duration_s",
+                "n_reference_samples",
+                "reference_start_mean_N",
+                "reference_end_mean_N",
+                "delta_end_minus_start_N",
+                "slope_N_per_s",
+            ],
+        ),
         "",
         "## 6. Dynamic validation summary",
         "",
-        _table(dyn, ["trial_type", "label", "index", "duration_s", "peak_force_N", "speed_N_per_s"]),
+        _table(
+            dyn, ["trial_type", "label", "index", "duration_s", "peak_force_N", "speed_N_per_s"]
+        ),
         "",
         "## 7. Previous calibration comparison",
         "",
@@ -479,7 +605,18 @@ def generate_report(session_dir: str | Path) -> Path:
         "",
         "## Event summary",
         "",
-        _table(pd.DataFrame(events), ["event", "trial_id", "target_force_N", "phase", "reason", "host_time_unix", "lsl_time"]),
+        _table(
+            pd.DataFrame(events),
+            [
+                "event",
+                "trial_id",
+                "target_force_N",
+                "phase",
+                "reason",
+                "host_time_unix",
+                "lsl_time",
+            ],
+        ),
         "",
         "## Plots",
         "",
@@ -488,30 +625,39 @@ def generate_report(session_dir: str | Path) -> Path:
         rel = plot.relative_to(session_dir)
         lines.append(f"![{plot.stem}]({rel.as_posix()})")
         lines.append("")
-    lines.extend([
-        "## Interpretation guidance",
-        "",
-        "- Use static staircase holds for primary model fitting.",
-        "- Use low-force refinement only if low-force residuals are systematic and reference noise is acceptable.",
-        "- Use creep/zero-return and dynamic protocols as validation/diagnostic layers, not as primary coefficient estimators.",
-        "- Prefer the selected model only inside the calibrated raw-count and force range.",
-        "- Treat `odr_affine`, `hysteresis_affine_diagnostic`, and `drift_affine_diagnostic` as diagnostics unless explicitly configured otherwise.",
-        "- If a nonlinear model wins by only a tiny margin, prefer the affine model and improve the calibration protocol before increasing firmware complexity.",
-        "",
-        "## Firmware constant caution",
-        "",
-        "The report includes HX711-style scale/offset approximations for affine models, but firmware constants must be verified against the exact HX711 library semantics before flashing. In particular, confirm whether the runtime uses `force = a * raw + b` or `units = (raw - offset) / scale`.",
-        "",
-        "## Limitations",
-        "",
-        "- The fit is only as good as the accepted static holds.",
-        "- Dynamic trials are validation data, not primary fit data.",
-        "- If the reference board applies hidden zeroing, display masking, dynamic tracking, or stability gating, the reference trace may not represent the true physical input.",
-    ])
+    lines.extend(
+        [
+            "## Interpretation guidance",
+            "",
+            "- Use static staircase holds for primary model fitting.",
+            "- Use low-force refinement only if low-force residuals are systematic and reference noise is acceptable.",
+            "- Use creep/zero-return and dynamic protocols as validation/diagnostic layers, not as primary coefficient estimators.",
+            "- Prefer the selected model only inside the calibrated raw-count and force range.",
+            "- Treat `odr_affine`, `hysteresis_affine_diagnostic`, and `drift_affine_diagnostic` as diagnostics unless explicitly configured otherwise.",
+            "- If a nonlinear model wins by only a tiny margin, prefer the affine model and improve the calibration protocol before increasing firmware complexity.",
+            "",
+            "## Firmware constant caution",
+            "",
+            "The report includes HX711-style scale/offset approximations for affine models, but firmware constants must be verified against the exact HX711 library semantics before flashing. In particular, confirm whether the runtime uses `force = a * raw + b` or `units = (raw - offset) / scale`.",
+            "",
+            "## Limitations",
+            "",
+            "- The fit is only as good as the accepted static holds.",
+            "- Dynamic trials are validation data, not primary fit data.",
+            "- If the reference board applies hidden zeroing, display masking, dynamic tracking, or stability gating, the reference trace may not represent the true physical input.",
+        ]
+    )
     md_path = session_dir / "calibration_report.md"
     md_path.write_text("\n".join(lines), encoding="utf-8")
     log.info("Report written: %s", md_path)
 
-    html = "<html><head><meta charset='utf-8'><title>Handgrip Calibration Report</title></head><body><pre>" + md_path.read_text(encoding="utf-8").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") + "</pre></body></html>"
+    html = (
+        "<html><head><meta charset='utf-8'><title>Handgrip Calibration Report</title></head><body><pre>"
+        + md_path.read_text(encoding="utf-8")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        + "</pre></body></html>"
+    )
     (session_dir / "calibration_report.html").write_text(html, encoding="utf-8")
     return md_path

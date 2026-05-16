@@ -33,19 +33,19 @@ class StreamLayout:
 class TargetWindow:
     # @brief A time-windowed snapshot of the target (handgrip) stream.
 
-    timestamps_s: np.ndarray       # LSL timestamps in seconds
-    device_clock_us: np.ndarray    # on-device monotonic clock in microseconds
-    raw: np.ndarray                 # raw ADC counts
-    filtered: np.ndarray            # filtered / engineering-unit signal
+    timestamps_s: np.ndarray  # LSL timestamps in seconds
+    device_clock_us: np.ndarray  # on-device monotonic clock in microseconds
+    raw: np.ndarray  # raw ADC counts
+    filtered: np.ndarray  # filtered / engineering-unit signal
 
 
 @dataclass(slots=True)
 class ReferenceWindow:
     # @brief A time-windowed snapshot of the reference (RS485) stream.
 
-    timestamps_s: np.ndarray    # LSL timestamps in seconds
-    rs485_clock: np.ndarray     # RS485 board clock (seconds, LSL epoch)
-    raw: np.ndarray             # reference force in engineering units
+    timestamps_s: np.ndarray  # LSL timestamps in seconds
+    rs485_clock: np.ndarray  # RS485 board clock (seconds, LSL epoch)
+    raw: np.ndarray  # reference force in engineering units
 
 
 @dataclass(slots=True)

@@ -2,6 +2,7 @@
 # @brief Package-native CLI entrypoint for Stage 1 analysis.
 
 """Entry point for ha-stage1: runs Stage 1 (startup warm-up) analysis via the package-native pipeline."""
+
 from __future__ import annotations
 
 import sys

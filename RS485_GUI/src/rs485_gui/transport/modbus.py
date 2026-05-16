@@ -8,6 +8,7 @@ send single-register commands.
 
 Dependency chain: models, constants, core/codec, transport/base
 """
+
 from __future__ import annotations
 
 import logging
@@ -32,12 +33,12 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
-## @brief Represents the ModbusError component.
+# @brief Represents the ModbusError component.
 class ModbusError(RuntimeError):
     """Raised on any Modbus RTU protocol violation."""
 
 
-## @brief Represents the MinimalModbusRTU component.
+# @brief Represents the MinimalModbusRTU component.
 class MinimalModbusRTU:
     """Minimal Modbus RTU master for function codes 0x03 (read) and 0x06 (write).
 
@@ -45,7 +46,7 @@ class MinimalModbusRTU:
     shared between the worker thread and the command handler without races.
     """
 
-    ## @brief Init.
+    # @brief Init.
     #
     #  @param self Parameter description.
     #  @param serial_port Parameter description.
@@ -62,7 +63,7 @@ class MinimalModbusRTU:
         self.inter_frame_gap_s = inter_frame_gap_s
         self.lock = threading.Lock()
 
-    ## @brief Effective inter frame gap s.
+    # @brief Effective inter frame gap s.
     #
     #  @param self Parameter description.
     #  @return Result produced by this function.
@@ -76,7 +77,7 @@ class MinimalModbusRTU:
         protocol_gap_s = 3.5 * (11.0 / float(baud))
         return max(configured, protocol_gap_s, 0.0005)
 
-    ## @brief Read exact with deadline.
+    # @brief Read exact with deadline.
     #
     #  @param self Parameter description.
     #  @param size Parameter description.
@@ -92,15 +93,15 @@ class MinimalModbusRTU:
                 buf.extend(chunk)
         return bytes(buf)
 
-    ## @brief Exchange.
+    # @brief Exchange.
     #
     #  @param self Parameter description.
     #  @param payload Parameter description.
     #  @param expected_function Parameter description.
     #  @return Result produced by this function.
     def _exchange(self, payload: bytes, expected_function: int) -> bytes:
-        frame = payload + crc16_modbus(payload).to_bytes(2, byteorder='little')
-        timeout = max(0.01, float(getattr(self.ser, 'timeout', 0.2) or 0.2))
+        frame = payload + crc16_modbus(payload).to_bytes(2, byteorder="little")
+        timeout = max(0.01, float(getattr(self.ser, "timeout", 0.2) or 0.2))
         deadline = time.monotonic() + timeout
         with self.lock:
             self.ser.reset_input_buffer()
@@ -109,9 +110,7 @@ class MinimalModbusRTU:
             time.sleep(self._effective_inter_frame_gap_s())
             header = self._read_exact_with_deadline(2, deadline)
             if len(header) < 2:
-                raise ModbusError(
-                    f'Short response header: expected 2 bytes, got {len(header)}'
-                )
+                raise ModbusError(f"Short response header: expected 2 bytes, got {len(header)}")
             slave_id = header[0]
             function = header[1]
             if function & 0x80:
@@ -120,7 +119,7 @@ class MinimalModbusRTU:
             elif function == 0x03:
                 byte_count_raw = self._read_exact_with_deadline(1, deadline)
                 if not byte_count_raw:
-                    raise ModbusError('Short response: missing byte count')
+                    raise ModbusError("Short response: missing byte count")
                 byte_count = byte_count_raw[0]
                 rest = self._read_exact_with_deadline(byte_count + 2, deadline)
                 response = header + byte_count_raw + rest
@@ -132,93 +131,92 @@ class MinimalModbusRTU:
                 response = header + rest
 
         if len(response) < 5:
-            raise ModbusError(
-                f'Invalid RTU response length: got {len(response)} bytes'
-            )
+            raise ModbusError(f"Invalid RTU response length: got {len(response)} bytes")
         data, received_crc = response[:-2], response[-2:]
-        expected_crc = crc16_modbus(data).to_bytes(2, byteorder='little')
+        expected_crc = crc16_modbus(data).to_bytes(2, byteorder="little")
         if received_crc != expected_crc:
-            note = ''
+            note = ""
             active_header = bytes([self.slave_id, 0x03, READ_REGISTER_COUNT * 2])
             if response.count(active_header) >= 2:
                 note = (
-                    ' (response looks like repeated active-send push frames; '
-                    'verify board setting 504.AS=0 for Modbus RTU)'
+                    " (response looks like repeated active-send push frames; "
+                    "verify board setting 504.AS=0 for Modbus RTU)"
                 )
             raise ModbusError(
-                f'CRC mismatch: got {received_crc.hex()}, '
-                f'expected {expected_crc.hex()}, '
-                f'frame={response.hex(" ")}{note}'
+                f"CRC mismatch: got {received_crc.hex()}, "
+                f"expected {expected_crc.hex()}, "
+                f"frame={response.hex(' ')}{note}"
             )
         if slave_id != self.slave_id:
-            raise ModbusError(
-                f'Unexpected slave id: got {slave_id}, expected {self.slave_id}'
-            )
+            raise ModbusError(f"Unexpected slave id: got {slave_id}, expected {self.slave_id}")
         if function != expected_function and not (function & 0x80):
             raise ModbusError(
-                f'Unexpected function: got 0x{function:02X}, '
-                f'expected 0x{expected_function:02X}'
+                f"Unexpected function: got 0x{function:02X}, expected 0x{expected_function:02X}"
             )
         if function & 0x80:
             code = data[2] if len(data) > 2 else None
-            raise ModbusError(
-                f'Modbus exception function=0x{function:02X} code={code}'
-            )
+            raise ModbusError(f"Modbus exception function=0x{function:02X} code={code}")
         return response
 
-    ## @brief Read holding registers.
+    # @brief Read holding registers.
     #
     #  @param self Parameter description.
     #  @param address Parameter description.
     #  @param count Parameter description.
     #  @return Result produced by this function.
-    def read_holding_registers(
-        self, address: int, count: int
-    ) -> tuple[list[int], bytes, bytes]:
+    def read_holding_registers(self, address: int, count: int) -> tuple[list[int], bytes, bytes]:
         """Read *count* holding registers starting at *address*.
 
         Returns ``(values, request_payload, raw_response)``.
         """
-        payload = bytes([
-            self.slave_id, 0x03,
-            (address >> 8) & 0xFF, address & 0xFF,
-            (count >> 8) & 0xFF, count & 0xFF,
-        ])
+        payload = bytes(
+            [
+                self.slave_id,
+                0x03,
+                (address >> 8) & 0xFF,
+                address & 0xFF,
+                (count >> 8) & 0xFF,
+                count & 0xFF,
+            ]
+        )
         response = self._exchange(payload, expected_function=0x03)
         raw_without_crc = response[:-2]
         byte_count = raw_without_crc[2]
         expected_byte_count = count * 2
         if byte_count != expected_byte_count:
             raise ModbusError(
-                f'Unexpected byte count: got {byte_count}, expected {expected_byte_count}'
+                f"Unexpected byte count: got {byte_count}, expected {expected_byte_count}"
             )
-        data = raw_without_crc[3:3 + byte_count]
+        data = raw_without_crc[3 : 3 + byte_count]
         values = [(data[i] << 8) | data[i + 1] for i in range(0, len(data), 2)]
         return values, payload, response
 
-    ## @brief Write single register.
+    # @brief Write single register.
     #
     #  @param self Parameter description.
     #  @param address Parameter description.
     #  @param value Parameter description.
     #  @return Result produced by this function.
-    def write_single_register(
-        self, address: int, value: int
-    ) -> tuple[bytes, bytes]:
+    def write_single_register(self, address: int, value: int) -> tuple[bytes, bytes]:
         """Write *value* to a single holding register at *address*.
 
         Returns ``(request_payload, raw_response)``.
         """
-        payload = bytes([
-            self.slave_id, 0x06,
-            (address >> 8) & 0xFF, address & 0xFF,
-            (value >> 8) & 0xFF, value & 0xFF,
-        ])
+        payload = bytes(
+            [
+                self.slave_id,
+                0x06,
+                (address >> 8) & 0xFF,
+                address & 0xFF,
+                (value >> 8) & 0xFF,
+                value & 0xFF,
+            ]
+        )
         response = self._exchange(payload, expected_function=0x06)
         return payload, response
 
 
-## @brief Represents the ModbusBoardTransport component.
+# @brief Represents the ModbusBoardTransport component.
 class ModbusBoardTransport(BoardTransport):
     """Polling Modbus RTU transport.
 
@@ -226,7 +224,7 @@ class ModbusBoardTransport(BoardTransport):
     single decoded :class:`~rs485_gui.models.MeasurementFrame`.
     """
 
-    ## @brief Init.
+    # @brief Init.
     #
     #  @param self Parameter description.
     #  @param app_state Parameter description.
@@ -236,7 +234,7 @@ class ModbusBoardTransport(BoardTransport):
         self.client: MinimalModbusRTU | None = None
         self._last_host_ts: float | None = None
 
-    ## @brief Connect.
+    # @brief Connect.
     #
     #  @param self Parameter description.
     def connect(self) -> None:
@@ -255,7 +253,7 @@ class ModbusBoardTransport(BoardTransport):
             inter_frame_gap_s=float(self.app_state.cfg.serial.inter_frame_gap_s),
         )
 
-    ## @brief Disconnect.
+    # @brief Disconnect.
     #
     #  @param self Parameter description.
     def disconnect(self) -> None:
@@ -264,23 +262,27 @@ class ModbusBoardTransport(BoardTransport):
         self.ser = None
         self.client = None
 
-    ## @brief Read frames.
+    # @brief Read frames.
     #
     #  @param self Parameter description.
     #  @return Result produced by this function.
     def read_frames(self) -> list[MeasurementFrame]:
         return [self._read_once()]
 
-    ## @brief Read once.
+    # @brief Read once.
     #
     #  @param self Parameter description.
     #  @return Result produced by this function.
     def _read_once(self) -> MeasurementFrame:
         if self.client is None:
-            raise RuntimeError('Transport not connected')
+            raise RuntimeError("Transport not connected")
 
-        read_start_reg = int(self.app_state.cfg.device.get('read_start_register', READ_START_REGISTER))
-        read_reg_count = int(self.app_state.cfg.device.get('read_register_count', READ_REGISTER_COUNT))
+        read_start_reg = int(
+            self.app_state.cfg.device.get("read_start_register", READ_START_REGISTER)
+        )
+        read_reg_count = int(
+            self.app_state.cfg.device.get("read_register_count", READ_REGISTER_COUNT)
+        )
 
         t_start = time.perf_counter()
         registers, request_payload, response = self.client.read_holding_registers(
@@ -296,7 +298,7 @@ class ModbusBoardTransport(BoardTransport):
             host_ts=host_ts,
             host_lsl_ts=host_lsl_ts,
             rs485_clock=host_lsl_ts,
-            rs485_clock_source='modbus_rtu_host_lsl_clock',
+            rs485_clock_source="modbus_rtu_host_lsl_clock",
         )
 
         observed_inter_read_s: float | None = None
@@ -308,36 +310,34 @@ class ModbusBoardTransport(BoardTransport):
         self._last_host_ts = host_ts
 
         diagnostics = {
-            'timestamp_source': 'host_poll_receive_time',
-            'configured_poll_interval_s': float(self.app_state.cfg.device.poll_interval_s),
-            'observed_inter_read_s': observed_inter_read_s,
-            'observed_inter_read_hz': observed_inter_read_hz,
-            'transaction_duration_s': transaction_duration_s,
-            'response_bytes': len(response),
+            "timestamp_source": "host_poll_receive_time",
+            "configured_poll_interval_s": float(self.app_state.cfg.device.poll_interval_s),
+            "observed_inter_read_s": observed_inter_read_s,
+            "observed_inter_read_hz": observed_inter_read_hz,
+            "transaction_duration_s": transaction_duration_s,
+            "response_bytes": len(response),
         }
-        frame.raw_transport['request_hex'] = request_payload.hex(' ')
-        frame.raw_transport['response_hex'] = response.hex(' ')
-        frame.raw_transport['diagnostics'] = diagnostics
+        frame.raw_transport["request_hex"] = request_payload.hex(" ")
+        frame.raw_transport["response_hex"] = response.hex(" ")
+        frame.raw_transport["diagnostics"] = diagnostics
         frame.interpreted.update(diagnostics)
         frame.session_id = self.app_state.get_session_id()
         frame.board_profile = self.app_state.build_board_profile_snapshot()
         return frame
 
-    ## @brief Send command.
+    # @brief Send command.
     #
     #  @param self Parameter description.
     #  @param command_name Parameter description.
     def send_command(self, command_name: str) -> None:
         if self.client is None:
-            raise RuntimeError('Transport not connected')
+            raise RuntimeError("Transport not connected")
         if command_name not in COMMANDS:
-            raise ValueError(f'Unsupported command: {command_name}')
-        cmd_register = int(
-            self.app_state.cfg.device.get('command_register', 11)
-        )
+            raise ValueError(f"Unsupported command: {command_name}")
+        cmd_register = int(self.app_state.cfg.device.get("command_register", 11))
         value = COMMANDS[command_name]
         request_payload, response = self.client.write_single_register(cmd_register, value)
         self.app_state.push_event(
-            f'Sent command {command_name} ({value}) '
-            f'request={request_payload.hex(" ")} response={response.hex(" ")}'
+            f"Sent command {command_name} ({value}) "
+            f"request={request_payload.hex(' ')} response={response.hex(' ')}"
         )

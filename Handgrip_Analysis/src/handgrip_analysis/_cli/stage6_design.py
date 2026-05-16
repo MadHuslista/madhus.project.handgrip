@@ -2,6 +2,7 @@
 # @brief Package-native CLI entrypoint for Stage 6 design analysis.
 
 """Entry point for ha-stage6-design: runs the Stage 6 filter design pass via the package-native pipeline."""
+
 from __future__ import annotations
 
 import sys

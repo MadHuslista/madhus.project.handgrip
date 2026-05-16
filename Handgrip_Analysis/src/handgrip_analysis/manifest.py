@@ -2,6 +2,7 @@
 # @brief Manifest loading and validation for multi-trial analysis.
 
 """Manifest loading and validation for multi-trial handgrip analysis."""
+
 from __future__ import annotations
 
 import logging
@@ -126,10 +127,7 @@ def normalize_manifest_frame(df: pd.DataFrame, base_dir: str | Path | None = Non
         warning is emitted at runtime when the legacy path is taken.
     """
     base = Path(base_dir).resolve() if base_dir is not None else Path.cwd().resolve()
-    _legacy_detected = (
-        "label" in df.columns
-        and not {"stage", "trial_id", "session_id"}.issubset(df.columns)
-    )
+    _legacy_detected = "label" in df.columns and not {"stage", "trial_id", "session_id"}.issubset(df.columns)
     if _legacy_detected:
         log.warning(
             "normalize_manifest_frame: legacy manifest schema detected "
@@ -146,7 +144,9 @@ def normalize_manifest_frame(df: pd.DataFrame, base_dir: str | Path | None = Non
         inferred = _infer_from_path(raw_path)
         label = _clean(row.get("label"))
         stage = _clean(row.get("stage"), inferred.get("stage", ""))
-        condition = _clean(row.get("condition"), _clean(row.get("trial_type"), inferred.get("condition", label or raw_path.stem)))
+        condition = _clean(
+            row.get("condition"), _clean(row.get("trial_type"), inferred.get("condition", label or raw_path.stem))
+        )
         trial_type = _clean(row.get("trial_type"), inferred.get("trial_type", condition))
         trial_id = _clean(row.get("trial_id"), inferred.get("trial_id", f"trial{idx + 1:02d}"))
         session_id = _clean(row.get("session_id"), inferred.get("session_id", "session_unknown"))

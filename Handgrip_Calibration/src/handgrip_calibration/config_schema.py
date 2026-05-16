@@ -20,9 +20,10 @@ Design principles
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 log = logging.getLogger(__name__)
 
@@ -94,9 +95,7 @@ class StreamConfig:
             timeout_s=float(data.get("timeout_s", 5.0)),
             channel_map=channel_map,
             nominal_srate_hz=(
-                None
-                if data.get("nominal_srate_hz") is None
-                else float(data["nominal_srate_hz"])
+                None if data.get("nominal_srate_hz") is None else float(data["nominal_srate_hz"])
             ),
             required=bool(data.get("required", True)),
         )
@@ -203,15 +202,18 @@ class ProtocolConfig:
             preload_max_force_N=float(preload.get("max_force_N", 100.0)),
             preload_hold_duration_s=float(preload.get("hold_duration_s", 0.0)),
             preload_recovery_duration_s=float(preload.get("recovery_duration_s", 0.0)),
-            levels_N=[float(x) for x in holds.get("levels_N", cls.__dataclass_fields__["levels_N"].default_factory())],  # type: ignore[misc]
+            levels_N=[
+                float(x)
+                for x in holds.get(
+                    "levels_N", cls.__dataclass_fields__["levels_N"].default_factory()
+                )
+            ],  # type: ignore[misc]
             hold_duration_s=float(holds.get("hold_duration_s", 5.0)),
             stable_window_s=float(holds.get("stable_window_s", 3.0)),
             repeats=int(holds.get("repeats", 2)),
             prompt_operator=bool(data.get("prompt_operator", True)),
             auto_accept_holds=bool(holds.get("auto_accept", False)),
-            dynamic_slow_ramps=int(
-                dynamic.get("slow_ramps", dynamic.get("slow_ramp_count", 2))
-            ),
+            dynamic_slow_ramps=int(dynamic.get("slow_ramps", dynamic.get("slow_ramp_count", 2))),
             dynamic_fast_squeezes=int(
                 dynamic.get("fast_squeezes", dynamic.get("squeeze_count", 5))
             ),
@@ -239,9 +241,7 @@ class ProtocolConfig:
         if self.hold_duration_s <= 0:
             raise ConfigError("protocol.holds.hold_duration_s must be > 0")
         if self.stable_window_s <= 0 or self.stable_window_s > self.hold_duration_s:
-            raise ConfigError(
-                "protocol.holds.stable_window_s must be > 0 and <= hold_duration_s"
-            )
+            raise ConfigError("protocol.holds.stable_window_s must be > 0 and <= hold_duration_s")
         if self.repeats < 1:
             raise ConfigError("protocol.holds.repeats must be >= 1")
         if self.baseline_duration_s <= 0:
@@ -267,15 +267,9 @@ class CreepZeroReturnConfig:
     hatch.  Now a first-class, validated configuration object.
     """
 
-    force_levels_N: list[float] = field(
-        default_factory=lambda: [0.0, 80.0, 0.0]
-    )
-    durations_s: list[float] = field(
-        default_factory=lambda: [120.0, 300.0, 300.0]
-    )
-    read_times_s: list[float] = field(
-        default_factory=lambda: [30.0, 300.0]
-    )
+    force_levels_N: list[float] = field(default_factory=lambda: [0.0, 80.0, 0.0])
+    durations_s: list[float] = field(default_factory=lambda: [120.0, 300.0, 300.0])
+    read_times_s: list[float] = field(default_factory=lambda: [30.0, 300.0])
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any] | None) -> CreepZeroReturnConfig:
@@ -284,9 +278,7 @@ class CreepZeroReturnConfig:
         force_levels = [float(x) for x in data.get("force_levels_N", defaults.force_levels_N)]
         durations = [float(x) for x in data.get("durations_s", defaults.durations_s)]
         read_times = sorted(
-            float(x)
-            for x in data.get("read_times_s", defaults.read_times_s)
-            if float(x) >= 0
+            float(x) for x in data.get("read_times_s", defaults.read_times_s) if float(x) >= 0
         )
         cfg = cls(
             force_levels_N=force_levels,
@@ -526,9 +518,7 @@ class FitSelectionConfig:
         if self.max_cv_folds < 2:
             raise ConfigError("fit.selection.max_cv_folds must be >= 2")
         if not 0 <= self.min_cv_coverage_fraction <= 1:
-            raise ConfigError(
-                "fit.selection.min_cv_coverage_fraction must be between 0 and 1"
-            )
+            raise ConfigError("fit.selection.min_cv_coverage_fraction must be between 0 and 1")
 
 
 @dataclass(frozen=True)
@@ -547,9 +537,7 @@ class FitRobustConfig:
         cfg = cls(
             huber_epsilon=float(data.get("huber_epsilon", 1.35)),
             huber_delta_N=(
-                None
-                if data.get("huber_delta_N") is None
-                else float(data["huber_delta_N"])
+                None if data.get("huber_delta_N") is None else float(data["huber_delta_N"])
             ),
             max_iter=int(data.get("max_iter", 50)),
             convergence_tol=float(data.get("convergence_tol", 1e-9)),
@@ -594,9 +582,7 @@ class FitMultipointConfig:
         if self.min_points < 3:
             raise ConfigError("fit.multipoint.min_points must be >= 3")
         if self.interpolation not in {"piecewise_linear"}:
-            raise ConfigError(
-                "Only fit.multipoint.interpolation='piecewise_linear' is implemented"
-            )
+            raise ConfigError("Only fit.multipoint.interpolation='piecewise_linear' is implemented")
         if self.extrapolation not in {"reject", "clip"}:
             raise ConfigError("fit.multipoint.extrapolation must be 'reject' or 'clip'")
         if self.max_knots < self.min_points:
@@ -620,9 +606,7 @@ class FitDiagnosticsConfig:
             enable_odr_affine=bool(data.get("enable_odr_affine", True)),
             enable_hysteresis=bool(data.get("enable_hysteresis", True)),
             enable_drift=bool(data.get("enable_drift", True)),
-            hysteresis_direction_column=str(
-                data.get("hysteresis_direction_column", "direction")
-            ),
+            hysteresis_direction_column=str(data.get("hysteresis_direction_column", "direction")),
             drift_time_column=str(data.get("drift_time_column", "t_mid_lsl")),
         )
 
@@ -714,15 +698,11 @@ class FitConfig:
             )
         unknown = sorted(set(self.candidate_models) - SUPPORTED_FIT_CANDIDATES)
         if unknown:
-            raise ConfigError(
-                f"Unsupported fit.candidate_models entries: {', '.join(unknown)}"
-            )
+            raise ConfigError(f"Unsupported fit.candidate_models entries: {', '.join(unknown)}")
         if self.operating_range_N <= 0:
             raise ConfigError("fit.operating_range_N must be > 0")
         if self.residual_threshold_percent_operating_range < 0:
-            raise ConfigError(
-                "fit.residual_threshold_percent_operating_range must be non-negative"
-            )
+            raise ConfigError("fit.residual_threshold_percent_operating_range must be non-negative")
         if self.reference_noise_floor_N <= 0 or self.target_raw_noise_floor <= 0:
             raise ConfigError("fit noise floors must be > 0")
 
@@ -751,8 +731,7 @@ class SessionConfig:
             purpose=str(data.get("purpose", "model_selection_handgrip_calibration")),
             notes=str(data.get("notes", "")),
             copy_component_configs=[
-                Path(str(p)).expanduser()
-                for p in data.get("copy_component_configs", [])
+                Path(str(p)).expanduser() for p in data.get("copy_component_configs", [])
             ],
         )
 
@@ -790,8 +769,7 @@ class AppConfig:
         if missing:
             raise ConfigError(f"Missing stream configuration(s): {', '.join(missing)}")
         streams = {
-            key: StreamConfig.from_mapping(value, key=key)
-            for key, value in streams_raw.items()
+            key: StreamConfig.from_mapping(value, key=key) for key, value in streams_raw.items()
         }
         return cls(
             session=SessionConfig.from_mapping(data.get("session")),

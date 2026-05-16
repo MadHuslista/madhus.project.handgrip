@@ -52,6 +52,7 @@ def _zip_columns(*columns: str, pad: int = 3) -> str:
 # Main render function
 # ---------------------------------------------------------------------------
 
+
 def render_info_text(
     window: DualWindow,
     state: ViewerState,
@@ -95,28 +96,14 @@ def render_info_text(
     reference = window.reference
     force_unit = cfg.viewer.force_unit_label
 
-    latest_target_raw = (
-        float(target.raw[-1]) if target is not None and target.raw.size else float("nan")
-    )
-    latest_target_filtered = (
-        float(target.filtered[-1])
-        if target is not None and target.filtered.size
-        else float("nan")
-    )
+    latest_target_raw = float(target.raw[-1]) if target is not None and target.raw.size else float("nan")
+    latest_target_filtered = float(target.filtered[-1]) if target is not None and target.filtered.size else float("nan")
     latest_target_clock = (
-        float(target.device_clock_us[-1])
-        if target is not None and target.device_clock_us.size
-        else float("nan")
+        float(target.device_clock_us[-1]) if target is not None and target.device_clock_us.size else float("nan")
     )
-    latest_reference_raw = (
-        float(reference.raw[-1])
-        if reference is not None and reference.raw.size
-        else float("nan")
-    )
+    latest_reference_raw = float(reference.raw[-1]) if reference is not None and reference.raw.size else float("nan")
     latest_reference_clock = (
-        float(reference.rs485_clock[-1])
-        if reference is not None and reference.rs485_clock.size
-        else float("nan")
+        float(reference.rs485_clock[-1]) if reference is not None and reference.rs485_clock.size else float("nan")
     )
 
     live_state_label = "paused" if state.live_paused else "running"

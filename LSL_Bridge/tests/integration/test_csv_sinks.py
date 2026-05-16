@@ -1,4 +1,5 @@
-"""Integration tests for lsl_bridge.io.csv_sinks.
+"""
+Integration tests for lsl_bridge.io.csv_sinks.
 
 Uses pytest's ``tmp_path`` fixture to write real CSV files without
 requiring any LSL or serial runtime.
@@ -11,10 +12,8 @@ import math
 from pathlib import Path
 
 import pytest
-
 from lsl_bridge.io.csv_sinks import ReferenceCsvSink, TargetCsvSink
 from lsl_bridge.types import ParsedTargetSample, ReferenceSample
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -159,10 +158,18 @@ class TestReferenceCsvSink:
         sink = ReferenceCsvSink(path, append=False, flush_every_n_rows=1)
         # Build the sample directly with nan frequency (slots=True means no __dict__)
         sample = ReferenceSample(
-            sequence=0, mode="continuous", signal_key="reference_force_N",
-            reference_force_N=0.0, reference_clock_s=0.0, host_lsl_ts=0.0,
-            host_unix_ts=0.0, received_lsl_ts=0.0, clock_source="rs485_hw",
-            unit_label="N", status=0, timestamp_source="host_lsl_ts",
+            sequence=0,
+            mode="continuous",
+            signal_key="reference_force_N",
+            reference_force_N=0.0,
+            reference_clock_s=0.0,
+            host_lsl_ts=0.0,
+            host_unix_ts=0.0,
+            received_lsl_ts=0.0,
+            clock_source="rs485_hw",
+            unit_label="N",
+            status=0,
+            timestamp_source="host_lsl_ts",
             configured_frequency_hz=math.nan,
         )
         sink.write(sample, 0.0)

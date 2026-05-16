@@ -3,6 +3,7 @@
 # @brief Stage 4 grip dynamics event-detection analysis.
 
 """Stage 4 — Grip dynamics: event detection and metrics."""
+
 from __future__ import annotations
 
 import logging
@@ -72,7 +73,8 @@ def main(cfg: DictConfig) -> None:
         cap = load_capture(csv_path, time_source=cfg.io.time_source)
         y = cap.series(cfg.analysis.channel)
         events = detect_events(
-            y, cap.fs_estimate_hz,
+            y,
+            cap.fs_estimate_hz,
             baseline_s=cfg.dsp.event_detection.baseline_s,
             threshold_sigma=cfg.analysis.threshold_sigma,
             min_duration_s=cfg.dsp.event_detection.min_duration_s,
@@ -83,11 +85,13 @@ def main(cfg: DictConfig) -> None:
         if not metrics.empty:
             metrics.insert(0, "file", Path(csv_path).name)
             all_metrics.append(metrics)
-        summary["files"].append({
-            "input": str(Path(csv_path).resolve()),
-            "n_events": int(len(events)),
-            "fs_estimate_hz": float(cap.fs_estimate_hz),
-        })
+        summary["files"].append(
+            {
+                "input": str(Path(csv_path).resolve()),
+                "n_events": int(len(events)),
+                "fs_estimate_hz": float(cap.fs_estimate_hz),
+            }
+        )
 
         fig, ax = plt.subplots(figsize=tuple(cfg.dsp.plot.figsize_wide))
         ax.plot(cap.time_s, y, label=cfg.analysis.channel)
@@ -96,15 +100,19 @@ def main(cfg: DictConfig) -> None:
             seg_t = cap.time_s[ev.start_idx : ev.end_idx + 1] - cap.time_s[ev.start_idx]
             seg_y = y[ev.start_idx : ev.end_idx + 1]
             overlay_ax.plot(
-                seg_t, seg_y, alpha=0.8,
+                seg_t,
+                seg_y,
+                alpha=0.8,
                 label=Path(csv_path).stem if len(events) == 1 else None,
             )
             if len(seg_y) > int(2 * cap.fs_estimate_hz):
-                hold_slice = seg_y[int(0.5 * len(seg_y)):]
+                hold_slice = seg_y[int(0.5 * len(seg_y)) :]
                 f, pxx = welch_psd(hold_slice, cap.fs_estimate_hz)
                 if f.size:
                     hold_ax.semilogy(
-                        f, pxx, alpha=0.8,
+                        f,
+                        pxx,
+                        alpha=0.8,
                         label=Path(csv_path).stem if len(events) == 1 else None,
                     )
         ax.set_title(f"Detected grip events — {Path(csv_path).name}")
@@ -118,11 +126,21 @@ def main(cfg: DictConfig) -> None:
     if all_metrics:
         metrics_df = pd.concat(all_metrics, ignore_index=True)
     else:
-        metrics_df = pd.DataFrame(columns=[
-            "file", "event_index", "start_time_s", "peak_time_s", "end_time_s",
-            "duration_s", "peak_value", "baseline_value", "rise_10_90_s",
-            "max_dfdt", "hold_std_last_20pct",
-        ])
+        metrics_df = pd.DataFrame(
+            columns=[
+                "file",
+                "event_index",
+                "start_time_s",
+                "peak_time_s",
+                "end_time_s",
+                "duration_s",
+                "peak_value",
+                "baseline_value",
+                "rise_10_90_s",
+                "max_dfdt",
+                "hold_std_last_20pct",
+            ]
+        )
     save_csv(outdir / "event_metrics.csv", metrics_df)
     save_json(outdir / "summary.json", summary)
 

@@ -1,4 +1,5 @@
 """Unit tests for handgrip_analysis.dsp (pure functions — no I/O, no mocking)."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -26,6 +27,7 @@ FS = 100.0  # Hz — used throughout
 # robust_std
 # ---------------------------------------------------------------------------
 
+
 def test_robust_std_constant():
     assert robust_std(np.ones(50)) == pytest.approx(0.0)
 
@@ -40,6 +42,7 @@ def test_robust_std_known():
 # ---------------------------------------------------------------------------
 # rolling_mean_std_slope
 # ---------------------------------------------------------------------------
+
 
 def test_rolling_constant_signal():
     y = np.full(500, 5.0)
@@ -61,6 +64,7 @@ def test_rolling_output_length():
 # ---------------------------------------------------------------------------
 # welch_psd
 # ---------------------------------------------------------------------------
+
 
 def test_welch_psd_short_signal():
     f, pxx = welch_psd(np.ones(4), FS)
@@ -88,6 +92,7 @@ def test_welch_psd_dc_component_suppressed():
 # bandpower
 # ---------------------------------------------------------------------------
 
+
 def test_bandpower_empty():
     assert np.isnan(bandpower(np.array([]), np.array([]), 0.0, 10.0))
 
@@ -104,6 +109,7 @@ def test_bandpower_flat_spectrum():
 # ---------------------------------------------------------------------------
 # allan_deviation
 # ---------------------------------------------------------------------------
+
 
 def test_allan_deviation_short():
     tau, adev = allan_deviation(np.ones(8), FS)
@@ -126,6 +132,7 @@ def test_allan_deviation_white_noise():
 # linear_trend
 # ---------------------------------------------------------------------------
 
+
 def test_linear_trend_exact():
     t = np.linspace(0, 10, 500)
     y = 3.0 * t + 7.0
@@ -137,6 +144,7 @@ def test_linear_trend_exact():
 # ---------------------------------------------------------------------------
 # detect_events
 # ---------------------------------------------------------------------------
+
 
 def _make_grip_signal(n: int = 2000, fs: float = FS) -> np.ndarray:
     """Synthetic: flat baseline + one 3-second grip event."""
@@ -182,6 +190,7 @@ def test_detect_events_peak_is_max():
 # event_metrics
 # ---------------------------------------------------------------------------
 
+
 def test_event_metrics_shape():
     y = _make_grip_signal()
     t = np.arange(len(y)) / FS
@@ -203,13 +212,20 @@ def test_event_metrics_empty():
 # best_event_metrics
 # ---------------------------------------------------------------------------
 
+
 def test_best_event_metrics_keys():
     y = _make_grip_signal()
     t = np.arange(len(y)) / FS
     m = best_event_metrics(y, t, FS)
     required = {
-        "n_events", "peak_value", "peak_time_s", "rise_10_90_s",
-        "max_dfdt", "plateau_std_last20pct", "event_start_s", "event_end_s",
+        "n_events",
+        "peak_value",
+        "peak_time_s",
+        "rise_10_90_s",
+        "max_dfdt",
+        "plateau_std_last20pct",
+        "event_start_s",
+        "event_end_s",
     }
     assert required.issubset(m.keys())
 
@@ -227,12 +243,13 @@ def test_best_event_metrics_selects_dominant():
     y = _make_grip_signal()
     t = np.arange(len(y)) / FS
     m = best_event_metrics(y, t, FS)
-    assert m["peak_value"] > 15.0   # synthetic grip adds 20 to noise
+    assert m["peak_value"] > 15.0  # synthetic grip adds 20 to noise
 
 
 # ---------------------------------------------------------------------------
 # dominant_psd_peaks
 # ---------------------------------------------------------------------------
+
 
 def test_dominant_psd_peaks_empty():
     peaks = dominant_psd_peaks(np.array([]), np.array([]), FS)
@@ -260,6 +277,7 @@ def test_dominant_psd_peaks_max_count():
 # ---------------------------------------------------------------------------
 # apply_filter_spec — all filter types
 # ---------------------------------------------------------------------------
+
 
 def _signal(n: int = 512) -> np.ndarray:
     rng = np.random.default_rng(0)
@@ -338,6 +356,7 @@ def test_apply_filter_unsupported_raises():
 # Filter highpass/bandpass attenuate the right frequency range
 # ---------------------------------------------------------------------------
 
+
 def test_butter_lowpass_attenuates_high_freq():
     """A 10 Hz lowpass should reduce high-frequency (45 Hz) power."""
     t = np.arange(4096) / FS
@@ -351,7 +370,7 @@ def test_butter_highpass_passes_high_freq():
     t = np.arange(4096) / FS
     hf = np.sin(2 * np.pi * 40.0 * t)
     out = apply_filter_spec(hf, FS, {"type": "butter_highpass", "cutoff_hz": 5.0})
-    assert float(np.std(out)) > 0.5   # ~unity gain at 40 Hz
+    assert float(np.std(out)) > 0.5  # ~unity gain at 40 Hz
 
 
 def test_butter_bandpass_blocks_dc_and_hf():
@@ -360,8 +379,6 @@ def test_butter_bandpass_blocks_dc_and_hf():
     dc = np.ones(len(t)) * 10.0
     hf = np.sin(2 * np.pi * 48.0 * t)
     mixed = dc + hf
-    out = apply_filter_spec(
-        mixed, FS, {"type": "butter_bandpass", "low_hz": 2.0, "high_hz": 20.0}
-    )
-    assert float(np.abs(np.mean(out))) < 0.1   # DC suppressed
-    assert float(np.std(out)) < 0.1            # 48 Hz attenuated
+    out = apply_filter_spec(mixed, FS, {"type": "butter_bandpass", "low_hz": 2.0, "high_hz": 20.0})
+    assert float(np.abs(np.mean(out))) < 0.1  # DC suppressed
+    assert float(np.std(out)) < 0.1  # 48 Hz attenuated

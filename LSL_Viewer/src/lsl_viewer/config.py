@@ -156,7 +156,7 @@ class ServerCfg:
     host: str = "127.0.0.1"
     port: int = 8765
     reload: bool = False
-    show: bool = True       # auto-open browser on start
+    show: bool = True  # auto-open browser on start
     dark: bool = False
     title: str = "LSL Viewer"
 
@@ -164,6 +164,7 @@ class ServerCfg:
 # ---------------------------------------------------------------------------
 # Viewer / display
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ViewerCfg:
@@ -187,6 +188,7 @@ class ViewerCfg:
 # Interpolation / alignment policy
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class AlignmentCfg:
     # @brief Interpolation and gap policy for XY alignment.
@@ -198,6 +200,7 @@ class AlignmentCfg:
 # ---------------------------------------------------------------------------
 # Calibration marker overlays
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class CalibrationMarkersCfg:
@@ -219,6 +222,7 @@ class CalibrationMarkersCfg:
 # Replay file paths
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ReferenceCfg:
     # @brief Replay input paths for CSV and XDF data.
@@ -230,6 +234,7 @@ class ReferenceCfg:
 # ---------------------------------------------------------------------------
 # Replay playback settings
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ReplayCfg:
@@ -243,18 +248,20 @@ class ReplayCfg:
 # Logging
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class LoggingCfg:
     # @brief Logging configuration used by the viewer entry point.
     level: str = "INFO"
     log_file: str = "handgrip_realtime_viewer.log"
-    max_bytes: int = 10_485_760   # 10 MB per file
+    max_bytes: int = 10_485_760  # 10 MB per file
     backup_count: int = 3
 
 
 # ---------------------------------------------------------------------------
 # Root application config
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class AppConfig:

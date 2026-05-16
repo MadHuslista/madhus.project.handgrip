@@ -137,20 +137,17 @@ def load_capture(path: str | Path, time_source: TimeSource = "auto") -> CaptureD
                 break
             log.warning("load_capture: column %r is not monotonic — skipping", col)
     if selected_col is None:
-        raise ValueError(
-            f"Could not select a monotonic time source from "
-            f"{TIME_PRIORITY[time_source]} for {path}"
-        )
+        raise ValueError(f"Could not select a monotonic time source from {TIME_PRIORITY[time_source]} for {path}")
 
     time_s = _normalize_time(df, selected_col)
     fs = estimate_fs(time_s)
     log.info(
         "load_capture: loaded %d samples, fs=%.1f Hz, duration=%.2f s",
-        len(time_s), fs, float(time_s[-1] - time_s[0]),
+        len(time_s),
+        fs,
+        float(time_s[-1] - time_s[0]),
     )
-    return CaptureData(
-        path=path, df=df, time_s=time_s, fs_estimate_hz=fs, time_source=selected_col
-    )
+    return CaptureData(path=path, df=df, time_s=time_s, fs_estimate_hz=fs, time_source=selected_col)
 
 
 # @brief Compute descriptive sampling statistics for a time vector.

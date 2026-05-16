@@ -2,6 +2,7 @@
 # @brief Validation, planning, and execution pipeline for trial-aware analysis.
 
 """Validation → plan → execute pipeline for trial-aware analysis."""
+
 from __future__ import annotations
 
 import logging

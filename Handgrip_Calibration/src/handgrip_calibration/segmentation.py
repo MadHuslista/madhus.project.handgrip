@@ -79,7 +79,9 @@ def _canonical_value(df: pd.DataFrame, preferred: str, fallback: str = "raw") ->
     raise SegmentationError(f"Could not find signal column {preferred!r} or fallback {fallback!r}")
 
 
-def load_session_frames(session_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFrame, list[dict[str, Any]], dict[str, Any]]:
+def load_session_frames(
+    session_dir: str | Path,
+) -> tuple[pd.DataFrame, pd.DataFrame, list[dict[str, Any]], dict[str, Any]]:
     # @brief Load target/reference frames, events, and manifest for a session.
     #  @param session_dir Session directory path.
     #  @return Tuple of target frame, reference frame, events list, and manifest dictionary.
@@ -102,7 +104,9 @@ def load_session_frames(session_dir: str | Path) -> tuple[pd.DataFrame, pd.DataF
     return target, reference, events, manifest
 
 
-def segment_accepted_holds(session_dir: str | Path, config: AppConfig | None = None) -> pd.DataFrame:
+def segment_accepted_holds(
+    session_dir: str | Path, config: AppConfig | None = None
+) -> pd.DataFrame:
     # @brief Build calibration rows from accepted static hold windows.
     #  @param session_dir Session directory path.
     #  @param config Optional application config for fit/quality thresholds.
@@ -122,7 +126,9 @@ def segment_accepted_holds(session_dir: str | Path, config: AppConfig | None = N
     target_col = _canonical_value(target, target_signal)
     ref_col = _canonical_value(reference, reference_signal)
     reference = reference.copy()
-    reference["reference_force_N"] = reference[ref_col].astype(float) * reference_scale + reference_offset
+    reference["reference_force_N"] = (
+        reference[ref_col].astype(float) * reference_scale + reference_offset
+    )
 
     accepted = _accepted_trial_ids(events)
     indexed = _index_events(events)
@@ -134,14 +140,20 @@ def segment_accepted_holds(session_dir: str | Path, config: AppConfig | None = N
         trial_events = indexed.get(trial_id, {})
         if "hold_start" not in trial_events or "hold_end" not in trial_events:
             continue
-        start_event = trial_events["stable_window_start"] if "stable_window_start" in trial_events else trial_events["hold_start"]
+        start_event = (
+            trial_events["stable_window_start"]
+            if "stable_window_start" in trial_events
+            else trial_events["hold_start"]
+        )
         end_event = trial_events["hold_end"]
         t0 = _event_time(start_event)
         t1 = _event_time(end_event)
         if t1 <= t0:
             continue
         tw = target[(target["timestamp_lsl"] >= t0) & (target["timestamp_lsl"] <= t1)].copy()
-        rw = reference[(reference["timestamp_lsl"] >= t0) & (reference["timestamp_lsl"] <= t1)].copy()
+        rw = reference[
+            (reference["timestamp_lsl"] >= t0) & (reference["timestamp_lsl"] <= t1)
+        ].copy()
         tq = compute_window_quality(tw, time_col="timestamp_lsl", value_col=target_col)
         rq = compute_window_quality(rw, time_col="timestamp_lsl", value_col="reference_force_N")
         interp = interpolate_reference_to_target(
@@ -166,41 +178,51 @@ def segment_accepted_holds(session_dir: str | Path, config: AppConfig | None = N
             if seq_gaps:
                 rejection_reasons.append("target_sequence_gap")
         start_payload = trial_events.get("hold_start", {}).get("payload", {}) or {}
-        rows.append({
-            "trial_id": trial_id,
-            "target_force_nominal_N": start_event.get("target_force_N"),
-            "direction": start_payload.get("direction"),
-            "repeat_index": start_payload.get("repeat_index"),
-            "level_index": start_payload.get("level_index"),
-            "t_start_lsl": t0,
-            "t_end_lsl": t1,
-            "duration_s": t1 - t0,
-            "target_signal": target_col,
-            "target_raw_mean": tq.value_mean,
-            "target_raw_median": tq.value_median,
-            "target_raw_std": tq.value_std,
-            "target_n_samples": tq.n_samples,
-            "target_sample_rate_hz": tq.sample_rate_hz,
-            "target_max_gap_s": tq.max_gap_s,
-            "target_seq_gap_count": len(seq_gaps),
-            "reference_signal": ref_col,
-            "reference_force_mean_N": rq.value_mean,
-            "reference_force_median_N": rq.value_median,
-            "reference_force_std_N": rq.value_std,
-            "reference_n_samples": rq.n_samples,
-            "reference_sample_rate_hz": rq.sample_rate_hz,
-            "reference_max_gap_s": rq.max_gap_s,
-            "reference_slope_N_s": rq.slope_per_s,
-            "reference_interpolated_to_target_mean_N": float(np.nanmean(valid_interp)) if len(valid_interp) else np.nan,
-            "reference_interpolated_to_target_median_N": float(np.nanmedian(valid_interp)) if len(valid_interp) else np.nan,
-            "accepted_by_operator": True,
-            "accepted_by_quality": not rejection_reasons,
-            "quality_rejection_reason": ";".join(rejection_reasons),
-        })
+        rows.append(
+            {
+                "trial_id": trial_id,
+                "target_force_nominal_N": start_event.get("target_force_N"),
+                "direction": start_payload.get("direction"),
+                "repeat_index": start_payload.get("repeat_index"),
+                "level_index": start_payload.get("level_index"),
+                "t_start_lsl": t0,
+                "t_end_lsl": t1,
+                "duration_s": t1 - t0,
+                "target_signal": target_col,
+                "target_raw_mean": tq.value_mean,
+                "target_raw_median": tq.value_median,
+                "target_raw_std": tq.value_std,
+                "target_n_samples": tq.n_samples,
+                "target_sample_rate_hz": tq.sample_rate_hz,
+                "target_max_gap_s": tq.max_gap_s,
+                "target_seq_gap_count": len(seq_gaps),
+                "reference_signal": ref_col,
+                "reference_force_mean_N": rq.value_mean,
+                "reference_force_median_N": rq.value_median,
+                "reference_force_std_N": rq.value_std,
+                "reference_n_samples": rq.n_samples,
+                "reference_sample_rate_hz": rq.sample_rate_hz,
+                "reference_max_gap_s": rq.max_gap_s,
+                "reference_slope_N_s": rq.slope_per_s,
+                "reference_interpolated_to_target_mean_N": float(np.nanmean(valid_interp))
+                if len(valid_interp)
+                else np.nan,
+                "reference_interpolated_to_target_median_N": float(np.nanmedian(valid_interp))
+                if len(valid_interp)
+                else np.nan,
+                "accepted_by_operator": True,
+                "accepted_by_quality": not rejection_reasons,
+                "quality_rejection_reason": ";".join(rejection_reasons),
+            }
+        )
 
     if not rows:
-        raise SegmentationError("Accepted markers were found, but no valid hold windows could be segmented")
+        raise SegmentationError(
+            "Accepted markers were found, but no valid hold windows could be segmented"
+        )
     dataset = pd.DataFrame(rows)
     dataset.to_csv(session_dir / "calibration_dataset.csv", index=False)
-    log.info("Segmented %d accepted holds -> %s", len(dataset), session_dir / "calibration_dataset.csv")
+    log.info(
+        "Segmented %d accepted holds -> %s", len(dataset), session_dir / "calibration_dataset.csv"
+    )
     return dataset

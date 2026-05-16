@@ -88,3 +88,4 @@ LabRecorder/Data/
 !Handgrip_Analysis/data/calibration_signals/
 !Handgrip_Analysis/data/manifests/
 .doxygen
+*.zip

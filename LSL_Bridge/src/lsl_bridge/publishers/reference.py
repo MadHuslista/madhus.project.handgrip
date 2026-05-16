@@ -103,14 +103,9 @@ class RS485IpcReferencePublisher:
             return
 
         if self._outlet is None:
-            raise RuntimeError(
-                "Reference stream is enabled but no StreamOutlet was provided."
-            )
+            raise RuntimeError("Reference stream is enabled but no StreamOutlet was provided.")
         if zmq is None:
-            raise RuntimeError(
-                "rs485_ipc.enabled=true requires pyzmq. "
-                "Install it with: pip install pyzmq"
-            )
+            raise RuntimeError("rs485_ipc.enabled=true requires pyzmq. Install it with: pip install pyzmq")
 
         self._context = zmq.Context.instance()
         self._socket = self._context.socket(zmq.SUB)
@@ -182,10 +177,7 @@ class RS485IpcReferencePublisher:
                 sample = self._decode_record(record)
             except Exception as exc:
                 self._malformed_count += 1
-                if (
-                    self._malformed_count == 1
-                    or self._malformed_count % log_malformed_every_n == 0
-                ):
+                if self._malformed_count == 1 or self._malformed_count % log_malformed_every_n == 0:
                     self._events.emit(
                         "reference_ipc_malformed",
                         count=self._malformed_count,
@@ -215,11 +207,7 @@ class RS485IpcReferencePublisher:
                     )
                 self._last_seq = sample.sequence
 
-            timestamp = (
-                sample.host_lsl_ts
-                if math.isfinite(sample.host_lsl_ts)
-                else sample.received_lsl_ts
-            )
+            timestamp = sample.host_lsl_ts if math.isfinite(sample.host_lsl_ts) else sample.received_lsl_ts
             self._outlet.push_sample(
                 [
                     float(sample.sequence),
@@ -262,18 +250,14 @@ class RS485IpcReferencePublisher:
         expected = str(self._cfg.rs485_ipc.expected_schema)
         actual_schema = str(record.get("schema", ""))
         if actual_schema != expected:
-            raise ValueError(
-                f"Unsupported IPC schema: expected={expected!r} received={actual_schema!r}"
-            )
+            raise ValueError(f"Unsupported IPC schema: expected={expected!r} received={actual_schema!r}")
 
         force = record.get("reference_force_N")
         clock = record.get("reference_clock_s")
         host_lsl_ts = record.get("host_lsl_ts")
 
         if force is None or clock is None or host_lsl_ts is None:
-            raise ValueError(
-                "Missing required fields: reference_force_N, reference_clock_s, host_lsl_ts"
-            )
+            raise ValueError("Missing required fields: reference_force_N, reference_clock_s, host_lsl_ts")
 
         status_raw = record.get("reference_status", 0)
         if isinstance(status_raw, str):
@@ -301,9 +285,7 @@ class RS485IpcReferencePublisher:
             status=status,
             timestamp_source=str(record.get("timestamp_source", "host_lsl_ts")),
             configured_frequency_hz=(
-                float(configured_frequency_hz)
-                if configured_frequency_hz is not None
-                else math.nan
+                float(configured_frequency_hz) if configured_frequency_hz is not None else math.nan
             ),
             session_id=record.get("session_id"),
             board_profile=record.get("board_profile", {}) or {},

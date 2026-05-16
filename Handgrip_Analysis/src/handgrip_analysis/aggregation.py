@@ -2,6 +2,7 @@
 # @brief Condition-level aggregation utilities.
 
 """Condition-level aggregation utilities."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence

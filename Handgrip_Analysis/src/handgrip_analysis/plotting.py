@@ -9,6 +9,7 @@ stage analyzers.  It reloads captures from the already-validated
 :class:`TrialSpec` objects and writes PNG artifacts into the standard Phase 3
 figure directories without changing scalar metrics or tables.
 """
+
 from __future__ import annotations
 
 import logging
@@ -239,7 +240,9 @@ def _allan_tables(result: TrialResult) -> list[tuple[str, pd.DataFrame]]:
 # @param outdir Output directory.
 # @param paths Artifact map to update.
 # @param stage_title Stage title for figure labels.
-def _plot_time_hist_trial(result: TrialResult, cfg: StageConfig, outdir: Path, paths: dict[str, Path], stage_title: str) -> None:
+def _plot_time_hist_trial(
+    result: TrialResult, cfg: StageConfig, outdir: Path, paths: dict[str, Path], stage_title: str
+) -> None:
     spec = result.spec
     cap = load_capture(spec.path, time_source=cfg.time_source)
     channels = cfg.channels or (spec.channel or cfg.channel,)
@@ -299,7 +302,9 @@ def _plot_psd_allan_trial(result: TrialResult, outdir: Path, paths: dict[str, Pa
     if allan_items:
         fig, ax = plt.subplots(figsize=FIGSIZE_COMPACT)
         for name, df in allan_items:
-            ax.loglog(df["tau_s"].to_numpy(float), df["allan_deviation"].to_numpy(float), label=name.replace("_allan", ""))
+            ax.loglog(
+                df["tau_s"].to_numpy(float), df["allan_deviation"].to_numpy(float), label=name.replace("_allan", "")
+            )
         ax.set_title(f"{stage_title} — Allan deviation — {spec.session_id} {spec.trial_id}")
         ax.set_xlabel("Tau [s]")
         ax.set_ylabel("Allan deviation")
@@ -341,7 +346,12 @@ def _plot_psd_aggregate(results: Sequence[TrialResult], outdir: Path, paths: dic
         ax.set_ylabel("PSD [signal²/Hz]")
         ax.grid(True, which="both")
         ax.legend()
-        _save(fig, outdir / f"{_slug(condition)}_{_slug(table_name)}_median_psd.png", paths, f"figure_{_slug(condition)}_{_slug(table_name)}_median_psd")
+        _save(
+            fig,
+            outdir / f"{_slug(condition)}_{_slug(table_name)}_median_psd.png",
+            paths,
+            f"figure_{_slug(condition)}_{_slug(table_name)}_median_psd",
+        )
 
 
 ##
@@ -387,9 +397,15 @@ def _plot_stage3_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
 # @param metric Metric key from TrialResult.metrics.
 # @param title Plot title.
 # @param ylabel Y-axis label.
-def _plot_metric_scatter(results: Sequence[TrialResult], outdir: Path, paths: dict[str, Path], metric: str, title: str, ylabel: str) -> None:
+def _plot_metric_scatter(
+    results: Sequence[TrialResult], outdir: Path, paths: dict[str, Path], metric: str, title: str, ylabel: str
+) -> None:
     rows = [
-        {"trial": f"{r.spec.session_id}/{r.spec.trial_id}", "condition": r.spec.condition, "value": r.metrics.get(metric, np.nan)}
+        {
+            "trial": f"{r.spec.session_id}/{r.spec.trial_id}",
+            "condition": r.spec.condition,
+            "value": r.metrics.get(metric, np.nan),
+        }
         for r in results
     ]
     df = pd.DataFrame(rows)
@@ -444,7 +460,9 @@ def _plot_stage4_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
 # @param cfg Stage configuration.
 # @param outdir Aggregate-figure output directory.
 # @param paths Artifact map to update.
-def _plot_stage4_aggregate(results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path]) -> None:
+def _plot_stage4_aggregate(
+    results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path]
+) -> None:
     # Event-aligned overlay for the first event of each dynamic trial.
     fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
     plotted = False
@@ -475,7 +493,9 @@ def _plot_stage4_aggregate(results: Sequence[TrialResult], cfg: StageConfig, out
         plt.close(fig)
 
     _plot_metric_scatter(results, outdir, paths, "peak_value_max", "Stage 4 — peak value by trial", "Peak value")
-    _plot_metric_scatter(results, outdir, paths, "rise_10_90_s_median", "Stage 4 — rise time by trial", "Rise 10–90 [s]")
+    _plot_metric_scatter(
+        results, outdir, paths, "rise_10_90_s_median", "Stage 4 — rise time by trial", "Rise 10–90 [s]"
+    )
 
 
 ##
@@ -502,7 +522,13 @@ def _score_from_filter_table(filter_df: pd.DataFrame, cfg: StageConfig) -> pd.Da
     rows = []
     for filter_name, group in filter_df.groupby("filter", dropna=False):
         row: dict[str, object] = {"filter": filter_name}
-        for col in ["rest_std_norm", "peak_relative_error", "rise_relative_error", "peak_time_shift_s", "dfdt_deviation"]:
+        for col in [
+            "rest_std_norm",
+            "peak_relative_error",
+            "rise_relative_error",
+            "peak_time_shift_s",
+            "dfdt_deviation",
+        ]:
             if col in group.columns:
                 values = pd.to_numeric(group[col], errors="coerce").dropna()
                 row[f"{col}__median"] = float(values.median()) if not values.empty else np.nan
@@ -597,7 +623,9 @@ def _plot_stage6_design_overlay(
 # @param cfg Stage configuration.
 # @param outdir Aggregate-figure output directory.
 # @param paths Artifact map to update.
-def _plot_stage6_aggregate(results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path]) -> None:
+def _plot_stage6_aggregate(
+    results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path]
+) -> None:
     filter_df = _stage6_filter_tables(results)
     ranking = _score_from_filter_table(filter_df, cfg)
     if not ranking.empty:
@@ -650,7 +678,9 @@ def _plot_stage6_aggregate(results: Sequence[TrialResult], cfg: StageConfig, out
 # @param paths Artifact map to update.
 def _plot_stage5_aggregate(results: Sequence[TrialResult], outdir: Path, paths: dict[str, Path]) -> None:
     _plot_psd_aggregate(results, outdir, paths, "Stage 5")
-    _plot_metric_scatter(results, outdir, paths, "top_peak_hz", "Stage 5 — top spectral peak by trial", "Frequency [Hz]")
+    _plot_metric_scatter(
+        results, outdir, paths, "top_peak_hz", "Stage 5 — top spectral peak by trial", "Frequency [Hz]"
+    )
     _plot_metric_scatter(results, outdir, paths, "robust_std", "Stage 5 — robust std by trial", "Robust std")
 
 
@@ -717,10 +747,21 @@ def generate_stage_figures(
         elif plan.stage == "stage2":
             _plot_psd_aggregate(results, aggregate, paths, "Stage 2")
             _plot_metric_scatter(results, aggregate, paths, "raw_std", "Stage 2 — raw std by trial", "Std")
-            _plot_metric_scatter(results, aggregate, paths, "raw_top_peak_hz", "Stage 2 — top spectral peak by trial", "Frequency [Hz]")
+            _plot_metric_scatter(
+                results, aggregate, paths, "raw_top_peak_hz", "Stage 2 — top spectral peak by trial", "Frequency [Hz]"
+            )
         elif plan.stage == "stage3":
-            _plot_metric_scatter(results, aggregate, paths, "drift_slope_per_min", "Stage 3 — drift slope by trial", "Slope [signal/min]")
-            _plot_metric_scatter(results, aggregate, paths, "return_to_zero_error", "Stage 3 — return-to-zero error by trial", "Post-pre mean")
+            _plot_metric_scatter(
+                results, aggregate, paths, "drift_slope_per_min", "Stage 3 — drift slope by trial", "Slope [signal/min]"
+            )
+            _plot_metric_scatter(
+                results,
+                aggregate,
+                paths,
+                "return_to_zero_error",
+                "Stage 3 — return-to-zero error by trial",
+                "Post-pre mean",
+            )
         elif plan.stage == "stage4":
             _plot_stage4_aggregate(results, cfg, aggregate, paths)
         elif plan.stage == "stage5":

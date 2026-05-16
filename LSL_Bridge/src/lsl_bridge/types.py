@@ -33,8 +33,7 @@ class Processor(Protocol):
     #  @param value Input signal sample.
     #  @param sample_time_s Processing-domain sample time in seconds.
     #  @return Processed signal value.
-    def process(self, value: float, sample_time_s: float) -> float:
-        ...
+    def process(self, value: float, sample_time_s: float) -> float: ...
 
 
 # ---------------------------------------------------------------------------

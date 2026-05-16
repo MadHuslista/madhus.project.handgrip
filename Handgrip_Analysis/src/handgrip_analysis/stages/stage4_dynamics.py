@@ -2,6 +2,7 @@
 # @brief Stage 4 grip dynamics and event metrics analyzer.
 
 """Stage 4 — grip dynamics and event metrics."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -55,7 +56,9 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
         "peak_value_median": float(events_df["peak_value"].median()) if not events_df.empty else float("nan"),
         "rise_10_90_s_median": float(events_df["rise_10_90_s"].median()) if not events_df.empty else float("nan"),
         "max_dfdt_max": float(events_df["max_dfdt"].max()) if not events_df.empty else float("nan"),
-        "hold_std_last_20pct_median": float(events_df["hold_std_last_20pct"].median()) if not events_df.empty else float("nan"),
+        "hold_std_last_20pct_median": float(events_df["hold_std_last_20pct"].median())
+        if not events_df.empty
+        else float("nan"),
     }
 
     tables: dict[str, pd.DataFrame] = {"event_metrics": events_df}
@@ -66,7 +69,8 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
             if len(seg_y) > int(2 * cap.fs_estimate_hz):
                 hold_slice = seg_y[int(0.5 * len(seg_y)) :]
                 f, pxx = welch_psd(
-                    hold_slice, cap.fs_estimate_hz,
+                    hold_slice,
+                    cap.fs_estimate_hz,
                     max_nperseg=dsp.welch.max_nperseg,
                     min_nperseg=dsp.welch.min_nperseg,
                     window=dsp.welch.window,

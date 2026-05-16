@@ -3,6 +3,7 @@
 # @brief Stage 5 interference PSD comparison across conditions.
 
 """Stage 5 — Interference PSD comparison across conditions."""
+
 from __future__ import annotations
 
 import logging
@@ -77,13 +78,15 @@ def main(cfg: DictConfig) -> None:
         ax.semilogy(f, pxx, label=label)
         peaks = dominant_psd_peaks(f, pxx, cap.fs_estimate_hz)
         for peak in peaks:
-            rows.append({
-                "label": label,
-                "frequency_hz": peak.frequency_hz,
-                "psd": peak.psd,
-                "prominence_db": peak.prominence_db,
-                "alias_hint": peak.alias_hint or "",
-            })
+            rows.append(
+                {
+                    "label": label,
+                    "frequency_hz": peak.frequency_hz,
+                    "psd": peak.psd,
+                    "prominence_db": peak.prominence_db,
+                    "alias_hint": peak.alias_hint or "",
+                }
+            )
         bp = {}
         for band in bands[:4]:
             lo, hi = band[0], band[1]

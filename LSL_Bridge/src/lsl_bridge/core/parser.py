@@ -110,10 +110,7 @@ class D2LineParser:
         match = self._data_re.match(line)
         if not match:
             self._parse_errors += 1
-            if (
-                self._parse_errors == 1
-                or self._parse_errors % self._log_parse_errors_every_n == 0
-            ):
+            if self._parse_errors == 1 or self._parse_errors % self._log_parse_errors_every_n == 0:
                 _log.warning(
                     "Dropped non-D2 target line #%d: %r",
                     self._parse_errors,

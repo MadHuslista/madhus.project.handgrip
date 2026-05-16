@@ -12,6 +12,7 @@ Usage:
     python pytest_all.py -x           # Stop on first failure
     python pytest_all.py --help       # See all options
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -30,12 +31,12 @@ SUBMODULES = [
 def run_tests_for_submodule(submodule: str, args: list[str], python_exe: str) -> int:
     """
     Run pytest for a single submodule with its own pyproject.toml config.
-    
+
     Args:
         submodule: Name of the submodule directory
         args: Additional arguments to pass to pytest
         python_exe: Path to Python executable to use (from venv)
-    
+
     Returns:
         Exit code from pytest
 

@@ -10,9 +10,10 @@ import csv
 import logging
 import threading
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .config_schema import StreamConfig
 from .export import ensure_dir
@@ -93,7 +94,9 @@ def resolve_stream(config: StreamConfig) -> tuple[Any, ResolvedStream]:
     if not streams and config.stream_type:
         streams = pylsl.resolve_byprop("type", config.stream_type, timeout=config.timeout_s)
     if not streams:
-        raise TimeoutError(f"Could not resolve LSL stream {config.name!r} within {config.timeout_s:.1f}s")
+        raise TimeoutError(
+            f"Could not resolve LSL stream {config.name!r} within {config.timeout_s:.1f}s"
+        )
     # Prefer exact source_id if configured; otherwise use the first matching stream.
     info = streams[0]
     if config.source_id:
@@ -129,7 +132,9 @@ def preflight_streams(streams: dict[str, StreamConfig]) -> dict[str, ResolvedStr
     return resolved
 
 
-def resolve_channel_indices(labels: list[str], channel_map: dict[str, list[str | int]]) -> dict[str, int]:
+def resolve_channel_indices(
+    labels: list[str], channel_map: dict[str, list[str | int]]
+) -> dict[str, int]:
     # @brief Resolve configured channel aliases into concrete indices.
     #  @param labels Published LSL channel labels.
     #  @param channel_map Canonical-to-candidate channel mapping.
@@ -194,7 +199,11 @@ class CsvStreamRecorder(threading.Thread):
             canonical_indices = resolve_channel_indices(labels, self.config.channel_map)
             self.stats.channel_labels = labels
             ensure_dir(self.output_csv.parent)
-            fieldnames = ["timestamp_lsl"] + sorted(canonical_indices.keys()) + [f"channel_{i}" for i in range(len(labels))]
+            fieldnames = (
+                ["timestamp_lsl"]
+                + sorted(canonical_indices.keys())
+                + [f"channel_{i}" for i in range(len(labels))]
+            )
             rate = RateMonitor(window_s=10.0)
             with self.output_csv.open("w", newline="", encoding="utf-8") as fh:
                 writer = csv.DictWriter(fh, fieldnames=fieldnames)

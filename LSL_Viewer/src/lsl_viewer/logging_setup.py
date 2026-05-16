@@ -36,10 +36,7 @@ def configure_logging(
     # ── Console handler ───────────────────────────────────────────────────
     # Add only if no StreamHandler is already present (avoids duplicates when
     # called more than once, e.g. during test runs).
-    if not any(
-        isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
-        for h in root.handlers
-    ):
+    if not any(isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler) for h in root.handlers):
         console = logging.StreamHandler()
         console.setLevel(level)
         console.setFormatter(formatter)
@@ -48,8 +45,7 @@ def configure_logging(
     # ── Rotating file handler ─────────────────────────────────────────────
     resolved = str(Path(log_file).resolve())
     if not any(
-        isinstance(h, logging.handlers.RotatingFileHandler)
-        and getattr(h, "baseFilename", None) == resolved
+        isinstance(h, logging.handlers.RotatingFileHandler) and getattr(h, "baseFilename", None) == resolved
         for h in root.handlers
     ):
         fh = logging.handlers.RotatingFileHandler(

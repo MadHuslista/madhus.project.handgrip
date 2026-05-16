@@ -57,10 +57,7 @@ class StreamConnectionError(ViewerError):
     def remediation(self) -> str | None:
         # @brief Suggested corrective action, if known.
         # @return Remediation text.
-        return (
-            f"Ensure an LSL stream named '{self.stream_name}' is active "
-            "on the network before starting the viewer."
-        )
+        return f"Ensure an LSL stream named '{self.stream_name}' is active on the network before starting the viewer."
 
 
 class ReplayLoadError(ViewerError):

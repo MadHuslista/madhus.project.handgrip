@@ -144,7 +144,8 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     dsp = _get_dsp_cfg(cfg)
     raw_std = float(pd.Series(y).std())
     f_raw, p_raw = welch_psd(
-        y, fs,
+        y,
+        fs,
         max_nperseg=dsp.welch.max_nperseg,
         min_nperseg=dsp.welch.min_nperseg,
         window=dsp.welch.window,
@@ -166,7 +167,8 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
         }
         if trial_kind == "rest":
             f_f, p_f = welch_psd(
-                y_f, fs,
+                y_f,
+                fs,
                 max_nperseg=dsp.welch.max_nperseg,
                 min_nperseg=dsp.welch.min_nperseg,
                 window=dsp.welch.window,
@@ -177,7 +179,9 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
                     "rest_std": float(pd.Series(y_f).std()),
                     "rest_std_norm": float(pd.Series(y_f).std()) / max(raw_std, 1e-12),
                     "rest_hf_bandpower": hf,
-                    "rest_hf_bandpower_norm": hf / max(raw_hf, PSD_FLOOR_LINEAR) if np.isfinite(raw_hf) else float("nan"),
+                    "rest_hf_bandpower_norm": hf / max(raw_hf, PSD_FLOOR_LINEAR)
+                    if np.isfinite(raw_hf)
+                    else float("nan"),
                 }
             )
         else:
@@ -392,10 +396,9 @@ def build_stage6_decision_table(review_ranking: pd.DataFrame, design_assessment:
     review_component = pd.to_numeric(merged.get("review_score_norm"), errors="coerce")
     design_component = pd.to_numeric(merged.get("design_score_norm"), errors="coerce")
     scoring = Stage6ScoringConfig()  # default weights; caller can pass via cfg if needed
-    merged["combined_score"] = (
-        scoring.review_weight * review_component.fillna(0.0)
-        + scoring.design_weight * design_component.fillna(0.0)
-    )
+    merged["combined_score"] = scoring.review_weight * review_component.fillna(
+        0.0
+    ) + scoring.design_weight * design_component.fillna(0.0)
     # Penalize rows missing one side of the decision.
     merged.loc[review_component.isna() | design_component.isna(), "combined_score"] += 0.25
     merged = merged.sort_values(
@@ -540,11 +543,13 @@ def filter_acceptance_markdown(ranking: pd.DataFrame, cfg: StageConfig) -> str:
         "",
     ]
     if ranking.empty:
-        lines.extend([
-            "No filter ranking rows were generated.",
-            "",
-            "Check that the manifest includes Stage 6 rest and/or dynamic trials and that `filter_config` points to valid candidates.",
-        ])
+        lines.extend(
+            [
+                "No filter ranking rows were generated.",
+                "",
+                "Check that the manifest includes Stage 6 rest and/or dynamic trials and that `filter_config` points to valid candidates.",
+            ]
+        )
         return "\n".join(lines) + "\n"
 
     top = ranking.iloc[0]

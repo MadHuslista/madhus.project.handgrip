@@ -12,6 +12,7 @@ call ``write_event()`` at any time.
 
 Dependency chain: models, core/signals  (no UI)
 """
+
 from __future__ import annotations
 
 import csv
@@ -30,11 +31,11 @@ from rs485_gui.models import MeasurementFrame
 LOGGER = logging.getLogger(__name__)
 
 
-## @brief Represents the SignalFileLogger component.
+# @brief Represents the SignalFileLogger component.
 class SignalFileLogger:
     """Thread-safe writer for the four acquisition log files."""
 
-    ## @brief Init.
+    # @brief Init.
     #
     #  @param self Parameter description.
     #  @param cfg Parameter description.
@@ -43,7 +44,7 @@ class SignalFileLogger:
         self.enabled = bool(cfg.logger.enabled)
         self.directory = Path(str(cfg.logger.directory)).expanduser()
         self.write_mode = str(cfg.logger.write_mode).lower()
-        if self.write_mode not in {'append', 'overwrite'}:
+        if self.write_mode not in {"append", "overwrite"}:
             raise ValueError(
                 f'logger.write_mode must be "append" or "overwrite", got {self.write_mode!r}'
             )
@@ -72,27 +73,35 @@ class SignalFileLogger:
             return
 
         self.directory.mkdir(parents=True, exist_ok=True)
-        file_mode = 'a' if self.write_mode == 'append' else 'w'
+        file_mode = "a" if self.write_mode == "append" else "w"
 
-        self._raw_fp = self.raw_path.open(file_mode, encoding='utf-8', newline='')
-        self._interpreted_fp = self.interpreted_path.open(file_mode, encoding='utf-8', newline='')
+        self._raw_fp = self.raw_path.open(file_mode, encoding="utf-8", newline="")
+        self._interpreted_fp = self.interpreted_path.open(file_mode, encoding="utf-8", newline="")
 
         gui_file_preexisting = self.gui_path.exists() and self.gui_path.stat().st_size > 0
-        self._gui_fp = self.gui_path.open(file_mode, encoding='utf-8', newline='')
-        self._event_fp = self.event_path.open(file_mode, encoding='utf-8', newline='')
+        self._gui_fp = self.gui_path.open(file_mode, encoding="utf-8", newline="")
+        self._event_fp = self.event_path.open(file_mode, encoding="utf-8", newline="")
         self._gui_writer = csv.writer(self._gui_fp)
         self._write_batches_since_flush = 0
         self._last_flush_monotonic = time.monotonic()
 
-        if self.write_mode == 'overwrite' or not gui_file_preexisting:
-            self._gui_writer.writerow([
-                'host_ts_epoch_s', 'host_ts_iso', 'session_id', 'mode',
-                'reference_force_N', 'reference_clock_s', 'reference_status',
-                'plot_signal_key', 'plot_value',
-            ])
+        if self.write_mode == "overwrite" or not gui_file_preexisting:
+            self._gui_writer.writerow(
+                [
+                    "host_ts_epoch_s",
+                    "host_ts_iso",
+                    "session_id",
+                    "mode",
+                    "reference_force_N",
+                    "reference_clock_s",
+                    "reference_status",
+                    "plot_signal_key",
+                    "plot_value",
+                ]
+            )
             self._flush_unlocked()
 
-    ## @brief Close.
+    # @brief Close.
     #
     #  @param self Parameter description.
     def close(self) -> None:
@@ -119,55 +128,58 @@ class SignalFileLogger:
             return
         with self._lock:
             if self._raw_fp is None or self._interpreted_fp is None or self._gui_writer is None:
-                raise RuntimeError('SignalFileLogger.write_frames called before open()')
+                raise RuntimeError("SignalFileLogger.write_frames called before open()")
 
             plot_signal_key = get_plot_signal_key(self.cfg)
             for frame in frames:
                 raw_record = {
-                    'host_ts_epoch_s': frame.host_ts,
-                    'host_ts_iso': frame.host_ts_iso,
-                    'session_id': frame.session_id,
-                    'mode': frame.mode,
-                    'raw_transport': frame.raw_transport,
-                    'board_profile': frame.board_profile,
+                    "host_ts_epoch_s": frame.host_ts,
+                    "host_ts_iso": frame.host_ts_iso,
+                    "session_id": frame.session_id,
+                    "mode": frame.mode,
+                    "raw_transport": frame.raw_transport,
+                    "board_profile": frame.board_profile,
                 }
                 interpreted_record = {
-                    'host_ts_epoch_s': frame.host_ts,
-                    'host_ts_iso': frame.host_ts_iso,
-                    'session_id': frame.session_id,
-                    'mode': frame.mode,
-                    'interpreted': frame.interpreted,
-                    'board_profile': frame.board_profile,
+                    "host_ts_epoch_s": frame.host_ts,
+                    "host_ts_iso": frame.host_ts_iso,
+                    "session_id": frame.session_id,
+                    "mode": frame.mode,
+                    "interpreted": frame.interpreted,
+                    "board_profile": frame.board_profile,
                 }
-                self._raw_fp.write(json.dumps(raw_record, ensure_ascii=False) + '\n')
+                self._raw_fp.write(json.dumps(raw_record, ensure_ascii=False) + "\n")
                 self._interpreted_fp.write(
-                    json.dumps(interpreted_record, ensure_ascii=False) + '\n'
+                    json.dumps(interpreted_record, ensure_ascii=False) + "\n"
                 )
                 plot_value = extract_plot_value(frame, self.cfg)
-                self._gui_writer.writerow([
-                    frame.host_ts,
-                    frame.host_ts_iso,
-                    frame.session_id,
-                    frame.mode,
-                    frame.interpreted.get('reference_force_N'),
-                    frame.interpreted.get('reference_clock_s'),
-                    frame.interpreted.get('reference_status'),
-                    plot_signal_key,
-                    plot_value,
-                ])
+                self._gui_writer.writerow(
+                    [
+                        frame.host_ts,
+                        frame.host_ts_iso,
+                        frame.session_id,
+                        frame.mode,
+                        frame.interpreted.get("reference_force_N"),
+                        frame.interpreted.get("reference_clock_s"),
+                        frame.interpreted.get("reference_status"),
+                        plot_signal_key,
+                        plot_value,
+                    ]
+                )
 
             self._write_batches_since_flush += 1
             flush_every_n = max(1, int(self.cfg.logger.flush_every_n_batches))
             flush_interval_s = float(self.cfg.logger.flush_interval_s)
             should_flush = self._write_batches_since_flush >= flush_every_n
-            if flush_interval_s > 0 and (
-                time.monotonic() - self._last_flush_monotonic
-            ) >= flush_interval_s:
+            if (
+                flush_interval_s > 0
+                and (time.monotonic() - self._last_flush_monotonic) >= flush_interval_s
+            ):
                 should_flush = True
             if should_flush:
                 self._flush_unlocked()
 
-    ## @brief Write frame.
+    # @brief Write frame.
     #
     #  @param self Parameter description.
     #  @param frame Parameter description.
@@ -175,7 +187,7 @@ class SignalFileLogger:
         """Write a single frame (convenience wrapper)."""
         self.write_frames([frame])
 
-    ## @brief Write event.
+    # @brief Write event.
     #
     #  @param self Parameter description.
     #  @param line Parameter description.
@@ -186,7 +198,7 @@ class SignalFileLogger:
         with self._lock:
             if self._event_fp is None:
                 return
-            self._event_fp.write(line + '\n')
+            self._event_fp.write(line + "\n")
             self._event_fp.flush()
 
     # ------------------------------------------------------------------

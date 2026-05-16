@@ -1,4 +1,5 @@
 """Unit tests for core.replay — pure functions and data-loading helpers."""
+
 from __future__ import annotations
 
 import math

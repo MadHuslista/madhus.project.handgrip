@@ -51,7 +51,9 @@ def _metrics(y_true: np.ndarray, y_pred: np.ndarray, *, operating_range_N: float
         "rmse_N": _finite_or_none(float(np.sqrt(np.mean(residuals**2)))),
         "mae_N": _finite_or_none(float(np.mean(np.abs(residuals)))),
         "max_abs_error_N": _finite_or_none(float(np.max(np.abs(residuals)))),
-        "max_abs_error_percent_range": _finite_or_none(float(100.0 * np.max(np.abs(residuals)) / operating_range_N)),
+        "max_abs_error_percent_range": _finite_or_none(
+            float(100.0 * np.max(np.abs(residuals)) / operating_range_N)
+        ),
         "bias_N": _finite_or_none(float(np.mean(residuals))),
         "residual_std_N": _finite_or_none(float(np.std(residuals, ddof=1)) if n > 1 else 0.0),
         "r2": _finite_or_none(float(r2)),
@@ -77,13 +79,21 @@ def _thresholds(config: AppConfig) -> dict[str, float]:
     ht = config.holdout_thresholds
     operating_range = float(config.fit.operating_range_N)
     return {
-        "max_rmse_N": ht.max_rmse_N if ht.max_rmse_N is not None else max(1.0, 0.01 * operating_range),
-        "max_abs_error_N": ht.max_abs_error_N if ht.max_abs_error_N is not None else max(2.0, 0.02 * operating_range),
-        "max_bias_N": ht.max_bias_N if ht.max_bias_N is not None else max(0.5, 0.005 * operating_range),
+        "max_rmse_N": ht.max_rmse_N
+        if ht.max_rmse_N is not None
+        else max(1.0, 0.01 * operating_range),
+        "max_abs_error_N": ht.max_abs_error_N
+        if ht.max_abs_error_N is not None
+        else max(2.0, 0.02 * operating_range),
+        "max_bias_N": ht.max_bias_N
+        if ht.max_bias_N is not None
+        else max(0.5, 0.005 * operating_range),
     }
 
 
-def validate_session_against_model(holdout_session_dir: str | Path, model_fit_result: str | Path, config: AppConfig) -> dict[str, Any]:
+def validate_session_against_model(
+    holdout_session_dir: str | Path, model_fit_result: str | Path, config: AppConfig
+) -> dict[str, Any]:
     # @brief Validate an independent holdout session against an existing fitted model.
     #  @param holdout_session_dir Path to the holdout session directory.
     #  @param model_fit_result Path to an existing fit_result.json artifact.
@@ -138,7 +148,9 @@ def validate_session_against_model(holdout_session_dir: str | Path, model_fit_re
         "metrics": metrics,
         "thresholds": thresholds,
         "passes_holdout_gate": passes,
-        "firmware_deployment_recommendation": "approve_constants_for_deployment" if passes else "do_not_deploy_investigate_protocol_or_model",
+        "firmware_deployment_recommendation": "approve_constants_for_deployment"
+        if passes
+        else "do_not_deploy_investigate_protocol_or_model",
         "notes": [
             "This validation does not refit the model; it applies the selected model to independent accepted holdout holds.",
             "Use holdout_predictions.csv for residual-by-force and direction-specific inspection.",

@@ -58,6 +58,7 @@ class TestWelchConfig:
 # EventDetectionConfig
 # ---------------------------------------------------------------------------
 
+
 class TestEventDetectionConfig:
     def test_defaults(self):
         cfg = EventDetectionConfig()
@@ -90,6 +91,7 @@ class TestEventDetectionConfig:
 # PsdPeaksConfig
 # ---------------------------------------------------------------------------
 
+
 class TestPsdPeaksConfig:
     def test_defaults(self):
         cfg = PsdPeaksConfig()
@@ -114,6 +116,7 @@ class TestPsdPeaksConfig:
 # PlotConfig
 # ---------------------------------------------------------------------------
 
+
 class TestPlotConfig:
     def test_defaults(self):
         cfg = PlotConfig()
@@ -135,6 +138,7 @@ class TestPlotConfig:
 # DSPConfig
 # ---------------------------------------------------------------------------
 
+
 class TestDSPConfig:
     def test_defaults(self):
         cfg = DSPConfig()
@@ -144,10 +148,12 @@ class TestDSPConfig:
         assert isinstance(cfg.plot, PlotConfig)
 
     def test_from_mapping_nested(self):
-        cfg = DSPConfig.from_mapping({
-            "welch": {"max_nperseg": 1024, "window": "blackman"},
-            "psd_peaks": {"max_peaks": 4},
-        })
+        cfg = DSPConfig.from_mapping(
+            {
+                "welch": {"max_nperseg": 1024, "window": "blackman"},
+                "psd_peaks": {"max_peaks": 4},
+            }
+        )
         assert cfg.welch.max_nperseg == 1024
         assert cfg.welch.window == "blackman"
         assert cfg.psd_peaks.max_peaks == 4
@@ -161,6 +167,7 @@ class TestDSPConfig:
 # ---------------------------------------------------------------------------
 # LoggingConfig
 # ---------------------------------------------------------------------------
+
 
 class TestLoggingConfig:
     def test_defaults(self):
@@ -181,6 +188,7 @@ class TestLoggingConfig:
 # ---------------------------------------------------------------------------
 # Stage6ScoringConfig
 # ---------------------------------------------------------------------------
+
 
 class TestStage6ScoringConfig:
     def test_defaults(self):
@@ -205,6 +213,7 @@ class TestStage6ScoringConfig:
 # AppConfig
 # ---------------------------------------------------------------------------
 
+
 class TestAppConfig:
     def test_defaults(self):
         cfg = AppConfig()
@@ -213,11 +222,13 @@ class TestAppConfig:
         assert isinstance(cfg.stage6_scoring, Stage6ScoringConfig)
 
     def test_from_mapping_nested(self):
-        cfg = AppConfig.from_mapping({
-            "dsp": {"welch": {"max_nperseg": 512}},
-            "logging": {"level": "DEBUG"},
-            "stage6_scoring": {"review_weight": 0.6, "design_weight": 0.4},
-        })
+        cfg = AppConfig.from_mapping(
+            {
+                "dsp": {"welch": {"max_nperseg": 512}},
+                "logging": {"level": "DEBUG"},
+                "stage6_scoring": {"review_weight": 0.6, "design_weight": 0.4},
+            }
+        )
         assert cfg.dsp.welch.max_nperseg == 512
         assert cfg.logging.level == "DEBUG"
         assert cfg.stage6_scoring.review_weight == pytest.approx(0.6)

@@ -74,8 +74,7 @@ def build_streams(cfg: DictConfig):
         from mne_lsl.stream import StreamLSL  # type: ignore[import]
     except ImportError as exc:
         raise RuntimeError(
-            "mne-lsl is required for live streaming. "
-            "Install it with: pip install lsl-viewer[live]"
+            "mne-lsl is required for live streaming. Install it with: pip install lsl-viewer[live]"
         ) from exc
 
     target_cfg = cfg.streams.target
@@ -91,9 +90,7 @@ def build_streams(cfg: DictConfig):
         bufsize=reference_cfg.buffer_seconds,
         name=str(reference_cfg.name),
         stype=str(reference_cfg.stype),
-        source_id=None
-        if reference_cfg.source_id is None
-        else str(reference_cfg.source_id),
+        source_id=None if reference_cfg.source_id is None else str(reference_cfg.source_id),
     )
 
     target.connect(
@@ -146,9 +143,8 @@ def build_streams(cfg: DictConfig):
 # Window fetching
 # ---------------------------------------------------------------------------
 
-def _stream_data_to_window(
-    data: np.ndarray, ts: np.ndarray, role: str
-) -> TargetWindow | ReferenceWindow | None:
+
+def _stream_data_to_window(data: np.ndarray, ts: np.ndarray, role: str) -> TargetWindow | ReferenceWindow | None:
     # @brief Validate shape and wrap raw stream arrays into a typed window object.
     # @param data Stream data matrix.
     # @param ts Stream timestamps.
@@ -208,9 +204,7 @@ def _slice_target_window(window: TargetWindow, t_start: float) -> TargetWindow |
     )
 
 
-def _slice_reference_window(
-    window: ReferenceWindow, t_start: float
-) -> ReferenceWindow | None:
+def _slice_reference_window(window: ReferenceWindow, t_start: float) -> ReferenceWindow | None:
     # @brief Slice a reference window from a given start time.
     # @param window Source reference window.
     # @param t_start Inclusive start timestamp.
@@ -262,15 +256,7 @@ def fetch_live_window(
     if latest_values:
         t_end = max(latest_values)
         t_start = t_end - cfg.viewer.window_seconds
-        target_window = (
-            _slice_target_window(target_window, t_start)
-            if target_window is not None
-            else None
-        )
-        reference_window = (
-            _slice_reference_window(reference_window, t_start)
-            if reference_window is not None
-            else None
-        )
+        target_window = _slice_target_window(target_window, t_start) if target_window is not None else None
+        reference_window = _slice_reference_window(reference_window, t_start) if reference_window is not None else None
 
     return DualWindow(target=target_window, reference=reference_window)

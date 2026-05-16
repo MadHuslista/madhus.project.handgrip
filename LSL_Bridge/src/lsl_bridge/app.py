@@ -116,9 +116,7 @@ def app(cfg: DictConfig) -> None:
 
     target_sink = _open_target_sink(cfg)
     reference_sink = _open_reference_sink(cfg)
-    reference_outlet = (
-        build_reference_outlet(cfg) if bool(cfg.streams.reference.enabled) else None
-    )
+    reference_outlet = build_reference_outlet(cfg) if bool(cfg.streams.reference.enabled) else None
     reference_publisher = RS485IpcReferencePublisher(cfg, reference_outlet, reference_sink, events)
     reference_publisher.start()
 
@@ -163,33 +161,22 @@ def app(cfg: DictConfig) -> None:
                         if not raw_line:
                             continue
 
-                        if (
-                            len(raw_line) > int(cfg.serial.max_line_bytes)
-                            and not raw_line.endswith(b"\n")
-                        ):
+                        if len(raw_line) > int(cfg.serial.max_line_bytes) and not raw_line.endswith(b"\n"):
                             events.emit("target_overlong_line")
-                            _log.warning(
-                                "Dropped overlong target serial line; flushing input buffer"
-                            )
+                            _log.warning("Dropped overlong target serial line; flushing input buffer")
                             ser.reset_input_buffer()
                             continue
 
                         arrival_unix_time_ns = time.time_ns()
-                        arrival_lsl_time = local_clock() - float(
-                            cfg.serial.transport_latency_s
-                        )
+                        arrival_lsl_time = local_clock() - float(cfg.serial.transport_latency_s)
 
                         sample = parser.feed(raw_line, arrival_lsl_time, arrival_unix_time_ns)
                         if sample is None:
                             continue
 
-                        sample.lsl_timestamp = target_timestamp_resolver.resolve(
-                            sample, arrival_lsl_time
-                        )
+                        sample.lsl_timestamp = target_timestamp_resolver.resolve(sample, arrival_lsl_time)
                         sample_time_s = processor_time_resolver.resolve(sample)
-                        filtered_units = float(
-                            processor.process(sample.target_current_units, sample_time_s)
-                        )
+                        filtered_units = float(processor.process(sample.target_current_units, sample_time_s))
 
                         target_outlet.push_sample(
                             [
@@ -208,10 +195,7 @@ def app(cfg: DictConfig) -> None:
                             target_sink.write(sample, filtered_units)
 
                         sample_count += 1
-                        if (
-                            sample_count == 1
-                            or sample_count % int(cfg.logging.log_every_n_samples) == 0
-                        ):
+                        if sample_count == 1 or sample_count % int(cfg.logging.log_every_n_samples) == 0:
                             _log.info(
                                 "Target LSL status: published=%d seq=%d clock_us=%d "
                                 "raw_count=%s current_units=%s status=%d timestamp=%.6f",
@@ -251,6 +235,7 @@ def app(cfg: DictConfig) -> None:
 def _bridge_version() -> str:
     try:
         from lsl_bridge import __version__
+
         return __version__
     except Exception:
         return "unknown"

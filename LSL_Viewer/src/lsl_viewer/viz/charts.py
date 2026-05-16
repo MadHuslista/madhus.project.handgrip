@@ -496,6 +496,7 @@ def _apply_markline(opts: dict, x_positions: list[float]) -> None:
 # Per-panel data updaters
 # ---------------------------------------------------------------------------
 
+
 def _render_downsample_enabled(cfg: DictConfig) -> bool:
     # @brief Return whether display-only downsampling is enabled in config.
     # @param cfg Hydra configuration.
@@ -642,6 +643,7 @@ def _update_xy_series(
 # ---------------------------------------------------------------------------
 # Main per-frame update entry point
 # ---------------------------------------------------------------------------
+
 
 def update_charts(
     ch: ChartHandles,

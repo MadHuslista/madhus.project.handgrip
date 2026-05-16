@@ -3,6 +3,7 @@
 Both ``ModbusBoardTransport`` and ``ActiveSendBoardTransport`` must implement
 all abstract methods.  Calling code uses only this interface.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -10,26 +11,26 @@ from abc import ABC, abstractmethod
 from rs485_gui.models import MeasurementFrame
 
 
-## @brief Represents the BoardTransport component.
+# @brief Represents the BoardTransport component.
 class BoardTransport(ABC):
     """Abstract interface for communicating with the acquisition board."""
 
     @abstractmethod
-    ## @brief Connect.
+    # @brief Connect.
     #
     #  @param self Parameter description.
     def connect(self) -> None:
         """Open the serial port and initialise the transport state."""
 
     @abstractmethod
-    ## @brief Disconnect.
+    # @brief Disconnect.
     #
     #  @param self Parameter description.
     def disconnect(self) -> None:
         """Close the serial port and release all resources."""
 
     @abstractmethod
-    ## @brief Read frames.
+    # @brief Read frames.
     #
     #  @param self Parameter description.
     def read_frames(self) -> list[MeasurementFrame]:
@@ -41,7 +42,7 @@ class BoardTransport(ABC):
         """
 
     @abstractmethod
-    ## @brief Send command.
+    # @brief Send command.
     #
     #  @param self Parameter description.
     #  @param command_name Parameter description.

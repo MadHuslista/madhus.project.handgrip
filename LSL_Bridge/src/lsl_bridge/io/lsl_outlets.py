@@ -159,11 +159,7 @@ def build_reference_outlet(cfg: DictConfig) -> StreamOutlet:
 
     """
     stream_cfg = cfg.streams.reference
-    source_id = (
-        "rs485-reference"
-        if stream_cfg.source_id is None
-        else str(stream_cfg.source_id)
-    )
+    source_id = "rs485-reference" if stream_cfg.source_id is None else str(stream_cfg.source_id)
     n_channels = len(stream_cfg.channels)
     info = StreamInfo(
         str(stream_cfg.name),
@@ -184,10 +180,7 @@ def build_reference_outlet(cfg: DictConfig) -> StreamOutlet:
             "sampling_model": "reference_native_regular",
             "nominal_srate_hz": stream_cfg.nominal_srate,
             "rs485_ipc_endpoint": cfg.rs485_ipc.connect,
-            "clock_semantics": (
-                "LSL timestamp is synchronization authority; "
-                "reference_clock_s is diagnostic"
-            ),
+            "clock_semantics": ("LSL timestamp is synchronization authority; reference_clock_s is diagnostic"),
             "fit_signal": "reference_force_N",
         },
     )

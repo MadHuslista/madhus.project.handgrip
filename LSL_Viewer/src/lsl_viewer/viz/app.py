@@ -307,8 +307,7 @@ def run_replay_mode_nicegui(cfg: DictConfig, replay_data: DualReplayData, mode: 
     replay_start_wall: list[float] = [time.monotonic()]
 
     log.info(
-        "Replay viewer starting: mode=%s source=%s type=%s "
-        "duration=%.3fs refresh_s=%.3f speed=%.3f loop=%s",
+        "Replay viewer starting: mode=%s source=%s type=%s duration=%.3fs refresh_s=%.3f speed=%.3f loop=%s",
         mode,
         replay_data.source_name,
         replay_data.source_type,

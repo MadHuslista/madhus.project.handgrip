@@ -6,7 +6,7 @@ import json
 from collections.abc import Iterable
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 
 def ensure_dir(path: str | Path) -> Path:

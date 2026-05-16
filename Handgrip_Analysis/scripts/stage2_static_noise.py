@@ -3,6 +3,7 @@
 # @brief Stage 2 stationary noise characterization analysis.
 
 """Stage 2 — Stationary rest noise characterisation."""
+
 from __future__ import annotations
 
 import logging

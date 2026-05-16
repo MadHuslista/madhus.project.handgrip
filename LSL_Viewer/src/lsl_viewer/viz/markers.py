@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 # Pure NDJSON loader  (unchanged from original)
 # ---------------------------------------------------------------------------
 
+
 def _load_marker_events(cfg: DictConfig) -> list[dict[str, Any]]:
     # @brief Parse the optional calibration NDJSON marker file.
     # @param cfg Hydra configuration.
@@ -55,9 +56,7 @@ def _load_marker_events(cfg: DictConfig) -> list[dict[str, Any]]:
         event = payload.get("event", record.get("event"))
         if allowed and event not in allowed:
             continue
-        ts = record.get(
-            "lsl_timestamp", record.get("lsl_ts", payload.get("lsl_ts"))
-        )
+        ts = record.get("lsl_timestamp", record.get("lsl_ts", payload.get("lsl_ts")))
         if ts is None:
             continue
         try:
@@ -70,6 +69,7 @@ def _load_marker_events(cfg: DictConfig) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Cache management  (unchanged from v0.3.0 — fixes per-frame re-read bug)
 # ---------------------------------------------------------------------------
+
 
 def refresh_marker_cache(state: ViewerState, cfg: DictConfig) -> None:
     # @brief Reload marker events only when the NDJSON file mtime has changed.
@@ -104,6 +104,7 @@ def refresh_marker_cache(state: ViewerState, cfg: DictConfig) -> None:
 # ---------------------------------------------------------------------------
 # ECharts marker position helper  (replaces Plotly get_marker_shapes)
 # ---------------------------------------------------------------------------
+
 
 def get_marker_x_positions(
     state: ViewerState,

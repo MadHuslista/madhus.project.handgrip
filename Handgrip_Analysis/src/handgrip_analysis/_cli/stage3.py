@@ -2,6 +2,7 @@
 # @brief Package-native CLI entrypoint for Stage 3 analysis.
 
 """Entry point for ha-stage3: runs Stage 3 (loaded drift) analysis via the package-native pipeline."""
+
 from __future__ import annotations
 
 import sys

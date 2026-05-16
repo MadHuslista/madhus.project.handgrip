@@ -2,6 +2,7 @@
 # @brief Package-native CLI entrypoint for Stage 6 review analysis.
 
 """Entry point for ha-stage6-review: runs the Stage 6 filter family review via the package-native pipeline."""
+
 from __future__ import annotations
 
 import sys

@@ -174,9 +174,7 @@ class ReferenceCsvSink:
                 "unit_label": sample.unit_label,
                 "timestamp_source": sample.timestamp_source,
                 "configured_frequency_hz": (
-                    ""
-                    if not math.isfinite(sample.configured_frequency_hz)
-                    else repr(sample.configured_frequency_hz)
+                    "" if not math.isfinite(sample.configured_frequency_hz) else repr(sample.configured_frequency_hz)
                 ),
                 "session_id": sample.session_id or "",
             }

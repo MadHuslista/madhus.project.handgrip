@@ -29,9 +29,7 @@ LIBRARY_ROOT = Path(__file__).parent.parent.parent.absolute()
 
 
 # Mode strings supported by this viewer
-_ALLOWED_MODES = frozenset(
-    {"live", "live_with_reference_validation", "csv_replay", "xdf_replay"}
-)
+_ALLOWED_MODES = frozenset({"live", "live_with_reference_validation", "csv_replay", "xdf_replay"})
 
 # Register structured config schema before the decorator is processed
 register_config()
@@ -52,6 +50,7 @@ def app(cfg: DictConfig) -> int:
     )
 
     from omegaconf import OmegaConf
+
     log.info(
         "Starting dual-native-stream viewer with config:\n%s",
         OmegaConf.to_yaml(cfg, resolve=True),
@@ -60,28 +59,29 @@ def app(cfg: DictConfig) -> int:
     # ── Mode validation ───────────────────────────────────────────────────
     mode = str(cfg.mode)
     if mode not in _ALLOWED_MODES:
-        raise RuntimeError(
-            f"Unsupported mode={mode!r}. "
-            f"Allowed modes: {sorted(_ALLOWED_MODES)}"
-        )
+        raise RuntimeError(f"Unsupported mode={mode!r}. Allowed modes: {sorted(_ALLOWED_MODES)}")
 
     # ── Mode dispatch ─────────────────────────────────────────────────────
     if mode == "live":
         from lsl_viewer.viz.app import run_live_mode_nicegui
+
         return run_live_mode_nicegui(cfg, validate_reference=False)
 
     if mode == "live_with_reference_validation":
         from lsl_viewer.viz.app import run_live_mode_nicegui
+
         return run_live_mode_nicegui(cfg, validate_reference=True)
 
     if mode == "csv_replay":
         from lsl_viewer.core.replay import load_csv_replay
         from lsl_viewer.viz.app import run_replay_mode_nicegui
+
         return run_replay_mode_nicegui(cfg, load_csv_replay(cfg), mode)
 
     if mode == "xdf_replay":
         from lsl_viewer.core.replay import load_xdf_replay
         from lsl_viewer.viz.app import run_replay_mode_nicegui
+
         return run_replay_mode_nicegui(cfg, load_xdf_replay(cfg), mode)
 
     raise AssertionError("Unreachable mode dispatch")  # pragma: no cover

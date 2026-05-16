@@ -2,6 +2,7 @@
 # @brief Shared helper utilities for stage analyzers.
 
 """Common helpers for stage analyzers."""
+
 from __future__ import annotations
 
 from typing import Mapping, Sequence

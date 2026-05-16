@@ -1,4 +1,5 @@
-"""Unit tests for lsl_bridge.core.parser.D2LineParser.
+"""
+Unit tests for lsl_bridge.core.parser.D2LineParser.
 
 Tests use a minimal stub for the events outlet so the parser can be tested
 without any LSL runtime dependency.
@@ -9,11 +10,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from omegaconf import OmegaConf
-
 from lsl_bridge.core.parser import D2LineParser
 from lsl_bridge.types import ParsedTargetSample
-
+from omegaconf import OmegaConf
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -85,6 +84,7 @@ class TestD2Parsing:
         sample = parser.feed(line, 0.0, 0)
         assert sample is not None
         import math
+
         assert math.isnan(sample.target_raw_count)
 
     def test_empty_line_returns_none(self):

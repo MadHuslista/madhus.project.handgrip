@@ -148,7 +148,12 @@ class SessionManager:
         """Write `session_manifest.yaml`."""
 
         with self.paths.manifest.open("w", encoding="utf-8") as fh:
-            yaml.safe_dump(self.manifest_dict(extra_manifest=extra_manifest), fh, sort_keys=False, allow_unicode=True)
+            yaml.safe_dump(
+                self.manifest_dict(extra_manifest=extra_manifest),
+                fh,
+                sort_keys=False,
+                allow_unicode=True,
+            )
 
     def copy_component_configs(self) -> None:
         # @brief Copy configured component snapshots into the session folder.

@@ -78,6 +78,7 @@ class LoggingConfig:
 # Stage 6 scoring weights
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 # @brief Composite score weights for Stage 6 filter-family review.
 # @param review_weight Weight for review ranking component.
@@ -105,9 +106,7 @@ class Stage6ScoringConfig:
     def __post_init__(self) -> None:
         total = self.review_weight + self.design_weight
         if abs(total - 1.0) > 1e-9:
-            raise ValueError(
-                f"Stage6ScoringConfig weights must sum to 1.0, got {total:.6f}"
-            )
+            raise ValueError(f"Stage6ScoringConfig weights must sum to 1.0, got {total:.6f}")
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any] | None = None) -> "Stage6ScoringConfig":
@@ -123,6 +122,7 @@ class Stage6ScoringConfig:
 # ---------------------------------------------------------------------------
 # Root application config
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 # @brief Root application configuration aggregating all sub-configs.
@@ -158,6 +158,7 @@ class AppConfig:
 # ---------------------------------------------------------------------------
 # Hydra ConfigStore registration (optional — only when hydra-core is in use)
 # ---------------------------------------------------------------------------
+
 
 # @brief Register AppConfig with Hydra ConfigStore when Hydra is available.
 # @return None.

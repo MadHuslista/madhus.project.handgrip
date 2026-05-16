@@ -208,7 +208,9 @@ def suggest_ready_time(
     suggested = None if candidates.size == 0 else float(time_s[candidates[0]])
     log.debug(
         "suggest_ready_time: std_thr=%.4g, slope_thr=%.4g, suggested=%s s",
-        std_thr, slope_thr, f"{suggested:.2f}" if suggested is not None else "None",
+        std_thr,
+        slope_thr,
+        f"{suggested:.2f}" if suggested is not None else "None",
     )
     return {
         "suggested_ready_time_s": suggested,
@@ -220,6 +222,7 @@ def suggest_ready_time(
 # ---------------------------------------------------------------------------
 # Spectral analysis
 # ---------------------------------------------------------------------------
+
 
 ##
 # @brief Compute Welch PSD with adaptive segment sizing.
@@ -365,6 +368,7 @@ def bandpower(f: np.ndarray, pxx: np.ndarray, low_hz: float, high_hz: float) -> 
 # Noise characterisation
 # ---------------------------------------------------------------------------
 
+
 ##
 # @brief Compute Allan deviation curve over averaging times.
 # @param y Input signal.
@@ -416,6 +420,7 @@ def linear_trend(y: np.ndarray, time_s: np.ndarray) -> tuple[float, float]:
 # ---------------------------------------------------------------------------
 # Event detection and metrics
 # ---------------------------------------------------------------------------
+
 
 ##
 # @brief Detect above-threshold transient events in a signal.
@@ -597,7 +602,8 @@ def best_event_metrics(
         "event_end_s": float("nan"),
     }
     events = detect_events(
-        y, fs,
+        y,
+        fs,
         baseline_s=baseline_s,
         threshold_sigma=threshold_sigma,
         min_duration_s=min_duration_s,
@@ -622,20 +628,17 @@ def best_event_metrics(
     y90 = baseline + 0.9 * rise
     c10 = np.where(seg_y >= y10)[0]
     c90 = np.where(seg_y >= y90)[0]
-    rise_10_90 = (
-        float(seg_t[c90[0]] - seg_t[c10[0]])
-        if c10.size and c90.size
-        else float("nan")
-    )
+    rise_10_90 = float(seg_t[c90[0]] - seg_t[c10[0]]) if c10.size and c90.size else float("nan")
 
     dy = np.gradient(seg_y, seg_t)
     # TAIL_FRACTION (0.80) defines the plateau window boundary.
-    tail = seg_y[int(TAIL_FRACTION * len(seg_y)):]
+    tail = seg_y[int(TAIL_FRACTION * len(seg_y)) :]
     plateau_std = float(np.std(tail)) if len(tail) > 1 else float("nan")
 
     log.debug(
         "best_event_metrics: n_events=%d, peak=%.4g, rise_10_90=%.4f s",
-        len(events), peak_value,
+        len(events),
+        peak_value,
         rise_10_90 if np.isfinite(rise_10_90) else float("nan"),
     )
     return {
@@ -653,6 +656,7 @@ def best_event_metrics(
 # ---------------------------------------------------------------------------
 # Filter application
 # ---------------------------------------------------------------------------
+
 
 ##
 # @brief Apply one declarative filter specification to a signal.
@@ -712,9 +716,7 @@ def apply_filter_spec(y: np.ndarray, fs: float, spec: dict[str, Any]) -> np.ndar
         order = int(spec.get("order", 2))
         low_hz = float(spec["low_hz"])
         high_hz = float(spec["high_hz"])
-        sos = signal.butter(
-            order, [low_hz, high_hz], btype="bandpass", fs=fs, output="sos"
-        )
+        sos = signal.butter(order, [low_hz, high_hz], btype="bandpass", fs=fs, output="sos")
         return signal.sosfiltfilt(sos, y)
 
     if filter_type == "one_pole_lowpass":

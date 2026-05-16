@@ -2,6 +2,7 @@
 
 Dependency chain: state, core/signals, core/sampling
 """
+
 from __future__ import annotations
 
 import logging
@@ -27,7 +28,7 @@ except Exception:
 LOGGER = logging.getLogger(__name__)
 
 
-## @brief Build plot figure.
+# @brief Build plot figure.
 #
 #  @param app_state Parameter description.
 #  @return Constructed object for this operation.
@@ -46,13 +47,15 @@ def build_plot_figure(app_state: AppState) -> go.Figure:
         if value is not None:
             points.append((frame.host_ts, value))
 
-    if app_state.mode == 'active_send':
+    if app_state.mode == "active_send":
         factor = int(cfg.ui.active_send_render_downsample_factor)
     else:
         factor = int(cfg.ui.modbus_rtu_render_downsample_factor)
 
     max_render_points = int(cfg.ui.max_render_plot_points)
-    render_points = downsample_points_for_render(points, factor=factor, max_points=max_render_points)
+    render_points = downsample_points_for_render(
+        points, factor=factor, max_points=max_render_points
+    )
 
     if render_points:
         if np is not None:
@@ -67,32 +70,30 @@ def build_plot_figure(app_state: AppState) -> go.Figure:
 
         trace_type = str(cfg.ui.plot_trace_type).lower()
         trace_cls = (
-            go.Scattergl
-            if trace_type == 'scattergl' and hasattr(go, 'Scattergl')
-            else go.Scatter
+            go.Scattergl if trace_type == "scattergl" and hasattr(go, "Scattergl") else go.Scatter
         )
         label = get_plot_signal_label(cfg)
         fig.add_trace(
             trace_cls(
                 x=xs,
                 y=ys,
-                mode='lines',
+                mode="lines",
                 name=label,
-                hovertemplate='t=%{x:.6f}s<br>%{fullData.name}=%{y:.6g}<extra></extra>',
+                hovertemplate="t=%{x:.6f}s<br>%{fullData.name}=%{y:.6g}<extra></extra>",
             )
         )
 
     label = get_plot_signal_label(cfg)
     fig.update_layout(
-        title=f'Live signal ({label})',
-        xaxis_title='Seconds since current plot window start',
+        title=f"Live signal ({label})",
+        xaxis_title="Seconds since current plot window start",
         yaxis_title=label,
         margin=dict(l=20, r=20, t=40, b=20),
         height=int(cfg.ui.plot_height_px),
-        template='plotly_white',
-        uirevision='plot-x-window',
-        transition={'duration': 0},
+        template="plotly_white",
+        uirevision="plot-x-window",
+        transition={"duration": 0},
     )
-    fig.update_xaxes(uirevision='plot-x-window')
-    fig.update_yaxes(uirevision=f'plot-y:{signal_key}')
+    fig.update_xaxes(uirevision="plot-x-window")
+    fig.update_yaxes(uirevision=f"plot-y:{signal_key}")
     return fig

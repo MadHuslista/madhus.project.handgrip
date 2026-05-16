@@ -4,6 +4,7 @@ All dataclasses here are pure data containers with no I/O or side effects.
 ``MeasurementFrame`` is the primary unit of data flowing through the system:
   transport → worker → AppState → (logger, publisher, UI)
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -11,20 +12,20 @@ from typing import Any
 
 
 @dataclass
-## @brief Represents the SerialSettings component.
+# @brief Represents the SerialSettings component.
 class SerialSettings:
     """Snapshot of active serial-port parameters."""
 
-    port: str = ''
+    port: str = ""
     baudrate: int = 9600
     bytesize: int = 8
-    parity: str = 'N'
+    parity: str = "N"
     stopbits: int = 1
     timeout: float = 0.2
 
 
 @dataclass
-## @brief Represents the MeasurementFrame component.
+# @brief Represents the MeasurementFrame component.
 class MeasurementFrame:
     """One decoded measurement snapshot from the acquisition board.
 
@@ -45,12 +46,12 @@ class MeasurementFrame:
     mode: str
     raw_transport: dict[str, Any]
     interpreted: dict[str, Any]
-    session_id: str = ''
+    session_id: str = ""
     board_profile: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
-## @brief Represents the PortInfo component.
+# @brief Represents the PortInfo component.
 class PortInfo:
     """Metadata for a discovered serial port, with a relevance score."""
 
@@ -64,7 +65,7 @@ class PortInfo:
 
 
 @dataclass
-## @brief Represents the ActiveSendStats component.
+# @brief Represents the ActiveSendStats component.
 class ActiveSendStats:
     """Running counters for the active-send binary parser.
 
@@ -89,8 +90,8 @@ class ActiveSendStats:
     warning_events_total: int = 0
     warning_suppressed: int = 0
     last_warning_emit_monotonic: float = 0.0
-    last_good_frame_hex: str = ''
-    last_bad_candidate_hex: str = ''
+    last_good_frame_hex: str = ""
+    last_bad_candidate_hex: str = ""
     timestamp_reanchors: int = 0
     timestamp_drift_reanchors: int = 0
     timestamp_parser_reanchors: int = 0

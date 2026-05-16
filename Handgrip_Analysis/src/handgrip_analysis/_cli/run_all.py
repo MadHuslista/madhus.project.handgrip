@@ -2,6 +2,7 @@
 # @brief Package-native CLI entrypoint for running all manifest stages.
 
 """Entry point for ha-run-all: runs all stages in a manifest via the package-native pipeline."""
+
 from __future__ import annotations
 
 from handgrip_analysis.cli import run_all_main

@@ -10,6 +10,7 @@ otherwise.
 
 Dependency chain: none (no internal imports)
 """
+
 from __future__ import annotations
 
 import logging
@@ -28,7 +29,7 @@ except Exception:
 
 
 @dataclass
-## @brief Represents the SamplingStats component.
+# @brief Represents the SamplingStats component.
 class SamplingStats:
     """Rolling window of inter-frame intervals with outlier rejection.
 
@@ -41,7 +42,7 @@ class SamplingStats:
     last_processed_ts: float | None = None
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
-    ## @brief Reset window.
+    # @brief Reset window.
     #
     #  @param self Parameter description.
     #  @param window_size Parameter description.
@@ -51,7 +52,7 @@ class SamplingStats:
             self.window_dts_s = deque(maxlen=max(2, int(window_size)))
             self.last_processed_ts = None
 
-    ## @brief Reset all.
+    # @brief Reset all.
     #
     #  @param self Parameter description.
     #  @param window_size Parameter description.
@@ -63,7 +64,7 @@ class SamplingStats:
             self.dropped_samples_max_rate = 0
             self.last_processed_ts = None
 
-    ## @brief Record received samples.
+    # @brief Record received samples.
     #
     #  @param self Parameter description.
     #  @param count Parameter description.
@@ -71,7 +72,7 @@ class SamplingStats:
         with self._lock:
             self.received_samples += int(count)
 
-    ## @brief Add dropped samples.
+    # @brief Add dropped samples.
     #
     #  @param self Parameter description.
     #  @param count Parameter description.
@@ -79,7 +80,7 @@ class SamplingStats:
         with self._lock:
             self.dropped_samples_max_rate += int(count)
 
-    ## @brief Get last processed ts.
+    # @brief Get last processed ts.
     #
     #  @param self Parameter description.
     #  @return Retrieved value for this request.
@@ -87,7 +88,7 @@ class SamplingStats:
         with self._lock:
             return self.last_processed_ts
 
-    ## @brief Record processed frame.
+    # @brief Record processed frame.
     #
     #  @param self Parameter description.
     #  @param host_ts Parameter description.
@@ -99,7 +100,7 @@ class SamplingStats:
                     self.window_dts_s.append(dt)
             self.last_processed_ts = host_ts
 
-    ## @brief Snapshot.
+    # @brief Snapshot.
     #
     #  @param self Parameter description.
     #  @param outlier_low_ratio Parameter description.
@@ -150,6 +151,7 @@ class SamplingStats:
 # ---------------------------------------------------------------------------
 # Display downsampling
 # ---------------------------------------------------------------------------
+
 
 def downsample_points_for_render(
     points: list[tuple[float, float]],

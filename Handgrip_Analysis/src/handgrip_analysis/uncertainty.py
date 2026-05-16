@@ -2,6 +2,7 @@
 # @brief Uncertainty and robust summary helper functions.
 
 """Uncertainty helpers for trial-level aggregation."""
+
 from __future__ import annotations
 
 from typing import Iterable, Literal

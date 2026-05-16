@@ -2,6 +2,7 @@
 # @brief Package-native CLI entrypoint for Stage 4 analysis.
 
 """Entry point for ha-stage4: runs Stage 4 (grip dynamics) analysis via the package-native pipeline."""
+
 from __future__ import annotations
 
 import sys

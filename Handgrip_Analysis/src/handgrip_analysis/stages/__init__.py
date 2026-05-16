@@ -2,6 +2,7 @@
 # @brief Trial-aware stage analyzer registry.
 
 """Trial-aware stage analyzer registry."""
+
 from __future__ import annotations
 
 from importlib import import_module
