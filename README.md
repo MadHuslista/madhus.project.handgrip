@@ -8,18 +8,20 @@
 - The documentation is organized from **high-level operation** to **low-level implementation**: start here, then move to workflows, then component docs, then configuration and development references.
 - This root README is intentionally short. The full documentation map starts at [`docs/index.md`](docs/index.md).
 
-## Who should read what
+### System Architecture
 
-| I am...                                   | Start here                                                                                                   | Then read                                                                                                                                                                                                                                  |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Principal investigator / PhD user         | [`docs/start-here.md`](docs/start-here.md)                                                                   | [`docs/system-overview.md`](docs/system-overview.md), [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                     |
-| Student operator running experiments      | [`docs/workflows/physical-setup.md`](docs/workflows/physical-setup.md)                                       | [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md), [`docs/workflows/full-live-viewer-quickstart.md`](docs/workflows/full-live-viewer-quickstart.md), [`docs/troubleshooting/index.md`](docs/troubleshooting/index.md) |
-| Student developer maintaining Python code | [`docs/development/python-project-structure-primer.md`](docs/development/python-project-structure-primer.md) | Component docs under `*/docs/index.md`, [`docs/architecture/repository-layout.md`](docs/architecture/repository-layout.md), [`docs/configuration/index.md`](docs/configuration/index.md)                                                   |
-| Firmware maintainer                       | [`Handgrip_Firmware/README.md`](Handgrip_Firmware/README.md)                                                 | [`Handgrip_Firmware/docs/index.md`](Handgrip_Firmware/docs/index.md), [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md)                                                                                               |
-| Calibration/analysis maintainer           | [`Handgrip_Calibration/docs/index.md`](Handgrip_Calibration/docs/index.md)                                   | [`Handgrip_Analysis/docs/index.md`](Handgrip_Analysis/docs/index.md), [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)     |
-| Future external collaborator              | [`docs/system-overview.md`](docs/system-overview.md)                                                         | [`docs/architecture/index.md`](docs/architecture/index.md), [`docs/hardware/index.md`](docs/hardware/index.md), [`docs/archive/index.md`](docs/archive/index.md)                                                                           |
-
-## System at a glance
+```mermaid
+flowchart TD
+    Hardware[PM58 Load Cell \n& Acquisition Board] -->|Modbus RS485| RS485_GUI[RS485 GUI]
+    RS485_GUI -->|ZeroMQ IPC| Bridge(LSL_Bridge)
+    FW(Handgrip_Firmware \nADC: HX711 &\nMCU: Arduino Nano) -->|UART Serial| Bridge
+    Bridge --> |s: HandgripReference| Streams
+    Bridge ~~~ |"LSL Streams\n Sync capables"| Streams(Dual Streams)
+    Bridge --> |s: HandgripTarget| Streams
+    Streams -->| Live | Viewer(LSL_Viewer)
+    Streams -->|Captured Data| Calibration(Handgrip_Calibration)
+    Calibration -->|Calibration Data/Files| Analysis(Handgrip_Analysis)
+```
 
 ```text
 Physical force
@@ -45,6 +47,33 @@ HandgripTarget + HandgripReference
   → Handgrip_Calibration for protocol recording, fitting, and reports
   → Handgrip_Analysis for offline signal characterization and filter design
 ```
+
+### Modules
+
+Following the system architecture, here are the entry points and purposes for each module:
+
+- [PM58 Load Cell & Acquisition Board](docs/workflows/physical_setup.md): Physical sensing and wiring stack for the setup of the reference-force acquisition board. 
+- [RS485_GUI](RS485_GUI/docs/index.md): GUI tool for connecting to the PM58 acquisition board via Modbus Active-Send mode over RS485. Provides streaming to the LSL_Bridge layer on real-time, along with live value monitoring. 
+- [Handgrip_Firmware](Handgrip_Firmware/docs/index.md): Arduino Nano firmware that samples the Handgrip's HX711 load-cell data, timestamps frames, and emits calibration-ready telemetry over UART serial. 
+- [LSL_Bridge](LSL_Bridge/docs/index.md): Middleware that ingests handgrip(target)/PM58(reference) sources and publishes synchronized Lab Streaming Layer streams (`HandgripTarget`, `HandgripReference`). 
+- [LSL_Viewer](LSL_Viewer/docs/index.md): Real-time dashboard for synchronized real time stream monitoring, timing inspection, and XY correlation quality checks. 
+- [Handgrip_Calibration](Handgrip_Calibration/docs/index.md): Calibration workflow that maps raw ADC counts into Newtons using reference-device ground truth. Evalautes multiple mathematical models to find the best fit, and returns report with model and exact parameters, with charts justification
+- [Handgrip_Analysis](Handgrip_Analysis/docs/index.md): Frequency analysis for noise/drift/dynamics of the Handgrip's calibrated force signal. Evalulate an extensible set of predefined DSP filters, and returns exact filter parameters to be set on the LSL_Bridge filtered channel for production real-time streaming. 
+
+
+
+## What to read when
+
+| I want...                             | Start here                                                                                                   | Then read                                                                                                                                                                                                                                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Understand what the whole suite does. | [`docs/start-here.md`](docs/start-here.md)                                                                   | [`docs/system-overview.md`](docs/system-overview.md), [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                     |
+| See what to connect physically        | [`docs/workflows/physical-setup.md`](docs/workflows/physical-setup.md)                                       | [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md), [`docs/workflows/full-live-viewer-quickstart.md`](docs/workflows/full-live-viewer-quickstart.md), [`docs/troubleshooting/index.md`](docs/troubleshooting/index.md) |
+| Understand repo structure             | [`docs/development/python-project-structure-primer.md`](docs/development/python-project-structure-primer.md) | Component docs under `*/docs/index.md`, [`docs/architecture/repository-layout.md`](docs/architecture/repository-layout.md), [`docs/configuration/index.md`](docs/configuration/index.md)                                                   |
+| Load the Handgrip Firmware            | [`Handgrip_Firmware/README.md`](Handgrip_Firmware/README.md)                                                 | [`Handgrip_Firmware/docs/index.md`](Handgrip_Firmware/docs/index.md), [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md)                                                                                               |
+| Calibrate the Handgrip                | [`Handgrip_Calibration/docs/index.md`](Handgrip_Calibration/docs/index.md)                                   | [`Handgrip_Analysis/docs/index.md`](Handgrip_Analysis/docs/index.md), [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)     |
+| Extend the features                   | [`docs/system-overview.md`](docs/system-overview.md)                                                         | [`docs/architecture/index.md`](docs/architecture/index.md), [`docs/hardware/index.md`](docs/hardware/index.md), [`docs/archive/index.md`](docs/archive/index.md)                                                                           |
+
+
 
 ## Fastest safe quickstart
 
@@ -148,12 +177,3 @@ High-level navigation:
 - [`docs/examples/`](docs/examples/) — curated example outputs.
 - [`docs/archive/`](docs/archive/) — historical/deprecated material.
 
-## Current known issues
-
-| Issue                                                                                                                                                    | Status                                 | Handling                                                                                                                                   |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Some detailed docs linked from this root README are created in later phases                                                                              | Expected during documentation refactor | Each missing target path is part of the v0.3 plan; do not treat the link as final until all phases are complete.                           |
-| `Handgrip_Firmware/README.md` may still contain legacy `D,<seq>,...` serial examples                                                                     | Known documentation drift              | Update it to the current `D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>` schema in the firmware documentation phase.        |
-| Calibration configs may reference `../RS485_GUI/config.yaml` instead of `../RS485_GUI/config/config.yaml`                                                | Known path issue                       | Fix in the calibration configuration phase before relying on session config snapshots.                                                     |
-| `protocol_static_reversible_staircase_v3.yaml` is the intended primary calibration protocol, while older defaults may still point to static staircase v2 | Known protocol-default ambiguity       | Make v3 explicit in operator docs; later align CLI defaults or document compatibility behavior.                                            |
-| New setup images are expected but may not yet be committed                                                                                               | Known asset dependency                 | Add `pm58_n_handgrip_setup.jpg`, `acq_board_n_pm58_n_handgrip_setup.jpg`, and `force_application_setup.jpg` under `docs/hardware/assets/`. |
