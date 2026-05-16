@@ -2,51 +2,77 @@
 
 ## Summary
 
-- **Purpose:** Bridge that converts target firmware serial data and reference IPC messages into Lab Streaming Layer streams.
-- This page is the component-level documentation map.
-- Start here when you know this component is the one you need, then follow the specific workflow/configuration/architecture links.
-- Some linked files are created in later phases of the documentation refactor; this index defines the intended stable navigation structure.
+- `LSL_Bridge` is the runtime boundary that publishes the Handgrip Suite's canonical Lab Streaming Layer (LSL) streams.
+- It consumes the target firmware UART protocol (`M2` metadata and `D2` data lines) and the RS485 GUI ZeroMQ IPC topic (`rs485.measurement.v1`).
+- It publishes `HandgripTarget`, `HandgripReference`, and `HandgripComponentEvents`.
+- This component documentation explains how to run the bridge, configure streams, preserve timestamp semantics, extend channels safely, and validate parser/CSV behavior.
 
 ## Audience
 
-| Reader                | Use this page to...                                                            |
-| --------------------- | ------------------------------------------------------------------------------ |
-| Operator              | Find the minimal run/validation workflow for this component.                   |
-| Maintainer            | Find configuration and architecture references before editing code.            |
-| Student developer     | Learn where behavior lives and which tests/validation steps should be updated. |
-| External collaborator | Understand this component's boundary within the full Handgrip Suite.           |
+| Reader | Use this page to... |
+| --- | --- |
+| Operator | Start the bridge and confirm the expected LSL streams. |
+| Maintainer | Find stream, timestamping, CSV, logging, and processing configuration references. |
+| Student developer | Learn where parser, publisher, timestamp, outlet, and CSV behavior lives before editing code. |
+| External collaborator | Understand how target serial and RS485 IPC become canonical LSL streams. |
 
 ## Component contract
 
-- `LSL_Bridge` owns LSL publication for the system.
-- Downstream tools should consume `HandgripTarget` and `HandgripReference` rather than directly coupling to serial/IPC sources.
-- Stream names and channel schemas are cross-component contracts.
+`LSL_Bridge` owns the conversion from hardware-facing transports into canonical LSL streams.
+
+```text
+Handgrip_Firmware UART D2/M2  ─┐
+                               ├─> LSL_Bridge ──> HandgripTarget
+RS485_GUI rs485.measurement.v1 ─┘                  HandgripReference
+                                                   HandgripComponentEvents
+```
+
+Downstream tools should consume the bridge outputs instead of reading firmware serial or RS485 IPC directly.
 
 ## Documentation map
 
-| Document                                     | Purpose                                                           |
-| -------------------------------------------- | ----------------------------------------------------------------- |
-| [`quickstart.md`](quickstart.md)             | Start bridge, select serial port, and confirm LSL streams.        |
-| [`configuration.md`](configuration.md)       | Full `conf/config.yaml` and logging-config reference.             |
-| [`stream-contracts.md`](stream-contracts.md) | `HandgripTarget`, `HandgripReference`, and event stream schemas.  |
-| [`timestamping.md`](timestamping.md)         | Host receive vs device-clock anchoring, gaps, and drift handling. |
-| [`architecture.md`](architecture.md)         | Serial reader, IPC subscriber, outlets, CSV sinks, processors.    |
-| [`development.md`](development.md)           | How to add channels, parsers, or processing stages safely.        |
+| Document | Purpose |
+| --- | --- |
+| [`quickstart.md`](quickstart.md) | Start bridge, override serial port, confirm target/reference/event streams. |
+| [`configuration.md`](configuration.md) | Full `conf/config.yaml` reference, including streams, serial, IPC, timestamping, CSV, processing, and logging. |
+| [`stream-contracts.md`](stream-contracts.md) | Component-specific target/reference/event stream schemas. |
+| [`timestamping.md`](timestamping.md) | Host receive vs device-clock anchor policy, drift guard, gap handling, and CSV/LSL timestamp meaning. |
+| [`architecture.md`](architecture.md) | Serial input, IPC input, LSL outlets, CSV sinks, processing pipeline, and event flow. |
+| [`development.md`](development.md) | How to add channels, change parser behavior, or add processing stages safely. |
 
-## Related system docs
+## Related root docs
 
-| System doc                                                                                   | Why it matters                                        |
-| -------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| [`../../docs/start-here.md`](../../docs/start-here.md)                                       | High-level introduction to the full suite.            |
-| [`../../docs/system-overview.md`](../../docs/system-overview.md)                             | Physical/software/dataflow map.                       |
-| [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md) | Cross-component stream and IPC contracts.             |
-| [`../../docs/configuration/index.md`](../../docs/configuration/index.md)                     | Configuration ownership and cross-component settings. |
-| [`../../docs/troubleshooting/index.md`](../../docs/troubleshooting/index.md)                 | Symptom-first debugging entry point.                  |
+| Root doc | Why it matters |
+| --- | --- |
+| [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md) | Root cross-component stream and IPC contract. |
+| [`../../docs/architecture/dataflow.md`](../../docs/architecture/dataflow.md) | End-to-end target/reference dataflow. |
+| [`../../docs/architecture/runtime-processes.md`](../../docs/architecture/runtime-processes.md) | Start order and process ownership. |
+| [`../../docs/architecture/timestamping-and-synchronization.md`](../../docs/architecture/timestamping-and-synchronization.md) | System-level timing model. |
+| [`../../docs/workflows/target-only-quickstart.md`](../../docs/workflows/target-only-quickstart.md) | Validate target firmware path through the bridge. |
+| [`../../docs/workflows/full-live-viewer-quickstart.md`](../../docs/workflows/full-live-viewer-quickstart.md) | Run RS485 GUI, bridge, and viewer together. |
 
-## Validation checklist for this docs index
+## Related component docs
 
-- [ ] The README links to this `docs/index.md`.
-- [ ] Every linked component doc exists by the end of the relevant documentation phase.
-- [ ] Component-specific docs link back to root system contracts where applicable.
-- [ ] Configuration docs include default, type/range, impact, safe-edit guidance, and failure modes.
-- [ ] Development docs identify files to edit, tests to update, and validation gates.
+| Component doc | Why it matters |
+| --- | --- |
+| [`../../Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md) | Target UART `M2`/`D2` contract consumed by the bridge. |
+| [`../../RS485_GUI/docs/ipc-schema.md`](../../RS485_GUI/docs/ipc-schema.md) | Reference IPC topic and payload produced by RS485 GUI. |
+| [`../../LSL_Viewer/docs/index.md`](../../LSL_Viewer/docs/index.md) | Main consumer for live stream visualization. |
+| [`../../Handgrip_Calibration/docs/protocols.md`](../../Handgrip_Calibration/docs/protocols.md) | Main consumer for target/reference calibration streams. |
+
+## First operational path
+
+1. Confirm target firmware emits D2 frames.
+2. Start `RS485_GUI` if the reference stream is needed.
+3. Start `LSL_Bridge` with the correct target serial port.
+4. Confirm `HandgripTarget`, `HandgripReference`, and `HandgripComponentEvents` appear as expected.
+5. Start `LSL_Viewer` or run `handgrip-cal preflight`.
+
+## Validation checklist
+
+- [ ] `quickstart.md` can start the bridge with explicit `serial.port=...`.
+- [ ] `configuration.md` explains every top-level `conf/config.yaml` section.
+- [ ] `stream-contracts.md` preserves target/reference/event stream schemas.
+- [ ] `timestamping.md` explains `host_receive` and `device_clock_anchor` policies.
+- [ ] `architecture.md` maps source modules to runtime responsibilities.
+- [ ] `development.md` explains safe extension steps and tests.

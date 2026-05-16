@@ -2,41 +2,14 @@
 
 ## Summary
 
-- `LSL_Bridge` owns the runtime conversion from target UART and reference IPC data into Lab Streaming Layer streams.
+- `LSL_Bridge` owns runtime conversion from target UART and RS485 IPC into Lab Streaming Layer streams.
 - The target side consumes current firmware `M2` / `D2` frames.
 - The reference side consumes `RS485_GUI` ZeroMQ messages on `rs485.measurement.v1`.
-- This component doc explains the bridge-specific implementation contract. The root contract is `docs/architecture/stream-contracts.md`.
-
-## Audience
-
-Read this document if you need to:
-
-- run or debug `LSL_Bridge`,
-- verify target/reference stream schemas,
-- extend bridge channel output,
-- update parser behavior,
-- understand what calibration and viewer modules expect from the bridge.
-
-## Status
-
-| Field                | Value                                       |
-| -------------------- | ------------------------------------------- |
-| Canonical            | Yes                                         |
-| Component            | `LSL_Bridge`                                |
-| Related root doc     | `docs/architecture/stream-contracts.md`     |
-| Related firmware doc | `Handgrip_Firmware/docs/serial-protocol.md` |
+- This document is the component-specific implementation contract. The root contract remains [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md).
 
 ## Inputs
 
 ### Target UART input
-
-`LSL_Bridge` reads the target handgrip firmware over serial.
-
-Current data frame:
-
-```text
-D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>
-```
 
 Current metadata frame:
 
@@ -44,127 +17,168 @@ Current metadata frame:
 M2,<payload_schema>,<firmware_version>,<git_sha>,<expected_rate_hz>,<scale_factor>,<scale_offset>,<unit>
 ```
 
-The bridge parser is strict by design. A malformed data line is dropped and logged instead of being guessed.
+Current data frame:
+
+```text
+D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>
+```
+
+The parser is strict. Malformed lines are dropped/logged instead of guessed.
 
 ### Reference IPC input
 
-`LSL_Bridge` subscribes to the RS485 GUI ZeroMQ publication.
+| Field | Value |
+| --- | --- |
+| Producer | `RS485_GUI` |
+| Consumer | `LSL_Bridge` |
+| Topic | `rs485.measurement.v1` |
+| Transport | ZeroMQ PUB/SUB |
+| Decoder | `RS485IpcReferencePublisher._decode_record()` |
 
-| Field    | Value                                                               |
-| -------- | ------------------------------------------------------------------- |
-| Producer | `RS485_GUI`                                                         |
-| Topic    | `rs485.measurement.v1`                                              |
-| Purpose  | Reference force measurements from the PM58/acquisition-board chain. |
+Required IPC fields:
+
+| Field | Meaning |
+| --- | --- |
+| `schema` | Must match `rs485.measurement.v1`. |
+| `reference_force_N` | Reference-force value published to LSL. |
+| `reference_clock_s` | Reference clock/sample time in seconds. |
+| `host_lsl_ts` | Host-side LSL timestamp from RS485 GUI. |
+
+Optional IPC fields preserved in `ReferenceSample`/CSV:
+
+| Field | Meaning |
+| --- | --- |
+| `seq` | Reference sequence, if available. |
+| `reference_status` | Reference/transport status. |
+| `mode` | Acquisition mode label. |
+| `signal_key` | Source signal key, normally `reference_force_N`. |
+| `host_unix_ts` | Host UNIX timestamp. |
+| `clock_source` | Reference clock source label. |
+| `unit_label` | Unit label, normally `N`. |
+| `timestamp_source` | Timestamp-source label. |
+| `configured_frequency_hz` | Configured board/source rate. |
+| `session_id` | Optional session ID. |
+| `board_profile` | Optional board profile metadata. |
 
 ## Outputs
 
 ### `HandgripTarget`
 
-| Field          | Value                                            |
-| -------------- | ------------------------------------------------ |
-| Producer       | `LSL_Bridge`                                     |
-| Source         | Firmware D2 frames                               |
-| Rate           | Irregular / target-timed                         |
+| Property | Value |
+| --- | --- |
+| Producer | `LSL_Bridge` target serial loop |
+| Source | firmware D2 frames |
+| LSL name | `HandgripTarget` |
+| LSL type | `Force` |
+| Nominal rate | `0.0` / irregular |
+| Schema metadata | `handgrip_target_stream.v2` |
 | Main consumers | `LSL_Viewer`, `Handgrip_Calibration`, recordings |
 
-Semantic channels:
+Channel order pushed to LSL:
 
-| Semantic name          | Source field    | Meaning                                         |
-| ---------------------- | --------------- | ----------------------------------------------- |
-| `device_clock_us`      | `timestamp_us`  | Device-local microsecond timestamp.             |
-| `target_raw_count`     | `raw_count`     | HX711 raw ADC count; calibration-authoritative. |
-| `target_current_units` | `current_units` | Firmware-scaled sanity value.                   |
-| `target_status`        | `status`        | Firmware acquisition bitfield.                  |
-| `target_sequence`      | `seq`           | Sample sequence number.                         |
+| Position | Label | Source | Meaning |
+| ---: | --- | --- | --- |
+| 0 | `seq` | D2 `seq` | Target sample sequence. |
+| 1 | `device_clock_us` | D2 `timestamp_us` | Firmware device clock in microseconds. |
+| 2 | `target_raw_count` | D2 `raw_count` | HX711 raw ADC count; calibration-authoritative. |
+| 3 | `target_current_units` | D2 `current_units` | Firmware-scaled force/value. |
+| 4 | `target_filtered_units` | bridge processing output | Filtered display/QA channel. |
+| 5 | `target_status` | D2 `status` | Firmware status bitfield. |
 
 ### `HandgripReference`
 
-| Field            | Value                                                        |
-| ---------------- | ------------------------------------------------------------ |
-| Producer         | `LSL_Bridge`                                                 |
-| Source           | RS485 GUI IPC measurement frames                             |
-| Recommended rate | 500 Hz when the acquisition board uses Active-Send at 500 Hz |
-| Main consumers   | `LSL_Viewer`, `Handgrip_Calibration`, recordings             |
+| Property | Value |
+| --- | --- |
+| Producer | `LSL_Bridge` RS485 IPC background publisher |
+| Source | `RS485_GUI` IPC |
+| LSL name | `HandgripReference` |
+| LSL type | `Force` |
+| Nominal rate | `500.0` |
+| Schema metadata | `handgrip_reference_stream.v2` |
+| Main consumers | `LSL_Viewer`, `Handgrip_Calibration`, recordings |
 
-Semantic channels depend on the active RS485 GUI and bridge configuration. Keep the reference force/net-force channel stable across viewer and calibration configs.
+Channel order pushed to LSL:
+
+| Position | Label | Source | Meaning |
+| ---: | --- | --- | --- |
+| 0 | `seq` | IPC `seq` or `-1` | Reference sample sequence. |
+| 1 | `reference_clock_s` | IPC `reference_clock_s` | Reference/sample clock in seconds. |
+| 2 | `reference_force_N` | IPC `reference_force_N` | Reference force used as calibration ground truth. |
+| 3 | `reference_status` | IPC `reference_status` | Reference/transport status bitfield. |
 
 ### `HandgripComponentEvents`
 
-This event stream is used for operational diagnostics.
+| Property | Value |
+| --- | --- |
+| Producer | `LSL_Bridge` `ComponentEventOutlet` |
+| LSL name | `HandgripComponentEvents` |
+| LSL type | `Markers` |
+| Schema | `handgrip_component_event.v1` |
+| Payload | single JSON string per event |
+| Purpose | Infrastructure markers for audit/debugging. |
 
-Typical event classes:
+Representative event names:
 
-- target metadata received,
-- target sequence gap,
-- parse warning,
-- reference IPC gap or malformed payload,
-- stream start/stop,
-- component state transitions.
+| Event | Meaning |
+| --- | --- |
+| `bridge_start` | Bridge process started. |
+| `bridge_stop` | Bridge process stopped. |
+| `target_serial_connected` | Target serial port opened and LSL outlet ready. |
+| `target_serial_error` | Serial exception/reconnect path. |
+| `target_metadata` | Firmware M2 metadata received. |
+| `target_sequence_gap` | D2 `seq` discontinuity detected. |
+| `target_timestamp_reanchor` | Timestamp resolver re-anchored target stream. |
+| `reference_ipc_connected` | ZMQ reference IPC subscriber connected. |
+| `reference_ipc_malformed` | IPC message failed schema/field decoding. |
+| `reference_sequence_gap` | Reference `seq` discontinuity detected. |
 
-## Parser behavior
+The bridge event stream is intentionally separate from calibration trial markers. `Handgrip_Calibration` owns experiment/protocol markers.
 
-The D2 parser expects:
+## CSV persistence contract
+
+Target CSV field order:
 
 ```text
-D2,<digits>,<digits>,<number>,<number>,<digits>
+host_unix_time_ns,lsl_timestamp_s,seq,device_clock_us,target_raw_count,target_current_units,target_filtered_units,target_status,raw_line
 ```
 
-Valid examples:
+Reference CSV field order:
 
 ```text
-D2,0,123456,-842133,0.000000,0
-D2,1,134002,-842129,nan,4
+host_unix_ts,received_lsl_ts,lsl_timestamp_s,seq,reference_clock_s,reference_force_N,reference_status,rs485_mode,rs485_signal_key,rs485_clock_source,unit_label,timestamp_source,configured_frequency_hz,session_id
 ```
 
-Invalid examples:
-
-```text
-legacy D-prefix three-field value frame
-D2,42,,123456,-842133,12.3,0
-D2,42,123456,-842133,12.3
-```
-
-Invalid target lines should trigger bridge logs. Do not “fix” this by making the parser permissive unless all downstream consumers are deliberately migrated.
+CSV files are local persistence of what the bridge published. They are useful for debug and replay, but calibration sessions should still use the canonical recording workflow when available.
 
 ## Calibration implications
 
-For calibration, the bridge must preserve:
+Calibration should fit:
 
-- `target_raw_count`,
-- target sample sequence,
-- target device timestamp,
-- reference force value,
-- host/LSL timestamps,
-- component metadata and configs.
-
-The calibration model should primarily use `target_raw_count` as the target-device input and reference force as ground truth.
-
-## When changing stream channels
-
-Changing a channel is a cross-component migration. Update together:
-
-1. `LSL_Bridge/conf/config.yaml`,
-2. bridge outlet/type code,
-3. parser tests,
-4. `LSL_Viewer/conf/config.yaml`,
-5. `Handgrip_Calibration/conf/*.yaml`,
-6. root stream contracts,
-7. this component doc.
-
-## Validation checklist
-
-```bash
-uv run pytest LSL_Bridge/tests/unit/test_parser.py
-uv run pytest LSL_Bridge/tests/unit/test_timestamping.py
-uv run pytest LSL_Bridge/tests/integration/test_csv_sinks.py
+```text
+reference_force_N = f(target_raw_count)
 ```
 
-Manual validation:
+Do not fit primarily against `target_current_units` or `target_filtered_units` unless a protocol explicitly states that it is validating already-deployed processing.
 
-1. Start firmware serial output.
-2. Start `LSL_Bridge`.
-3. Confirm `M2` metadata is logged.
-4. Confirm `HandgripTarget` appears in an LSL browser/viewer.
-5. Start `RS485_GUI`.
-6. Confirm `HandgripReference` appears.
-7. Confirm `Handgrip_Calibration preflight` resolves both streams.
+## Change-control rule
+
+If any field, channel label, channel order, stream name, or IPC field changes, update together:
+
+1. `LSL_Bridge/conf/config.yaml`,
+2. bridge source code,
+3. parser/reference publisher tests,
+4. root `docs/architecture/stream-contracts.md`,
+5. this document,
+6. `LSL_Viewer` config/docs,
+7. `Handgrip_Calibration` config/docs.
+
+## Validation commands
+
+```bash
+uv run pytest tests/unit/test_parser.py
+uv run pytest tests/unit/test_timestamping.py
+uv run pytest tests/integration/test_csv_sinks.py
+
+rg "HandgripTarget|HandgripReference|HandgripComponentEvents" LSL_Bridge/conf/config.yaml LSL_Bridge/docs
+rg "rs485.measurement.v1" LSL_Bridge/conf/config.yaml LSL_Bridge/docs ../../docs/architecture/stream-contracts.md
+```
