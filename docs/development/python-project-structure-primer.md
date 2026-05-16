@@ -169,14 +169,14 @@ uv run pytest
 
 Configuration is component-owned.
 
-| Component   | Main config path                                        | Docs                                         |
-| ----------- | ------------------------------------------------------- | -------------------------------------------- |
-| Firmware    | `platformio.ini`, `Handgrip_Firmware/Core/Inc/config.h` | [`Handgrip_Firmware/docs/configuration.md`](../../Handgrip_Firmware/docs/configuration.md)    |
-| RS485 GUI   | `RS485_GUI/config/config.yaml`                          | [`RS485_GUI/docs/configuration.md`](../../RS485_GUI/docs/configuration.md)            |
-| LSL Bridge  | `LSL_Bridge/conf/config.yaml`                           | [`LSL_Bridge/docs/configuration.md`](../../LSL_Bridge/docs/configuration.md)           |
-| LSL Viewer  | `LSL_Viewer/conf/config.yaml`                           | [`LSL_Viewer/docs/configuration.md`](../../LSL_Viewer/docs/configuration.md)           |
+| Component   | Main config path                                        | Docs                                                                                             |
+| ----------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Firmware    | `platformio.ini`, `Handgrip_Firmware/Core/Inc/config.h` | [`Handgrip_Firmware/docs/configuration.md`](../../Handgrip_Firmware/docs/configuration.md)       |
+| RS485 GUI   | `RS485_GUI/config/config.yaml`                          | [`RS485_GUI/docs/configuration.md`](../../RS485_GUI/docs/configuration.md)                       |
+| LSL Bridge  | `LSL_Bridge/conf/config.yaml`                           | [`LSL_Bridge/docs/configuration.md`](../../LSL_Bridge/docs/configuration.md)                     |
+| LSL Viewer  | `LSL_Viewer/conf/config.yaml`                           | [`LSL_Viewer/docs/configuration.md`](../../LSL_Viewer/docs/configuration.md)                     |
 | Calibration | `Handgrip_Calibration/conf/*.yaml`                      | [`Handgrip_Calibration/docs/configuration.md`](../../Handgrip_Calibration/docs/configuration.md) |
-| Analysis    | `Handgrip_Analysis/conf/**/*.yaml`                      | [`Handgrip_Analysis/docs/configuration.md`](../../Handgrip_Analysis/docs/configuration.md)    |
+| Analysis    | `Handgrip_Analysis/conf/**/*.yaml`                      | [`Handgrip_Analysis/docs/configuration.md`](../../Handgrip_Analysis/docs/configuration.md)       |
 
 If a config change affects stream names, channel names, serial schema, or calibration semantics, also update:
 

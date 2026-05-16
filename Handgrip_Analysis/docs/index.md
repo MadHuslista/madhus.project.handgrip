@@ -51,14 +51,14 @@
 
 ## Required reading by task
 
-| Task                             | Read                                                                                                              |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Run analysis for the first time  | [`quickstart.md`](quickstart.md), then [`stages.md`](stages.md)                                                   |
-| Understand what each stage means | [`stages.md`](stages.md)                                                                                          |
-| Edit config safely               | [`configuration.md`](configuration.md)                                                                            |
-| Interpret Stage 6                | [`filter-design.md`](filter-design.md), then [`reports-and-outputs.md`](reports-and-outputs.md)                   |
+| Task                             | Read                                                                                                                                                        |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Run analysis for the first time  | [`quickstart.md`](quickstart.md), then [`stages.md`](stages.md)                                                                                             |
+| Understand what each stage means | [`stages.md`](stages.md)                                                                                                                                    |
+| Edit config safely               | [`configuration.md`](configuration.md)                                                                                                                      |
+| Interpret Stage 6                | [`filter-design.md`](filter-design.md), then [`reports-and-outputs.md`](reports-and-outputs.md)                                                             |
 | Apply a filter recommendation    | [`filter-design.md`](filter-design.md), then [`LSL_Bridge/docs/configuration.md`](../../LSL_Bridge/docs/configuration.md) if deploying to bridge processing |
-| Add a stage/filter/metric        | [`development.md`](development.md), then [`architecture.md`](architecture.md)                                     |
+| Add a stage/filter/metric        | [`development.md`](development.md), then [`architecture.md`](architecture.md)                                                                               |
 
 ## Validation checklist for this docs index
 

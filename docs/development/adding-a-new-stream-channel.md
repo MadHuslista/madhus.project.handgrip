@@ -11,28 +11,28 @@
 
 ### Target channel from firmware D2
 
-| File                                        | Why                                                       |
-| ------------------------------------------- | --------------------------------------------------------- |
-| `Handgrip_Firmware/Core/Src/main.cpp`       | Emit the new field if firmware payload changes.           |
-| `Handgrip_Firmware/Core/Inc/config.h`       | Update schema metadata, comments, constants.              |
+| File                                                                                           | Why                                                       |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `Handgrip_Firmware/Core/Src/main.cpp`                                                          | Emit the new field if firmware payload changes.           |
+| `Handgrip_Firmware/Core/Inc/config.h`                                                          | Update schema metadata, comments, constants.              |
 | [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md) | Document the D2 schema change.                            |
-| `LSL_Bridge/src/lsl_bridge/core/parser.py`  | Parse the new field strictly.                             |
-| `LSL_Bridge/conf/config.yaml`               | Add channel name/metadata.                                |
-| [`LSL_Bridge/docs/stream-contracts.md`](../../LSL_Bridge/docs/stream-contracts.md)       | Document component-level stream schema.                   |
-| [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)     | Document root cross-component contract.                   |
-| `LSL_Viewer/conf/config.yaml`               | Add viewer label if displayed.                            |
-| `Handgrip_Calibration/conf/*.yaml`          | Add or explicitly ignore channel if calibration needs it. |
+| `LSL_Bridge/src/lsl_bridge/core/parser.py`                                                     | Parse the new field strictly.                             |
+| `LSL_Bridge/conf/config.yaml`                                                                  | Add channel name/metadata.                                |
+| [`LSL_Bridge/docs/stream-contracts.md`](../../LSL_Bridge/docs/stream-contracts.md)             | Document component-level stream schema.                   |
+| [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)                 | Document root cross-component contract.                   |
+| `LSL_Viewer/conf/config.yaml`                                                                  | Add viewer label if displayed.                            |
+| `Handgrip_Calibration/conf/*.yaml`                                                             | Add or explicitly ignore channel if calibration needs it. |
 
 ### Reference channel from RS485 GUI IPC
 
-| File                                                | Why                             |
-| --------------------------------------------------- | ------------------------------- |
-| `RS485_GUI/src/rs485_gui/io/publisher.py`           | Publish the new IPC field.      |
-| [`RS485_GUI/docs/ipc-schema.md`](../../RS485_GUI/docs/ipc-schema.md)                      | Document topic/payload alias.   |
-| `LSL_Bridge/src/lsl_bridge/publishers/reference.py` | Decode the new field.           |
-| `LSL_Bridge/conf/config.yaml`                       | Add reference stream channel.   |
-| `LSL_Viewer/conf/config.yaml`                       | Display/label if needed.        |
-| `Handgrip_Calibration/conf/*.yaml`                  | Use for recording/QA if needed. |
+| File                                                                 | Why                             |
+| -------------------------------------------------------------------- | ------------------------------- |
+| `RS485_GUI/src/rs485_gui/io/publisher.py`                            | Publish the new IPC field.      |
+| [`RS485_GUI/docs/ipc-schema.md`](../../RS485_GUI/docs/ipc-schema.md) | Document topic/payload alias.   |
+| `LSL_Bridge/src/lsl_bridge/publishers/reference.py`                  | Decode the new field.           |
+| `LSL_Bridge/conf/config.yaml`                                        | Add reference stream channel.   |
+| `LSL_Viewer/conf/config.yaml`                                        | Display/label if needed.        |
+| `Handgrip_Calibration/conf/*.yaml`                                   | Use for recording/QA if needed. |
 
 ## Data contracts affected
 

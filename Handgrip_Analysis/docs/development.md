@@ -10,14 +10,14 @@
 
 ### Files to edit
 
-| File area                                            | Purpose                             |
-| ---------------------------------------------------- | ----------------------------------- |
-| `src/handgrip_analysis/...` or `scripts/stageN_*.py` | Stage implementation.               |
-| `conf/analysis/stageN.yaml`                          | Stage defaults.                     |
-| [`Handgrip_Analysis/docs/stages.md`](stages.md)                   | Purpose/input/output documentation. |
-| [`Handgrip_Analysis/docs/configuration.md`](configuration.md)            | Config reference.                   |
-| [`Handgrip_Analysis/docs/reports-and-outputs.md`](reports-and-outputs.md)      | Output artifacts.                   |
-| `tests/`                                             | Unit/integration coverage.          |
+| File area                                                                 | Purpose                             |
+| ------------------------------------------------------------------------- | ----------------------------------- |
+| `src/handgrip_analysis/...` or `scripts/stageN_*.py`                      | Stage implementation.               |
+| `conf/analysis/stageN.yaml`                                               | Stage defaults.                     |
+| [`Handgrip_Analysis/docs/stages.md`](stages.md)                           | Purpose/input/output documentation. |
+| [`Handgrip_Analysis/docs/configuration.md`](configuration.md)             | Config reference.                   |
+| [`Handgrip_Analysis/docs/reports-and-outputs.md`](reports-and-outputs.md) | Output artifacts.                   |
+| `tests/`                                                                  | Unit/integration coverage.          |
 
 ### Required contract
 

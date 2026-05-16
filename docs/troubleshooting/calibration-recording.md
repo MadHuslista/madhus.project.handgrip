@@ -31,12 +31,12 @@ uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase
 
 ### Likely causes
 
-| Cause                                 | Check                   | Fix                                           |
-| ------------------------------------- | ----------------------- | --------------------------------------------- |
-| Recording stopped before data arrived | session folder contents | Re-run after preflight passes.                |
-| One stream missing                    | recording logs          | Fix LSL stream discovery.                     |
-| Output path changed                   | config/report path      | Inspect protocol/config output section.       |
-| Session ID mistyped                   | folder name             | Copy exact session ID from record output.     |
+| Cause                                 | Check                   | Fix                                                                                           |
+| ------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------- |
+| Recording stopped before data arrived | session folder contents | Re-run after preflight passes.                                                                |
+| One stream missing                    | recording logs          | Fix LSL stream discovery.                                                                     |
+| Output path changed                   | config/report path      | Inspect protocol/config output section.                                                       |
+| Session ID mistyped                   | folder name             | Copy exact session ID from record output.                                                     |
 | File naming differs                   | component version       | Use [`Handgrip_Calibration/docs/recording.md`](../../Handgrip_Calibration/docs/recording.md). |
 
 Minimum expected artifact classes:

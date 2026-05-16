@@ -203,11 +203,11 @@ The dataclass schema in `config/schema.py` is documentation/validation support, 
 
 ## Validation map
 
-| Change             | Tests/docs to update                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| Register decode    | `tests/unit/test_codec.py`, [`active-send-and-modbus.md`](active-send-and-modbus.md).                              |
+| Change             | Tests/docs to update                                                                                      |
+| ------------------ | --------------------------------------------------------------------------------------------------------- |
+| Register decode    | `tests/unit/test_codec.py`, [`active-send-and-modbus.md`](active-send-and-modbus.md).                     |
 | Signal registry    | `tests/unit/test_signals.py`, [`configuration.md`](configuration.md).                                     |
-| File logging       | `tests/integration/test_file_logger.py`, [`logging-and-outputs.md`](logging-and-outputs.md).                    |
-| IPC payload        | publisher tests/bridge tests where available, [`ipc-schema.md`](ipc-schema.md), root stream contracts. |
-| Active-Send parser | `tests/integration/test_active_send_parser.py`, [`active-send-and-modbus.md`](active-send-and-modbus.md).          |
+| File logging       | `tests/integration/test_file_logger.py`, [`logging-and-outputs.md`](logging-and-outputs.md).              |
+| IPC payload        | publisher tests/bridge tests where available, [`ipc-schema.md`](ipc-schema.md), root stream contracts.    |
+| Active-Send parser | `tests/integration/test_active_send_parser.py`, [`active-send-and-modbus.md`](active-send-and-modbus.md). |
 | Config key         | `tests/unit/test_config.py`, [`configuration.md`](configuration.md).                                      |

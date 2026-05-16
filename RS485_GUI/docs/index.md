@@ -19,16 +19,16 @@
 
 ## Component contract
 
-| Contract                     | Value                                         |
-| ---------------------------- | --------------------------------------------- |
-| Component                    | `RS485_GUI`                                   |
-| Primary command              | `uv run rs485-gui`                            |
-| Main config                  | `RS485_GUI/config/config.yaml`                |
-| Reference acquisition modes  | `active_send`, `modbus_rtu`                   |
-| IPC topic                    | `rs485.measurement.v1`                        |
-| IPC event topic              | `rs485.event.v1`                              |
-| Recommended published signal | `net_value` as `reference_force_N`            |
-| Downstream consumer          | `LSL_Bridge`                                  |
+| Contract                     | Value                                                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------------------- |
+| Component                    | `RS485_GUI`                                                                                  |
+| Primary command              | `uv run rs485-gui`                                                                           |
+| Main config                  | `RS485_GUI/config/config.yaml`                                                               |
+| Reference acquisition modes  | `active_send`, `modbus_rtu`                                                                  |
+| IPC topic                    | `rs485.measurement.v1`                                                                       |
+| IPC event topic              | `rs485.event.v1`                                                                             |
+| Recommended published signal | `net_value` as `reference_force_N`                                                           |
+| Downstream consumer          | `LSL_Bridge`                                                                                 |
 | Root contract doc            | [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md) |
 
 ## Documentation map

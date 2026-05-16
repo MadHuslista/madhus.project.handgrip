@@ -17,12 +17,12 @@
 
 ### Required decisions
 
-| Decision                                      | Document it in                                         |
-| --------------------------------------------- | ------------------------------------------------------ |
-| production vs diagnostic vs smoke             | [`protocols.md`](protocols.md)                                         |
-| primary fitting vs holdout vs validation-only | [`protocols.md`](protocols.md)                                         |
-| force levels and repeats                      | protocol YAML + operator doc                           |
-| quality gates                                 | protocol YAML + [`configuration.md`](configuration.md)                     |
+| Decision                                      | Document it in                                                                   |
+| --------------------------------------------- | -------------------------------------------------------------------------------- |
+| production vs diagnostic vs smoke             | [`protocols.md`](protocols.md)                                                   |
+| primary fitting vs holdout vs validation-only | [`protocols.md`](protocols.md)                                                   |
+| force levels and repeats                      | protocol YAML + operator doc                                                     |
+| quality gates                                 | protocol YAML + [`configuration.md`](configuration.md)                           |
 | expected outputs                              | [`reports-and-outputs.md`](reports-and-outputs.md) if new artifact class appears |
 
 ### Validation

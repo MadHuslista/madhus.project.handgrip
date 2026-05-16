@@ -31,7 +31,7 @@ Exact paths are config-owned. The run command should print or log the output dir
 
 | Artifact                                                                    | Purpose                                      |
 | --------------------------------------------------------------------------- | -------------------------------------------- |
-| [`README.md`](../../README.md) or stage report markdown                                        | Human-readable explanation of stage results. |
+| [`README.md`](../../README.md) or stage report markdown                     | Human-readable explanation of stage results. |
 | `metrics.json`                                                              | Machine-readable metrics.                    |
 | `metrics.csv`                                                               | Tabular metrics for review/spreadsheets.     |
 | `figures/` or `plots/`                                                      | Diagnostic plots.                            |

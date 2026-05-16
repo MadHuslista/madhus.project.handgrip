@@ -9,15 +9,15 @@
 
 ## Files to edit
 
-| File                                               | Purpose                                                       |
-| -------------------------------------------------- | ------------------------------------------------------------- |
-| `Handgrip_Calibration/conf/protocol_<name>.yaml`   | New protocol definition.                                      |
-| [`Handgrip_Calibration/docs/protocols.md`](../../Handgrip_Calibration/docs/protocols.md)           | Add protocol status and intended use.                         |
-| [`Handgrip_Calibration/docs/configuration.md`](../../Handgrip_Calibration/docs/configuration.md)       | Document any new config keys/sections.                        |
-| [`Handgrip_Calibration/docs/recording.md`](../../Handgrip_Calibration/docs/recording.md)           | Update capture/session expectations if outputs change.        |
+| File                                                                                                         | Purpose                                                       |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `Handgrip_Calibration/conf/protocol_<name>.yaml`                                                             | New protocol definition.                                      |
+| [`Handgrip_Calibration/docs/protocols.md`](../../Handgrip_Calibration/docs/protocols.md)                     | Add protocol status and intended use.                         |
+| [`Handgrip_Calibration/docs/configuration.md`](../../Handgrip_Calibration/docs/configuration.md)             | Document any new config keys/sections.                        |
+| [`Handgrip_Calibration/docs/recording.md`](../../Handgrip_Calibration/docs/recording.md)                     | Update capture/session expectations if outputs change.        |
 | [`Handgrip_Calibration/docs/reports-and-outputs.md`](../../Handgrip_Calibration/docs/reports-and-outputs.md) | Document new report/output artifacts.                         |
-| [`docs/workflows/handgrip-calibration.md`](../workflows/handgrip-calibration.md)           | Update only if protocol becomes operator-facing or canonical. |
-| tests under `Handgrip_Calibration/tests/`          | Validate config parsing, preflight, dry-run behavior.         |
+| [`docs/workflows/handgrip-calibration.md`](../workflows/handgrip-calibration.md)                             | Update only if protocol becomes operator-facing or canonical. |
+| tests under `Handgrip_Calibration/tests/`                                                                    | Validate config parsing, preflight, dry-run behavior.         |
 
 ## Data contracts affected
 
