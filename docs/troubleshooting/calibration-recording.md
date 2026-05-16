@@ -12,13 +12,13 @@ Use this guide when `handgrip-cal preflight`, `record`, `fit`, or `report` canno
 
 ### Likely causes
 
-| Cause | Check | Fix |
-| --- | --- | --- |
-| `LSL_Bridge` not running | terminal/logs | Start bridge. |
-| `RS485_GUI` not running | reference stream absent | Start GUI first. |
-| Wrong stream names | preflight output | Align config with `HandgripTarget` / `HandgripReference`. |
-| Stale duplicate LSL stream | repeated inconsistent discovery | Restart bridge/viewer/calibration. |
-| Wrong protocol config | command path | Use `conf/protocol_static_reversible_staircase_v3.yaml`. |
+| Cause                      | Check                           | Fix                                                       |
+| -------------------------- | ------------------------------- | --------------------------------------------------------- |
+| `LSL_Bridge` not running   | terminal/logs                   | Start bridge.                                             |
+| `RS485_GUI` not running    | reference stream absent         | Start GUI first.                                          |
+| Wrong stream names         | preflight output                | Align config with `HandgripTarget` / `HandgripReference`. |
+| Stale duplicate LSL stream | repeated inconsistent discovery | Restart bridge/viewer/calibration.                        |
+| Wrong protocol config      | command path                    | Use `conf/protocol_static_reversible_staircase_v3.yaml`.  |
 
 Command:
 
@@ -31,13 +31,13 @@ uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase
 
 ### Likely causes
 
-| Cause | Check | Fix |
-| --- | --- | --- |
-| Recording stopped before data arrived | session folder contents | Re-run after preflight passes. |
-| One stream missing | recording logs | Fix LSL stream discovery. |
-| Output path changed | config/report path | Inspect protocol/config output section. |
-| Session ID mistyped | folder name | Copy exact session ID from record output. |
-| File naming differs | component version | Use `Handgrip_Calibration/docs/recording.md`. |
+| Cause                                 | Check                   | Fix                                           |
+| ------------------------------------- | ----------------------- | --------------------------------------------- |
+| Recording stopped before data arrived | session folder contents | Re-run after preflight passes.                |
+| One stream missing                    | recording logs          | Fix LSL stream discovery.                     |
+| Output path changed                   | config/report path      | Inspect protocol/config output section.       |
+| Session ID mistyped                   | folder name             | Copy exact session ID from record output.     |
+| File naming differs                   | component version       | Use `Handgrip_Calibration/docs/recording.md`. |
 
 Minimum expected artifact classes:
 

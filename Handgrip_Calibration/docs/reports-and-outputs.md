@@ -15,16 +15,16 @@ uv run handgrip-cal report data/calibration/<session_id> --config conf/protocol_
 
 ## Expected output classes
 
-| Artifact | Purpose |
-| --- | --- |
-| `calibration_report.md` | Human-readable report for review and handoff. |
-| `calibration_report.html` | Browser-friendly report when enabled. |
-| `fit_result.json` | Selected model and recommended deployment values. |
-| `fit_candidates.json` | Candidate model metrics and diagnostics. |
+| Artifact                      | Purpose                                                  |
+| ----------------------------- | -------------------------------------------------------- |
+| `calibration_report.md`       | Human-readable report for review and handoff.            |
+| `calibration_report.html`     | Browser-friendly report when enabled.                    |
+| `fit_result.json`             | Selected model and recommended deployment values.        |
+| `fit_candidates.json`         | Candidate model metrics and diagnostics.                 |
 | `model_selection_report.json` | Selection rationale, likelihoods, penalties, thresholds. |
-| `calibration_dataset.csv` | Accepted holds used for fitting. |
-| `plots/` | Time series, residuals, model comparisons, metric bars. |
-| config snapshots | Reproducibility of upstream components. |
+| `calibration_dataset.csv`     | Accepted holds used for fitting.                         |
+| `plots/`                      | Time series, residuals, model comparisons, metric bars.  |
+| config snapshots              | Reproducibility of upstream components.                  |
 
 Exact filenames may differ by implementation version. This document defines the expected artifact roles.
 
@@ -66,17 +66,17 @@ unless evidence strongly justifies otherwise.
 
 ## Plot interpretation
 
-| Plot | Meaning | What to look for |
-| --- | --- | --- |
-| target time series | target raw/units over time | gaps, jumps, status problems. |
-| reference time series | PM58/reference force over time | stable holds, drift, backlog artifacts. |
-| model comparison curve | candidate curves over accepted holds | whether nonlinear models are materially different. |
-| selected residuals by force | residuals vs force | curvature, bias, outlier holds. |
-| model comparison residuals | residuals for multiple candidates | real improvement vs cosmetic complexity. |
-| model metric bars | RMSE/max error comparison | best model vs acceptable simple model. |
-| model likelihoods | relative decision weight | decisive vs marginal winner. |
-| robust weights | robust-fit hold weights | contaminated holds. |
-| hysteresis up/down | direction split | mechanical hysteresis or load-path asymmetry. |
+| Plot                        | Meaning                              | What to look for                                   |
+| --------------------------- | ------------------------------------ | -------------------------------------------------- |
+| target time series          | target raw/units over time           | gaps, jumps, status problems.                      |
+| reference time series       | PM58/reference force over time       | stable holds, drift, backlog artifacts.            |
+| model comparison curve      | candidate curves over accepted holds | whether nonlinear models are materially different. |
+| selected residuals by force | residuals vs force                   | curvature, bias, outlier holds.                    |
+| model comparison residuals  | residuals for multiple candidates    | real improvement vs cosmetic complexity.           |
+| model metric bars           | RMSE/max error comparison            | best model vs acceptable simple model.             |
+| model likelihoods           | relative decision weight             | decisive vs marginal winner.                       |
+| robust weights              | robust-fit hold weights              | contaminated holds.                                |
+| hysteresis up/down          | direction split                      | mechanical hysteresis or load-path asymmetry.      |
 
 ## Tables to preserve
 

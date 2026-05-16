@@ -105,14 +105,14 @@ Handgrip_Calibration/data/calibration/<session_id>/
 
 Expected artifact classes:
 
-| Artifact class | Purpose |
-| --- | --- |
-| target samples | Target stream samples from `HandgripTarget`. |
-| reference samples | Reference stream samples from `HandgripReference`. |
-| protocol events | Baseline/hold/dynamic/holdout markers. |
-| copied configs | Reproducibility snapshot for bridge/viewer/RS485/calibration settings. |
-| fit artifacts | Selected model, candidate comparison, residual metrics. |
-| reports | Human-readable Markdown/HTML report and plots. |
+| Artifact class    | Purpose                                                                |
+| ----------------- | ---------------------------------------------------------------------- |
+| target samples    | Target stream samples from `HandgripTarget`.                           |
+| reference samples | Reference stream samples from `HandgripReference`.                     |
+| protocol events   | Baseline/hold/dynamic/holdout markers.                                 |
+| copied configs    | Reproducibility snapshot for bridge/viewer/RS485/calibration settings. |
+| fit artifacts     | Selected model, candidate comparison, residual metrics.                |
+| reports           | Human-readable Markdown/HTML report and plots.                         |
 
 ## Stop conditions
 

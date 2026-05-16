@@ -9,12 +9,12 @@
 
 ## Validation modes
 
-| Mode | Command | Use when | Behavior |
-| --- | --- | --- | --- |
-| Docs-only snapshot | `python3 scripts/validate_docs.py --docs-only` | You only have Markdown files and no full source/assets/config tree. | Missing source/config/image files become warnings unless the Markdown link itself points to a missing Markdown doc. |
-| Strict full repo | `python3 scripts/validate_docs.py` | You have the full repository before handoff. | Markdown links, image links, required config/source paths, and content guards must pass. |
-| Content contracts | `bash scripts/validate_content_contracts.sh` | You want fast `rg` contract checks. | Confirms D2, stream names, canonical RS485 path, and deprecated-material guards. |
-| Workflow validation | `bash scripts/validate_handoff_workflows.sh` | You are preparing final handoff. | Runs or prints software/hardware workflow validation gates. |
+| Mode                | Command                                        | Use when                                                            | Behavior                                                                                                            |
+| ------------------- | ---------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Docs-only snapshot  | `python3 scripts/validate_docs.py --docs-only` | You only have Markdown files and no full source/assets/config tree. | Missing source/config/image files become warnings unless the Markdown link itself points to a missing Markdown doc. |
+| Strict full repo    | `python3 scripts/validate_docs.py`             | You have the full repository before handoff.                        | Markdown links, image links, required config/source paths, and content guards must pass.                            |
+| Content contracts   | `bash scripts/validate_content_contracts.sh`   | You want fast `rg` contract checks.                                 | Confirms D2, stream names, canonical RS485 path, and deprecated-material guards.                                    |
+| Workflow validation | `bash scripts/validate_handoff_workflows.sh`   | You are preparing final handoff.                                    | Runs or prints software/hardware workflow validation gates.                                                         |
 
 ## Step 11.1 — Link/path validation
 
@@ -116,14 +116,14 @@ RUN_HANDOFF_SOFTWARE=1 bash scripts/validate_handoff_workflows.sh
 
 ## Failure triage
 
-| Failure | Likely cause | Fix |
-| --- | --- | --- |
-| Missing Markdown link | A linked doc was planned but not created. | Create the missing doc or update the link. |
-| Missing image link | Phase 3 assets not committed or docs-only snapshot. | Add image under `docs/hardware/assets/` or run docs-only mode. |
-| Missing config file | Running against documentation-only snapshot or config path typo. | Use strict mode only on full repo; fix path if full repo. |
-| Legacy D schema found | Stale documentation survived Phase 4/6.2. | Replace with D2 schema or mark as historical outside canonical docs. |
-| Stale RS485 path found in configs | Phase 4 path fix not applied. | Replace `../RS485_GUI/config.yaml` with `../RS485_GUI/config/config.yaml`. |
-| Deprecated HX710B/STM32F103 link found | Old hardware doc leaked into canonical docs. | Move link to archive or remove from canonical path. |
+| Failure                                | Likely cause                                                     | Fix                                                                        |
+| -------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Missing Markdown link                  | A linked doc was planned but not created.                        | Create the missing doc or update the link.                                 |
+| Missing image link                     | Phase 3 assets not committed or docs-only snapshot.              | Add image under `docs/hardware/assets/` or run docs-only mode.             |
+| Missing config file                    | Running against documentation-only snapshot or config path typo. | Use strict mode only on full repo; fix path if full repo.                  |
+| Legacy D schema found                  | Stale documentation survived Phase 4/6.2.                        | Replace with D2 schema or mark as historical outside canonical docs.       |
+| Stale RS485 path found in configs      | Phase 4 path fix not applied.                                    | Replace `../RS485_GUI/config.yaml` with `../RS485_GUI/config/config.yaml`. |
+| Deprecated HX710B/STM32F103 link found | Old hardware doc leaked into canonical docs.                     | Move link to archive or remove from canonical path.                        |
 
 ## Definition of done
 

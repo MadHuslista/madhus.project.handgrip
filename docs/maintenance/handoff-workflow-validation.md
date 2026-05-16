@@ -9,14 +9,14 @@
 
 ## Handoff validation scope
 
-| Area | Validation target |
-| --- | --- |
-| Firmware | Serial monitor emits `M2` and `D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>` frames. |
-| RS485 GUI | Reference-force data arrives from the acquisition board. |
-| LSL Bridge | `HandgripTarget`, `HandgripReference`, and `HandgripComponentEvents` are published or logged as expected. |
-| LSL Viewer | Target/reference time series and XY correlation render correctly. |
-| Calibration | Preflight, smoke recording, fit, and report complete. |
-| Analysis | Smoke-stage or Stage 6 analysis completes and writes expected output. |
+| Area        | Validation target                                                                                         |
+| ----------- | --------------------------------------------------------------------------------------------------------- |
+| Firmware    | Serial monitor emits `M2` and `D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>` frames.      |
+| RS485 GUI   | Reference-force data arrives from the acquisition board.                                                  |
+| LSL Bridge  | `HandgripTarget`, `HandgripReference`, and `HandgripComponentEvents` are published or logged as expected. |
+| LSL Viewer  | Target/reference time series and XY correlation render correctly.                                         |
+| Calibration | Preflight, smoke recording, fit, and report complete.                                                     |
+| Analysis    | Smoke-stage or Stage 6 analysis completes and writes expected output.                                     |
 
 ## Software validation
 
@@ -168,16 +168,16 @@ Pass condition:
 
 ## Handoff worksheet
 
-| Gate | Pass/fail | Evidence path / screenshot | Notes |
-| --- | --- | --- | --- |
-| Firmware D2 serial |  |  |  |
-| RS485 reference force |  |  |  |
-| LSL bridge streams |  |  |  |
-| Viewer plots |  |  |  |
-| Calibration preflight |  |  |  |
-| Smoke recording |  |  |  |
-| Fit/report |  |  |  |
-| Analysis smoke |  |  |  |
+| Gate                  | Pass/fail | Evidence path / screenshot | Notes |
+| --------------------- | --------- | -------------------------- | ----- |
+| Firmware D2 serial    |           |                            |       |
+| RS485 reference force |           |                            |       |
+| LSL bridge streams    |           |                            |       |
+| Viewer plots          |           |                            |       |
+| Calibration preflight |           |                            |       |
+| Smoke recording       |           |                            |       |
+| Fit/report            |           |                            |       |
+| Analysis smoke        |           |                            |       |
 
 ## Final acceptance condition
 

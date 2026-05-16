@@ -63,23 +63,23 @@ Offline analysis does not require live LSL streams unless a specific future stag
 
 ## Process ownership table
 
-| Process | Command | Inputs | Outputs | Stop condition |
-| --- | --- | --- | --- | --- |
-| `RS485_GUI` | `uv run rs485-gui` | RS485 serial adapter and board config | GUI, logs, ZMQ IPC | Reference values visible or expected error shown. |
-| `LSL_Bridge` | `uv run lsl-bridge` | Arduino UART and RS485 IPC | LSL target/reference streams, optional CSVs/logs | Streams visible and parser health OK. |
-| `LSL_Viewer` | `uv run lsl-viewer` | LSL streams or replay files | Browser UI | Target/reference traces visible. |
-| `handgrip-cal` | `uv run handgrip-cal ...` | LSL streams or session folder | Calibration session, fit, report | Requested subcommand completes. |
-| `Handgrip_Analysis` | component CLI commands | Manifest/CSV/session data | Analysis output folders | Stage reports and metrics generated. |
+| Process             | Command                   | Inputs                                | Outputs                                          | Stop condition                                    |
+| ------------------- | ------------------------- | ------------------------------------- | ------------------------------------------------ | ------------------------------------------------- |
+| `RS485_GUI`         | `uv run rs485-gui`        | RS485 serial adapter and board config | GUI, logs, ZMQ IPC                               | Reference values visible or expected error shown. |
+| `LSL_Bridge`        | `uv run lsl-bridge`       | Arduino UART and RS485 IPC            | LSL target/reference streams, optional CSVs/logs | Streams visible and parser health OK.             |
+| `LSL_Viewer`        | `uv run lsl-viewer`       | LSL streams or replay files           | Browser UI                                       | Target/reference traces visible.                  |
+| `handgrip-cal`      | `uv run handgrip-cal ...` | LSL streams or session folder         | Calibration session, fit, report                 | Requested subcommand completes.                   |
+| `Handgrip_Analysis` | component CLI commands    | Manifest/CSV/session data             | Analysis output folders                          | Stage reports and metrics generated.              |
 
 ## Common runtime failure modes
 
-| Symptom | Likely owner | Start here |
-| --- | --- | --- |
-| No `/dev/ttyUSB*` appears | OS/adapter/cable | `docs/troubleshooting/serial-and-rs485.md` |
-| Board display reacts but GUI does not | RS485 wiring or board communication menu | `docs/workflows/reference-only-quickstart.md` |
-| Firmware serial monitor shows no D2 lines | Firmware/upload/HX711 wiring | `docs/workflows/firmware-setup.md` |
-| Viewer cannot find streams | Bridge not running or wrong stream names | `docs/troubleshooting/lsl-streams.md` |
-| Calibration preflight fails | Missing LSL stream or wrong config | `docs/workflows/handgrip-calibration.md` |
+| Symptom                                   | Likely owner                             | Start here                                    |
+| ----------------------------------------- | ---------------------------------------- | --------------------------------------------- |
+| No `/dev/ttyUSB*` appears                 | OS/adapter/cable                         | `docs/troubleshooting/serial-and-rs485.md`    |
+| Board display reacts but GUI does not     | RS485 wiring or board communication menu | `docs/workflows/reference-only-quickstart.md` |
+| Firmware serial monitor shows no D2 lines | Firmware/upload/HX711 wiring             | `docs/workflows/firmware-setup.md`            |
+| Viewer cannot find streams                | Bridge not running or wrong stream names | `docs/troubleshooting/lsl-streams.md`         |
+| Calibration preflight fails               | Missing LSL stream or wrong config       | `docs/workflows/handgrip-calibration.md`      |
 
 ## Validation checklist
 

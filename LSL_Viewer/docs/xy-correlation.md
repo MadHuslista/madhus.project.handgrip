@@ -28,9 +28,9 @@ Reason: raw target counts are the calibration-authoritative target signal.
 
 ## XY signal selection
 
-| Setting | Meaning | Use case |
-| --- | --- | --- |
-| `target_signal: raw` | Use `target_raw_count` on Y-axis. | Calibration visualization and raw sensor validation. |
+| Setting                   | Meaning                                      | Use case                                                    |
+| ------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
+| `target_signal: raw`      | Use `target_raw_count` on Y-axis.            | Calibration visualization and raw sensor validation.        |
 | `target_signal: filtered` | Use `target_filtered_units` / current units. | Display-only experiments and deployed-filter sanity checks. |
 
 ## Alignment policy
@@ -49,11 +49,11 @@ viewer:
       smoothing_alpha: 1.0
 ```
 
-| Mode | Meaning | Recommended use |
-| --- | --- | --- |
-| `raw_lsl` | Use native LSL timestamps with no viewer-side reference shift. | Default and calibration diagnostic mode. |
+| Mode               | Meaning                                                            | Recommended use                                                |
+| ------------------ | ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| `raw_lsl`          | Use native LSL timestamps with no viewer-side reference shift.     | Default and calibration diagnostic mode.                       |
 | `tail_aligned_lsl` | Display-only auto-shift based on target/reference tail timestamps. | Temporary visual aid when diagnosing backlog/alignment issues. |
-| `manual` | Apply fixed `manual_reference_shift_s`. | Temporary debugging or controlled demonstration. |
+| `manual`           | Apply fixed `manual_reference_shift_s`.                            | Temporary debugging or controlled demonstration.               |
 
 ## Reference interpolation
 
@@ -83,10 +83,10 @@ viewer:
     toggle_key: x
 ```
 
-| Mode | Behavior |
-| --- | --- |
-| `lock_max_span: false` | Adaptive autoscale on each refresh. |
-| `lock_max_span: true` | Preserve largest observed XY axis span; only zoom out. |
+| Mode                   | Behavior                                               |
+| ---------------------- | ------------------------------------------------------ |
+| `lock_max_span: false` | Adaptive autoscale on each refresh.                    |
+| `lock_max_span: true`  | Preserve largest observed XY axis span; only zoom out. |
 
 Keyboard toggle:
 
@@ -115,13 +115,13 @@ This is browser-rendering only. It does not alter raw buffers, replay files, cal
 
 Likely causes:
 
-| Cause | How to distinguish |
-| --- | --- |
-| Real upstream timestamp/backlog issue | Time-series and saved data also show reference lag. |
-| Viewer alignment mode hiding problem | `tail_aligned_lsl` looks okay but `raw_lsl` drifts. |
-| Browser render overload | UI is sluggish, but logs/data timestamps remain valid. |
-| Reference frame parsing backlog | `RS485_GUI`/`LSL_Bridge` logs show drops, queueing, or parser warnings. |
-| Wrong channel labels | XY plot empty or uses unintended signal. |
+| Cause                                 | How to distinguish                                                      |
+| ------------------------------------- | ----------------------------------------------------------------------- |
+| Real upstream timestamp/backlog issue | Time-series and saved data also show reference lag.                     |
+| Viewer alignment mode hiding problem  | `tail_aligned_lsl` looks okay but `raw_lsl` drifts.                     |
+| Browser render overload               | UI is sluggish, but logs/data timestamps remain valid.                  |
+| Reference frame parsing backlog       | `RS485_GUI`/`LSL_Bridge` logs show drops, queueing, or parser warnings. |
+| Wrong channel labels                  | XY plot empty or uses unintended signal.                                |
 
 ### Recommended diagnostic sequence
 
@@ -144,8 +144,8 @@ Stop before calibration if:
 
 ## Tests that guard XY behavior
 
-| Test file | Coverage |
-| --- | --- |
-| `tests/unit/test_alignment.py` | Reference interpolation, time shift, gap rejection, raw/filtered selection. |
-| `tests/unit/test_state.py` | XY axis span locking and viewer state round-trip. |
+| Test file                          | Coverage                                                                    |
+| ---------------------------------- | --------------------------------------------------------------------------- |
+| `tests/unit/test_alignment.py`     | Reference interpolation, time shift, gap rejection, raw/filtered selection. |
+| `tests/unit/test_state.py`         | XY axis span locking and viewer state round-trip.                           |
 | `tests/integration/test_charts.py` | XY ECharts series, render downsampling, clear behavior, marker integration. |

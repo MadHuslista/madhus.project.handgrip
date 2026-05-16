@@ -37,20 +37,20 @@ main()
 
 ## Source module map
 
-| Module | Responsibility |
-| --- | --- |
-| `lsl_bridge.app` | Main Hydra entry point and lifecycle orchestration. |
-| `lsl_bridge.core.parser` | Strict D2/M2 target UART parser and metadata handling. |
-| `lsl_bridge.core.timestamping` | Target LSL timestamp policy and processor-domain time resolution. |
-| `lsl_bridge.core.filter` | Current target processing implementation. |
-| `lsl_bridge.core.processing` | Runtime processor module loading / processor factory. |
-| `lsl_bridge.io.lsl_outlets` | Build target/reference LSL StreamInfo and outlets. |
-| `lsl_bridge.io.csv_sinks` | Persist target/reference samples to CSV. |
-| `lsl_bridge.io.serial_utils` | Serial port metadata and startup settling helpers. |
-| `lsl_bridge.publishers.reference` | Background RS485 IPC subscriber and reference LSL publisher. |
-| `lsl_bridge.publishers.events` | Component event marker outlet. |
-| `lsl_bridge.types` | Shared dataclass contracts. |
-| `lsl_bridge.logging_setup` | Console/file logging configuration. |
+| Module                            | Responsibility                                                    |
+| --------------------------------- | ----------------------------------------------------------------- |
+| `lsl_bridge.app`                  | Main Hydra entry point and lifecycle orchestration.               |
+| `lsl_bridge.core.parser`          | Strict D2/M2 target UART parser and metadata handling.            |
+| `lsl_bridge.core.timestamping`    | Target LSL timestamp policy and processor-domain time resolution. |
+| `lsl_bridge.core.filter`          | Current target processing implementation.                         |
+| `lsl_bridge.core.processing`      | Runtime processor module loading / processor factory.             |
+| `lsl_bridge.io.lsl_outlets`       | Build target/reference LSL StreamInfo and outlets.                |
+| `lsl_bridge.io.csv_sinks`         | Persist target/reference samples to CSV.                          |
+| `lsl_bridge.io.serial_utils`      | Serial port metadata and startup settling helpers.                |
+| `lsl_bridge.publishers.reference` | Background RS485 IPC subscriber and reference LSL publisher.      |
+| `lsl_bridge.publishers.events`    | Component event marker outlet.                                    |
+| `lsl_bridge.types`                | Shared dataclass contracts.                                       |
+| `lsl_bridge.logging_setup`        | Console/file logging configuration.                               |
 
 ## Serial input path
 
@@ -97,19 +97,19 @@ Design points:
 
 ## LSL outlets
 
-| Outlet | Builder | Notes |
-| --- | --- | --- |
-| `HandgripTarget` | `build_target_outlet()` | Target stream metadata includes schema, session ID, firmware metadata, timestamping policy, and calibration signal notes. |
-| `HandgripReference` | `build_reference_outlet()` | Reference stream metadata includes schema, session ID, endpoint, nominal rate, and fit signal. |
-| `HandgripComponentEvents` | `ComponentEventOutlet` | One JSON string marker per infrastructure event. |
+| Outlet                    | Builder                    | Notes                                                                                                                     |
+| ------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `HandgripTarget`          | `build_target_outlet()`    | Target stream metadata includes schema, session ID, firmware metadata, timestamping policy, and calibration signal notes. |
+| `HandgripReference`       | `build_reference_outlet()` | Reference stream metadata includes schema, session ID, endpoint, nominal rate, and fit signal.                            |
+| `HandgripComponentEvents` | `ComponentEventOutlet`     | One JSON string marker per infrastructure event.                                                                          |
 
 ## CSV persistence
 
 CSV sinks write the samples the bridge publishes.
 
-| Sink | File path config | Flush default | Notes |
-| --- | --- | --- | --- |
-| `TargetCsvSink` | `csv.target.path` | every row | Includes raw line and filtered target value. |
+| Sink               | File path config     | Flush default | Notes                                                                                    |
+| ------------------ | -------------------- | ------------- | ---------------------------------------------------------------------------------------- |
+| `TargetCsvSink`    | `csv.target.path`    | every row     | Includes raw line and filtered target value.                                             |
 | `ReferenceCsvSink` | `csv.reference.path` | every 25 rows | Includes reference mode, signal key, timestamp source, configured frequency, session ID. |
 
 CSV persistence is useful for debugging. Calibration workflows should still use dedicated calibration session recordings when available.
@@ -130,15 +130,15 @@ Important boundary:
 
 ## Failure isolation
 
-| Failure | Likely module |
-| --- | --- |
-| target serial port cannot open | `app.py`, OS serial permissions, config `serial.port` |
-| D2 lines dropped | `core/parser.py`, firmware serial output, `protocol` config |
-| reference missing | `publishers/reference.py`, RS485 GUI IPC, config `rs485_ipc` |
-| no LSL streams | `io/lsl_outlets.py`, pylsl runtime, app lifecycle |
-| CSV missing | `io/csv_sinks.py`, `csv.*.enabled`, path permissions |
-| growing XY delay | `core/timestamping.py`, viewer alignment, device-clock drift |
-| filtered signal unstable | `core/filter.py`, processing config, input cadence |
+| Failure                        | Likely module                                                |
+| ------------------------------ | ------------------------------------------------------------ |
+| target serial port cannot open | `app.py`, OS serial permissions, config `serial.port`        |
+| D2 lines dropped               | `core/parser.py`, firmware serial output, `protocol` config  |
+| reference missing              | `publishers/reference.py`, RS485 GUI IPC, config `rs485_ipc` |
+| no LSL streams                 | `io/lsl_outlets.py`, pylsl runtime, app lifecycle            |
+| CSV missing                    | `io/csv_sinks.py`, `csv.*.enabled`, path permissions         |
+| growing XY delay               | `core/timestamping.py`, viewer alignment, device-clock drift |
+| filtered signal unstable       | `core/filter.py`, processing config, input cadence           |
 
 ## Validation commands
 

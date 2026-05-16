@@ -25,17 +25,17 @@ CLI command
 
 ## Module responsibilities
 
-| Area | Expected responsibility |
-| --- | --- |
-| `cli.py` | Parse subcommands, config path, session paths, and dispatch. |
-| config schema/loading | Validate YAML structure, defaults, protocol fields, and overrides. |
-| preflight | Check LSL stream discovery, channels, output paths, config snapshots. |
-| recorder | Pull LSL target/reference samples and write session artifacts. |
-| protocol/event layer | Emit/record baseline, holds, validation markers, operator prompts. |
-| segmentation/reduction | Convert recorded holds into accepted calibration dataset rows. |
-| fitting | Evaluate candidate models, metrics, thresholds, and selected model. |
-| validation | Evaluate accepted model on holdout sessions. |
-| report | Render Markdown/HTML, plots, tables, and deployment recommendations. |
+| Area                   | Expected responsibility                                               |
+| ---------------------- | --------------------------------------------------------------------- |
+| `cli.py`               | Parse subcommands, config path, session paths, and dispatch.          |
+| config schema/loading  | Validate YAML structure, defaults, protocol fields, and overrides.    |
+| preflight              | Check LSL stream discovery, channels, output paths, config snapshots. |
+| recorder               | Pull LSL target/reference samples and write session artifacts.        |
+| protocol/event layer   | Emit/record baseline, holds, validation markers, operator prompts.    |
+| segmentation/reduction | Convert recorded holds into accepted calibration dataset rows.        |
+| fitting                | Evaluate candidate models, metrics, thresholds, and selected model.   |
+| validation             | Evaluate accepted model on holdout sessions.                          |
+| report                 | Render Markdown/HTML, plots, tables, and deployment recommendations.  |
 
 ## Input boundaries
 
@@ -74,15 +74,15 @@ It does not own:
 
 ## Command architecture
 
-| Command | Input | Output |
-| --- | --- | --- |
-| `preflight` | protocol config + live streams | pass/fail diagnostics. |
-| `record` | protocol config + live streams | session folder with samples/events. |
-| `segment` | session folder + config | accepted-hold dataset. |
-| `fit` | session folder + config | model artifacts and metrics. |
-| `report` | session folder + artifacts | human-readable report. |
-| `validate-holdout` | holdout session + model artifact | validation result artifacts. |
-| `demo-data` | synthetic/session options | hardware-free demo session. |
+| Command            | Input                            | Output                              |
+| ------------------ | -------------------------------- | ----------------------------------- |
+| `preflight`        | protocol config + live streams   | pass/fail diagnostics.              |
+| `record`           | protocol config + live streams   | session folder with samples/events. |
+| `segment`          | session folder + config          | accepted-hold dataset.              |
+| `fit`              | session folder + config          | model artifacts and metrics.        |
+| `report`           | session folder + artifacts       | human-readable report.              |
+| `validate-holdout` | holdout session + model artifact | validation result artifacts.        |
+| `demo-data`        | synthetic/session options        | hardware-free demo session.         |
 
 ## Reproducibility principles
 

@@ -41,26 +41,26 @@ Use a capture with baseline, rise, hold, and release. The current filter reasses
 
 Candidate families to include when relevant:
 
-| Family | When to test | Main risk |
-| --- | --- | --- |
-| identity/raw | Always include baseline. | None; provides comparison reference. |
-| low-pass | High-frequency contamination without needing baseline removal. | Over-smoothing, peak error, delayed/flattened dynamics. |
-| notch/band-reject | Confirmed narrowband contamination that survives low-pass or is in useful band. | Ringing, unnecessary complexity. |
-| high-pass | Baseline drift must be removed and force DC/slow components are not meaningful. | Destroys static force interpretation. |
-| band-pass | Signal is known to occupy a bounded dynamic band and DC/static force is not needed. | Usually wrong for force magnitude channels. |
+| Family            | When to test                                                                        | Main risk                                               |
+| ----------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| identity/raw      | Always include baseline.                                                            | None; provides comparison reference.                    |
+| low-pass          | High-frequency contamination without needing baseline removal.                      | Over-smoothing, peak error, delayed/flattened dynamics. |
+| notch/band-reject | Confirmed narrowband contamination that survives low-pass or is in useful band.     | Ringing, unnecessary complexity.                        |
+| high-pass         | Baseline drift must be removed and force DC/slow components are not meaningful.     | Destroys static force interpretation.                   |
+| band-pass         | Signal is known to occupy a bounded dynamic band and DC/static force is not needed. | Usually wrong for force magnitude channels.             |
 
 ### Step 5 — Evaluate metrics
 
 Important Stage 6 metrics:
 
-| Metric | Meaning |
-| --- | --- |
-| peak error | Force/count amplitude distortion. |
-| peak-time shift | Timing shift of maximum force. |
-| rise-time shift | Distortion of onset/rise behavior. |
-| max dF/dt ratio | Slope/dynamic suppression. |
-| plateau standard deviation | Stability/noise during hold. |
-| rest noise impact | Noise reduction in unloaded/rest condition. |
+| Metric                     | Meaning                                     |
+| -------------------------- | ------------------------------------------- |
+| peak error                 | Force/count amplitude distortion.           |
+| peak-time shift            | Timing shift of maximum force.              |
+| rise-time shift            | Distortion of onset/rise behavior.          |
+| max dF/dt ratio            | Slope/dynamic suppression.                  |
+| plateau standard deviation | Stability/noise during hold.                |
+| rest noise impact          | Noise reduction in unloaded/rest condition. |
 
 ### Step 6 — Interpret candidate ranking
 
@@ -76,23 +76,23 @@ Prefer the simplest candidate that:
 
 Based on the current filter reassessment source report:
 
-| Role | Recommendation | Rationale |
-| --- | --- | --- |
-| Primary characterization channel | 2nd-order Butterworth low-pass at 15 Hz, fs = 100 Hz | Best realism/noise tradeoff after outlier artifact fix. |
-| Optional stable-display channel | 2nd-order Butterworth low-pass at 10 Hz, fs = 100 Hz | Smoother display; more dynamic suppression. |
-| Baseline handling | State-based tare and unloaded-only baseline tracking | Avoids corrupting grip-event DC/slow force content. |
-| High-pass | Not recommended for primary force channel | Distorts ramp/hold events and removes meaningful slow/static force. |
-| Band-pass | Not recommended for primary force channel | Same high-pass problem plus low-pass constraints. |
-| Notch/band-reject | Not needed in main path for current data | Low-pass addresses high-frequency contamination without notch complexity. |
+| Role                             | Recommendation                                       | Rationale                                                                 |
+| -------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------- |
+| Primary characterization channel | 2nd-order Butterworth low-pass at 15 Hz, fs = 100 Hz | Best realism/noise tradeoff after outlier artifact fix.                   |
+| Optional stable-display channel  | 2nd-order Butterworth low-pass at 10 Hz, fs = 100 Hz | Smoother display; more dynamic suppression.                               |
+| Baseline handling                | State-based tare and unloaded-only baseline tracking | Avoids corrupting grip-event DC/slow force content.                       |
+| High-pass                        | Not recommended for primary force channel            | Distorts ramp/hold events and removes meaningful slow/static force.       |
+| Band-pass                        | Not recommended for primary force channel            | Same high-pass problem plus low-pass constraints.                         |
+| Notch/band-reject                | Not needed in main path for current data             | Low-pass addresses high-frequency contamination without notch complexity. |
 
 ## Deployment targets
 
-| Target | When appropriate | Validation required |
-| --- | --- | --- |
-| `LSL_Bridge` processing | Filtered stream should be available to viewer/calibration consumers. | Live stream comparison, timestamp/latency review, calibration residual check. |
-| `LSL_Viewer` display only | Smoothing is purely visual/operator-facing. | Confirm raw data and saved outputs are unchanged. |
-| Firmware | Filter must exist on-device. | Rebuild/upload, D2 validation, repeat calibration/holdout checks. |
-| Analysis only | Filter supports reports/plots but not live deployment. | Ensure reports label filtered vs raw outputs clearly. |
+| Target                    | When appropriate                                                     | Validation required                                                           |
+| ------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `LSL_Bridge` processing   | Filtered stream should be available to viewer/calibration consumers. | Live stream comparison, timestamp/latency review, calibration residual check. |
+| `LSL_Viewer` display only | Smoothing is purely visual/operator-facing.                          | Confirm raw data and saved outputs are unchanged.                             |
+| Firmware                  | Filter must exist on-device.                                         | Rebuild/upload, D2 validation, repeat calibration/holdout checks.             |
+| Analysis only             | Filter supports reports/plots but not live deployment.               | Ensure reports label filtered vs raw outputs clearly.                         |
 
 ## What to do after selecting a filter
 

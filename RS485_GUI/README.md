@@ -67,25 +67,25 @@ RS485_GUI/config/config.yaml
 
 Main configuration areas:
 
-| Area | Purpose |
-| --- | --- |
-| `serial` / transport settings | Port, baud, mode, Modbus/Active-Send profile. |
-| `ui` | Browser UI host/port, refresh cadence, plot behavior. |
-| `logger` | CSV/NDJSON/event logging behavior and output paths. |
-| `ipc` | ZeroMQ publisher endpoint and topic configuration. |
-| parser/signal settings | Board payload interpretation and selected displayed signal. |
+| Area                          | Purpose                                                     |
+| ----------------------------- | ----------------------------------------------------------- |
+| `serial` / transport settings | Port, baud, mode, Modbus/Active-Send profile.               |
+| `ui`                          | Browser UI host/port, refresh cadence, plot behavior.       |
+| `logger`                      | CSV/NDJSON/event logging behavior and output paths.         |
+| `ipc`                         | ZeroMQ publisher endpoint and topic configuration.          |
+| parser/signal settings        | Board payload interpretation and selected displayed signal. |
 
 Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
 
 ## Common workflows
 
-| Goal | Document |
-| --- | --- |
-| Validate reference chain only | [`../docs/workflows/reference-only-quickstart.md`](../docs/workflows/reference-only-quickstart.md) |
-| Run full live viewer stack | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
-| Understand PM58/acquisition-board wiring | [`../docs/hardware/pm58-wiring-and-bringup.md`](../docs/hardware/pm58-wiring-and-bringup.md) |
-| Understand stream and IPC contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) |
-| Navigate component docs | [`docs/index.md`](docs/index.md) |
+| Goal                                     | Document                                                                                               |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Validate reference chain only            | [`../docs/workflows/reference-only-quickstart.md`](../docs/workflows/reference-only-quickstart.md)     |
+| Run full live viewer stack               | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
+| Understand PM58/acquisition-board wiring | [`../docs/hardware/pm58-wiring-and-bringup.md`](../docs/hardware/pm58-wiring-and-bringup.md)           |
+| Understand stream and IPC contracts      | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                 |
+| Navigate component docs                  | [`docs/index.md`](docs/index.md)                                                                       |
 
 ## Repository layout
 

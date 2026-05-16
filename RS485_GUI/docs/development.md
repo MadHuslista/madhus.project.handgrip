@@ -29,16 +29,16 @@ uv run pytest tests/e2e/test_cli.py
 
 ## Source ownership map
 
-| Task | Primary files | Tests to update |
-| --- | --- | --- |
-| Add decoded board field | `core/codec.py`, possibly `transport/active_send.py` or `transport/modbus.py` | `tests/unit/test_codec.py`, `tests/integration/test_active_send_parser.py` |
-| Add plotted signal | `core/signals.py`, possibly `ui/layout.py` | `tests/unit/test_signals.py` |
-| Add IPC field | `io/publisher.py`, `docs/ipc-schema.md`, root stream contracts | publisher/bridge tests if available |
-| Add log column/file field | `io/logger.py`, `docs/logging-and-outputs.md` | `tests/integration/test_file_logger.py` |
-| Add UI control | `ui/layout.py`, `state.py`, config if persistent | UI/e2e test if available; manual quickstart |
-| Add config key | `config/config.yaml`, `config/schema.py`, `docs/configuration.md` | `tests/unit/test_config.py` |
-| Change Active-Send parser | `transport/active_send.py`, `core/codec.py` | `tests/integration/test_active_send_parser.py` |
-| Change Modbus register map | `constants.py`, `config/config.yaml`, `transport/modbus.py` | `tests/unit/test_codec.py`, manual Modbus test |
+| Task                       | Primary files                                                                 | Tests to update                                                            |
+| -------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Add decoded board field    | `core/codec.py`, possibly `transport/active_send.py` or `transport/modbus.py` | `tests/unit/test_codec.py`, `tests/integration/test_active_send_parser.py` |
+| Add plotted signal         | `core/signals.py`, possibly `ui/layout.py`                                    | `tests/unit/test_signals.py`                                               |
+| Add IPC field              | `io/publisher.py`, `docs/ipc-schema.md`, root stream contracts                | publisher/bridge tests if available                                        |
+| Add log column/file field  | `io/logger.py`, `docs/logging-and-outputs.md`                                 | `tests/integration/test_file_logger.py`                                    |
+| Add UI control             | `ui/layout.py`, `state.py`, config if persistent                              | UI/e2e test if available; manual quickstart                                |
+| Add config key             | `config/config.yaml`, `config/schema.py`, `docs/configuration.md`             | `tests/unit/test_config.py`                                                |
+| Change Active-Send parser  | `transport/active_send.py`, `core/codec.py`                                   | `tests/integration/test_active_send_parser.py`                             |
+| Change Modbus register map | `constants.py`, `config/config.yaml`, `transport/modbus.py`                   | `tests/unit/test_codec.py`, manual Modbus test                             |
 
 ## How to add a parser field
 
@@ -54,12 +54,12 @@ Add the field in the decode path so each `MeasurementFrame.interpreted` has a st
 
 Preferred field naming:
 
-| Kind | Pattern |
-| --- | --- |
-| raw board integer | `<name>_raw_value` |
-| decimal-scaled engineering value | `<name>_value` |
-| canonical bridge alias | `reference_<meaning>` |
-| status/flags | `<name>_status`, `status_word`, `status_flags` |
+| Kind                             | Pattern                                        |
+| -------------------------------- | ---------------------------------------------- |
+| raw board integer                | `<name>_raw_value`                             |
+| decimal-scaled engineering value | `<name>_value`                                 |
+| canonical bridge alias           | `reference_<meaning>`                          |
+| status/flags                     | `<name>_status`, `status_word`, `status_flags` |
 
 ### Step 3 — Register plot metadata if operator-selectable
 
@@ -90,12 +90,12 @@ uv run pytest tests/integration/test_active_send_parser.py
 
 ### Step 1 — Decide whether the control is runtime-only or config-backed
 
-| Control type | Store in |
-| --- | --- |
-| Runtime-only operator state | `state.py` / `RuntimeSettings` |
-| Persistent default | `config/config.yaml` + `config/schema.py` |
-| Display behavior | `ui` config section |
-| Acquisition behavior | `device`, `serial`, or `active_send` config sections |
+| Control type                | Store in                                             |
+| --------------------------- | ---------------------------------------------------- |
+| Runtime-only operator state | `state.py` / `RuntimeSettings`                       |
+| Persistent default          | `config/config.yaml` + `config/schema.py`            |
+| Display behavior            | `ui` config section                                  |
+| Acquisition behavior        | `device`, `serial`, or `active_send` config sections |
 
 ### Step 2 — Add UI element
 
@@ -129,13 +129,13 @@ Update:
 
 ### Step 1 — Identify artifact class
 
-| Artifact | File |
-| --- | --- |
-| raw wire/register audit | `raw_signal.ndjson` |
-| decoded engineering values | `interpreted_signal.ndjson` |
-| spreadsheet-friendly stable values | `gui_signal.csv` |
-| operator/runtime events | `event.log` |
-| Python/module debug | `acquisition_debug.log` |
+| Artifact                           | File                        |
+| ---------------------------------- | --------------------------- |
+| raw wire/register audit            | `raw_signal.ndjson`         |
+| decoded engineering values         | `interpreted_signal.ndjson` |
+| spreadsheet-friendly stable values | `gui_signal.csv`            |
+| operator/runtime events            | `event.log`                 |
+| Python/module debug                | `acquisition_debug.log`     |
 
 ### Step 2 — Update `SignalFileLogger`
 

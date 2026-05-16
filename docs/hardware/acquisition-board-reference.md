@@ -19,13 +19,13 @@ phase: 3
 
 ## Fast navigation
 
-| Need | Go to |
-| --- | --- |
-| Wire the board safely | [Safety and installation boundaries](#2-safety-and-installation-boundaries), [Rear terminals and wiring map](#6-rear-terminals-and-wiring-map) |
-| Understand acquisition-board capabilities | [Product identity and scope](#1-product-identity-and-scope), [Technical specifications](#3-technical-specifications) |
-| Configure RS485 / Active-Send | [`C5.CoM` — RS485 communication](#14-c5com--rs485-communication) |
-| Configure PM58 calibration on the board | [`C2.CAL` — Calibration](#11-c2cal--calibration) |
-| Interpret error messages | [Faults and status messages](#20-faults-and-status-messages) |
+| Need                                      | Go to                                                                                                                                          |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wire the board safely                     | [Safety and installation boundaries](#2-safety-and-installation-boundaries), [Rear terminals and wiring map](#6-rear-terminals-and-wiring-map) |
+| Understand acquisition-board capabilities | [Product identity and scope](#1-product-identity-and-scope), [Technical specifications](#3-technical-specifications)                           |
+| Configure RS485 / Active-Send             | [`C5.CoM` — RS485 communication](#14-c5com--rs485-communication)                                                                               |
+| Configure PM58 calibration on the board   | [`C2.CAL` — Calibration](#11-c2cal--calibration)                                                                                               |
+| Interpret error messages                  | [Faults and status messages](#20-faults-and-status-messages)                                                                                   |
 
 
 **Document purpose.**  

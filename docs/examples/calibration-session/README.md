@@ -11,20 +11,20 @@ This directory is for small, curated examples that teach how to interpret calibr
 
 ## What a complete calibration session usually contains
 
-| Artifact | Purpose | How to interpret |
-| --- | --- | --- |
-| `target.csv` | Captured `HandgripTarget` samples. | Confirms raw target counts, timestamps, and status values. |
-| `reference.csv` | Captured `HandgripReference` samples. | Confirms PM58/reference force values. |
-| `events.ndjson` | Protocol/marker events. | Segment baseline, preload, static holds, dynamic trials, and holdout events. |
-| `quality_live.ndjson` | Live QA telemetry. | Check sample rates, gaps, unstable holds, and runtime warnings. |
-| `session_manifest.yaml` | Session metadata. | Identify operator, purpose, protocol, output root, and provenance. |
-| `component_configs/` | Copied configs from bridge/viewer/RS485/calibration. | Reproduce the acquisition context. |
-| `calibration_dataset.csv` | Segmented/accepted fit dataset. | Confirm accepted holds and force levels used for fitting. |
-| `fit_candidates.json` | All evaluated model candidates. | Compare models and complexity. |
-| `fit_result.json` | Selected model and deployment values. | Source of accepted model parameters. |
-| `model_selection_report.json` | Machine-readable model-selection evidence. | Audit metric/likelihood/residual choices. |
-| `calibration_report.md` / `.html` | Human-readable report. | Primary review artifact for handoff. |
-| `plots/` | Diagnostic plots. | Residuals, selected fit curve, hysteresis, weights, likelihoods. |
+| Artifact                          | Purpose                                              | How to interpret                                                             |
+| --------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `target.csv`                      | Captured `HandgripTarget` samples.                   | Confirms raw target counts, timestamps, and status values.                   |
+| `reference.csv`                   | Captured `HandgripReference` samples.                | Confirms PM58/reference force values.                                        |
+| `events.ndjson`                   | Protocol/marker events.                              | Segment baseline, preload, static holds, dynamic trials, and holdout events. |
+| `quality_live.ndjson`             | Live QA telemetry.                                   | Check sample rates, gaps, unstable holds, and runtime warnings.              |
+| `session_manifest.yaml`           | Session metadata.                                    | Identify operator, purpose, protocol, output root, and provenance.           |
+| `component_configs/`              | Copied configs from bridge/viewer/RS485/calibration. | Reproduce the acquisition context.                                           |
+| `calibration_dataset.csv`         | Segmented/accepted fit dataset.                      | Confirm accepted holds and force levels used for fitting.                    |
+| `fit_candidates.json`             | All evaluated model candidates.                      | Compare models and complexity.                                               |
+| `fit_result.json`                 | Selected model and deployment values.                | Source of accepted model parameters.                                         |
+| `model_selection_report.json`     | Machine-readable model-selection evidence.           | Audit metric/likelihood/residual choices.                                    |
+| `calibration_report.md` / `.html` | Human-readable report.                               | Primary review artifact for handoff.                                         |
+| `plots/`                          | Diagnostic plots.                                    | Residuals, selected fit curve, hysteresis, weights, likelihoods.             |
 
 ## Selected interpretation path
 

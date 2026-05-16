@@ -70,26 +70,26 @@ LSL_Bridge/conf/config.yaml
 
 Main configuration areas:
 
-| Area | Purpose |
-| --- | --- |
-| serial target input | Target Arduino port, baud, parser behavior. |
-| reference IPC input | ZMQ endpoint/topic for `RS485_GUI`. |
-| LSL outlets | Stream names, types, channel names, nominal rates, metadata. |
-| timestamping | Host/device timestamp policy, gap detection, anchor behavior. |
-| processing | Optional filtering/calibration/derived channels. |
-| logging/CSV | Debug logs and optional saved target/reference data. |
+| Area                | Purpose                                                       |
+| ------------------- | ------------------------------------------------------------- |
+| serial target input | Target Arduino port, baud, parser behavior.                   |
+| reference IPC input | ZMQ endpoint/topic for `RS485_GUI`.                           |
+| LSL outlets         | Stream names, types, channel names, nominal rates, metadata.  |
+| timestamping        | Host/device timestamp policy, gap detection, anchor behavior. |
+| processing          | Optional filtering/calibration/derived channels.              |
+| logging/CSV         | Debug logs and optional saved target/reference data.          |
 
 Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
 
 ## Common workflows
 
-| Goal | Document |
-| --- | --- |
-| Validate target path only | [`../docs/workflows/target-only-quickstart.md`](../docs/workflows/target-only-quickstart.md) |
-| Run full live viewer stack | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
-| Understand bridge stream contracts | [`docs/stream-contracts.md`](docs/stream-contracts.md) |
-| Understand root data contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) |
-| Debug timing/synchronization | [`../docs/architecture/timestamping-and-synchronization.md`](../docs/architecture/timestamping-and-synchronization.md) |
+| Goal                               | Document                                                                                                               |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Validate target path only          | [`../docs/workflows/target-only-quickstart.md`](../docs/workflows/target-only-quickstart.md)                           |
+| Run full live viewer stack         | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md)                 |
+| Understand bridge stream contracts | [`docs/stream-contracts.md`](docs/stream-contracts.md)                                                                 |
+| Understand root data contracts     | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                                 |
+| Debug timing/synchronization       | [`../docs/architecture/timestamping-and-synchronization.md`](../docs/architecture/timestamping-and-synchronization.md) |
 
 ## Repository layout
 

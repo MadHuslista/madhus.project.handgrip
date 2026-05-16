@@ -83,25 +83,25 @@ Handgrip_Analysis/conf/
 
 Main configuration areas:
 
-| Area | Purpose |
-| --- | --- |
-| input / manifest | Source CSVs, labels, channel mapping, batch dispatch. |
-| output / IO | Output directory, overwrite policy, report paths. |
-| stage configs | Stage-specific windows, metrics, plots, thresholds. |
-| DSP defaults | Sampling assumptions, filtering utilities, spectral settings. |
-| filter candidates | Candidate families and parameters for Stage 6 evaluation. |
+| Area              | Purpose                                                       |
+| ----------------- | ------------------------------------------------------------- |
+| input / manifest  | Source CSVs, labels, channel mapping, batch dispatch.         |
+| output / IO       | Output directory, overwrite policy, report paths.             |
+| stage configs     | Stage-specific windows, metrics, plots, thresholds.           |
+| DSP defaults      | Sampling assumptions, filtering utilities, spectral settings. |
+| filter candidates | Candidate families and parameters for Stage 6 evaluation.     |
 
 Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
 
 ## Common workflows
 
-| Goal | Document |
-| --- | --- |
-| Run offline analysis | [`../docs/workflows/handgrip-analysis.md`](../docs/workflows/handgrip-analysis.md) |
+| Goal                         | Document                                                                                                 |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Run offline analysis         | [`../docs/workflows/handgrip-analysis.md`](../docs/workflows/handgrip-analysis.md)                       |
 | Understand generated outputs | [`../docs/architecture/data-and-output-lifecycle.md`](../docs/architecture/data-and-output-lifecycle.md) |
-| Navigate component docs | [`docs/index.md`](docs/index.md) |
-| Understand stages | [`docs/stages.md`](docs/stages.md) |
-| Interpret filter design | [`docs/filter-design.md`](docs/filter-design.md) |
+| Navigate component docs      | [`docs/index.md`](docs/index.md)                                                                         |
+| Understand stages            | [`docs/stages.md`](docs/stages.md)                                                                       |
+| Interpret filter design      | [`docs/filter-design.md`](docs/filter-design.md)                                                         |
 
 ## Repository layout
 

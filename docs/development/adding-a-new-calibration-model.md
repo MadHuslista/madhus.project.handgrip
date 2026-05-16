@@ -9,15 +9,15 @@
 
 ## Files to edit
 
-| File area | Purpose |
-| --- | --- |
-| `Handgrip_Calibration/src/handgrip_calibration/...` | Model implementation and fitting logic. |
-| `Handgrip_Calibration/conf/*.yaml` | Candidate enable/disable flags and model-specific parameters. |
-| `Handgrip_Calibration/docs/fitting-and-model-selection.md` | Model rationale, metrics, residual interpretation. |
-| `Handgrip_Calibration/docs/reports-and-outputs.md` | New fit/report artifacts if any. |
-| `Handgrip_Calibration/docs/applying-calibration-results.md` | Deployment guidance if model is deployable. |
-| `docs/configuration/handgrip-calibration.md` | Root config reference if config keys are user-facing. |
-| tests under `Handgrip_Calibration/tests/` | Synthetic, noisy, outlier, and report behavior tests. |
+| File area                                                   | Purpose                                                       |
+| ----------------------------------------------------------- | ------------------------------------------------------------- |
+| `Handgrip_Calibration/src/handgrip_calibration/...`         | Model implementation and fitting logic.                       |
+| `Handgrip_Calibration/conf/*.yaml`                          | Candidate enable/disable flags and model-specific parameters. |
+| `Handgrip_Calibration/docs/fitting-and-model-selection.md`  | Model rationale, metrics, residual interpretation.            |
+| `Handgrip_Calibration/docs/reports-and-outputs.md`          | New fit/report artifacts if any.                              |
+| `Handgrip_Calibration/docs/applying-calibration-results.md` | Deployment guidance if model is deployable.                   |
+| `docs/configuration/handgrip-calibration.md`                | Root config reference if config keys are user-facing.         |
+| tests under `Handgrip_Calibration/tests/`                   | Synthetic, noisy, outlier, and report behavior tests.         |
 
 ## Data contracts affected
 
@@ -32,12 +32,12 @@ A new model can affect:
 
 It must not change the input contract unless explicitly documented:
 
-| Input | Required role |
-| --- | --- |
-| `target_raw_count` | Model input. |
-| `reference_force_N` | Ground-truth output. |
-| protocol events | Segmentation and hold labels. |
-| config snapshots | Reproducibility. |
+| Input               | Required role                 |
+| ------------------- | ----------------------------- |
+| `target_raw_count`  | Model input.                  |
+| `reference_force_N` | Ground-truth output.          |
+| protocol events     | Segmentation and hold labels. |
+| config snapshots    | Reproducibility.              |
 
 ## Tests to update
 
@@ -50,15 +50,15 @@ uv run pytest
 
 Recommended model-specific tests:
 
-| Test | Purpose |
-| --- | --- |
-| synthetic exact mapping | Model recovers known parameters. |
-| noisy mapping | Model is stable under measurement noise. |
-| outlier mapping | Robust models behave as expected. |
-| monotonicity | Force mapping does not violate physical assumptions unless diagnostic-only. |
-| serialization | Fit result JSON contains required fields. |
-| report rendering | Model appears correctly in comparison tables. |
-| holdout validation | Model can be applied to independent data. |
+| Test                    | Purpose                                                                     |
+| ----------------------- | --------------------------------------------------------------------------- |
+| synthetic exact mapping | Model recovers known parameters.                                            |
+| noisy mapping           | Model is stable under measurement noise.                                    |
+| outlier mapping         | Robust models behave as expected.                                           |
+| monotonicity            | Force mapping does not violate physical assumptions unless diagnostic-only. |
+| serialization           | Fit result JSON contains required fields.                                   |
+| report rendering        | Model appears correctly in comparison tables.                               |
+| holdout validation      | Model can be applied to independent data.                                   |
 
 ## Validation workflow
 
@@ -75,11 +75,11 @@ Recommended model-specific tests:
 
 ## Common failure modes
 
-| Failure | Cause | Fix |
-| --- | --- | --- |
-| Model overfits fit session | Too many parameters, no holdout discipline | Prefer simpler model or require holdout pass. |
-| Non-monotonic mapping | Polynomial/spline behavior unconstrained | Add monotonic constraint or mark diagnostic-only. |
-| Cannot export to firmware | Model not representable as scale/offset | Document host-side deployment or non-deployable status. |
-| Report selection unclear | Missing metric or likelihood explanation | Update model-selection report and docs. |
-| Residuals improve but dynamics worsen | Filter/model hides lag/hysteresis | Validate against dynamic/holdout protocols. |
-| Units ambiguous | Parameters not labelled | Add units to fit JSON and report tables. |
+| Failure                               | Cause                                      | Fix                                                     |
+| ------------------------------------- | ------------------------------------------ | ------------------------------------------------------- |
+| Model overfits fit session            | Too many parameters, no holdout discipline | Prefer simpler model or require holdout pass.           |
+| Non-monotonic mapping                 | Polynomial/spline behavior unconstrained   | Add monotonic constraint or mark diagnostic-only.       |
+| Cannot export to firmware             | Model not representable as scale/offset    | Document host-side deployment or non-deployable status. |
+| Report selection unclear              | Missing metric or likelihood explanation   | Update model-selection report and docs.                 |
+| Residuals improve but dynamics worsen | Filter/model hides lag/hysteresis          | Validate against dynamic/holdout protocols.             |
+| Units ambiguous                       | Parameters not labelled                    | Add units to fit JSON and report tables.                |

@@ -20,13 +20,13 @@ Read this document if you need to:
 
 ## Status
 
-| Field | Value |
-| --- | --- |
-| Canonical | Yes |
-| Applies to | `Handgrip_Firmware` schema 2 / `HANDGRIP_PAYLOAD_SCHEMA = 2U` |
+| Field        | Value                                                                                |
+| ------------ | ------------------------------------------------------------------------------------ |
+| Canonical    | Yes                                                                                  |
+| Applies to   | `Handgrip_Firmware` schema 2 / `HANDGRIP_PAYLOAD_SCHEMA = 2U`                        |
 | Source files | `Core/Inc/config.h`, `Core/Src/main.cpp`, `LSL_Bridge/src/lsl_bridge/core/parser.py` |
-| Consumers | `LSL_Bridge`, `LSL_Viewer`, `Handgrip_Calibration`, downstream analysis outputs |
-| Replaces | Legacy D-prefix target output documentation |
+| Consumers    | `LSL_Bridge`, `LSL_Viewer`, `Handgrip_Calibration`, downstream analysis outputs      |
+| Replaces     | Legacy D-prefix target output documentation                                          |
 
 ## Frame types
 
@@ -46,16 +46,16 @@ Example:
 M2,2,2.0.0-calibration-schema,unknown,93.000,1.000000000,0.000,N
 ```
 
-| Field | Meaning | Notes |
-| --- | --- | --- |
-| `M2` | Metadata frame prefix | Used by the bridge/session metadata path to identify firmware context. |
-| `payload_schema` | Firmware payload schema version | Current supported value: `2`. |
-| `firmware_version` | Firmware semantic/source version | Human-readable version string. |
-| `git_sha` | Source build identifier | Defaults to `unknown` unless injected at compile time. |
-| `expected_rate_hz` | Expected practical HX711 output rate | Metadata only; target stream remains irregular. |
-| `scale_factor` | Current firmware scale factor | Used for `current_units`; raw counts remain authoritative. |
-| `scale_offset` | Current firmware offset | Used for `current_units`; raw counts remain authoritative. |
-| `unit` | Engineering unit for `current_units` | Recommended calibration unit: `N`. |
+| Field              | Meaning                              | Notes                                                                  |
+| ------------------ | ------------------------------------ | ---------------------------------------------------------------------- |
+| `M2`               | Metadata frame prefix                | Used by the bridge/session metadata path to identify firmware context. |
+| `payload_schema`   | Firmware payload schema version      | Current supported value: `2`.                                          |
+| `firmware_version` | Firmware semantic/source version     | Human-readable version string.                                         |
+| `git_sha`          | Source build identifier              | Defaults to `unknown` unless injected at compile time.                 |
+| `expected_rate_hz` | Expected practical HX711 output rate | Metadata only; target stream remains irregular.                        |
+| `scale_factor`     | Current firmware scale factor        | Used for `current_units`; raw counts remain authoritative.             |
+| `scale_offset`     | Current firmware offset              | Used for `current_units`; raw counts remain authoritative.             |
+| `unit`             | Engineering unit for `current_units` | Recommended calibration unit: `N`.                                     |
 
 ### Data frame: `D2`
 
@@ -71,25 +71,25 @@ Example:
 D2,42,1234567,-842133,12.345678,0
 ```
 
-| Field | Type | Meaning | Calibration relevance |
-| --- | --- | --- | --- |
-| `D2` | literal | Data-frame prefix | Must match the `LSL_Bridge` data-prefix/parser expectation. |
-| `seq` | unsigned integer | Monotonic sample sequence number | Used to detect dropped samples and sequence gaps. |
-| `timestamp_us` | unsigned integer | Device-local `micros()` timestamp in microseconds | Used to audit timing and reconstruct device-clock behavior. |
-| `raw_count` | signed integer | HX711 raw ADC count before firmware scale/offset | **Primary target signal for calibration fitting.** |
-| `current_units` | float or `nan` | Convenience engineering value from firmware constants | Useful for sanity display; not the source of truth for fitting. |
-| `status` | unsigned integer bitfield | Acquisition status flags | Used for QA and troubleshooting. |
+| Field           | Type                      | Meaning                                               | Calibration relevance                                           |
+| --------------- | ------------------------- | ----------------------------------------------------- | --------------------------------------------------------------- |
+| `D2`            | literal                   | Data-frame prefix                                     | Must match the `LSL_Bridge` data-prefix/parser expectation.     |
+| `seq`           | unsigned integer          | Monotonic sample sequence number                      | Used to detect dropped samples and sequence gaps.               |
+| `timestamp_us`  | unsigned integer          | Device-local `micros()` timestamp in microseconds     | Used to audit timing and reconstruct device-clock behavior.     |
+| `raw_count`     | signed integer            | HX711 raw ADC count before firmware scale/offset      | **Primary target signal for calibration fitting.**              |
+| `current_units` | float or `nan`            | Convenience engineering value from firmware constants | Useful for sanity display; not the source of truth for fitting. |
+| `status`        | unsigned integer bitfield | Acquisition status flags                              | Used for QA and troubleshooting.                                |
 
 ## Status bitfield
 
 The `status` field is an integer bitfield. Multiple bits can be set in the same sample.
 
-| Bit mask | Name | Meaning | Operator action |
-| ---: | --- | --- | --- |
-| `0x0000` | `HANDGRIP_STATUS_OK` | No known acquisition issue for this sample | Continue. |
-| `0x0001` | `HANDGRIP_STATUS_FIFO_OVERFLOW` | Interrupt-to-loop FIFO overflowed | Reduce serial/logging load, check host consumption, inspect missed samples. |
-| `0x0002` | `HANDGRIP_STATUS_HX711_NOTREADY` | Timer tick occurred before HX711 had a new conversion ready | Occasional events may happen with non-blocking polling; persistent events require diagnosis. |
-| `0x0004` | `HANDGRIP_STATUS_SCALE_INVALID` | Firmware `current_units` conversion invalid, usually because scale factor is zero or NaN | Do not trust `current_units`; use `raw_count`; fix firmware constants before operator-facing use. |
+| Bit mask | Name                             | Meaning                                                                                  | Operator action                                                                                   |
+| -------: | -------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `0x0000` | `HANDGRIP_STATUS_OK`             | No known acquisition issue for this sample                                               | Continue.                                                                                         |
+| `0x0001` | `HANDGRIP_STATUS_FIFO_OVERFLOW`  | Interrupt-to-loop FIFO overflowed                                                        | Reduce serial/logging load, check host consumption, inspect missed samples.                       |
+| `0x0002` | `HANDGRIP_STATUS_HX711_NOTREADY` | Timer tick occurred before HX711 had a new conversion ready                              | Occasional events may happen with non-blocking polling; persistent events require diagnosis.      |
+| `0x0004` | `HANDGRIP_STATUS_SCALE_INVALID`  | Firmware `current_units` conversion invalid, usually because scale factor is zero or NaN | Do not trust `current_units`; use `raw_count`; fix firmware constants before operator-facing use. |
 
 ## Why `raw_count` is authoritative
 
@@ -141,13 +141,13 @@ Invalid target lines should trigger bridge logs. Do not relax the parser unless 
 
 Recommended semantic mapping:
 
-| D2 field | Bridge semantic field | LSL/channel meaning |
-| --- | --- | --- |
-| `seq` | `target_sequence` | Target sample sequence. |
-| `timestamp_us` | `device_clock_us` | Device-local clock. |
-| `raw_count` | `target_raw_count` | Raw target count. |
+| D2 field        | Bridge semantic field  | LSL/channel meaning           |
+| --------------- | ---------------------- | ----------------------------- |
+| `seq`           | `target_sequence`      | Target sample sequence.       |
+| `timestamp_us`  | `device_clock_us`      | Device-local clock.           |
+| `raw_count`     | `target_raw_count`     | Raw target count.             |
 | `current_units` | `target_current_units` | Firmware-scaled sanity value. |
-| `status` | `target_status` | Target acquisition status. |
+| `status`        | `target_status`        | Target acquisition status.    |
 
 If channel order differs from this semantic table, keep active config and component docs authoritative but preserve these semantic names across docs and downstream outputs.
 

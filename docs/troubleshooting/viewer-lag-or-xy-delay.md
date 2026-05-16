@@ -12,12 +12,12 @@ A delayed XY plot is a symptom to diagnose, not automatic proof that recorded da
 
 ### Likely causes
 
-| Cause | Why | Check |
-| --- | --- | --- |
-| Reference interpolation window mismatch | Target/reference rates differ | `LSL_Viewer/docs/xy-correlation.md` settings. |
-| Timestamp anchor drift | Device clock and host time diverge | `LSL_Bridge/docs/timestamping.md`. |
-| Buffer pruning bug | Viewer keeps unmatched old samples | Viewer alignment tests/logs. |
-| Display render backlog | Browser cannot keep up | Compare saved data vs visual plot. |
+| Cause                                   | Why                                | Check                                         |
+| --------------------------------------- | ---------------------------------- | --------------------------------------------- |
+| Reference interpolation window mismatch | Target/reference rates differ      | `LSL_Viewer/docs/xy-correlation.md` settings. |
+| Timestamp anchor drift                  | Device clock and host time diverge | `LSL_Bridge/docs/timestamping.md`.            |
+| Buffer pruning bug                      | Viewer keeps unmatched old samples | Viewer alignment tests/logs.                  |
+| Display render backlog                  | Browser cannot keep up             | Compare saved data vs visual plot.            |
 
 ## Symptom: reference lag only in XY plot
 
@@ -37,12 +37,12 @@ Check:
 
 Use this decision table:
 
-| Observation | Likely class |
-| --- | --- |
-| Saved CSV target/reference align correctly, but browser XY lags | viewer display/alignment issue. |
-| Saved CSV and viewer both show delay | timestamp/acquisition issue. |
-| Only reference stream lags | RS485 GUI, IPC, or reference timestamping issue. |
-| Only target stream lags | firmware serial, bridge parser, or target timestamping issue. |
+| Observation                                                     | Likely class                                                  |
+| --------------------------------------------------------------- | ------------------------------------------------------------- |
+| Saved CSV target/reference align correctly, but browser XY lags | viewer display/alignment issue.                               |
+| Saved CSV and viewer both show delay                            | timestamp/acquisition issue.                                  |
+| Only reference stream lags                                      | RS485 GUI, IPC, or reference timestamping issue.              |
+| Only target stream lags                                         | firmware serial, bridge parser, or target timestamping issue. |
 
 ## Diagnostic workflow
 
@@ -57,13 +57,13 @@ Use this decision table:
 
 ## Common fixes
 
-| Fix | Use when |
-| --- | --- |
-| Reduce viewer max points | Browser/render lag dominates. |
-| Adjust XY interpolation mode | XY only is misaligned. |
-| Use tail-aligned LSL mode | Comparing most recent target/reference tails is preferred. |
-| Reanchor target timestamping | Device clock drift exceeds bridge threshold. |
-| Validate RS485 profile | Reference stream itself is delayed or bursty. |
+| Fix                          | Use when                                                   |
+| ---------------------------- | ---------------------------------------------------------- |
+| Reduce viewer max points     | Browser/render lag dominates.                              |
+| Adjust XY interpolation mode | XY only is misaligned.                                     |
+| Use tail-aligned LSL mode    | Comparing most recent target/reference tails is preferred. |
+| Reanchor target timestamping | Device clock drift exceeds bridge threshold.               |
+| Validate RS485 profile       | Reference stream itself is delayed or bursty.              |
 
 ## Stop conditions
 

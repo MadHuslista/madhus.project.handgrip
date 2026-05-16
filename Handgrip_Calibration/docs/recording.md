@@ -9,11 +9,11 @@
 
 ## Required LSL inputs
 
-| Input | Producer | Use |
-| --- | --- | --- |
-| `HandgripTarget` | `LSL_Bridge` from firmware UART | Target raw counts, target timing, status. |
-| `HandgripReference` | `LSL_Bridge` from RS485 GUI IPC | Reference force ground truth. |
-| `HandgripComponentEvents` | `LSL_Bridge` | Optional diagnostics: gaps, reconnects, parse issues. |
+| Input                        | Producer                                | Use                                                        |
+| ---------------------------- | --------------------------------------- | ---------------------------------------------------------- |
+| `HandgripTarget`             | `LSL_Bridge` from firmware UART         | Target raw counts, target timing, status.                  |
+| `HandgripReference`          | `LSL_Bridge` from RS485 GUI IPC         | Reference force ground truth.                              |
+| `HandgripComponentEvents`    | `LSL_Bridge`                            | Optional diagnostics: gaps, reconnects, parse issues.      |
 | `HandgripCalibrationMarkers` | `Handgrip_Calibration` / session events | Protocol segmentation: baseline, holds, validation trials. |
 
 ## Preflight before recording
@@ -61,14 +61,14 @@ Use the full session ID in lab notes, commit messages, reports, and handoff comm
 
 Exact filenames are implementation-owned, but a complete session should contain these artifact classes:
 
-| Artifact class | Expected examples | Purpose |
-| --- | --- | --- |
-| target data | `target.csv` or equivalent | Target stream samples and timing. |
-| reference data | `reference.csv` or equivalent | Reference force samples and timing. |
-| protocol events | `events.ndjson` or equivalent | Segment boundaries and operator markers. |
-| live quality telemetry | `quality_live.ndjson` or equivalent | Gap/status/rate diagnostics. |
-| config snapshots | copied YAML/config files | Reproducibility. |
-| metadata | JSON/YAML manifest | Session identity and protocol metadata. |
+| Artifact class         | Expected examples                   | Purpose                                  |
+| ---------------------- | ----------------------------------- | ---------------------------------------- |
+| target data            | `target.csv` or equivalent          | Target stream samples and timing.        |
+| reference data         | `reference.csv` or equivalent       | Reference force samples and timing.      |
+| protocol events        | `events.ndjson` or equivalent       | Segment boundaries and operator markers. |
+| live quality telemetry | `quality_live.ndjson` or equivalent | Gap/status/rate diagnostics.             |
+| config snapshots       | copied YAML/config files            | Reproducibility.                         |
+| metadata               | JSON/YAML manifest                  | Session identity and protocol metadata.  |
 
 ## Data contract during recording
 
@@ -93,26 +93,26 @@ Reference data should preserve:
 
 Before fitting, inspect:
 
-| Check | Pass condition |
-| --- | --- |
-| files exist | target, reference, events, config snapshots present. |
-| sample counts | enough target/reference samples for all holds. |
-| target gaps | no unexplained sequence gaps during accepted holds. |
-| reference gaps | below configured max gap threshold. |
-| force coverage | holds cover intended force levels. |
-| stable tails | accepted holds have stable reference force. |
-| operator markers | protocol events match performed actions. |
+| Check            | Pass condition                                       |
+| ---------------- | ---------------------------------------------------- |
+| files exist      | target, reference, events, config snapshots present. |
+| sample counts    | enough target/reference samples for all holds.       |
+| target gaps      | no unexplained sequence gaps during accepted holds.  |
+| reference gaps   | below configured max gap threshold.                  |
+| force coverage   | holds cover intended force levels.                   |
+| stable tails     | accepted holds have stable reference force.          |
+| operator markers | protocol events match performed actions.             |
 
 ## Failure modes
 
-| Symptom | Likely cause | Action |
-| --- | --- | --- |
-| missing target file | target stream not discovered or recording failed | rerun preflight, validate firmware/bridge. |
-| missing reference file | RS485 GUI/bridge IPC issue | rerun reference-only and full-live quickstarts. |
-| events missing | marker/event writer disabled or crashed | do not fit; rerun recording. |
-| few target samples | HX711/firmware/status issue | validate target D2 stream. |
-| reference gaps | RS485 parser/backlog/serial rate issue | validate RS485 GUI and board config. |
-| force levels wrong | operator prompt/fixture issue | rerun protocol with documented fixture setup. |
+| Symptom                | Likely cause                                     | Action                                          |
+| ---------------------- | ------------------------------------------------ | ----------------------------------------------- |
+| missing target file    | target stream not discovered or recording failed | rerun preflight, validate firmware/bridge.      |
+| missing reference file | RS485 GUI/bridge IPC issue                       | rerun reference-only and full-live quickstarts. |
+| events missing         | marker/event writer disabled or crashed          | do not fit; rerun recording.                    |
+| few target samples     | HX711/firmware/status issue                      | validate target D2 stream.                      |
+| reference gaps         | RS485 parser/backlog/serial rate issue           | validate RS485 GUI and board config.            |
+| force levels wrong     | operator prompt/fixture issue                    | rerun protocol with documented fixture setup.   |
 
 ## Stop condition
 

@@ -10,15 +10,15 @@
 
 ## Prerequisites
 
-| Requirement | Expected |
-| --- | --- |
-| Host IDE | Visual Studio Code. |
-| VS Code extension | PlatformIO IDE. |
-| Repo open path | Repository root, not only `Handgrip_Firmware/`. |
-| Firmware target | Arduino Nano ATmega328 old bootloader. |
-| Firmware source path | `Handgrip_Firmware/Core/Src`. |
-| Firmware include path | `Handgrip_Firmware/Core/Inc`. |
-| USB connection | Arduino Nano connected to host PC. |
+| Requirement           | Expected                                        |
+| --------------------- | ----------------------------------------------- |
+| Host IDE              | Visual Studio Code.                             |
+| VS Code extension     | PlatformIO IDE.                                 |
+| Repo open path        | Repository root, not only `Handgrip_Firmware/`. |
+| Firmware target       | Arduino Nano ATmega328 old bootloader.          |
+| Firmware source path  | `Handgrip_Firmware/Core/Src`.                   |
+| Firmware include path | `Handgrip_Firmware/Core/Inc`.                   |
+| USB connection        | Arduino Nano connected to host PC.              |
 
 ## Step 1 — Install VS Code
 
@@ -169,16 +169,16 @@ D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>
 
 Checklist:
 
-| Check | Expected result |
-| --- | --- |
-| Metadata | One `M2` line appears near boot/reset. |
-| Schema | `M2` schema field is `2`. |
-| Data prefix | Sample lines start with `D2,`. |
-| Field count | Each D2 line has six comma-separated fields. |
-| `seq` | Increases monotonically. |
-| `timestamp_us` | Increases over time. |
-| `raw_count` | Changes when force changes. |
-| `status` | Usually `0`; persistent nonzero status requires troubleshooting. |
+| Check          | Expected result                                                  |
+| -------------- | ---------------------------------------------------------------- |
+| Metadata       | One `M2` line appears near boot/reset.                           |
+| Schema         | `M2` schema field is `2`.                                        |
+| Data prefix    | Sample lines start with `D2,`.                                   |
+| Field count    | Each D2 line has six comma-separated fields.                     |
+| `seq`          | Increases monotonically.                                         |
+| `timestamp_us` | Increases over time.                                             |
+| `raw_count`    | Changes when force changes.                                      |
+| `status`       | Usually `0`; persistent nonzero status requires troubleshooting. |
 
 ## Stop conditions
 

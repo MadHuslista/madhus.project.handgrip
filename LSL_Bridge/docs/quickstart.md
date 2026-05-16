@@ -8,13 +8,13 @@
 
 ## Prerequisites
 
-| Requirement | Validation |
-| --- | --- |
-| Python environment installed | `uv sync` completed from repo root, or component dependencies installed. |
-| Target firmware is running | Serial monitor shows `D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>`. |
-| Target serial port known | Prefer `/dev/serial/by-id/...`; fallback: `/dev/ttyUSB*` or `/dev/ttyACM*`. |
-| Reference GUI running, if needed | `RS485_GUI` publishes `rs485.measurement.v1` over ZeroMQ. |
-| Bridge config exists | `LSL_Bridge/conf/config.yaml`. |
+| Requirement                      | Validation                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------------ |
+| Python environment installed     | `uv sync` completed from repo root, or component dependencies installed.             |
+| Target firmware is running       | Serial monitor shows `D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>`. |
+| Target serial port known         | Prefer `/dev/serial/by-id/...`; fallback: `/dev/ttyUSB*` or `/dev/ttyACM*`.          |
+| Reference GUI running, if needed | `RS485_GUI` publishes `rs485.measurement.v1` over ZeroMQ.                            |
+| Bridge config exists             | `LSL_Bridge/conf/config.yaml`.                                                       |
 
 ## Commands
 
@@ -85,22 +85,22 @@ A successful run should show:
 
 Expected stream names:
 
-| Stream | Producer | When expected |
-| --- | --- | --- |
-| `HandgripTarget` | Bridge target serial loop | Always, once valid D2 frames arrive. |
-| `HandgripReference` | Bridge RS485 IPC background publisher | When `RS485_GUI` is running and publishing valid IPC. |
-| `HandgripComponentEvents` | Bridge event publisher | When `component_events.enabled=true`. |
+| Stream                    | Producer                              | When expected                                         |
+| ------------------------- | ------------------------------------- | ----------------------------------------------------- |
+| `HandgripTarget`          | Bridge target serial loop             | Always, once valid D2 frames arrive.                  |
+| `HandgripReference`       | Bridge RS485 IPC background publisher | When `RS485_GUI` is running and publishing valid IPC. |
+| `HandgripComponentEvents` | Bridge event publisher                | When `component_events.enabled=true`.                 |
 
 ## Where outputs/logs appear
 
 Default output paths from `conf/config.yaml`:
 
-| Output | Default path | Notes |
-| --- | --- | --- |
-| Bridge log | `LSL_Bridge/logs/lsl_bridge.log` | Controlled by `logging.file`. |
-| Target CSV | `LSL_Bridge/data/target_handgrip_samples_v2.csv` | Enabled by `csv.target.enabled`. |
+| Output        | Default path                                     | Notes                               |
+| ------------- | ------------------------------------------------ | ----------------------------------- |
+| Bridge log    | `LSL_Bridge/logs/lsl_bridge.log`                 | Controlled by `logging.file`.       |
+| Target CSV    | `LSL_Bridge/data/target_handgrip_samples_v2.csv` | Enabled by `csv.target.enabled`.    |
 | Reference CSV | `LSL_Bridge/data/reference_rs485_samples_v2.csv` | Enabled by `csv.reference.enabled`. |
-| LSL streams | Live LSL network | Consumed by viewer/calibration. |
+| LSL streams   | Live LSL network                                 | Consumed by viewer/calibration.     |
 
 ## Stop conditions
 

@@ -60,27 +60,27 @@ Replay mode
 
 ## Layer responsibilities
 
-| Layer | Files | Responsibility |
-| --- | --- | --- |
-| CLI/config | `cli.py`, `config.py` | Hydra config, mode dispatch, logging setup. |
-| Types | `types.py` | Dataclasses / typed containers for windows, replay data, viewer state, chart handles. |
-| Core stream | `core/stream.py` | LSL channel resolution, stream window extraction, target/reference buffers. |
-| Core alignment | `core/alignment.py` | Display-only XY reference shift and interpolation. |
-| Core replay | `core/replay.py` | CSV/XDF loading and replay time windows. |
-| Core timing | `core/timing.py` | Timing interval and clock validation metrics. |
-| Viz app | `viz/app.py` | NiceGUI app lifecycle and live/replay refresh loops. |
-| Viz charts | `viz/charts.py` | ECharts options, chart updates, render downsampling, XY buckets. |
-| Viz panels | `viz/panels.py` | Page layout, controls, keyboard callbacks. |
-| Viz markers | `viz/markers.py` | Calibration marker cache and marker-line positioning. |
-| Viz state | `viz/state.py` | Axis limit helpers and XY max-span state helpers. |
+| Layer          | Files                 | Responsibility                                                                        |
+| -------------- | --------------------- | ------------------------------------------------------------------------------------- |
+| CLI/config     | `cli.py`, `config.py` | Hydra config, mode dispatch, logging setup.                                           |
+| Types          | `types.py`            | Dataclasses / typed containers for windows, replay data, viewer state, chart handles. |
+| Core stream    | `core/stream.py`      | LSL channel resolution, stream window extraction, target/reference buffers.           |
+| Core alignment | `core/alignment.py`   | Display-only XY reference shift and interpolation.                                    |
+| Core replay    | `core/replay.py`      | CSV/XDF loading and replay time windows.                                              |
+| Core timing    | `core/timing.py`      | Timing interval and clock validation metrics.                                         |
+| Viz app        | `viz/app.py`          | NiceGUI app lifecycle and live/replay refresh loops.                                  |
+| Viz charts     | `viz/charts.py`       | ECharts options, chart updates, render downsampling, XY buckets.                      |
+| Viz panels     | `viz/panels.py`       | Page layout, controls, keyboard callbacks.                                            |
+| Viz markers    | `viz/markers.py`      | Calibration marker cache and marker-line positioning.                                 |
+| Viz state      | `viz/state.py`        | Axis limit helpers and XY max-span state helpers.                                     |
 
 ## Stream buffers
 
 Live mode keeps separate target/reference windows because the streams have different rates:
 
-| Buffer | Config | Notes |
-| --- | --- | --- |
-| Target | `streams.target.buffer_samples`, `viewer.target_window_samples` | Sample-count based because target is irregular/device-paced. |
+| Buffer    | Config                                                                | Notes                                                                |
+| --------- | --------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Target    | `streams.target.buffer_samples`, `viewer.target_window_samples`       | Sample-count based because target is irregular/device-paced.         |
 | Reference | `streams.reference.buffer_seconds`, `viewer.reference_window_extra_s` | Time-window based because reference is faster and nominally regular. |
 
 ## UI refresh model
@@ -106,13 +106,13 @@ The UI uses ECharts through NiceGUI.
 
 Plot classes:
 
-| Plot | Purpose |
-| --- | --- |
-| Target raw | Raw target count / calibration-authoritative target signal. |
-| Target filtered/current | Display or processed target engineering value. |
-| Reference | PM58/reference force value. |
-| Overlay/timing panels | Compare target/reference behavior and timing. |
-| XY correlation | Reference force vs selected target signal. |
+| Plot                    | Purpose                                                     |
+| ----------------------- | ----------------------------------------------------------- |
+| Target raw              | Raw target count / calibration-authoritative target signal. |
+| Target filtered/current | Display or processed target engineering value.              |
+| Reference               | PM58/reference force value.                                 |
+| Overlay/timing panels   | Compare target/reference behavior and timing.               |
+| XY correlation          | Reference force vs selected target signal.                  |
 
 ## XY rendering
 
@@ -124,14 +124,14 @@ The number of buckets is implementation-owned in `viz/charts.py`; tests assert t
 
 Viewer transformations are display-local:
 
-| Operation | Mutates saved/live source data? |
-| --- | --- |
-| render downsampling | No |
-| XY interpolation | No |
-| tail-aligned display shift | No |
-| manual reference shift | No |
-| pause/clear UI | No source mutation; affects displayed state only |
-| marker overlay | No |
+| Operation                  | Mutates saved/live source data?                  |
+| -------------------------- | ------------------------------------------------ |
+| render downsampling        | No                                               |
+| XY interpolation           | No                                               |
+| tail-aligned display shift | No                                               |
+| manual reference shift     | No                                               |
+| pause/clear UI             | No source mutation; affects displayed state only |
+| marker overlay             | No                                               |
 
 ## Failure containment
 

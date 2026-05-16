@@ -75,33 +75,33 @@ Stop if the serial monitor shows the deprecated legacy D-prefix frame instead of
 
 Primary configuration files:
 
-| File | Purpose |
-| --- | --- |
+| File                | Purpose                                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------------------- |
 | `Core/Inc/config.h` | Firmware constants: serial baud, payload schema, sampling period, scale factor, offset, status bits. |
-| `Core/Src/main.cpp` | HX711 setup, TimerOne acquisition, FIFO handoff, M2/D2 emission. |
-| `../platformio.ini` | PlatformIO environment, board, dependencies, upload/monitor settings. |
+| `Core/Src/main.cpp` | HX711 setup, TimerOne acquisition, FIFO handoff, M2/D2 emission.                                     |
+| `../platformio.ini` | PlatformIO environment, board, dependencies, upload/monitor settings.                                |
 
 Important constants:
 
-| Constant / concept | Meaning |
-| --- | --- |
-| `SCALE_FACTOR` | Firmware-side scale used for `current_units`. |
-| `SCALE_OFFSET` | Firmware-side offset used for `current_units`. |
-| `SAMPLING_PERIOD_US` | Timer tick for non-blocking HX711 polling. |
-| `HANDGRIP_PAYLOAD_SCHEMA` | Current payload schema. Expected value: `2`. |
-| `HANDGRIP_FORCE_UNIT` | Unit emitted in M2 metadata, normally `N`. |
+| Constant / concept        | Meaning                                        |
+| ------------------------- | ---------------------------------------------- |
+| `SCALE_FACTOR`            | Firmware-side scale used for `current_units`.  |
+| `SCALE_OFFSET`            | Firmware-side offset used for `current_units`. |
+| `SAMPLING_PERIOD_US`      | Timer tick for non-blocking HX711 polling.     |
+| `HANDGRIP_PAYLOAD_SCHEMA` | Current payload schema. Expected value: `2`.   |
+| `HANDGRIP_FORCE_UNIT`     | Unit emitted in M2 metadata, normally `N`.     |
 
 Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
 
 ## Common workflows
 
-| Goal | Document |
-| --- | --- |
-| Build and upload firmware | [`../docs/workflows/firmware-setup.md`](../docs/workflows/firmware-setup.md) |
-| Understand D2/M2 serial output | [`docs/serial-protocol.md`](docs/serial-protocol.md) |
-| Understand cross-component stream contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) |
-| Validate target-only stream path | [`../docs/workflows/target-only-quickstart.md`](../docs/workflows/target-only-quickstart.md) |
-| Run full live viewer workflow | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
+| Goal                                        | Document                                                                                               |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Build and upload firmware                   | [`../docs/workflows/firmware-setup.md`](../docs/workflows/firmware-setup.md)                           |
+| Understand D2/M2 serial output              | [`docs/serial-protocol.md`](docs/serial-protocol.md)                                                   |
+| Understand cross-component stream contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                 |
+| Validate target-only stream path            | [`../docs/workflows/target-only-quickstart.md`](../docs/workflows/target-only-quickstart.md)           |
+| Run full live viewer workflow               | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
 
 ## Repository layout
 

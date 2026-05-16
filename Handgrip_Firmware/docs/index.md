@@ -10,12 +10,12 @@
 
 ## Audience
 
-| Reader | Use this docs section to... |
-| --- | --- |
-| Operator | Build/upload firmware and verify D2 serial output. |
-| Student maintainer | Understand safe configuration values before editing `config.h`. |
-| Firmware developer | Understand acquisition, FIFO handoff, serial emission, and status bits. |
-| Calibration maintainer | Verify that firmware output preserves raw-count traceability. |
+| Reader                 | Use this docs section to...                                             |
+| ---------------------- | ----------------------------------------------------------------------- |
+| Operator               | Build/upload firmware and verify D2 serial output.                      |
+| Student maintainer     | Understand safe configuration values before editing `config.h`.         |
+| Firmware developer     | Understand acquisition, FIFO handoff, serial emission, and status bits. |
+| Calibration maintainer | Verify that firmware output preserves raw-count traceability.           |
 
 ## Firmware contract
 
@@ -37,32 +37,32 @@ Minimum validation points:
 
 ## Documentation map
 
-| Document | Purpose |
-| --- | --- |
-| [`build-and-upload.md`](build-and-upload.md) | PlatformIO extension, root-open requirement, build/upload/monitor workflow, old Nano bootloader notes. |
-| [`serial-protocol.md`](serial-protocol.md) | Canonical M2/D2 schema, field meanings, examples, status bitfield, parser contract. |
-| [`configuration.md`](configuration.md) | `config.h`, `platformio.ini`, sampling, calibration mode, scale factor, offset, and safe-edit rules. |
-| [`architecture.md`](architecture.md) | TimerOne acquisition, non-blocking HX711 polling, FIFO handoff, serial output, and dependency boundaries. |
-| [`troubleshooting.md`](troubleshooting.md) | Upload errors, old bootloader mismatch, serial permissions, no D2 output, status-bit diagnosis. |
+| Document                                     | Purpose                                                                                                   |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| [`build-and-upload.md`](build-and-upload.md) | PlatformIO extension, root-open requirement, build/upload/monitor workflow, old Nano bootloader notes.    |
+| [`serial-protocol.md`](serial-protocol.md)   | Canonical M2/D2 schema, field meanings, examples, status bitfield, parser contract.                       |
+| [`configuration.md`](configuration.md)       | `config.h`, `platformio.ini`, sampling, calibration mode, scale factor, offset, and safe-edit rules.      |
+| [`architecture.md`](architecture.md)         | TimerOne acquisition, non-blocking HX711 polling, FIFO handoff, serial output, and dependency boundaries. |
+| [`troubleshooting.md`](troubleshooting.md)   | Upload errors, old bootloader mismatch, serial permissions, no D2 output, status-bit diagnosis.           |
 
 ## Related root docs
 
-| Root doc | Why it matters |
-| --- | --- |
-| [`../../docs/workflows/firmware-setup.md`](../../docs/workflows/firmware-setup.md) | Operator-level firmware setup workflow. |
+| Root doc                                                                                           | Why it matters                                                              |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`../../docs/workflows/firmware-setup.md`](../../docs/workflows/firmware-setup.md)                 | Operator-level firmware setup workflow.                                     |
 | [`../../docs/workflows/target-only-quickstart.md`](../../docs/workflows/target-only-quickstart.md) | Validates firmware → bridge → `HandgripTarget` without the reference chain. |
-| [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md) | Root cross-component stream and serial contracts. |
-| [`../../docs/architecture/dataflow.md`](../../docs/architecture/dataflow.md) | Places firmware output in the full system dataflow. |
-| [`../../docs/workflows/handgrip-calibration.md`](../../docs/workflows/handgrip-calibration.md) | Explains why `raw_count` is preserved for calibration fitting. |
+| [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md)       | Root cross-component stream and serial contracts.                           |
+| [`../../docs/architecture/dataflow.md`](../../docs/architecture/dataflow.md)                       | Places firmware output in the full system dataflow.                         |
+| [`../../docs/workflows/handgrip-calibration.md`](../../docs/workflows/handgrip-calibration.md)     | Explains why `raw_count` is preserved for calibration fitting.              |
 
 ## Source map
 
-| Source file | Role |
-| --- | --- |
-| `Core/Src/main.cpp` | Runtime firmware: setup, ISR sampling, FIFO pop/emit, metadata/data frame emission. |
-| `Core/Inc/config.h` | Public firmware constants: serial baud, schema, sampling period, scale factor, offset, status bits, metadata. |
-| `Core/Inc/fifo_buffer.h` | Fixed-size circular FIFO used for interrupt-to-loop handoff. |
-| `../platformio.ini` | Root PlatformIO project configuration, board target, source/include paths, dependencies, upload/monitor ports. |
+| Source file              | Role                                                                                                           |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `Core/Src/main.cpp`      | Runtime firmware: setup, ISR sampling, FIFO pop/emit, metadata/data frame emission.                            |
+| `Core/Inc/config.h`      | Public firmware constants: serial baud, schema, sampling period, scale factor, offset, status bits, metadata.  |
+| `Core/Inc/fifo_buffer.h` | Fixed-size circular FIFO used for interrupt-to-loop handoff.                                                   |
+| `../platformio.ini`      | Root PlatformIO project configuration, board target, source/include paths, dependencies, upload/monitor ports. |
 
 ## Safe edit order
 

@@ -9,15 +9,15 @@
 
 ## Mode comparison
 
-| Area | Active-Send | Modbus RTU polling |
-| --- | --- | --- |
-| Config value | `device.mode=active_send` | `device.mode=modbus_rtu` |
-| Board behavior | Board pushes measurement frames continuously. | Host requests registers repeatedly. |
-| Typical rate | 500 Hz when `active_send_frequency_code=8`. | Transaction-limited; usually lower than Active-Send. |
-| Host timing | Reconstructed from batch timing policy. | Host poll/receive timestamp. |
-| Commands to board | Not available through Active-Send transport. | Available through command register path. |
-| Failure pattern | CRC/resync/backlog warnings. | Timeout or Modbus response errors. |
-| Best use | Calibration/live reference stream once validated. | Bring-up, fallback, command testing, slow debug. |
+| Area              | Active-Send                                       | Modbus RTU polling                                   |
+| ----------------- | ------------------------------------------------- | ---------------------------------------------------- |
+| Config value      | `device.mode=active_send`                         | `device.mode=modbus_rtu`                             |
+| Board behavior    | Board pushes measurement frames continuously.     | Host requests registers repeatedly.                  |
+| Typical rate      | 500 Hz when `active_send_frequency_code=8`.       | Transaction-limited; usually lower than Active-Send. |
+| Host timing       | Reconstructed from batch timing policy.           | Host poll/receive timestamp.                         |
+| Commands to board | Not available through Active-Send transport.      | Available through command register path.             |
+| Failure pattern   | CRC/resync/backlog warnings.                      | Timeout or Modbus response errors.                   |
+| Best use          | Calibration/live reference stream once validated. | Bring-up, fallback, command testing, slow debug.     |
 
 ## Active-Send mode
 
@@ -33,15 +33,15 @@ uv run rs485-gui \
 
 Important config keys:
 
-| Key | Recommended value | Meaning |
-| --- | --- | --- |
-| `device.mode` | `active_send` | Selects push-frame transport. |
-| `device.active_send_frequency_code` | `8` | Board code for 500 Hz. |
-| `active_send.default_parser_profile` | `modbus_rtu_response_11regs` | Expected binary 11-register response payload. |
-| `active_send.timestamp_policy` | `batch_end_anchored` | Reconstructs frame timestamps inside each delivery batch. |
-| `active_send.delivery_window_s` | `0.010` | Low-latency delivery window. |
-| `active_send.max_frames_per_delivery` | `16` | Keeps batches short enough for bridge freshness. |
-| `ipc.publish_after_max_rate_filter` | `false` | Publishes full-rate frames before GUI display filtering. |
+| Key                                   | Recommended value            | Meaning                                                   |
+| ------------------------------------- | ---------------------------- | --------------------------------------------------------- |
+| `device.mode`                         | `active_send`                | Selects push-frame transport.                             |
+| `device.active_send_frequency_code`   | `8`                          | Board code for 500 Hz.                                    |
+| `active_send.default_parser_profile`  | `modbus_rtu_response_11regs` | Expected binary 11-register response payload.             |
+| `active_send.timestamp_policy`        | `batch_end_anchored`         | Reconstructs frame timestamps inside each delivery batch. |
+| `active_send.delivery_window_s`       | `0.010`                      | Low-latency delivery window.                              |
+| `active_send.max_frames_per_delivery` | `16`                         | Keeps batches short enough for bridge freshness.          |
+| `ipc.publish_after_max_rate_filter`   | `false`                      | Publishes full-rate frames before GUI display filtering.  |
 
 ### Active-Send timestamping
 
@@ -64,12 +64,12 @@ Use `host_receive` only as a debug fallback if timestamp reconstruction itself i
 
 Active-Send byte streams can develop CRC/resync cascades if the serial buffer contains stale bytes or the board/host timing gets out of sync. Recovery settings:
 
-| Key | Purpose |
-| --- | --- |
-| `active_send.recovery_enabled` | Enable stale-buffer recovery. |
-| `active_send.recovery_warning_threshold` | Number of warnings before recovery can trigger. |
-| `active_send.recovery_min_interval_s` | Minimum time between recoveries. |
-| `active_send.recovery_reset_input_buffer` | Reset OS serial input buffer on recovery. |
+| Key                                       | Purpose                                         |
+| ----------------------------------------- | ----------------------------------------------- |
+| `active_send.recovery_enabled`            | Enable stale-buffer recovery.                   |
+| `active_send.recovery_warning_threshold`  | Number of warnings before recovery can trigger. |
+| `active_send.recovery_min_interval_s`     | Minimum time between recoveries.                |
+| `active_send.recovery_reset_input_buffer` | Reset OS serial input buffer on recovery.       |
 
 Expected warning handling:
 
@@ -90,13 +90,13 @@ uv run rs485-gui \
 
 Important config keys:
 
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `device.slave_address` | `1` | Board Modbus address. |
-| `device.poll_interval_s` | `0.001` | Target host poll cadence; actual rate remains transaction-limited. |
-| `device.read_start_register` | `0` | First holding register to read. |
-| `device.read_register_count` | `11` | Consecutive register count. |
-| `device.command_register` | `11` | Board command register. |
+| Key                          | Default | Meaning                                                            |
+| ---------------------------- | ------- | ------------------------------------------------------------------ |
+| `device.slave_address`       | `1`     | Board Modbus address.                                              |
+| `device.poll_interval_s`     | `0.001` | Target host poll cadence; actual rate remains transaction-limited. |
+| `device.read_start_register` | `0`     | First holding register to read.                                    |
+| `device.read_register_count` | `11`    | Consecutive register count.                                        |
+| `device.command_register`    | `11`    | Board command register.                                            |
 
 Use Modbus RTU when:
 
@@ -109,32 +109,32 @@ Use Modbus RTU when:
 
 Both modes should produce interpreted fields such as:
 
-| Field | Meaning |
-| --- | --- |
-| `gross_value` | Decimal-scaled gross board reading. |
-| `net_value` | Decimal-scaled net board reading; recommended IPC/calibration signal. |
-| `peak_value` | Decimal-scaled peak board reading. |
-| `gross_raw_value` | Raw gross register value. |
-| `net_raw_value` | Raw net register value. |
-| `peak_raw_value` | Raw peak register value. |
-| `internal_code_raw_value` | Board internal code. |
-| `decimal_code` | Board decimal-point code. |
-| `unit_label` | Decoded engineering unit label. |
-| `status_word` | Raw board status bitfield. |
-| `status_flags` | Decoded status labels. |
-| `reference_force_N` | Canonical alias used by IPC/bridge. |
-| `reference_clock_s` | Canonical reference timestamp. |
-| `reference_status` | Canonical status alias. |
+| Field                     | Meaning                                                               |
+| ------------------------- | --------------------------------------------------------------------- |
+| `gross_value`             | Decimal-scaled gross board reading.                                   |
+| `net_value`               | Decimal-scaled net board reading; recommended IPC/calibration signal. |
+| `peak_value`              | Decimal-scaled peak board reading.                                    |
+| `gross_raw_value`         | Raw gross register value.                                             |
+| `net_raw_value`           | Raw net register value.                                               |
+| `peak_raw_value`          | Raw peak register value.                                              |
+| `internal_code_raw_value` | Board internal code.                                                  |
+| `decimal_code`            | Board decimal-point code.                                             |
+| `unit_label`              | Decoded engineering unit label.                                       |
+| `status_word`             | Raw board status bitfield.                                            |
+| `status_flags`            | Decoded status labels.                                                |
+| `reference_force_N`       | Canonical alias used by IPC/bridge.                                   |
+| `reference_clock_s`       | Canonical reference timestamp.                                        |
+| `reference_status`        | Canonical status alias.                                               |
 
 ## Selecting mode during troubleshooting
 
-| Symptom | Try |
-| --- | --- |
-| No frames in Active-Send | Confirm board Active-Send mode and baud; then test `device.mode=modbus_rtu`. |
-| CRC failures / resyncs continuously | Verify baud, frame profile, board frequency, serial adapter quality, and cable. |
-| Modbus timeouts | Verify A/B wiring, slave address, baud/parity/stop bits. |
-| GUI works but bridge is stale | Confirm `ipc.publish_after_max_rate_filter=false` and Active-Send delivery window is not too large. |
-| Viewer shows reference lag | Inspect timestamp policy, delivery window, bridge timestamping, and viewer alignment. |
+| Symptom                             | Try                                                                                                 |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------- |
+| No frames in Active-Send            | Confirm board Active-Send mode and baud; then test `device.mode=modbus_rtu`.                        |
+| CRC failures / resyncs continuously | Verify baud, frame profile, board frequency, serial adapter quality, and cable.                     |
+| Modbus timeouts                     | Verify A/B wiring, slave address, baud/parity/stop bits.                                            |
+| GUI works but bridge is stale       | Confirm `ipc.publish_after_max_rate_filter=false` and Active-Send delivery window is not too large. |
+| Viewer shows reference lag          | Inspect timestamp policy, delivery window, bridge timestamping, and viewer alignment.               |
 
 ## Calibration recommendation
 

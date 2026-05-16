@@ -17,13 +17,13 @@ RS485_GUI/logs/
 
 Default files:
 
-| File | Format | Purpose |
-| --- | --- | --- |
-| `raw_signal.ndjson` | newline-delimited JSON | Raw transport audit trail: bytes/registers, mode, timestamps, board profile. |
-| `interpreted_signal.ndjson` | newline-delimited JSON | Decoded engineering values and metadata. |
-| `gui_signal.csv` | CSV | Spreadsheet-friendly flat signal log. |
-| `event.log` | plain text | Operator/runtime events such as connect, disconnect, parser config, logger paths, errors. |
-| `acquisition_debug.log` | Python log text | Root/module logs when `logger.debug_log_to_file=true`. |
+| File                        | Format                 | Purpose                                                                                   |
+| --------------------------- | ---------------------- | ----------------------------------------------------------------------------------------- |
+| `raw_signal.ndjson`         | newline-delimited JSON | Raw transport audit trail: bytes/registers, mode, timestamps, board profile.              |
+| `interpreted_signal.ndjson` | newline-delimited JSON | Decoded engineering values and metadata.                                                  |
+| `gui_signal.csv`            | CSV                    | Spreadsheet-friendly flat signal log.                                                     |
+| `event.log`                 | plain text             | Operator/runtime events such as connect, disconnect, parser config, logger paths, errors. |
+| `acquisition_debug.log`     | Python log text        | Root/module logs when `logger.debug_log_to_file=true`.                                    |
 
 ## Config section
 
@@ -54,14 +54,14 @@ One JSON object per acquired frame.
 
 Expected fields:
 
-| Field | Meaning |
-| --- | --- |
-| `host_ts_epoch_s` | Host Unix timestamp. |
-| `host_ts_iso` | Human-readable host timestamp. |
-| `session_id` | Session identifier if configured. |
-| `mode` | `active_send` or `modbus_rtu`. |
-| `raw_transport` | Wire-level bytes/registers/diagnostics. |
-| `board_profile` | Board/runtime profile snapshot. |
+| Field             | Meaning                                 |
+| ----------------- | --------------------------------------- |
+| `host_ts_epoch_s` | Host Unix timestamp.                    |
+| `host_ts_iso`     | Human-readable host timestamp.          |
+| `session_id`      | Session identifier if configured.       |
+| `mode`            | `active_send` or `modbus_rtu`.          |
+| `raw_transport`   | Wire-level bytes/registers/diagnostics. |
+| `board_profile`   | Board/runtime profile snapshot.         |
 
 Use this file when debugging parser behavior, CRC failures, register maps, or source traceability.
 
@@ -77,14 +77,14 @@ One JSON object per decoded frame.
 
 Expected fields:
 
-| Field | Meaning |
-| --- | --- |
-| `host_ts_epoch_s` | Host Unix timestamp. |
-| `host_ts_iso` | Human-readable host timestamp. |
-| `session_id` | Session identifier. |
-| `mode` | Acquisition mode. |
-| `interpreted` | Decoded values: `net_value`, `gross_value`, `reference_force_N`, `status_word`, clocks, unit, etc. |
-| `board_profile` | Board/runtime profile snapshot. |
+| Field             | Meaning                                                                                            |
+| ----------------- | -------------------------------------------------------------------------------------------------- |
+| `host_ts_epoch_s` | Host Unix timestamp.                                                                               |
+| `host_ts_iso`     | Human-readable host timestamp.                                                                     |
+| `session_id`      | Session identifier.                                                                                |
+| `mode`            | Acquisition mode.                                                                                  |
+| `interpreted`     | Decoded values: `net_value`, `gross_value`, `reference_force_N`, `status_word`, clocks, unit, etc. |
+| `board_profile`   | Board/runtime profile snapshot.                                                                    |
 
 Use this file for debugging engineering values and confirming what IPC should publish.
 
@@ -154,19 +154,19 @@ uv run rs485-gui \
 
 ## Write mode
 
-| Mode | Behavior | Use case | Risk |
-| --- | --- | --- | --- |
-| `overwrite` | Replaces previous logs at startup/open. | Clean single-run validation. | Can erase prior run logs. |
-| `append` | Appends to existing logs. | Long-running or cumulative debug log. | Can mix sessions unless `session_id` is set. |
+| Mode        | Behavior                                | Use case                              | Risk                                         |
+| ----------- | --------------------------------------- | ------------------------------------- | -------------------------------------------- |
+| `overwrite` | Replaces previous logs at startup/open. | Clean single-run validation.          | Can erase prior run logs.                    |
+| `append`    | Appends to existing logs.               | Long-running or cumulative debug log. | Can mix sessions unless `session_id` is set. |
 
 For calibration, prefer a unique session/log directory or ensure logs are captured into the calibration session folder if the workflow supports it.
 
 ## Flush policy
 
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| `flush_every_n_batches` | `25` | Flush after this many write batches. |
-| `flush_interval_s` | `1.0` | Flush at least this often. |
+| Setting                 | Default | Meaning                              |
+| ----------------------- | ------- | ------------------------------------ |
+| `flush_every_n_batches` | `25`    | Flush after this many write batches. |
+| `flush_interval_s`      | `1.0`   | Flush at least this often.           |
 
 Tradeoff:
 
@@ -177,12 +177,12 @@ Tradeoff:
 
 Recommended policy:
 
-| Artifact | Keep? | Notes |
-| --- | --- | --- |
-| Logs from accepted calibration sessions | Yes | Preserve with session or archive. |
-| Logs from smoke tests | Optional | Keep only if debugging later. |
-| Logs from failed bring-up | Keep until issue is resolved | Useful for reproducing hardware/communication failures. |
-| Generated logs in documentation commits | Usually no | Do not commit routine logs unless curated as examples. |
+| Artifact                                | Keep?                        | Notes                                                   |
+| --------------------------------------- | ---------------------------- | ------------------------------------------------------- |
+| Logs from accepted calibration sessions | Yes                          | Preserve with session or archive.                       |
+| Logs from smoke tests                   | Optional                     | Keep only if debugging later.                           |
+| Logs from failed bring-up               | Keep until issue is resolved | Useful for reproducing hardware/communication failures. |
+| Generated logs in documentation commits | Usually no                   | Do not commit routine logs unless curated as examples.  |
 
 ## Validation commands
 

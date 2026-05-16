@@ -23,17 +23,17 @@ The current curated conclusion from prior Stage 6 work is:
 
 ## Important Stage 6 artifacts
 
-| Artifact | Purpose | How to use |
-| --- | --- | --- |
-| `stage6_review_design_report.md` | Human-readable review/design report. | Start here for reasoning and final recommendation. |
-| `filter_acceptance_report.md` | Acceptance/failure analysis for candidates. | Check why candidates passed/failed constraints. |
-| `filter_ranking_summary.csv` | Candidate ranking. | Inspect top candidates and composite scores. |
-| `filter_validation_scores.csv` | Validation scores. | Check whether a filter generalizes across trials/sessions. |
-| `filter_decision_summary.csv` | Compact decision table. | Use in handoff reports. |
-| `filter_design_assessment.csv` | Per-candidate design assessment. | Audit filter tradeoffs. |
-| `lsl_bridge_processing_recommendation.yaml` | Candidate deployment config for `LSL_Bridge`. | Copy only after validation and review. |
-| `selected_filter_recommendation.json` | Machine-readable selected recommendation. | Preserve for reproducibility. |
-| `figures/aggregate/stage6_design_representative_overlay.png` | Visual overlay of representative input/filter output. | Check waveform realism. |
+| Artifact                                                     | Purpose                                               | How to use                                                 |
+| ------------------------------------------------------------ | ----------------------------------------------------- | ---------------------------------------------------------- |
+| `stage6_review_design_report.md`                             | Human-readable review/design report.                  | Start here for reasoning and final recommendation.         |
+| `filter_acceptance_report.md`                                | Acceptance/failure analysis for candidates.           | Check why candidates passed/failed constraints.            |
+| `filter_ranking_summary.csv`                                 | Candidate ranking.                                    | Inspect top candidates and composite scores.               |
+| `filter_validation_scores.csv`                               | Validation scores.                                    | Check whether a filter generalizes across trials/sessions. |
+| `filter_decision_summary.csv`                                | Compact decision table.                               | Use in handoff reports.                                    |
+| `filter_design_assessment.csv`                               | Per-candidate design assessment.                      | Audit filter tradeoffs.                                    |
+| `lsl_bridge_processing_recommendation.yaml`                  | Candidate deployment config for `LSL_Bridge`.         | Copy only after validation and review.                     |
+| `selected_filter_recommendation.json`                        | Machine-readable selected recommendation.             | Preserve for reproducibility.                              |
+| `figures/aggregate/stage6_design_representative_overlay.png` | Visual overlay of representative input/filter output. | Check waveform realism.                                    |
 
 ## What not to do
 

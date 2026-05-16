@@ -16,17 +16,17 @@ Most firmware-side handoff failures fall into one of these buckets:
 
 ## Fast triage table
 
-| Symptom | Likely cause | First action |
-| --- | --- | --- |
-| PlatformIO cannot find project | VS Code opened `Handgrip_Firmware/` instead of repo root | Reopen repository root. |
-| Build cannot find `config.h` | root `platformio.ini` not loaded or include path wrong | Confirm root `platformio.ini`. |
-| Upload sync error | Wrong bootloader or wrong serial port | Confirm `board = nanoatmega328`; select correct port. |
-| Permission denied on `/dev/ttyUSB*` | Linux serial permissions | Add user to `dialout` or use appropriate udev/permissions flow. |
-| Serial monitor blank | wrong port, wrong baud, firmware not running | Monitor at `115200`; reset board; confirm target port. |
-| Garbled serial output | baud mismatch or wrong device | Confirm `SERIAL_BAUD_RATE` and monitor speed. |
-| No D2 lines | old firmware, wrong monitor device, firmware stuck, HX711 not ready | Rebuild/upload and inspect status/metadata. |
-| `current_units` is `nan` | invalid scale factor | Check `SCALE_FACTOR`; use `raw_count` for calibration. |
-| Frequent FIFO overflow status | serial/loop cannot drain samples fast enough | Check host monitor/bridge load and FIFO depth. |
+| Symptom                             | Likely cause                                                        | First action                                                    |
+| ----------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------- |
+| PlatformIO cannot find project      | VS Code opened `Handgrip_Firmware/` instead of repo root            | Reopen repository root.                                         |
+| Build cannot find `config.h`        | root `platformio.ini` not loaded or include path wrong              | Confirm root `platformio.ini`.                                  |
+| Upload sync error                   | Wrong bootloader or wrong serial port                               | Confirm `board = nanoatmega328`; select correct port.           |
+| Permission denied on `/dev/ttyUSB*` | Linux serial permissions                                            | Add user to `dialout` or use appropriate udev/permissions flow. |
+| Serial monitor blank                | wrong port, wrong baud, firmware not running                        | Monitor at `115200`; reset board; confirm target port.          |
+| Garbled serial output               | baud mismatch or wrong device                                       | Confirm `SERIAL_BAUD_RATE` and monitor speed.                   |
+| No D2 lines                         | old firmware, wrong monitor device, firmware stuck, HX711 not ready | Rebuild/upload and inspect status/metadata.                     |
+| `current_units` is `nan`            | invalid scale factor                                                | Check `SCALE_FACTOR`; use `raw_count` for calibration.          |
+| Frequent FIFO overflow status       | serial/loop cannot drain samples fast enough                        | Check host monitor/bridge load and FIFO depth.                  |
 
 ## Upload errors
 
@@ -146,22 +146,22 @@ M2,2,...
 
 ### Possible causes
 
-| Cause | Evidence | Fix |
-| --- | --- | --- |
-| wrong serial port | no M2; RS485 noise/board data instead | use `/dev/serial/by-id/` target path. |
-| wrong baud | garbled text | use `115200`. |
-| old firmware | output does not use D2 | rebuild/upload. |
-| firmware reset loop | repeated M2, no stable D2 | inspect power/wiring/source changes. |
-| HX711 never ready | M2 appears but no samples or status issues | inspect HX711 pins/load cell wiring. |
+| Cause               | Evidence                                   | Fix                                   |
+| ------------------- | ------------------------------------------ | ------------------------------------- |
+| wrong serial port   | no M2; RS485 noise/board data instead      | use `/dev/serial/by-id/` target path. |
+| wrong baud          | garbled text                               | use `115200`.                         |
+| old firmware        | output does not use D2                     | rebuild/upload.                       |
+| firmware reset loop | repeated M2, no stable D2                  | inspect power/wiring/source changes.  |
+| HX711 never ready   | M2 appears but no samples or status issues | inspect HX711 pins/load cell wiring.  |
 
 ## Status-bit diagnosis
 
-| Status bit | Meaning | Likely cause | Action |
-| ---: | --- | --- | --- |
-| `0x0000` | OK | Normal sample | Continue. |
-| `0x0001` | FIFO overflow | main loop/serial emission cannot keep up | reduce host blocking, close slow monitor, inspect bridge load, consider FIFO depth only after measuring. |
-| `0x0002` | HX711 not ready | timer tick occurred before HX711 conversion ready | occasional is expected; persistent means rate/wiring/HX711 issue. |
-| `0x0004` | scale invalid | `SCALE_FACTOR == 0.0F` or invalid unit conversion | fix `SCALE_FACTOR`; trust `raw_count` over `current_units`. |
+| Status bit | Meaning         | Likely cause                                      | Action                                                                                                   |
+| ---------: | --------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+|   `0x0000` | OK              | Normal sample                                     | Continue.                                                                                                |
+|   `0x0001` | FIFO overflow   | main loop/serial emission cannot keep up          | reduce host blocking, close slow monitor, inspect bridge load, consider FIFO depth only after measuring. |
+|   `0x0002` | HX711 not ready | timer tick occurred before HX711 conversion ready | occasional is expected; persistent means rate/wiring/HX711 issue.                                        |
+|   `0x0004` | scale invalid   | `SCALE_FACTOR == 0.0F` or invalid unit conversion | fix `SCALE_FACTOR`; trust `raw_count` over `current_units`.                                              |
 
 ## Raw count does not change under force
 

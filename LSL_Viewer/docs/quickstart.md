@@ -61,25 +61,25 @@ http://127.0.0.1:8765
 
 Expected panels / behavior:
 
-| UI element | Expected behavior |
-| --- | --- |
-| Info panel | Shows mode, stream status, latest values, timing/diagnostic summary. |
-| Target raw plot | Updates when force is applied to the target handgrip. |
+| UI element                         | Expected behavior                                                           |
+| ---------------------------------- | --------------------------------------------------------------------------- |
+| Info panel                         | Shows mode, stream status, latest values, timing/diagnostic summary.        |
+| Target raw plot                    | Updates when force is applied to the target handgrip.                       |
 | Target filtered/current units plot | Shows firmware/bridge filtered or current engineering value when available. |
-| Reference plot | Updates from PM58/acquisition-board reference force. |
-| Overlay / timing panels | Help compare target/reference timing and force behavior. |
-| XY correlation | Shows relationship between reference force and selected target signal. |
-| Clear control | Clears plots and resets post-clear display state. |
-| Pause control | Pauses/resumes live or replay rendering. |
-| XY lock control | Toggles adaptive axis behavior vs lock-largest-span behavior. |
+| Reference plot                     | Updates from PM58/acquisition-board reference force.                        |
+| Overlay / timing panels            | Help compare target/reference timing and force behavior.                    |
+| XY correlation                     | Shows relationship between reference force and selected target signal.      |
+| Clear control                      | Clears plots and resets post-clear display state.                           |
+| Pause control                      | Pauses/resumes live or replay rendering.                                    |
+| XY lock control                    | Toggles adaptive axis behavior vs lock-largest-span behavior.               |
 
 ## Where outputs/logs appear
 
-| Output | Default / source |
-| --- | --- |
-| Browser UI | `viewer.server.host` + `viewer.server.port`, default `127.0.0.1:8765`. |
-| Viewer log | `logging.log_file`, default `handgrip_realtime_viewer.log`. |
-| LSL inputs | Live LSL network streams from `LSL_Bridge`. |
+| Output        | Default / source                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| Browser UI    | `viewer.server.host` + `viewer.server.port`, default `127.0.0.1:8765`.                            |
+| Viewer log    | `logging.log_file`, default `handgrip_realtime_viewer.log`.                                       |
+| LSL inputs    | Live LSL network streams from `LSL_Bridge`.                                                       |
 | Replay inputs | Paths under `reference.target_csv_path`, `reference.reference_csv_path`, or `reference.xdf_path`. |
 
 The viewer generally does not create scientific source data. It displays live/replay data and writes diagnostic logs.

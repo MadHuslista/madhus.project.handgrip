@@ -9,14 +9,14 @@
 
 ## Development entry points
 
-| Task | Start with |
-| --- | --- |
-| Add a new plot | `src/lsl_viewer/viz/charts.py`, `src/lsl_viewer/viz/panels.py` |
-| Add a new signal/channel | `conf/config.yaml`, `config.py`, `types.py`, `core/stream.py`, `core/replay.py` |
-| Change XY behavior | `core/alignment.py`, `viz/charts.py`, `viz/state.py` |
-| Add a keyboard/control toggle | `config.py`, `viz/panels.py`, `types.py`, tests |
-| Add replay behavior | `core/replay.py`, `viz/app.py`, replay tests |
-| Add marker behavior | `viz/markers.py`, `viz/charts.py`, marker integration tests |
+| Task                          | Start with                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| Add a new plot                | `src/lsl_viewer/viz/charts.py`, `src/lsl_viewer/viz/panels.py`                  |
+| Add a new signal/channel      | `conf/config.yaml`, `config.py`, `types.py`, `core/stream.py`, `core/replay.py` |
+| Change XY behavior            | `core/alignment.py`, `viz/charts.py`, `viz/state.py`                            |
+| Add a keyboard/control toggle | `config.py`, `viz/panels.py`, `types.py`, tests                                 |
+| Add replay behavior           | `core/replay.py`, `viz/app.py`, replay tests                                    |
+| Add marker behavior           | `viz/markers.py`, `viz/charts.py`, marker integration tests                     |
 
 ## Add a new plot
 
@@ -109,11 +109,11 @@ uv run pytest tests/integration/test_charts.py
 
 Current patterns:
 
-| Control | Config | State/callback |
-| --- | --- | --- |
-| clear | `viewer.controls.clear_key` | `viz/panels.py` clear callback |
-| pause | `viewer.controls.pause_key` | live/replay pause callback |
-| XY lock | `viewer.xy_correlation.toggle_key` | `xy_lock_max_span` state |
+| Control | Config                             | State/callback                 |
+| ------- | ---------------------------------- | ------------------------------ |
+| clear   | `viewer.controls.clear_key`        | `viz/panels.py` clear callback |
+| pause   | `viewer.controls.pause_key`        | live/replay pause callback     |
+| XY lock | `viewer.xy_correlation.toggle_key` | `xy_lock_max_span` state       |
 
 ## Add replay support
 
@@ -143,15 +143,15 @@ Keep `dejitter_timestamps=False` unless there is a documented reason to alter XD
 
 ## Test matrix
 
-| Test file | What it guards |
-| --- | --- |
-| `tests/unit/test_alignment.py` | XY interpolation, time shift, gap rejection, target signal choice. |
-| `tests/unit/test_state.py` | Axis limits, XY max-span state, viewer state round-trip. |
-| `tests/unit/test_timing.py` | Timing interval and clock validation metrics. |
-| `tests/unit/test_replay_loaders.py` | Replay timebase/window helper behavior. |
-| `tests/integration/test_charts.py` | ECharts options, render downsampling, clear/marker/XY updates. |
-| `tests/integration/test_csv_replay.py` | CSV replay loading and required column behavior. |
-| `tests/e2e/test_cli.py` | CLI/Hydra help, invalid modes, missing replay path errors. |
+| Test file                              | What it guards                                                     |
+| -------------------------------------- | ------------------------------------------------------------------ |
+| `tests/unit/test_alignment.py`         | XY interpolation, time shift, gap rejection, target signal choice. |
+| `tests/unit/test_state.py`             | Axis limits, XY max-span state, viewer state round-trip.           |
+| `tests/unit/test_timing.py`            | Timing interval and clock validation metrics.                      |
+| `tests/unit/test_replay_loaders.py`    | Replay timebase/window helper behavior.                            |
+| `tests/integration/test_charts.py`     | ECharts options, render downsampling, clear/marker/XY updates.     |
+| `tests/integration/test_csv_replay.py` | CSV replay loading and required column behavior.                   |
+| `tests/e2e/test_cli.py`                | CLI/Hydra help, invalid modes, missing replay path errors.         |
 
 ## Pre-merge checklist
 

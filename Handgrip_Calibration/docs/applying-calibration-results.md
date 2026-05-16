@@ -27,13 +27,13 @@ Do not copy values from:
 
 ## Deployment targets
 
-| Target | Use when | Risk |
-| --- | --- | --- |
-| Firmware `SCALE_FACTOR` / `SCALE_OFFSET` | Accepted model is simple affine and on-device convenience output is needed. | Requires firmware rebuild/upload and bench validation. |
-| `LSL_Bridge` processing config | Host-side calibrated stream is preferred while preserving firmware raw counts. | Must update bridge docs/config and validate downstream consumers. |
-| Report/downstream conversion | Scientific traceability prefers raw-count preservation. | Users must apply conversion consistently during analysis. |
-| Viewer display-only conversion | Only operator display needs calibrated units. | Must not be confused with saved/calibrated data. |
-| Analysis config | Offline analysis needs calibrated signal. | Must document exactly which session/model produced the conversion. |
+| Target                                   | Use when                                                                       | Risk                                                               |
+| ---------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Firmware `SCALE_FACTOR` / `SCALE_OFFSET` | Accepted model is simple affine and on-device convenience output is needed.    | Requires firmware rebuild/upload and bench validation.             |
+| `LSL_Bridge` processing config           | Host-side calibrated stream is preferred while preserving firmware raw counts. | Must update bridge docs/config and validate downstream consumers.  |
+| Report/downstream conversion             | Scientific traceability prefers raw-count preservation.                        | Users must apply conversion consistently during analysis.          |
+| Viewer display-only conversion           | Only operator display needs calibrated units.                                  | Must not be confused with saved/calibrated data.                   |
+| Analysis config                          | Offline analysis needs calibrated signal.                                      | Must document exactly which session/model produced the conversion. |
 
 ## Firmware affine conversion
 
@@ -104,15 +104,15 @@ Pass conditions:
 
 Document every deployment with:
 
-| Field | Example |
-| --- | --- |
-| source fit session | `2026-05-13_055327_handgrip_cal` |
-| holdout session | `<holdout_session_id>` |
-| selected model | `affine_wls` |
-| deployment target | firmware / bridge / downstream report |
-| values applied | `a`, `b`, `SCALE_FACTOR`, `SCALE_OFFSET`, or model file path |
-| validation result | pass/fail + threshold |
-| commit | git commit that applied values |
+| Field              | Example                                                      |
+| ------------------ | ------------------------------------------------------------ |
+| source fit session | `2026-05-13_055327_handgrip_cal`                             |
+| holdout session    | `<holdout_session_id>`                                       |
+| selected model     | `affine_wls`                                                 |
+| deployment target  | firmware / bridge / downstream report                        |
+| values applied     | `a`, `b`, `SCALE_FACTOR`, `SCALE_OFFSET`, or model file path |
+| validation result  | pass/fail + threshold                                        |
+| commit             | git commit that applied values                               |
 
 ## Stop conditions
 

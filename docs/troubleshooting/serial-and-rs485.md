@@ -20,12 +20,12 @@ dmesg | tail -80
 
 ### Likely causes
 
-| Cause | Fix |
-| --- | --- |
-| USB cable is power-only | Use a known data-capable USB cable. |
-| Device permissions | Add user to `dialout` or use udev rules; re-login. |
-| Adapter not enumerating | Try another USB port/cable. |
-| Port occupied | Close serial monitor, GUI, bridge, or other process using the port. |
+| Cause                   | Fix                                                                 |
+| ----------------------- | ------------------------------------------------------------------- |
+| USB cable is power-only | Use a known data-capable USB cable.                                 |
+| Device permissions      | Add user to `dialout` or use udev rules; re-login.                  |
+| Adapter not enumerating | Try another USB port/cable.                                         |
+| Port occupied           | Close serial monitor, GUI, bridge, or other process using the port. |
 
 ## Symptom: wrong A/B wiring
 
@@ -43,9 +43,9 @@ Power down if required by lab practice, then swap A/B on the RS485 adapter side 
 Typical mapping:
 
 | Board | Adapter |
-| --- | --- |
-| A+ | A / D+ |
-| B- | B / D- |
+| ----- | ------- |
+| A+    | A / D+  |
+| B-    | B / D-  |
 
 ## Symptom: baud mismatch
 
@@ -70,13 +70,13 @@ Ensure acquisition board communication menu and `RS485_GUI/config/config.yaml` a
 
 ### Likely causes
 
-| Cause | Fix |
-| --- | --- |
-| Active-Send not enabled on board | Enable vendor Active-Send mode from board menu. |
-| Wrong output rate | Set a supported rate, typically 500 Hz for calibration profile. |
-| Wrong serial profile | Align baud/parity/stop bits. |
-| Wrong parser profile | Update `RS485_GUI/config/config.yaml`. |
-| A/B swapped | Swap RS485 pair and retry. |
+| Cause                            | Fix                                                             |
+| -------------------------------- | --------------------------------------------------------------- |
+| Active-Send not enabled on board | Enable vendor Active-Send mode from board menu.                 |
+| Wrong output rate                | Set a supported rate, typically 500 Hz for calibration profile. |
+| Wrong serial profile             | Align baud/parity/stop bits.                                    |
+| Wrong parser profile             | Update `RS485_GUI/config/config.yaml`.                          |
+| A/B swapped                      | Swap RS485 pair and retry.                                      |
 
 ## Fallback path
 

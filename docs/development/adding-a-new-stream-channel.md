@@ -11,28 +11,28 @@
 
 ### Target channel from firmware D2
 
-| File | Why |
-| --- | --- |
-| `Handgrip_Firmware/Core/Src/main.cpp` | Emit the new field if firmware payload changes. |
-| `Handgrip_Firmware/Core/Inc/config.h` | Update schema metadata, comments, constants. |
-| `Handgrip_Firmware/docs/serial-protocol.md` | Document the D2 schema change. |
-| `LSL_Bridge/src/lsl_bridge/core/parser.py` | Parse the new field strictly. |
-| `LSL_Bridge/conf/config.yaml` | Add channel name/metadata. |
-| `LSL_Bridge/docs/stream-contracts.md` | Document component-level stream schema. |
-| `docs/architecture/stream-contracts.md` | Document root cross-component contract. |
-| `LSL_Viewer/conf/config.yaml` | Add viewer label if displayed. |
-| `Handgrip_Calibration/conf/*.yaml` | Add or explicitly ignore channel if calibration needs it. |
+| File                                        | Why                                                       |
+| ------------------------------------------- | --------------------------------------------------------- |
+| `Handgrip_Firmware/Core/Src/main.cpp`       | Emit the new field if firmware payload changes.           |
+| `Handgrip_Firmware/Core/Inc/config.h`       | Update schema metadata, comments, constants.              |
+| `Handgrip_Firmware/docs/serial-protocol.md` | Document the D2 schema change.                            |
+| `LSL_Bridge/src/lsl_bridge/core/parser.py`  | Parse the new field strictly.                             |
+| `LSL_Bridge/conf/config.yaml`               | Add channel name/metadata.                                |
+| `LSL_Bridge/docs/stream-contracts.md`       | Document component-level stream schema.                   |
+| `docs/architecture/stream-contracts.md`     | Document root cross-component contract.                   |
+| `LSL_Viewer/conf/config.yaml`               | Add viewer label if displayed.                            |
+| `Handgrip_Calibration/conf/*.yaml`          | Add or explicitly ignore channel if calibration needs it. |
 
 ### Reference channel from RS485 GUI IPC
 
-| File | Why |
-| --- | --- |
-| `RS485_GUI/src/rs485_gui/io/publisher.py` | Publish the new IPC field. |
-| `RS485_GUI/docs/ipc-schema.md` | Document topic/payload alias. |
-| `LSL_Bridge/src/lsl_bridge/publishers/reference.py` | Decode the new field. |
-| `LSL_Bridge/conf/config.yaml` | Add reference stream channel. |
-| `LSL_Viewer/conf/config.yaml` | Display/label if needed. |
-| `Handgrip_Calibration/conf/*.yaml` | Use for recording/QA if needed. |
+| File                                                | Why                             |
+| --------------------------------------------------- | ------------------------------- |
+| `RS485_GUI/src/rs485_gui/io/publisher.py`           | Publish the new IPC field.      |
+| `RS485_GUI/docs/ipc-schema.md`                      | Document topic/payload alias.   |
+| `LSL_Bridge/src/lsl_bridge/publishers/reference.py` | Decode the new field.           |
+| `LSL_Bridge/conf/config.yaml`                       | Add reference stream channel.   |
+| `LSL_Viewer/conf/config.yaml`                       | Display/label if needed.        |
+| `Handgrip_Calibration/conf/*.yaml`                  | Use for recording/QA if needed. |
 
 ## Data contracts affected
 
@@ -95,11 +95,11 @@ uv run pytest
 
 ## Common failure modes
 
-| Failure | Cause | Fix |
-| --- | --- | --- |
-| Bridge drops all target lines | D2 parser not updated for firmware field count | Update parser and tests. |
-| Viewer shows missing channel | Viewer config label not updated | Update `LSL_Viewer/conf/config.yaml` and docs. |
-| Calibration preflight fails | Protocol expected old channel set | Update calibration config or declare channel optional. |
-| CSV column order differs from docs | CSV sink not updated | Update sink tests and output docs. |
-| Analysis manifest fails | New channel absent from manifest | Update manifest schema/docs. |
-| Calibration semantics change accidentally | New field replaces raw count | Preserve `target_raw_count` and reference force contracts. |
+| Failure                                   | Cause                                          | Fix                                                        |
+| ----------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------- |
+| Bridge drops all target lines             | D2 parser not updated for firmware field count | Update parser and tests.                                   |
+| Viewer shows missing channel              | Viewer config label not updated                | Update `LSL_Viewer/conf/config.yaml` and docs.             |
+| Calibration preflight fails               | Protocol expected old channel set              | Update calibration config or declare channel optional.     |
+| CSV column order differs from docs        | CSV sink not updated                           | Update sink tests and output docs.                         |
+| Analysis manifest fails                   | New channel absent from manifest               | Update manifest schema/docs.                               |
+| Calibration semantics change accidentally | New field replaces raw count                   | Preserve `target_raw_count` and reference force contracts. |

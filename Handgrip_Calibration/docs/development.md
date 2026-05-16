@@ -17,13 +17,13 @@
 
 ### Required decisions
 
-| Decision | Document it in |
-| --- | --- |
-| production vs diagnostic vs smoke | `protocols.md` |
-| primary fitting vs holdout vs validation-only | `protocols.md` |
-| force levels and repeats | protocol YAML + operator doc |
-| quality gates | protocol YAML + `configuration.md` |
-| expected outputs | `reports-and-outputs.md` if new artifact class appears |
+| Decision                                      | Document it in                                         |
+| --------------------------------------------- | ------------------------------------------------------ |
+| production vs diagnostic vs smoke             | `protocols.md`                                         |
+| primary fitting vs holdout vs validation-only | `protocols.md`                                         |
+| force levels and repeats                      | protocol YAML + operator doc                           |
+| quality gates                                 | protocol YAML + `configuration.md`                     |
+| expected outputs                              | `reports-and-outputs.md` if new artifact class appears |
 
 ### Validation
 
@@ -44,14 +44,14 @@ uv run handgrip-cal record --config conf/protocol_<name>.yaml --dry-run
 
 ### Required model metadata
 
-| Metadata | Purpose |
-| --- | --- |
-| model name | Stable config/report identifier. |
-| deployable flag | Whether it can be selected as primary. |
+| Metadata              | Purpose                                                  |
+| --------------------- | -------------------------------------------------------- |
+| model name            | Stable config/report identifier.                         |
+| deployable flag       | Whether it can be selected as primary.                   |
 | monotonicity behavior | Whether it can violate physical monotonic force mapping. |
-| parameters | Report/deployment values. |
-| metrics | Selection and interpretation. |
-| failure modes | What bad data pattern it diagnoses. |
+| parameters            | Report/deployment values.                                |
+| metrics               | Selection and interpretation.                            |
+| failure modes         | What bad data pattern it diagnoses.                      |
 
 ### Validation
 
@@ -72,12 +72,12 @@ uv run handgrip-cal record --config conf/protocol_<name>.yaml --dry-run
 
 ### Required report-section contract
 
-| Field | Requirement |
-| --- | --- |
-| input artifacts | Explicit source files. |
-| output artifact | Stable filename/section title. |
-| interpretation | What the reader should conclude. |
-| failure state | What it means if the section is absent. |
+| Field           | Requirement                             |
+| --------------- | --------------------------------------- |
+| input artifacts | Explicit source files.                  |
+| output artifact | Stable filename/section title.          |
+| interpretation  | What the reader should conclude.        |
+| failure state   | What it means if the section is absent. |
 
 ## Add a captured artifact
 
@@ -110,13 +110,13 @@ uv run pytest
 
 Recommended categories:
 
-| Change | Test focus |
-| --- | --- |
-| protocol YAML | config parsing, preflight, dry-run recording. |
-| recorder | session folder structure, stream/channel mapping, event writing. |
-| model | synthetic fit, metrics, selection, serialization. |
-| report | generated sections, plots, JSON/Markdown outputs. |
-| holdout | independent validation metrics and pass/fail behavior. |
+| Change        | Test focus                                                       |
+| ------------- | ---------------------------------------------------------------- |
+| protocol YAML | config parsing, preflight, dry-run recording.                    |
+| recorder      | session folder structure, stream/channel mapping, event writing. |
+| model         | synthetic fit, metrics, selection, serialization.                |
+| report        | generated sections, plots, JSON/Markdown outputs.                |
+| holdout       | independent validation metrics and pass/fail behavior.           |
 
 ## Development stop conditions
 

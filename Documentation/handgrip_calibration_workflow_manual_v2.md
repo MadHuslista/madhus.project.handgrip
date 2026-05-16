@@ -1093,20 +1093,20 @@ handgrip-cal demo-data --output ./demo_sessions --seed 42
 
 ## 12. Failure Modes and Triage
 
-| Failure                                        | Likely cause                                                      | Immediate action                                                                    |
-| ---------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `preflight` cannot resolve `HandgripTarget`    | firmware not parsed, serial port wrong, D2 format mismatch        | inspect raw serial; verify no extra comma; check LSL_Bridge logs                    |
-| `preflight` cannot resolve `HandgripReference` | RS485_GUI IPC not publishing, bridge not subscribed               | check ZMQ endpoint `tcp://127.0.0.1:5557`, topic `rs485.measurement.v1`             |
-| bridge logs show repeated IPC reconnect or no reference samples | endpoint/topic mismatch between publisher and subscriber | verify RS485_GUI publisher endpoint/topic and LSL_Bridge `reference_ipc` config match exactly |
-| RS485 GUI fails to start publisher             | local endpoint already in use                                     | stop conflicting process on `tcp://127.0.0.1:5557` and restart RS485_GUI             |
-| reference rate < 495 Hz                        | serial backlog, Active-Send config mismatch, parser recovery loop | reduce GUI load, check baud 460800, check board `505.AF=8`                          |
-| target gaps > 100 ms                           | HX711 not ready, firmware FIFO overflow, serial disruption        | inspect `target_status`, USB cable, sampling ISR behavior                           |
-| reference stream present but values invalid/intermittent | malformed RS485 IPC payloads or field mismatch | inspect RS485_GUI payload keys (`reference_force_N`, `reference_clock_s`, `seq`) and bridge warnings |
-| many holds rejected for std                    | operator instability or fixture compliance                        | improve mechanical support, longer hold, lower threshold only after measuring noise |
-| many holds rejected for slope                  | force drifting during stable window                               | wait longer before pressing ENTER, improve load application method                  |
-| affine fails but nonlinear passes              | possible nonlinearity or bad holds                                | inspect residuals; repeat session before deploying nonlinear model                  |
-| hysteresis diagnostic large                    | mechanical hysteresis/contact issue                               | improve fixture/preload, compare ascending/descending holds                         |
-| drift diagnostic large                         | warm-up/creep/auto-zero problem                                   | warm up longer, verify auto-zero/dynamic tracking disabled                          |
+| Failure                                                         | Likely cause                                                      | Immediate action                                                                                     |
+| --------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `preflight` cannot resolve `HandgripTarget`                     | firmware not parsed, serial port wrong, D2 format mismatch        | inspect raw serial; verify no extra comma; check LSL_Bridge logs                                     |
+| `preflight` cannot resolve `HandgripReference`                  | RS485_GUI IPC not publishing, bridge not subscribed               | check ZMQ endpoint `tcp://127.0.0.1:5557`, topic `rs485.measurement.v1`                              |
+| bridge logs show repeated IPC reconnect or no reference samples | endpoint/topic mismatch between publisher and subscriber          | verify RS485_GUI publisher endpoint/topic and LSL_Bridge `reference_ipc` config match exactly        |
+| RS485 GUI fails to start publisher                              | local endpoint already in use                                     | stop conflicting process on `tcp://127.0.0.1:5557` and restart RS485_GUI                             |
+| reference rate < 495 Hz                                         | serial backlog, Active-Send config mismatch, parser recovery loop | reduce GUI load, check baud 460800, check board `505.AF=8`                                           |
+| target gaps > 100 ms                                            | HX711 not ready, firmware FIFO overflow, serial disruption        | inspect `target_status`, USB cable, sampling ISR behavior                                            |
+| reference stream present but values invalid/intermittent        | malformed RS485 IPC payloads or field mismatch                    | inspect RS485_GUI payload keys (`reference_force_N`, `reference_clock_s`, `seq`) and bridge warnings |
+| many holds rejected for std                                     | operator instability or fixture compliance                        | improve mechanical support, longer hold, lower threshold only after measuring noise                  |
+| many holds rejected for slope                                   | force drifting during stable window                               | wait longer before pressing ENTER, improve load application method                                   |
+| affine fails but nonlinear passes                               | possible nonlinearity or bad holds                                | inspect residuals; repeat session before deploying nonlinear model                                   |
+| hysteresis diagnostic large                                     | mechanical hysteresis/contact issue                               | improve fixture/preload, compare ascending/descending holds                                          |
+| drift diagnostic large                                          | warm-up/creep/auto-zero problem                                   | warm up longer, verify auto-zero/dynamic tracking disabled                                           |
 
 ---
 

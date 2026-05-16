@@ -9,14 +9,14 @@
 
 ## Stage overview
 
-| Stage | Name | Purpose | Typical input | Typical output |
-| --- | --- | --- | --- | --- |
-| Stage 1 | Startup / warm-up | Quantify startup drift, stabilization time, and zero behavior. | Startup or idle capture after power-on. | Stabilization metrics, drift plots, recommended warm-up/discard interval. |
-| Stage 2 | Static rest noise | Characterize stationary noise and spectral content at rest. | No-load/rest capture. | Noise metrics, PSD/bandpower, narrowband component review. |
-| Stage 3 | Loaded drift / creep | Characterize drift, creep, and zero return under static load. | Loaded hold or static force capture. | Drift slopes, creep metrics, zero-return assessment. |
-| Stage 4 | Real handgrip dynamics | Quantify realistic grip waveform dynamics. | Ramp/hold/squeeze/release captures. | Rise/peak/release metrics, dynamic plots, event summaries. |
-| Stage 5 | Interference / condition comparison | Compare operating conditions and external interference. | Multi-condition captures. | Condition comparison table/report. |
-| Stage 6 | Filter design / candidate benchmark | Rank and interpret filter candidates against signal goals. | Selected representative captures plus prior stage metrics. | Candidate comparison, recommendation YAML/report, deployment guidance. |
+| Stage   | Name                                | Purpose                                                        | Typical input                                              | Typical output                                                            |
+| ------- | ----------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Stage 1 | Startup / warm-up                   | Quantify startup drift, stabilization time, and zero behavior. | Startup or idle capture after power-on.                    | Stabilization metrics, drift plots, recommended warm-up/discard interval. |
+| Stage 2 | Static rest noise                   | Characterize stationary noise and spectral content at rest.    | No-load/rest capture.                                      | Noise metrics, PSD/bandpower, narrowband component review.                |
+| Stage 3 | Loaded drift / creep                | Characterize drift, creep, and zero return under static load.  | Loaded hold or static force capture.                       | Drift slopes, creep metrics, zero-return assessment.                      |
+| Stage 4 | Real handgrip dynamics              | Quantify realistic grip waveform dynamics.                     | Ramp/hold/squeeze/release captures.                        | Rise/peak/release metrics, dynamic plots, event summaries.                |
+| Stage 5 | Interference / condition comparison | Compare operating conditions and external interference.        | Multi-condition captures.                                  | Condition comparison table/report.                                        |
+| Stage 6 | Filter design / candidate benchmark | Rank and interpret filter candidates against signal goals.     | Selected representative captures plus prior stage metrics. | Candidate comparison, recommendation YAML/report, deployment guidance.    |
 
 ## Stage 1 — Startup / warm-up
 

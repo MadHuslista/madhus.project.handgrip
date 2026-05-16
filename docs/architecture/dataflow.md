@@ -44,14 +44,14 @@ HandgripTarget + HandgripReference + events
 
 ## Ownership boundaries
 
-| Boundary | Producer | Consumer | Contract |
-| --- | --- | --- | --- |
-| Firmware UART | `Handgrip_Firmware` | `LSL_Bridge` | `M2` metadata and `D2` sample lines. |
-| RS485 board link | acquisition board | `RS485_GUI` | Active-Send or Modbus RTU measurement frames. |
-| Reference IPC | `RS485_GUI` | `LSL_Bridge` | ZMQ topic `rs485.measurement.v1`. |
-| LSL streams | `LSL_Bridge` | Viewer/calibration/recording tools | Stream names, channel labels, timestamps, nominal rates. |
-| Calibration session folder | `Handgrip_Calibration` | Reports, users, analysis tools | `target.csv`, `reference.csv`, event logs, fit/report files. |
-| Analysis output folder | `Handgrip_Analysis` | Users and maintainers | Stage reports, plots, metrics, filter recommendation files. |
+| Boundary                   | Producer               | Consumer                           | Contract                                                     |
+| -------------------------- | ---------------------- | ---------------------------------- | ------------------------------------------------------------ |
+| Firmware UART              | `Handgrip_Firmware`    | `LSL_Bridge`                       | `M2` metadata and `D2` sample lines.                         |
+| RS485 board link           | acquisition board      | `RS485_GUI`                        | Active-Send or Modbus RTU measurement frames.                |
+| Reference IPC              | `RS485_GUI`            | `LSL_Bridge`                       | ZMQ topic `rs485.measurement.v1`.                            |
+| LSL streams                | `LSL_Bridge`           | Viewer/calibration/recording tools | Stream names, channel labels, timestamps, nominal rates.     |
+| Calibration session folder | `Handgrip_Calibration` | Reports, users, analysis tools     | `target.csv`, `reference.csv`, event logs, fit/report files. |
+| Analysis output folder     | `Handgrip_Analysis`    | Users and maintainers              | Stage reports, plots, metrics, filter recommendation files.  |
 
 ## Target chain details
 
@@ -95,11 +95,11 @@ For calibration, the preferred reference profile is high-rate, low-hidden-filter
 
 ## Downstream consumers
 
-| Consumer | Inputs | Outputs | Main use |
-| --- | --- | --- | --- |
-| `LSL_Viewer` | `HandgripTarget`, `HandgripReference`, optional marker/event streams | Browser visualization | Validate live signals and timing behavior. |
-| `Handgrip_Calibration` | target/reference LSL streams and markers | Calibration session folder + reports | Fit target raw counts to reference force. |
-| `Handgrip_Analysis` | CSV/session/manifest inputs | Stage reports and filter recommendations | Offline signal characterization and DSP decisions. |
+| Consumer               | Inputs                                                               | Outputs                                  | Main use                                           |
+| ---------------------- | -------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------- |
+| `LSL_Viewer`           | `HandgripTarget`, `HandgripReference`, optional marker/event streams | Browser visualization                    | Validate live signals and timing behavior.         |
+| `Handgrip_Calibration` | target/reference LSL streams and markers                             | Calibration session folder + reports     | Fit target raw counts to reference force.          |
+| `Handgrip_Analysis`    | CSV/session/manifest inputs                                          | Stage reports and filter recommendations | Offline signal characterization and DSP decisions. |
 
 ## Validation checklist
 

@@ -30,23 +30,23 @@ ipc:
 
 ## Lifecycle
 
-| Stage | Behavior |
-| --- | --- |
-| App construction | Publisher object can exist, but ZMQ endpoint should not bind when `start_on_app_launch=false`. |
-| Connect | Publisher binds when `start_on_connect=true`. |
+| Stage            | Behavior                                                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------- |
+| App construction | Publisher object can exist, but ZMQ endpoint should not bind when `start_on_app_launch=false`.                   |
+| Connect          | Publisher binds when `start_on_connect=true`.                                                                    |
 | Acquisition loop | Worker publishes frames at full acquisition rate before UI filtering when `publish_after_max_rate_filter=false`. |
-| Disconnect | Publisher closes when `stop_on_disconnect=true`. |
+| Disconnect       | Publisher closes when `stop_on_disconnect=true`.                                                                 |
 
 The delayed bind is intentional: NiceGUI can re-execute the application module while serving pages, and binding during construction can cause false port-conflict errors.
 
 ## Measurement topic
 
-| Field | Value |
-| --- | --- |
-| Topic | `rs485.measurement.v1` |
-| Transport | ZeroMQ multipart PUB message |
-| Producer | `RS485_GUI` |
-| Consumer | `LSL_Bridge` |
+| Field            | Value                        |
+| ---------------- | ---------------------------- |
+| Topic            | `rs485.measurement.v1`       |
+| Transport        | ZeroMQ multipart PUB message |
+| Producer         | `RS485_GUI`                  |
+| Consumer         | `LSL_Bridge`                 |
 | Payload encoding | JSON object encoded as UTF-8 |
 
 ### Measurement payload
@@ -80,43 +80,43 @@ Representative payload shape:
 
 ### Canonical measurement fields
 
-| Field | Type | Meaning | Consumer behavior |
-| --- | --- | --- | --- |
-| `schema` | string | Payload schema name. | Should equal `rs485.measurement.v1`. |
-| `seq` | integer | Publisher-local sequence number. | Detect publish drops/restarts. |
-| `session_id` | string | Active session identifier. | Preserve calibration/run provenance. |
-| `mode` | string | `active_send` or `modbus_rtu`. | Debug acquisition mode. |
-| `signal_key` | string | Source signal used for `reference_force_N`. | Verify calibration signal. |
-| `reference_force_N` | float | Canonical reference value for bridge/calibration. | Primary value consumed by `LSL_Bridge`. |
-| `reference_clock_s` | float | LSL-aligned reference timestamp. | Used by bridge timestamping/fusion. |
-| `reference_status` | integer | Canonical reference status. | Used for QA and troubleshooting. |
-| `board_profile` | object | Board/runtime profile snapshot. | Late subscribers still receive profile metadata. |
+| Field               | Type    | Meaning                                           | Consumer behavior                                |
+| ------------------- | ------- | ------------------------------------------------- | ------------------------------------------------ |
+| `schema`            | string  | Payload schema name.                              | Should equal `rs485.measurement.v1`.             |
+| `seq`               | integer | Publisher-local sequence number.                  | Detect publish drops/restarts.                   |
+| `session_id`        | string  | Active session identifier.                        | Preserve calibration/run provenance.             |
+| `mode`              | string  | `active_send` or `modbus_rtu`.                    | Debug acquisition mode.                          |
+| `signal_key`        | string  | Source signal used for `reference_force_N`.       | Verify calibration signal.                       |
+| `reference_force_N` | float   | Canonical reference value for bridge/calibration. | Primary value consumed by `LSL_Bridge`.          |
+| `reference_clock_s` | float   | LSL-aligned reference timestamp.                  | Used by bridge timestamping/fusion.              |
+| `reference_status`  | integer | Canonical reference status.                       | Used for QA and troubleshooting.                 |
+| `board_profile`     | object  | Board/runtime profile snapshot.                   | Late subscribers still receive profile metadata. |
 
 ### Retained aliases
 
-| Field | Meaning |
-| --- | --- |
-| `rs485_raw` | Human/debug alias for published numeric value. |
-| `rs485_clock` | Human/debug alias for reference clock. |
-| `rs485_clock_source` | Origin of reference clock. |
-| `host_lsl_ts` | Host LSL clock at publication/build time. |
-| `host_unix_ts` | Host Unix timestamp. |
-| `host_ts_iso` | Human-readable host timestamp. |
-| `unit_label` | Decoded board engineering unit. |
-| `status_word` | Raw board status word when available. |
-| `timestamp_source` | Timestamp origin from decoding path. |
+| Field                     | Meaning                                                    |
+| ------------------------- | ---------------------------------------------------------- |
+| `rs485_raw`               | Human/debug alias for published numeric value.             |
+| `rs485_clock`             | Human/debug alias for reference clock.                     |
+| `rs485_clock_source`      | Origin of reference clock.                                 |
+| `host_lsl_ts`             | Host LSL clock at publication/build time.                  |
+| `host_unix_ts`            | Host Unix timestamp.                                       |
+| `host_ts_iso`             | Human-readable host timestamp.                             |
+| `unit_label`              | Decoded board engineering unit.                            |
+| `status_word`             | Raw board status word when available.                      |
+| `timestamp_source`        | Timestamp origin from decoding path.                       |
 | `configured_frequency_hz` | Active-Send configured/expected frame rate when available. |
-| `parsed_from` | Parser profile or decoding path. |
+| `parsed_from`             | Parser profile or decoding path.                           |
 
 ## Event topic
 
-| Field | Value |
-| --- | --- |
-| Topic | `rs485.event.v1` |
-| Transport | ZeroMQ multipart PUB message |
-| Producer | `RS485_GUI` |
-| Consumer | diagnostics / bridge / logs where applicable |
-| Payload encoding | JSON object encoded as UTF-8 |
+| Field            | Value                                        |
+| ---------------- | -------------------------------------------- |
+| Topic            | `rs485.event.v1`                             |
+| Transport        | ZeroMQ multipart PUB message                 |
+| Producer         | `RS485_GUI`                                  |
+| Consumer         | diagnostics / bridge / logs where applicable |
+| Payload encoding | JSON object encoded as UTF-8                 |
 
 Representative event payload:
 
@@ -137,11 +137,11 @@ Representative event payload:
 
 `session_id` can come from:
 
-| Source | Notes |
-| --- | --- |
-| `session.session_id` config | Manual/operator-specified. |
-| `AppState` runtime session | Used when calibration/session integration sets it. |
-| empty string | Allowed for non-calibration debug runs, but less reproducible. |
+| Source                      | Notes                                                          |
+| --------------------------- | -------------------------------------------------------------- |
+| `session.session_id` config | Manual/operator-specified.                                     |
+| `AppState` runtime session  | Used when calibration/session integration sets it.             |
+| empty string                | Allowed for non-calibration debug runs, but less reproducible. |
 
 Calibration sessions should prefer a non-empty session ID so RS485 logs and IPC records can be joined with target/reference calibration outputs.
 
@@ -149,11 +149,11 @@ Calibration sessions should prefer a non-empty session ID so RS485 logs and IPC 
 
 When `ipc.drop_on_backpressure=true`, the publisher uses non-blocking sends. This protects acquisition/UI responsiveness but can drop IPC messages if downstream subscribers cannot keep up.
 
-| Setting | Effect |
-| --- | --- |
-| `send_hwm` | ZMQ high-water mark. |
+| Setting                | Effect                         |
+| ---------------------- | ------------------------------ |
+| `send_hwm`             | ZMQ high-water mark.           |
 | `drop_on_backpressure` | Non-blocking publish behavior. |
-| `log_every_s` | Status logging interval. |
+| `log_every_s`          | Status logging interval.       |
 
 If bridge reference data is stale or missing:
 

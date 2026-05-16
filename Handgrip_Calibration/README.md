@@ -69,13 +69,13 @@ Stop if preflight cannot find both streams or if the physical force path has not
 
 Primary config/protocol files:
 
-| File | Purpose |
-| --- | --- |
-| `conf/protocol_static_reversible_staircase_v3.yaml` | Canonical primary calibration protocol. |
-| `conf/protocol_reference_verification.yaml` | Reference-chain verification before main calibration. |
-| `conf/protocol_holdout_verification.yaml` | Independent post-fit validation. |
-| `conf/default.yaml` / `conf/config.yaml` | Base/default calibration settings, depending on command path. |
-| `conf/template.yaml` | Starting point for new protocol definitions. |
+| File                                                | Purpose                                                       |
+| --------------------------------------------------- | ------------------------------------------------------------- |
+| `conf/protocol_static_reversible_staircase_v3.yaml` | Canonical primary calibration protocol.                       |
+| `conf/protocol_reference_verification.yaml`         | Reference-chain verification before main calibration.         |
+| `conf/protocol_holdout_verification.yaml`           | Independent post-fit validation.                              |
+| `conf/default.yaml` / `conf/config.yaml`            | Base/default calibration settings, depending on command path. |
+| `conf/template.yaml`                                | Starting point for new protocol definitions.                  |
 
 Important config-path rule:
 
@@ -89,12 +89,12 @@ Full configuration reference is planned at [`docs/configuration.md`](docs/config
 
 ## Common workflows
 
-| Goal | Document |
-| --- | --- |
-| Run end-to-end calibration | [`../docs/workflows/handgrip-calibration.md`](../docs/workflows/handgrip-calibration.md) |
-| Choose a protocol | [`docs/protocols.md`](docs/protocols.md) |
-| Understand stream contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) |
-| Validate physical fixture | [`../docs/hardware/force-fixture.md`](../docs/hardware/force-fixture.md) |
+| Goal                        | Document                                                                                                 |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Run end-to-end calibration  | [`../docs/workflows/handgrip-calibration.md`](../docs/workflows/handgrip-calibration.md)                 |
+| Choose a protocol           | [`docs/protocols.md`](docs/protocols.md)                                                                 |
+| Understand stream contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                   |
+| Validate physical fixture   | [`../docs/hardware/force-fixture.md`](../docs/hardware/force-fixture.md)                                 |
 | Understand output lifecycle | [`../docs/architecture/data-and-output-lifecycle.md`](../docs/architecture/data-and-output-lifecycle.md) |
 
 ## Repository layout

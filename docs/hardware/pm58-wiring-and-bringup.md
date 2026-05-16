@@ -23,13 +23,13 @@ phase: 3
 
 ## Validation gates
 
-| Gate | Method | Expected result | Failure meaning |
-| --- | --- | --- | --- |
-| Power identity | Inspect board label / AC sticker | Unit explicitly says AC100-240V, L, N | Do not apply power until exact power variant is confirmed. |
-| Sensor wiring | Inspect terminals 5-8 before power-on | Red/black/white/green match E+/E-/S-/S+ | Wrong bridge wiring can produce no signal, reversed sign, or unstable reading. |
-| First force response | Apply small manual force after power-on | Display changes consistently | Sensor wiring, calibration, or mechanical path may be wrong. |
-| RS485 enumeration | Check host serial device | `/dev/ttyUSB*`, `/dev/ttyACM*`, or COM port appears | USB-RS485 adapter/driver/permissions issue. |
-| Digital readout | Poll Modbus or parse active-send | Host receives changing measurement values | A/B swapped, wrong serial settings, wrong mode, or parser mismatch. |
+| Gate                 | Method                                  | Expected result                                     | Failure meaning                                                                |
+| -------------------- | --------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Power identity       | Inspect board label / AC sticker        | Unit explicitly says AC100-240V, L, N               | Do not apply power until exact power variant is confirmed.                     |
+| Sensor wiring        | Inspect terminals 5-8 before power-on   | Red/black/white/green match E+/E-/S-/S+             | Wrong bridge wiring can produce no signal, reversed sign, or unstable reading. |
+| First force response | Apply small manual force after power-on | Display changes consistently                        | Sensor wiring, calibration, or mechanical path may be wrong.                   |
+| RS485 enumeration    | Check host serial device                | `/dev/ttyUSB*`, `/dev/ttyACM*`, or COM port appears | USB-RS485 adapter/driver/permissions issue.                                    |
+| Digital readout      | Poll Modbus or parse active-send        | Host receives changing measurement values           | A/B swapped, wrong serial settings, wrong mode, or parser mismatch.            |
 
 # PM58 Load Cell + High-Speed Acquisition Instrument
 ## Practical Wiring and Bring-Up Manual
@@ -270,13 +270,13 @@ From **Fig. 4**, **Fig. 5**, and **Fig. 7**:
 
 ## Recommended mapping table
 
-| PM58 wire | Sensor function | Board terminal | Label on board |
-|---|---:|---:|---|
-| Red | Excitation + | 5 | E+ |
-| Black | Excitation - | 6 | E- |
-| White | Signal - | 7 | S- |
-| Green | Signal + | 8 | S+ |
-| Yellow / bare drain | Shield | Do **not** place on 5–8 | Isolate unless separately grounded by design |
+| PM58 wire           | Sensor function |          Board terminal | Label on board                               |
+| ------------------- | --------------: | ----------------------: | -------------------------------------------- |
+| Red                 |    Excitation + |                       5 | E+                                           |
+| Black               |    Excitation - |                       6 | E-                                           |
+| White               |        Signal - |                       7 | S-                                           |
+| Green               |        Signal + |                       8 | S+                                           |
+| Yellow / bare drain |          Shield | Do **not** place on 5–8 | Isolate unless separately grounded by design |
 
 ## Step-by-step
 

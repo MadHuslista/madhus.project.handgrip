@@ -14,17 +14,17 @@ Read this document if you need to choose a calibration protocol, add a protocol,
 
 ## Protocol decision table
 
-| Protocol file | Status | Use for | Avoid using for |
-| --- | --- | --- | --- |
-| `protocol_reference_verification.yaml` | Canonical pre-check | Verify reference board/PM58 chain before primary calibration. | Primary model fitting. |
-| `protocol_static_reversible_staircase_v3.yaml` | **Canonical primary** | Main calibration fit dataset using reversible up/down static holds. | Quick smoke-only checks. |
-| `protocol_holdout_verification.yaml` | Canonical validation | Independent post-fit holdout validation. | Training/refitting the primary model. |
-| `protocol_low_force_refinement.yaml` | Optional refinement | Improve low-force region if the primary fit is weak near zero. | First-run calibration unless low-force accuracy is specifically required. |
-| `protocol_creep_zero_return.yaml` | Optional diagnostic | Quantify creep, zero return, and baseline recovery. | Primary gain/offset fitting. |
-| `protocol_dynamic_validation.yaml` | Optional diagnostic | Ramps, squeezes, lag, hysteresis, dynamic behavior. | Static fit parameter estimation. |
-| `protocol_fast_smoke_test.yaml` | Developer/operator smoke test | Fast sanity test before a full session. | Final calibration report. |
-| `protocol_static_staircase.yaml` | Legacy/basic baseline | Compatibility with older docs or short static-only baseline. | Recommended handoff workflow. |
-| `template.yaml` | Authoring template | Create new protocol configs. | Direct operator run unless filled out. |
+| Protocol file                                  | Status                        | Use for                                                             | Avoid using for                                                           |
+| ---------------------------------------------- | ----------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `protocol_reference_verification.yaml`         | Canonical pre-check           | Verify reference board/PM58 chain before primary calibration.       | Primary model fitting.                                                    |
+| `protocol_static_reversible_staircase_v3.yaml` | **Canonical primary**         | Main calibration fit dataset using reversible up/down static holds. | Quick smoke-only checks.                                                  |
+| `protocol_holdout_verification.yaml`           | Canonical validation          | Independent post-fit holdout validation.                            | Training/refitting the primary model.                                     |
+| `protocol_low_force_refinement.yaml`           | Optional refinement           | Improve low-force region if the primary fit is weak near zero.      | First-run calibration unless low-force accuracy is specifically required. |
+| `protocol_creep_zero_return.yaml`              | Optional diagnostic           | Quantify creep, zero return, and baseline recovery.                 | Primary gain/offset fitting.                                              |
+| `protocol_dynamic_validation.yaml`             | Optional diagnostic           | Ramps, squeezes, lag, hysteresis, dynamic behavior.                 | Static fit parameter estimation.                                          |
+| `protocol_fast_smoke_test.yaml`                | Developer/operator smoke test | Fast sanity test before a full session.                             | Final calibration report.                                                 |
+| `protocol_static_staircase.yaml`               | Legacy/basic baseline         | Compatibility with older docs or short static-only baseline.        | Recommended handoff workflow.                                             |
+| `template.yaml`                                | Authoring template            | Create new protocol configs.                                        | Direct operator run unless filled out.                                    |
 
 ## Canonical sequence
 
@@ -85,15 +85,15 @@ The stale path below should not appear in current configs or docs:
 
 Use `template.yaml` as the starting point and document:
 
-| Section | Required decision |
-| --- | --- |
-| `metadata` | Human-readable protocol name, version, purpose. |
-| `session` | Output root, config snapshots, operator prompts. |
-| `lsl` | Required target/reference streams and channel aliases. |
-| `events` / `steps` | Protocol marker sequence and hold definitions. |
-| `quality` | Minimum samples, gap limits, stable-window rules. |
-| `fit` | Whether this protocol is fit-producing, validation-only, or diagnostic. |
-| `report` | Expected report sections and plots. |
+| Section            | Required decision                                                       |
+| ------------------ | ----------------------------------------------------------------------- |
+| `metadata`         | Human-readable protocol name, version, purpose.                         |
+| `session`          | Output root, config snapshots, operator prompts.                        |
+| `lsl`              | Required target/reference streams and channel aliases.                  |
+| `events` / `steps` | Protocol marker sequence and hold definitions.                          |
+| `quality`          | Minimum samples, gap limits, stable-window rules.                       |
+| `fit`              | Whether this protocol is fit-producing, validation-only, or diagnostic. |
+| `report`           | Expected report sections and plots.                                     |
 
 ## Validation checklist
 

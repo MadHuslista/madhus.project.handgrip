@@ -29,26 +29,26 @@ Exact paths are config-owned. The run command should print or log the output dir
 
 ## Common artifacts
 
-| Artifact | Purpose |
-| --- | --- |
-| `README.md` or stage report markdown | Human-readable explanation of stage results. |
-| `metrics.json` | Machine-readable metrics. |
-| `metrics.csv` | Tabular metrics for review/spreadsheets. |
-| `figures/` or `plots/` | Diagnostic plots. |
-| `run_config.yaml` or config snapshot | Reproducibility. |
-| `filter_comparison.csv` | Stage 6 candidate ranking/metrics. |
-| `filter_recommendation.yaml` or `lsl_bridge_processing_recommendation.yaml` | Deployment-oriented filter recommendation. |
+| Artifact                                                                    | Purpose                                      |
+| --------------------------------------------------------------------------- | -------------------------------------------- |
+| `README.md` or stage report markdown                                        | Human-readable explanation of stage results. |
+| `metrics.json`                                                              | Machine-readable metrics.                    |
+| `metrics.csv`                                                               | Tabular metrics for review/spreadsheets.     |
+| `figures/` or `plots/`                                                      | Diagnostic plots.                            |
+| `run_config.yaml` or config snapshot                                        | Reproducibility.                             |
+| `filter_comparison.csv`                                                     | Stage 6 candidate ranking/metrics.           |
+| `filter_recommendation.yaml` or `lsl_bridge_processing_recommendation.yaml` | Deployment-oriented filter recommendation.   |
 
 ## Stage-specific outputs
 
-| Stage | Output examples | Interpretation |
-| --- | --- | --- |
-| Stage 1 | warm-up plots, drift metrics, stabilization interval | Decide capture discard/warm-up policy. |
-| Stage 2 | PSD plot, noise floor metrics, peak frequency table | Decide whether noise/contamination justifies filtering. |
-| Stage 3 | drift/creep slopes, hold stability plots | Decide whether baseline/fixture behavior is acceptable. |
-| Stage 4 | event dynamics table, rise/peak/release plots | Protect dynamic waveform realism. |
-| Stage 5 | condition comparison report | Identify setup/environment effects. |
-| Stage 6 | candidate comparison, recommendation YAML/report | Decide filter deployment candidate. |
+| Stage   | Output examples                                      | Interpretation                                          |
+| ------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| Stage 1 | warm-up plots, drift metrics, stabilization interval | Decide capture discard/warm-up policy.                  |
+| Stage 2 | PSD plot, noise floor metrics, peak frequency table  | Decide whether noise/contamination justifies filtering. |
+| Stage 3 | drift/creep slopes, hold stability plots             | Decide whether baseline/fixture behavior is acceptable. |
+| Stage 4 | event dynamics table, rise/peak/release plots        | Protect dynamic waveform realism.                       |
+| Stage 5 | condition comparison report                          | Identify setup/environment effects.                     |
+| Stage 6 | candidate comparison, recommendation YAML/report     | Decide filter deployment candidate.                     |
 
 ## Figures
 
@@ -86,14 +86,14 @@ For Stage 6, include:
 
 ## Retention policy
 
-| Output class | Keep? | Rule |
-| --- | --- | --- |
-| Raw input data | Yes | Preserve; never edit in place. |
-| Stage metrics | Yes | Needed for reproducibility. |
-| Figures | Yes if used in reports | Regenerate if source/config changes. |
-| Temporary debug logs | Optional | Keep only while debugging. |
-| Curated examples | Yes | Store under `docs/examples/analysis-output/`. |
-| Stale exploratory outputs | Archive/delete | Do not present as current documentation. |
+| Output class              | Keep?                  | Rule                                          |
+| ------------------------- | ---------------------- | --------------------------------------------- |
+| Raw input data            | Yes                    | Preserve; never edit in place.                |
+| Stage metrics             | Yes                    | Needed for reproducibility.                   |
+| Figures                   | Yes if used in reports | Regenerate if source/config changes.          |
+| Temporary debug logs      | Optional               | Keep only while debugging.                    |
+| Curated examples          | Yes                    | Store under `docs/examples/analysis-output/`. |
+| Stale exploratory outputs | Archive/delete         | Do not present as current documentation.      |
 
 ## Validation checklist
 

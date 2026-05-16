@@ -9,12 +9,12 @@
 
 ## Audience
 
-| Reader | Use this page to... |
-| --- | --- |
-| Operator | Start the viewer and validate expected plots before calibration. |
+| Reader               | Use this page to...                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------- |
+| Operator             | Start the viewer and validate expected plots before calibration.                    |
 | Calibration operator | Check target/reference behavior and XY correlation without changing data semantics. |
-| Maintainer | Find configuration, architecture, and development references. |
-| Student developer | Learn where to add plots, controls, channel labels, or replay behavior safely. |
+| Maintainer           | Find configuration, architecture, and development references.                       |
+| Student developer    | Learn where to add plots, controls, channel labels, or replay behavior safely.      |
 
 ## Component boundary
 
@@ -35,32 +35,32 @@ It does **not** own:
 
 ## Documentation map
 
-| Document | Purpose |
-| --- | --- |
-| [`quickstart.md`](quickstart.md) | Run the live viewer and validate expected plots. |
-| [`configuration.md`](configuration.md) | Full `conf/config.yaml` reference. |
-| [`xy-correlation.md`](xy-correlation.md) | XY plot behavior, alignment policy, lag troubleshooting. |
-| [`live-csv-xdf-modes.md`](live-csv-xdf-modes.md) | Live mode, live validation mode, CSV replay, XDF replay. |
-| [`architecture.md`](architecture.md) | Stream buffers, UI refresh, plotting model, marker overlays. |
-| [`development.md`](development.md) | Add plots, signals, toggles, replay behavior, and tests. |
+| Document                                         | Purpose                                                      |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| [`quickstart.md`](quickstart.md)                 | Run the live viewer and validate expected plots.             |
+| [`configuration.md`](configuration.md)           | Full `conf/config.yaml` reference.                           |
+| [`xy-correlation.md`](xy-correlation.md)         | XY plot behavior, alignment policy, lag troubleshooting.     |
+| [`live-csv-xdf-modes.md`](live-csv-xdf-modes.md) | Live mode, live validation mode, CSV replay, XDF replay.     |
+| [`architecture.md`](architecture.md)             | Stream buffers, UI refresh, plotting model, marker overlays. |
+| [`development.md`](development.md)               | Add plots, signals, toggles, replay behavior, and tests.     |
 
 ## Related system docs
 
-| System doc | Why it matters |
-| --- | --- |
-| [`../../docs/workflows/full-live-viewer-quickstart.md`](../../docs/workflows/full-live-viewer-quickstart.md) | Full process order: `RS485_GUI` → `LSL_Bridge` → `LSL_Viewer`. |
-| [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md) | Canonical target/reference/event stream contracts. |
-| [`../../docs/architecture/timestamping-and-synchronization.md`](../../docs/architecture/timestamping-and-synchronization.md) | Timing assumptions and lag diagnosis. |
-| [`../../docs/workflows/handgrip-calibration.md`](../../docs/workflows/handgrip-calibration.md) | How viewer validation fits into calibration. |
-| [`../../docs/troubleshooting/viewer-lag-or-xy-delay.md`](../../docs/troubleshooting/viewer-lag-or-xy-delay.md) | Symptom-first lag troubleshooting once created. |
+| System doc                                                                                                                   | Why it matters                                                 |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [`../../docs/workflows/full-live-viewer-quickstart.md`](../../docs/workflows/full-live-viewer-quickstart.md)                 | Full process order: `RS485_GUI` → `LSL_Bridge` → `LSL_Viewer`. |
+| [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md)                                 | Canonical target/reference/event stream contracts.             |
+| [`../../docs/architecture/timestamping-and-synchronization.md`](../../docs/architecture/timestamping-and-synchronization.md) | Timing assumptions and lag diagnosis.                          |
+| [`../../docs/workflows/handgrip-calibration.md`](../../docs/workflows/handgrip-calibration.md)                               | How viewer validation fits into calibration.                   |
+| [`../../docs/troubleshooting/viewer-lag-or-xy-delay.md`](../../docs/troubleshooting/viewer-lag-or-xy-delay.md)               | Symptom-first lag troubleshooting once created.                |
 
 ## Expected runtime streams
 
-| Stream | Producer | Viewer role |
-| --- | --- | --- |
-| `HandgripTarget` | `LSL_Bridge` | Target raw count, filtered/current units, device timing. |
-| `HandgripReference` | `LSL_Bridge` | Reference force and reference timing. |
-| `HandgripCalibrationMarkers` / events file | `Handgrip_Calibration` | Optional marker overlays during replay/analysis. |
+| Stream                                     | Producer               | Viewer role                                              |
+| ------------------------------------------ | ---------------------- | -------------------------------------------------------- |
+| `HandgripTarget`                           | `LSL_Bridge`           | Target raw count, filtered/current units, device timing. |
+| `HandgripReference`                        | `LSL_Bridge`           | Reference force and reference timing.                    |
+| `HandgripCalibrationMarkers` / events file | `Handgrip_Calibration` | Optional marker overlays during replay/analysis.         |
 
 ## Validation checklist
 

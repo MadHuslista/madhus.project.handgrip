@@ -75,12 +75,12 @@ If the command fails because an entry point does not exist, check `pyproject.tom
 
 A successful run produces:
 
-| Output | Purpose |
-| --- | --- |
-| stage report | Human-readable analysis result. |
-| metrics JSON/CSV | Machine-readable result data. |
-| figures | Visual diagnostics. |
-| run config snapshot | Reproducibility and audit trail, when enabled. |
+| Output                 | Purpose                                                       |
+| ---------------------- | ------------------------------------------------------------- |
+| stage report           | Human-readable analysis result.                               |
+| metrics JSON/CSV       | Machine-readable result data.                                 |
+| figures                | Visual diagnostics.                                           |
+| run config snapshot    | Reproducibility and audit trail, when enabled.                |
 | Stage 6 recommendation | Candidate ranking and deployment guidance, when Stage 6 runs. |
 
 ## Where outputs/logs appear

@@ -10,12 +10,12 @@
 
 ## Audience
 
-| Reader | Use this page to... |
-| --- | --- |
-| Principal investigator / analyst | Understand what the offline analysis can answer and how to interpret outputs. |
-| Student operator | Run all stages or an individual stage on prepared data. |
-| Maintainer | Find config, architecture, and development references before editing code. |
-| Student developer | Add stages, metrics, filters, plots, or report sections without breaking pipeline contracts. |
+| Reader                           | Use this page to...                                                                          |
+| -------------------------------- | -------------------------------------------------------------------------------------------- |
+| Principal investigator / analyst | Understand what the offline analysis can answer and how to interpret outputs.                |
+| Student operator                 | Run all stages or an individual stage on prepared data.                                      |
+| Maintainer                       | Find config, architecture, and development references before editing code.                   |
+| Student developer                | Add stages, metrics, filters, plots, or report sections without breaking pipeline contracts. |
 
 ## Component contract
 
@@ -27,38 +27,38 @@
 
 ## Documentation map
 
-| Document | Purpose |
-| --- | --- |
-| [`quickstart.md`](quickstart.md) | Run all stages and individual stages. |
-| [`stages.md`](stages.md) | Stage 1–6 purpose, input, output, and interpretation. |
-| [`configuration.md`](configuration.md) | Full analysis config tree reference and safe-edit guidance. |
-| [`filter-design.md`](filter-design.md) | Candidate review/design workflow and Stage 6 interpretation. |
+| Document                                           | Purpose                                                                     |
+| -------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`quickstart.md`](quickstart.md)                   | Run all stages and individual stages.                                       |
+| [`stages.md`](stages.md)                           | Stage 1–6 purpose, input, output, and interpretation.                       |
+| [`configuration.md`](configuration.md)             | Full analysis config tree reference and safe-edit guidance.                 |
+| [`filter-design.md`](filter-design.md)             | Candidate review/design workflow and Stage 6 interpretation.                |
 | [`reports-and-outputs.md`](reports-and-outputs.md) | Output tree, generated reports, figures, metrics, and recommendation files. |
-| [`architecture.md`](architecture.md) | CLI, stages, config, IO, DSP, plotting, and report layers. |
-| [`development.md`](development.md) | How to add stages, metrics, filter families, report sections, and tests. |
+| [`architecture.md`](architecture.md)               | CLI, stages, config, IO, DSP, plotting, and report layers.                  |
+| [`development.md`](development.md)                 | How to add stages, metrics, filter families, report sections, and tests.    |
 
 ## Related system docs
 
-| System doc | Why it matters |
-| --- | --- |
-| [`../../docs/start-here.md`](../../docs/start-here.md) | High-level introduction to the full suite. |
-| [`../../docs/system-overview.md`](../../docs/system-overview.md) | Physical/software/dataflow map. |
-| [`../../docs/workflows/handgrip-analysis.md`](../../docs/workflows/handgrip-analysis.md) | Root operator workflow for offline analysis. |
-| [`../../docs/architecture/data-and-output-lifecycle.md`](../../docs/architecture/data-and-output-lifecycle.md) | Generated-output policy and data lifecycle. |
-| [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md) | Upstream target/reference stream and session contracts. |
-| [`../../docs/configuration/index.md`](../../docs/configuration/index.md) | Cross-component configuration ownership. |
-| [`../../docs/troubleshooting/index.md`](../../docs/troubleshooting/index.md) | Symptom-first debugging entry point. |
+| System doc                                                                                                     | Why it matters                                          |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| [`../../docs/start-here.md`](../../docs/start-here.md)                                                         | High-level introduction to the full suite.              |
+| [`../../docs/system-overview.md`](../../docs/system-overview.md)                                               | Physical/software/dataflow map.                         |
+| [`../../docs/workflows/handgrip-analysis.md`](../../docs/workflows/handgrip-analysis.md)                       | Root operator workflow for offline analysis.            |
+| [`../../docs/architecture/data-and-output-lifecycle.md`](../../docs/architecture/data-and-output-lifecycle.md) | Generated-output policy and data lifecycle.             |
+| [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md)                   | Upstream target/reference stream and session contracts. |
+| [`../../docs/configuration/index.md`](../../docs/configuration/index.md)                                       | Cross-component configuration ownership.                |
+| [`../../docs/troubleshooting/index.md`](../../docs/troubleshooting/index.md)                                   | Symptom-first debugging entry point.                    |
 
 ## Required reading by task
 
-| Task | Read |
-| --- | --- |
-| Run analysis for the first time | [`quickstart.md`](quickstart.md), then [`stages.md`](stages.md) |
-| Understand what each stage means | [`stages.md`](stages.md) |
-| Edit config safely | [`configuration.md`](configuration.md) |
-| Interpret Stage 6 | [`filter-design.md`](filter-design.md), then [`reports-and-outputs.md`](reports-and-outputs.md) |
-| Apply a filter recommendation | [`filter-design.md`](filter-design.md), then `LSL_Bridge/docs/configuration.md` if deploying to bridge processing |
-| Add a stage/filter/metric | [`development.md`](development.md), then [`architecture.md`](architecture.md) |
+| Task                             | Read                                                                                                              |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Run analysis for the first time  | [`quickstart.md`](quickstart.md), then [`stages.md`](stages.md)                                                   |
+| Understand what each stage means | [`stages.md`](stages.md)                                                                                          |
+| Edit config safely               | [`configuration.md`](configuration.md)                                                                            |
+| Interpret Stage 6                | [`filter-design.md`](filter-design.md), then [`reports-and-outputs.md`](reports-and-outputs.md)                   |
+| Apply a filter recommendation    | [`filter-design.md`](filter-design.md), then `LSL_Bridge/docs/configuration.md` if deploying to bridge processing |
+| Add a stage/filter/metric        | [`development.md`](development.md), then [`architecture.md`](architecture.md)                                     |
 
 ## Validation checklist for this docs index
 

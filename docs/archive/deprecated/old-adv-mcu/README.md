@@ -19,25 +19,25 @@
 
 During the v0.3 documentation refactor, deprecated source material should be handled with the following policy:
 
-| Material class | Canonical-doc status | Preservation policy |
-| --- | --- | --- |
-| HX710B datasheets/tutorials | Deprecated | Archive here only if traceability is required; otherwise omit from final handoff package. |
-| Old ADV-board material | Deprecated | Archive here only if traceability is required; otherwise omit from final handoff package. |
-| Old STM32F103 MCU references | Deprecated | Archive here only if traceability is required; otherwise omit from final handoff package. |
-| Current HX711 datasheet | Relevant fallback reference | Keep under `docs/hardware/references/hx711/`. |
-| Current acquisition-board PDFs | Relevant fallback reference | Keep under `docs/hardware/references/acquisition-board/`. |
-| Current PM58/acquisition-board wiring docs | Relevant maintained docs | Promote into canonical `docs/hardware/`. |
+| Material class                             | Canonical-doc status        | Preservation policy                                                                       |
+| ------------------------------------------ | --------------------------- | ----------------------------------------------------------------------------------------- |
+| HX710B datasheets/tutorials                | Deprecated                  | Archive here only if traceability is required; otherwise omit from final handoff package. |
+| Old ADV-board material                     | Deprecated                  | Archive here only if traceability is required; otherwise omit from final handoff package. |
+| Old STM32F103 MCU references               | Deprecated                  | Archive here only if traceability is required; otherwise omit from final handoff package. |
+| Current HX711 datasheet                    | Relevant fallback reference | Keep under `docs/hardware/references/hx711/`.                                             |
+| Current acquisition-board PDFs             | Relevant fallback reference | Keep under `docs/hardware/references/acquisition-board/`.                                 |
+| Current PM58/acquisition-board wiring docs | Relevant maintained docs    | Promote into canonical `docs/hardware/`.                                                  |
 
 ## Canonical replacement paths
 
 Use these current references instead of deprecated material:
 
-| Topic | Current replacement |
-| --- | --- |
-| Target ADC behavior | `docs/hardware/references/hx711/hx711_english.pdf` and `Handgrip_Firmware/docs/` |
+| Topic                                  | Current replacement                                                                          |
+| -------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Target ADC behavior                    | `docs/hardware/references/hx711/hx711_english.pdf` and `Handgrip_Firmware/docs/`             |
 | Acquisition board wiring/configuration | `docs/hardware/acquisition-board-reference.md` and `docs/hardware/pm58-acquisition-board.md` |
-| Full physical setup | `docs/workflows/physical-setup.md` and `docs/hardware/force-fixture-setup.md` |
-| Firmware setup | `docs/workflows/firmware-setup.md` and `Handgrip_Firmware/docs/firmware-setup.md` |
+| Full physical setup                    | `docs/workflows/physical-setup.md` and `docs/hardware/force-fixture-setup.md`                |
+| Firmware setup                         | `docs/workflows/firmware-setup.md` and `Handgrip_Firmware/docs/firmware-setup.md`            |
 
 ## Validation rule
 

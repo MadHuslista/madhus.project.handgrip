@@ -9,14 +9,14 @@
 
 ## Prerequisites
 
-| Requirement | Expected state |
-| --- | --- |
-| PM58 wiring | PM58 is wired to the acquisition board sensor terminals and the board display reacts to force. |
-| Acquisition-board power | Board powers on safely and exits startup state. |
-| RS485 adapter | USB-RS485 adapter appears on the host, preferably under `/dev/serial/by-id/`. |
-| Board communication settings | Board baud/parity/address/mode match `RS485_GUI/config/config.yaml`. |
-| Python environment | `uv sync` has been run at the repo root or component root. |
-| Port ownership | The Arduino target serial port is not selected by the GUI. Use `serial.excluded_ports` if needed. |
+| Requirement                  | Expected state                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------- |
+| PM58 wiring                  | PM58 is wired to the acquisition board sensor terminals and the board display reacts to force.    |
+| Acquisition-board power      | Board powers on safely and exits startup state.                                                   |
+| RS485 adapter                | USB-RS485 adapter appears on the host, preferably under `/dev/serial/by-id/`.                     |
+| Board communication settings | Board baud/parity/address/mode match `RS485_GUI/config/config.yaml`.                              |
+| Python environment           | `uv sync` has been run at the repo root or component root.                                        |
+| Port ownership               | The Arduino target serial port is not selected by the GUI. Use `serial.excluded_ports` if needed. |
 
 ## Commands
 
@@ -67,14 +67,14 @@ uv run rs485-gui \
 
 ## Expected UI result
 
-| UI element | Expected behavior |
-| --- | --- |
-| Browser page | Opens at the configured host/port, default `127.0.0.1:8088`. |
-| Connection state | Shows connected after selecting the RS485 port and starting acquisition. |
-| Main signal plot | Updates when the PM58/acquisition-board value changes. |
+| UI element           | Expected behavior                                                                       |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| Browser page         | Opens at the configured host/port, default `127.0.0.1:8088`.                            |
+| Connection state     | Shows connected after selecting the RS485 port and starting acquisition.                |
+| Main signal plot     | Updates when the PM58/acquisition-board value changes.                                  |
 | Selected signal info | Shows selected signal metadata such as `net_value`, unit, status, and timestamp source. |
-| Event log | Shows connect/disconnect, parser profile, logger paths, and errors/warnings if any. |
-| Sampling estimate | Updates based on recent received frames. |
+| Event log            | Shows connect/disconnect, parser profile, logger paths, and errors/warnings if any.     |
+| Sampling estimate    | Updates based on recent received frames.                                                |
 
 ## Expected log output
 
@@ -86,13 +86,13 @@ RS485_GUI/logs/
 
 Expected files when `logger.enabled=true`:
 
-| File | Expected content |
-| --- | --- |
-| `raw_signal.ndjson` | Raw transport bytes/registers and board profile per frame. |
-| `interpreted_signal.ndjson` | Decoded engineering values and metadata per frame. |
-| `gui_signal.csv` | Spreadsheet-friendly flattened samples. |
-| `event.log` | Operational events. |
-| `acquisition_debug.log` | Python logging output when `logger.debug_log_to_file=true`. |
+| File                        | Expected content                                            |
+| --------------------------- | ----------------------------------------------------------- |
+| `raw_signal.ndjson`         | Raw transport bytes/registers and board profile per frame.  |
+| `interpreted_signal.ndjson` | Decoded engineering values and metadata per frame.          |
+| `gui_signal.csv`            | Spreadsheet-friendly flattened samples.                     |
+| `event.log`                 | Operational events.                                         |
+| `acquisition_debug.log`     | Python logging output when `logger.debug_log_to_file=true`. |
 
 ## Expected IPC output
 

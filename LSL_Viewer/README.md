@@ -67,26 +67,26 @@ LSL_Viewer/conf/config.yaml
 
 Main configuration areas:
 
-| Area | Purpose |
-| --- | --- |
-| mode | live, validation, CSV replay, XDF replay. |
-| stream discovery | Expected LSL stream names and channel labels. |
-| buffers | Retention windows and sample handling. |
-| plots | Time-series, XY correlation, dimensions, axis behavior. |
-| server | Host, port, browser UI behavior. |
-| keyboard/UI | Clear, pause, XY lock, toggles. |
+| Area             | Purpose                                                 |
+| ---------------- | ------------------------------------------------------- |
+| mode             | live, validation, CSV replay, XDF replay.               |
+| stream discovery | Expected LSL stream names and channel labels.           |
+| buffers          | Retention windows and sample handling.                  |
+| plots            | Time-series, XY correlation, dimensions, axis behavior. |
+| server           | Host, port, browser UI behavior.                        |
+| keyboard/UI      | Clear, pause, XY lock, toggles.                         |
 
 Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
 
 ## Common workflows
 
-| Goal | Document |
-| --- | --- |
-| Run full live viewer stack | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
-| Understand live process order | [`../docs/architecture/runtime-processes.md`](../docs/architecture/runtime-processes.md) |
-| Understand stream contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) |
-| Debug timestamp/XY delay | [`../docs/architecture/timestamping-and-synchronization.md`](../docs/architecture/timestamping-and-synchronization.md) |
-| Navigate component docs | [`docs/index.md`](docs/index.md) |
+| Goal                          | Document                                                                                                               |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Run full live viewer stack    | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md)                 |
+| Understand live process order | [`../docs/architecture/runtime-processes.md`](../docs/architecture/runtime-processes.md)                               |
+| Understand stream contracts   | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                                 |
+| Debug timestamp/XY delay      | [`../docs/architecture/timestamping-and-synchronization.md`](../docs/architecture/timestamping-and-synchronization.md) |
+| Navigate component docs       | [`docs/index.md`](docs/index.md)                                                                                       |
 
 ## Repository layout
 

@@ -237,13 +237,13 @@ From **Fig. 4**, **Fig. 5**, and **Fig. 7**:
 
 ## Recommended mapping table
 
-| PM58 wire | Sensor function | Board terminal | Label on board |
-|---|---:|---:|---|
-| Red | Excitation + | 5 | E+ |
-| Black | Excitation - | 6 | E- |
-| White | Signal - | 7 | S- |
-| Green | Signal + | 8 | S+ |
-| Yellow / bare drain | Shield | Do **not** place on 5–8 | Isolate unless separately grounded by design |
+| PM58 wire           | Sensor function |          Board terminal | Label on board                               |
+| ------------------- | --------------: | ----------------------: | -------------------------------------------- |
+| Red                 |    Excitation + |                       5 | E+                                           |
+| Black               |    Excitation - |                       6 | E-                                           |
+| White               |        Signal - |                       7 | S-                                           |
+| Green               |        Signal + |                       8 | S+                                           |
+| Yellow / bare drain |          Shield | Do **not** place on 5–8 | Isolate unless separately grounded by design |
 
 ## Step-by-step
 

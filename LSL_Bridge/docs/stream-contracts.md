@@ -27,110 +27,110 @@ The parser is strict. Malformed lines are dropped/logged instead of guessed.
 
 ### Reference IPC input
 
-| Field | Value |
-| --- | --- |
-| Producer | `RS485_GUI` |
-| Consumer | `LSL_Bridge` |
-| Topic | `rs485.measurement.v1` |
-| Transport | ZeroMQ PUB/SUB |
-| Decoder | `RS485IpcReferencePublisher._decode_record()` |
+| Field     | Value                                         |
+| --------- | --------------------------------------------- |
+| Producer  | `RS485_GUI`                                   |
+| Consumer  | `LSL_Bridge`                                  |
+| Topic     | `rs485.measurement.v1`                        |
+| Transport | ZeroMQ PUB/SUB                                |
+| Decoder   | `RS485IpcReferencePublisher._decode_record()` |
 
 Required IPC fields:
 
-| Field | Meaning |
-| --- | --- |
-| `schema` | Must match `rs485.measurement.v1`. |
+| Field               | Meaning                                 |
+| ------------------- | --------------------------------------- |
+| `schema`            | Must match `rs485.measurement.v1`.      |
 | `reference_force_N` | Reference-force value published to LSL. |
 | `reference_clock_s` | Reference clock/sample time in seconds. |
-| `host_lsl_ts` | Host-side LSL timestamp from RS485 GUI. |
+| `host_lsl_ts`       | Host-side LSL timestamp from RS485 GUI. |
 
 Optional IPC fields preserved in `ReferenceSample`/CSV:
 
-| Field | Meaning |
-| --- | --- |
-| `seq` | Reference sequence, if available. |
-| `reference_status` | Reference/transport status. |
-| `mode` | Acquisition mode label. |
-| `signal_key` | Source signal key, normally `reference_force_N`. |
-| `host_unix_ts` | Host UNIX timestamp. |
-| `clock_source` | Reference clock source label. |
-| `unit_label` | Unit label, normally `N`. |
-| `timestamp_source` | Timestamp-source label. |
-| `configured_frequency_hz` | Configured board/source rate. |
-| `session_id` | Optional session ID. |
-| `board_profile` | Optional board profile metadata. |
+| Field                     | Meaning                                          |
+| ------------------------- | ------------------------------------------------ |
+| `seq`                     | Reference sequence, if available.                |
+| `reference_status`        | Reference/transport status.                      |
+| `mode`                    | Acquisition mode label.                          |
+| `signal_key`              | Source signal key, normally `reference_force_N`. |
+| `host_unix_ts`            | Host UNIX timestamp.                             |
+| `clock_source`            | Reference clock source label.                    |
+| `unit_label`              | Unit label, normally `N`.                        |
+| `timestamp_source`        | Timestamp-source label.                          |
+| `configured_frequency_hz` | Configured board/source rate.                    |
+| `session_id`              | Optional session ID.                             |
+| `board_profile`           | Optional board profile metadata.                 |
 
 ## Outputs
 
 ### `HandgripTarget`
 
-| Property | Value |
-| --- | --- |
-| Producer | `LSL_Bridge` target serial loop |
-| Source | firmware D2 frames |
-| LSL name | `HandgripTarget` |
-| LSL type | `Force` |
-| Nominal rate | `0.0` / irregular |
-| Schema metadata | `handgrip_target_stream.v2` |
-| Main consumers | `LSL_Viewer`, `Handgrip_Calibration`, recordings |
+| Property        | Value                                            |
+| --------------- | ------------------------------------------------ |
+| Producer        | `LSL_Bridge` target serial loop                  |
+| Source          | firmware D2 frames                               |
+| LSL name        | `HandgripTarget`                                 |
+| LSL type        | `Force`                                          |
+| Nominal rate    | `0.0` / irregular                                |
+| Schema metadata | `handgrip_target_stream.v2`                      |
+| Main consumers  | `LSL_Viewer`, `Handgrip_Calibration`, recordings |
 
 Channel order pushed to LSL:
 
-| Position | Label | Source | Meaning |
-| ---: | --- | --- | --- |
-| 0 | `seq` | D2 `seq` | Target sample sequence. |
-| 1 | `device_clock_us` | D2 `timestamp_us` | Firmware device clock in microseconds. |
-| 2 | `target_raw_count` | D2 `raw_count` | HX711 raw ADC count; calibration-authoritative. |
-| 3 | `target_current_units` | D2 `current_units` | Firmware-scaled force/value. |
-| 4 | `target_filtered_units` | bridge processing output | Filtered display/QA channel. |
-| 5 | `target_status` | D2 `status` | Firmware status bitfield. |
+| Position | Label                   | Source                   | Meaning                                         |
+| -------: | ----------------------- | ------------------------ | ----------------------------------------------- |
+|        0 | `seq`                   | D2 `seq`                 | Target sample sequence.                         |
+|        1 | `device_clock_us`       | D2 `timestamp_us`        | Firmware device clock in microseconds.          |
+|        2 | `target_raw_count`      | D2 `raw_count`           | HX711 raw ADC count; calibration-authoritative. |
+|        3 | `target_current_units`  | D2 `current_units`       | Firmware-scaled force/value.                    |
+|        4 | `target_filtered_units` | bridge processing output | Filtered display/QA channel.                    |
+|        5 | `target_status`         | D2 `status`              | Firmware status bitfield.                       |
 
 ### `HandgripReference`
 
-| Property | Value |
-| --- | --- |
-| Producer | `LSL_Bridge` RS485 IPC background publisher |
-| Source | `RS485_GUI` IPC |
-| LSL name | `HandgripReference` |
-| LSL type | `Force` |
-| Nominal rate | `500.0` |
-| Schema metadata | `handgrip_reference_stream.v2` |
-| Main consumers | `LSL_Viewer`, `Handgrip_Calibration`, recordings |
+| Property        | Value                                            |
+| --------------- | ------------------------------------------------ |
+| Producer        | `LSL_Bridge` RS485 IPC background publisher      |
+| Source          | `RS485_GUI` IPC                                  |
+| LSL name        | `HandgripReference`                              |
+| LSL type        | `Force`                                          |
+| Nominal rate    | `500.0`                                          |
+| Schema metadata | `handgrip_reference_stream.v2`                   |
+| Main consumers  | `LSL_Viewer`, `Handgrip_Calibration`, recordings |
 
 Channel order pushed to LSL:
 
-| Position | Label | Source | Meaning |
-| ---: | --- | --- | --- |
-| 0 | `seq` | IPC `seq` or `-1` | Reference sample sequence. |
-| 1 | `reference_clock_s` | IPC `reference_clock_s` | Reference/sample clock in seconds. |
-| 2 | `reference_force_N` | IPC `reference_force_N` | Reference force used as calibration ground truth. |
-| 3 | `reference_status` | IPC `reference_status` | Reference/transport status bitfield. |
+| Position | Label               | Source                  | Meaning                                           |
+| -------: | ------------------- | ----------------------- | ------------------------------------------------- |
+|        0 | `seq`               | IPC `seq` or `-1`       | Reference sample sequence.                        |
+|        1 | `reference_clock_s` | IPC `reference_clock_s` | Reference/sample clock in seconds.                |
+|        2 | `reference_force_N` | IPC `reference_force_N` | Reference force used as calibration ground truth. |
+|        3 | `reference_status`  | IPC `reference_status`  | Reference/transport status bitfield.              |
 
 ### `HandgripComponentEvents`
 
-| Property | Value |
-| --- | --- |
-| Producer | `LSL_Bridge` `ComponentEventOutlet` |
-| LSL name | `HandgripComponentEvents` |
-| LSL type | `Markers` |
-| Schema | `handgrip_component_event.v1` |
-| Payload | single JSON string per event |
-| Purpose | Infrastructure markers for audit/debugging. |
+| Property | Value                                       |
+| -------- | ------------------------------------------- |
+| Producer | `LSL_Bridge` `ComponentEventOutlet`         |
+| LSL name | `HandgripComponentEvents`                   |
+| LSL type | `Markers`                                   |
+| Schema   | `handgrip_component_event.v1`               |
+| Payload  | single JSON string per event                |
+| Purpose  | Infrastructure markers for audit/debugging. |
 
 Representative event names:
 
-| Event | Meaning |
-| --- | --- |
-| `bridge_start` | Bridge process started. |
-| `bridge_stop` | Bridge process stopped. |
-| `target_serial_connected` | Target serial port opened and LSL outlet ready. |
-| `target_serial_error` | Serial exception/reconnect path. |
-| `target_metadata` | Firmware M2 metadata received. |
-| `target_sequence_gap` | D2 `seq` discontinuity detected. |
-| `target_timestamp_reanchor` | Timestamp resolver re-anchored target stream. |
-| `reference_ipc_connected` | ZMQ reference IPC subscriber connected. |
-| `reference_ipc_malformed` | IPC message failed schema/field decoding. |
-| `reference_sequence_gap` | Reference `seq` discontinuity detected. |
+| Event                       | Meaning                                         |
+| --------------------------- | ----------------------------------------------- |
+| `bridge_start`              | Bridge process started.                         |
+| `bridge_stop`               | Bridge process stopped.                         |
+| `target_serial_connected`   | Target serial port opened and LSL outlet ready. |
+| `target_serial_error`       | Serial exception/reconnect path.                |
+| `target_metadata`           | Firmware M2 metadata received.                  |
+| `target_sequence_gap`       | D2 `seq` discontinuity detected.                |
+| `target_timestamp_reanchor` | Timestamp resolver re-anchored target stream.   |
+| `reference_ipc_connected`   | ZMQ reference IPC subscriber connected.         |
+| `reference_ipc_malformed`   | IPC message failed schema/field decoding.       |
+| `reference_sequence_gap`    | Reference `seq` discontinuity detected.         |
 
 The bridge event stream is intentionally separate from calibration trial markers. `Handgrip_Calibration` owns experiment/protocol markers.
 

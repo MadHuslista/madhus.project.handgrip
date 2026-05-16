@@ -88,11 +88,11 @@ The PM58 and handgrip must experience the same axial force with minimal off-axis
 
 ## What each image proves
 
-| Image | Proves | Does not prove |
-| --- | --- | --- |
-| `pm58_n_handgrip_setup.jpg` | PM58 and handgrip target can be placed in a common mechanical chain. | That the force path is perfectly axial, backlash-free, or calibrated. |
-| `acq_board_n_pm58_n_handgrip_setup.jpg` | The reference sensor can be electrically connected while installed in the mechanical setup. | That RS485 communication, scaling, or acquisition-board settings are correct. |
-| `force_application_setup.jpg` | The fixture can apply controlled force through the sensor chain. | That the force is traceable, linear, or free from friction/compliance artifacts. |
+| Image                                   | Proves                                                                                      | Does not prove                                                                   |
+| --------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `pm58_n_handgrip_setup.jpg`             | PM58 and handgrip target can be placed in a common mechanical chain.                        | That the force path is perfectly axial, backlash-free, or calibrated.            |
+| `acq_board_n_pm58_n_handgrip_setup.jpg` | The reference sensor can be electrically connected while installed in the mechanical setup. | That RS485 communication, scaling, or acquisition-board settings are correct.    |
+| `force_application_setup.jpg`           | The fixture can apply controlled force through the sensor chain.                            | That the force is traceable, linear, or free from friction/compliance artifacts. |
 
 ## How to validate force path before calibration
 
@@ -139,14 +139,14 @@ The PM58 and handgrip must experience the same axial force with minimal off-axis
 
 ## Common mistakes
 
-| Mistake | Symptom | Fix |
-| --- | --- | --- |
-| PM58 and handgrip are not truly in series | Reference changes but target does not, or target changes with poor correlation | Rebuild fixture so the same force path crosses both devices. |
-| Screw press applies off-axis force | Signal is noisy, nonlinear, or changes after touching the fixture | Re-align contact surfaces and add guides/supports if needed. |
-| Fixture slips during holds | Calibration staircase has sudden jumps or inconsistent repeats | Add mechanical stops, improve clamping, or reduce maximum test force. |
-| Cables mechanically load the sensor | Baseline changes when cables move | Add strain relief and route cables away from the moving force path. |
-| Hidden preload before zero | Zero point changes after first load cycle | Perform preload cycles, release, then zero before calibration. |
-| Trying to debug software before validating mechanics | Signals look inconsistent even though code is working | Complete the mechanical validation gates first. |
+| Mistake                                              | Symptom                                                                        | Fix                                                                   |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| PM58 and handgrip are not truly in series            | Reference changes but target does not, or target changes with poor correlation | Rebuild fixture so the same force path crosses both devices.          |
+| Screw press applies off-axis force                   | Signal is noisy, nonlinear, or changes after touching the fixture              | Re-align contact surfaces and add guides/supports if needed.          |
+| Fixture slips during holds                           | Calibration staircase has sudden jumps or inconsistent repeats                 | Add mechanical stops, improve clamping, or reduce maximum test force. |
+| Cables mechanically load the sensor                  | Baseline changes when cables move                                              | Add strain relief and route cables away from the moving force path.   |
+| Hidden preload before zero                           | Zero point changes after first load cycle                                      | Perform preload cycles, release, then zero before calibration.        |
+| Trying to debug software before validating mechanics | Signals look inconsistent even though code is working                          | Complete the mechanical validation gates first.                       |
 
 ## Pre-calibration checklist
 

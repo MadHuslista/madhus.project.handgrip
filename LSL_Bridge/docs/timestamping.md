@@ -10,15 +10,15 @@
 
 ## Timestamp domains
 
-| Domain | Field | Owner | Role |
-| --- | --- | --- | --- |
-| Firmware device clock | `device_clock_us` | `Handgrip_Firmware` | Target diagnostic/sample clock. |
-| Target host arrival | `arrival_lsl_time` | `LSL_Bridge` serial loop | Host-side arrival time for D2 line. |
-| Target LSL timestamp | `sample.lsl_timestamp` | `TargetTimestampResolver` | Timestamp used for target LSL sample. |
-| Reference source clock | `reference_clock_s` | `RS485_GUI` / acquisition path | Reference diagnostic/sample clock. |
-| Reference host LSL timestamp | `host_lsl_ts` | `RS485_GUI` | Preferred reference LSL timestamp. |
-| Reference bridge receive timestamp | `received_lsl_ts` | `LSL_Bridge` IPC thread | Fallback reference timestamp. |
-| Processor-domain time | configured by `processing.timestamp_source` | `SampleTimeResolver` | Time fed into target processing/filter chain. |
+| Domain                             | Field                                       | Owner                          | Role                                          |
+| ---------------------------------- | ------------------------------------------- | ------------------------------ | --------------------------------------------- |
+| Firmware device clock              | `device_clock_us`                           | `Handgrip_Firmware`            | Target diagnostic/sample clock.               |
+| Target host arrival                | `arrival_lsl_time`                          | `LSL_Bridge` serial loop       | Host-side arrival time for D2 line.           |
+| Target LSL timestamp               | `sample.lsl_timestamp`                      | `TargetTimestampResolver`      | Timestamp used for target LSL sample.         |
+| Reference source clock             | `reference_clock_s`                         | `RS485_GUI` / acquisition path | Reference diagnostic/sample clock.            |
+| Reference host LSL timestamp       | `host_lsl_ts`                               | `RS485_GUI`                    | Preferred reference LSL timestamp.            |
+| Reference bridge receive timestamp | `received_lsl_ts`                           | `LSL_Bridge` IPC thread        | Fallback reference timestamp.                 |
+| Processor-domain time              | configured by `processing.timestamp_source` | `SampleTimeResolver`           | Time fed into target processing/filter chain. |
 
 ## Target timestamp policies
 
@@ -57,12 +57,12 @@ Use when:
 
 Safety guards:
 
-| Key | Meaning |
-| --- | --- |
-| `reset_on_nonmonotonic` | Re-anchor if target device clock goes backward. |
-| `max_gap_s` | Re-anchor if a large target device-clock gap appears. |
-| `max_anchor_drift_s` | Re-anchor if device-derived time drifts too far from host arrival time. |
-| `monotonic_epsilon_s` | Enforce strictly increasing LSL timestamps. |
+| Key                     | Meaning                                                                 |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `reset_on_nonmonotonic` | Re-anchor if target device clock goes backward.                         |
+| `max_gap_s`             | Re-anchor if a large target device-clock gap appears.                   |
+| `max_anchor_drift_s`    | Re-anchor if device-derived time drifts too far from host arrival time. |
+| `monotonic_epsilon_s`   | Enforce strictly increasing LSL timestamps.                             |
 
 ## Drift and gap behavior
 
@@ -70,11 +70,11 @@ The resolver emits component events when it re-anchors. These are important for 
 
 Typical reasons:
 
-| Reason | Meaning |
-| --- | --- |
+| Reason                      | Meaning                                                               |
+| --------------------------- | --------------------------------------------------------------------- |
 | `device_clock_anchor_drift` | Predicted device-clock timestamp drifted beyond `max_anchor_drift_s`. |
-| `device_clock_gap` | Target device-clock gap exceeded `max_gap_s`. |
-| nonmonotonic clock reset | Device clock moved backward and reset policy is enabled. |
+| `device_clock_gap`          | Target device-clock gap exceeded `max_gap_s`.                         |
+| nonmonotonic clock reset    | Device clock moved backward and reset policy is enabled.              |
 
 If these happen rarely around reconnects or startup, they are usually acceptable. If they happen continuously during stable acquisition, inspect firmware timing, USB serial stability, and host load.
 
@@ -105,10 +105,10 @@ processing:
 
 Supported behavior:
 
-| Source | Meaning |
-| --- | --- |
+| Source            | Meaning                                                      |
+| ----------------- | ------------------------------------------------------------ |
 | `device_clock_us` | Filter uses target device-clock deltas converted to seconds. |
-| `lsl` | Filter uses resolved LSL timestamps. |
+| `lsl`             | Filter uses resolved LSL timestamps.                         |
 
 Changing processor time source affects filter dynamics. Validate with `tests/unit/test_filter.py` and signal-level analysis before promoting changes.
 

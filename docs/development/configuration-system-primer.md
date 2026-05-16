@@ -58,14 +58,14 @@ Practical implications:
 
 ## Component-local configs
 
-| Component | Config root | Notes |
-| --- | --- | --- |
-| `RS485_GUI` | `RS485_GUI/config/config.yaml` | Serial transport, parser profile, logging, GUI display, IPC publishing. |
-| `LSL_Bridge` | `LSL_Bridge/conf/config.yaml` | Target serial, reference IPC, LSL outlets, timestamping, CSV sinks, processing. |
-| `LSL_Viewer` | `LSL_Viewer/conf/config.yaml` | Stream names, channel labels, live/replay modes, XY alignment, display-only downsampling. |
-| `Handgrip_Calibration` | `Handgrip_Calibration/conf/*.yaml` | Protocols, stream requirements, recording outputs, fitting/report settings. |
-| `Handgrip_Analysis` | `Handgrip_Analysis/conf/**/*.yaml` | Stage settings, manifests, filter candidates, output/report behavior. |
-| `Handgrip_Firmware` | `Handgrip_Firmware/Core/Inc/config.h` | Compile-time constants, D2 schema metadata, sampling period, scale/offset. |
+| Component              | Config root                           | Notes                                                                                     |
+| ---------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `RS485_GUI`            | `RS485_GUI/config/config.yaml`        | Serial transport, parser profile, logging, GUI display, IPC publishing.                   |
+| `LSL_Bridge`           | `LSL_Bridge/conf/config.yaml`         | Target serial, reference IPC, LSL outlets, timestamping, CSV sinks, processing.           |
+| `LSL_Viewer`           | `LSL_Viewer/conf/config.yaml`         | Stream names, channel labels, live/replay modes, XY alignment, display-only downsampling. |
+| `Handgrip_Calibration` | `Handgrip_Calibration/conf/*.yaml`    | Protocols, stream requirements, recording outputs, fitting/report settings.               |
+| `Handgrip_Analysis`    | `Handgrip_Analysis/conf/**/*.yaml`    | Stage settings, manifests, filter candidates, output/report behavior.                     |
+| `Handgrip_Firmware`    | `Handgrip_Firmware/Core/Inc/config.h` | Compile-time constants, D2 schema metadata, sampling period, scale/offset.                |
 
 ## Protocol configs
 
@@ -145,14 +145,14 @@ A complete session should preserve:
 
 Treat these as high risk:
 
-| Change | Why high risk | Required docs/tests |
-| --- | --- | --- |
-| Stream name | Consumers may not discover streams | root stream contracts, bridge/viewer/calibration configs, preflight. |
-| Channel name/order | Calibration/viewer columns can break | bridge docs, viewer docs, calibration docs, parser/channel tests. |
-| Firmware D2 field | Parser and reports can break | firmware docs, bridge parser tests, root stream contracts. |
-| RS485 IPC topic | Bridge reference stream can disappear | RS485 GUI docs, bridge config/docs, reference-only quickstart. |
-| Calibration protocol default | Operators may run wrong workflow | calibration docs, root workflow, CLI help, tests. |
-| Analysis filter recommendation target | Live vs display-only behavior can diverge | analysis docs, bridge/viewer config docs, validation workflow. |
+| Change                                | Why high risk                             | Required docs/tests                                                  |
+| ------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------- |
+| Stream name                           | Consumers may not discover streams        | root stream contracts, bridge/viewer/calibration configs, preflight. |
+| Channel name/order                    | Calibration/viewer columns can break      | bridge docs, viewer docs, calibration docs, parser/channel tests.    |
+| Firmware D2 field                     | Parser and reports can break              | firmware docs, bridge parser tests, root stream contracts.           |
+| RS485 IPC topic                       | Bridge reference stream can disappear     | RS485 GUI docs, bridge config/docs, reference-only quickstart.       |
+| Calibration protocol default          | Operators may run wrong workflow          | calibration docs, root workflow, CLI help, tests.                    |
+| Analysis filter recommendation target | Live vs display-only behavior can diverge | analysis docs, bridge/viewer config docs, validation workflow.       |
 
 ## Validation commands
 
@@ -172,10 +172,10 @@ rg 'protocol_static_reversible_staircase_v3.yaml' docs Handgrip_Calibration
 
 ## Common mistakes
 
-| Mistake | Symptom | Fix |
-| --- | --- | --- |
-| Editing config from wrong working directory | File-not-found or copied config snapshots missing | Run from documented component root or use repo-root-aware paths. |
-| Using CLI overrides as hidden permanent state | Another operator cannot reproduce behavior | Promote validated overrides to YAML and docs. |
-| Renaming a channel in one component only | Viewer/calibration cannot find data | Update producer/consumer configs and stream contracts together. |
-| Treating display downsampling as acquisition downsampling | Saved data and plot behavior disagree | Document whether setting is display-only or data-path affecting. |
-| Forgetting config snapshots | Calibration report cannot explain conditions | Fix `copy_component_configs` and rerun session. |
+| Mistake                                                   | Symptom                                           | Fix                                                              |
+| --------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------- |
+| Editing config from wrong working directory               | File-not-found or copied config snapshots missing | Run from documented component root or use repo-root-aware paths. |
+| Using CLI overrides as hidden permanent state             | Another operator cannot reproduce behavior        | Promote validated overrides to YAML and docs.                    |
+| Renaming a channel in one component only                  | Viewer/calibration cannot find data               | Update producer/consumer configs and stream contracts together.  |
+| Treating display downsampling as acquisition downsampling | Saved data and plot behavior disagree             | Document whether setting is display-only or data-path affecting. |
+| Forgetting config snapshots                               | Calibration report cannot explain conditions      | Fix `copy_component_configs` and rerun session.                  |

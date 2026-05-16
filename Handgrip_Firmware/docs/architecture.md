@@ -10,12 +10,12 @@
 
 ## Source files
 
-| File | Responsibility |
-| --- | --- |
-| `Core/Src/main.cpp` | Setup, ISR, raw-to-units conversion, metadata emission, D2 sample emission. |
-| `Core/Inc/config.h` | Public constants, status bits, schema, metadata, scale/offset, timing. |
-| `Core/Inc/fifo_buffer.h` | Fixed-size circular FIFO template. |
-| `../platformio.ini` | Build environment, board selection, library dependencies, source/include paths. |
+| File                     | Responsibility                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| `Core/Src/main.cpp`      | Setup, ISR, raw-to-units conversion, metadata emission, D2 sample emission.     |
+| `Core/Inc/config.h`      | Public constants, status bits, schema, metadata, scale/offset, timing.          |
+| `Core/Inc/fifo_buffer.h` | Fixed-size circular FIFO template.                                              |
+| `../platformio.ini`      | Build environment, board selection, library dependencies, source/include paths. |
 
 ## Runtime dataflow
 
@@ -88,21 +88,21 @@ Why this is correct:
 
 Runtime sample fields:
 
-| Field | Source | Purpose |
-| --- | --- | --- |
-| `raw_count` | `_scale.read()` | HX711 raw count; calibration-authoritative. |
-| `current_units` | `_raw_to_units(raw_count)` | firmware-scaled sanity value. |
-| `timestamp_us` | `micros()` | device-local timestamp. |
-| `seq` | `_seq++` | monotonic sequence number. |
-| `status` | `_sticky_status` + scale status | acquisition/scaling QA bitfield. |
+| Field           | Source                          | Purpose                                     |
+| --------------- | ------------------------------- | ------------------------------------------- |
+| `raw_count`     | `_scale.read()`                 | HX711 raw count; calibration-authoritative. |
+| `current_units` | `_raw_to_units(raw_count)`      | firmware-scaled sanity value.               |
+| `timestamp_us`  | `micros()`                      | device-local timestamp.                     |
+| `seq`           | `_seq++`                        | monotonic sequence number.                  |
+| `status`        | `_sticky_status` + scale status | acquisition/scaling QA bitfield.            |
 
 ## FIFO handoff
 
 The FIFO decouples sample capture from serial printing.
 
-| Side | Action |
-| --- | --- |
-| ISR | Pushes `SensorSample` into `_sensor_fifo`. |
+| Side      | Action                                            |
+| --------- | ------------------------------------------------- |
+| ISR       | Pushes `SensorSample` into `_sensor_fifo`.        |
 | Main loop | Pops one `SensorSample` and emits it over serial. |
 
 Why this matters:
@@ -159,13 +159,13 @@ robtillaart/HX711@^0.6.3
 
 Used calls include:
 
-| Call | Purpose |
-| --- | --- |
-| `_scale.begin(data_pin, clock_pin)` | Initialize HX711 pins. |
-| `_scale.set_scale(SCALE_FACTOR)` | Set library scale used for sanity behavior. |
-| `_scale.set_offset(SCALE_OFFSET)` | Set library offset used for sanity behavior. |
-| `_scale.is_ready()` | Non-blocking readiness check. |
-| `_scale.read()` | Read raw ADC count. |
+| Call                                | Purpose                                      |
+| ----------------------------------- | -------------------------------------------- |
+| `_scale.begin(data_pin, clock_pin)` | Initialize HX711 pins.                       |
+| `_scale.set_scale(SCALE_FACTOR)`    | Set library scale used for sanity behavior.  |
+| `_scale.set_offset(SCALE_OFFSET)`   | Set library offset used for sanity behavior. |
+| `_scale.is_ready()`                 | Non-blocking readiness check.                |
+| `_scale.read()`                     | Read raw ADC count.                          |
 
 ## TimerOne dependency
 
@@ -177,31 +177,31 @@ paulstoffregen/TimerOne@^1.2
 
 Used calls include:
 
-| Call | Purpose |
-| --- | --- |
+| Call                                    | Purpose                      |
+| --------------------------------------- | ---------------------------- |
 | `Timer1.initialize(SAMPLING_PERIOD_US)` | Configure timer tick period. |
-| `Timer1.attachInterrupt(sample_scale)` | Register sample ISR. |
+| `Timer1.attachInterrupt(sample_scale)`  | Register sample ISR.         |
 
 ## Architecture boundaries
 
-| Belongs in firmware | Does not belong in firmware |
-| --- | --- |
-| raw HX711 acquisition | calibration protocol sequencing |
-| device timestamp | static hold segmentation |
-| monotonic sequence number | model fitting |
-| status bitfield | report generation |
-| current firmware constants metadata | reference/target synchronization policy beyond exposed timestamps |
-| simple raw-to-units sanity conversion | DSP model selection |
+| Belongs in firmware                   | Does not belong in firmware                                       |
+| ------------------------------------- | ----------------------------------------------------------------- |
+| raw HX711 acquisition                 | calibration protocol sequencing                                   |
+| device timestamp                      | static hold segmentation                                          |
+| monotonic sequence number             | model fitting                                                     |
+| status bitfield                       | report generation                                                 |
+| current firmware constants metadata   | reference/target synchronization policy beyond exposed timestamps |
+| simple raw-to-units sanity conversion | DSP model selection                                               |
 
 ## Change-risk map
 
-| Change | Risk | Required validation |
-| --- | --- | --- |
-| Change pins | No data if wiring/config mismatch. | Serial monitor + force response. |
-| Change sampling period | More not-ready ticks or FIFO pressure. | Status histogram and sequence gaps. |
-| Change FIFO depth | SRAM pressure or overflow behavior. | Long-run serial test. |
-| Change D2 fields | Cross-component breakage. | Bridge parser tests + root stream contract update. |
-| Change scale/offset | `current_units` changes. | Calibration/holdout validation. |
+| Change                 | Risk                                   | Required validation                                |
+| ---------------------- | -------------------------------------- | -------------------------------------------------- |
+| Change pins            | No data if wiring/config mismatch.     | Serial monitor + force response.                   |
+| Change sampling period | More not-ready ticks or FIFO pressure. | Status histogram and sequence gaps.                |
+| Change FIFO depth      | SRAM pressure or overflow behavior.    | Long-run serial test.                              |
+| Change D2 fields       | Cross-component breakage.              | Bridge parser tests + root stream contract update. |
+| Change scale/offset    | `current_units` changes.               | Calibration/holdout validation.                    |
 
 ## Validation checklist
 

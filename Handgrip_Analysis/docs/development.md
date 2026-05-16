@@ -10,14 +10,14 @@
 
 ### Files to edit
 
-| File area | Purpose |
-| --- | --- |
-| `src/handgrip_analysis/...` or `scripts/stageN_*.py` | Stage implementation. |
-| `conf/analysis/stageN.yaml` | Stage defaults. |
-| `Handgrip_Analysis/docs/stages.md` | Purpose/input/output documentation. |
-| `Handgrip_Analysis/docs/configuration.md` | Config reference. |
-| `Handgrip_Analysis/docs/reports-and-outputs.md` | Output artifacts. |
-| `tests/` | Unit/integration coverage. |
+| File area                                            | Purpose                             |
+| ---------------------------------------------------- | ----------------------------------- |
+| `src/handgrip_analysis/...` or `scripts/stageN_*.py` | Stage implementation.               |
+| `conf/analysis/stageN.yaml`                          | Stage defaults.                     |
+| `Handgrip_Analysis/docs/stages.md`                   | Purpose/input/output documentation. |
+| `Handgrip_Analysis/docs/configuration.md`            | Config reference.                   |
+| `Handgrip_Analysis/docs/reports-and-outputs.md`      | Output artifacts.                   |
+| `tests/`                                             | Unit/integration coverage.          |
 
 ### Required contract
 
@@ -50,13 +50,13 @@ A stage must document:
 
 ### Files to edit
 
-| Area | Purpose |
-| --- | --- |
-| DSP/filter module | Apply candidate filter. |
-| filter candidate config | Add family/order/cutoff parameters. |
-| Stage 6 runner | Include candidate in benchmark loop. |
-| Stage 6 report | Show metrics and interpretation. |
-| tests | Validate frequency constraints and output behavior. |
+| Area                    | Purpose                                             |
+| ----------------------- | --------------------------------------------------- |
+| DSP/filter module       | Apply candidate filter.                             |
+| filter candidate config | Add family/order/cutoff parameters.                 |
+| Stage 6 runner          | Include candidate in benchmark loop.                |
+| Stage 6 report          | Show metrics and interpretation.                    |
+| tests                   | Validate frequency constraints and output behavior. |
 
 ### Required validation
 
@@ -103,12 +103,12 @@ Do not add plots that are not referenced in a report or interpretation workflow.
 
 ## Testing strategy
 
-| Test class | Purpose |
-| --- | --- |
-| Unit tests | Metrics, DSP functions, filter candidate validation. |
-| Integration tests | Stage run on small fixture data. |
-| CLI tests | Entry points, argument parsing, output folder creation. |
-| Report tests | Required sections/artifacts present. |
+| Test class        | Purpose                                                 |
+| ----------------- | ------------------------------------------------------- |
+| Unit tests        | Metrics, DSP functions, filter candidate validation.    |
+| Integration tests | Stage run on small fixture data.                        |
+| CLI tests         | Entry points, argument parsing, output folder creation. |
+| Report tests      | Required sections/artifacts present.                    |
 
 Suggested commands:
 
