@@ -1,12 +1,69 @@
 # Handgrip Firmware
 
-This firmware targets an Arduino Nano ATmega328 connected to an HX711 load-cell amplifier. The project is built with PlatformIO and uses the Arduino framework, Rob Tillaart's HX711 library, and TimerOne for deterministic sampling.
+## Summary
 
-The firmware sources live in `Handgrip_Firmware/Core/`:
+- This firmware runs on an Arduino Nano ATmega328 connected to an HX711 load-cell amplifier.
+- It samples the target handgrip load-cell path and streams calibration-ready serial frames over UART.
+- The current protocol is **schema 2**: `M2` metadata frames plus strict `D2` data frames.
+- `raw_count` is always emitted and is the calibration-authoritative target signal.
+- Host-side calibration, fitting, reporting, stream publication, and analysis belong to the Python tools, not to the firmware.
 
-- `Handgrip_Firmware/Core/Src/main.cpp` configures the HX711 on `D2` and `D3`, samples at `80 Hz`, and streams values over serial.
-- `Handgrip_Firmware/Core/Inc/config.h` contains the compile-time settings for calibration and sampling.
-- `Handgrip_Firmware/Core/Inc/fifo_buffer.h` provides the FIFO used to decouple interrupt-driven acquisition from serial transmission.
+## Status
+
+| Field                 | Value                                       |
+| --------------------- | ------------------------------------------- |
+| Component             | `Handgrip_Firmware`                         |
+| Board                 | Arduino Nano ATmega328, old bootloader      |
+| Framework             | PlatformIO + Arduino                        |
+| HX711 pins            | `DAT = D2`, `CLK = D3`                      |
+| Serial baud           | `115200`                                    |
+| Current serial schema | `M2` + `D2`                                 |
+| Detailed protocol doc | `Handgrip_Firmware/docs/serial-protocol.md` |
+
+## When to use this component
+
+Use this component when you need to:
+
+- build or upload firmware to the target handgrip Arduino,
+- validate raw target sensor output,
+- update firmware calibration constants after an accepted calibration report,
+- debug target-side timing/status issues,
+- modify the low-level HX711 acquisition path.
+
+Do not use this component to:
+
+- run calibration protocols,
+- segment static holds,
+- fit calibration models,
+- publish Lab Streaming Layer streams,
+- visualize target/reference correlation.
+
+Those are handled by the host-side Python components.
+
+## Source layout
+
+```text
+Handgrip_Firmware/
+├── README.md
+├── docs/
+│   ├── index.md
+│   └── serial-protocol.md
+└── Core/
+    ├── Inc/
+    │   ├── config.h
+    │   └── fifo_buffer.h
+    └── Src/
+        └── main.cpp
+```
+
+Important files:
+
+| File                     | Purpose                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| `Core/Src/main.cpp`      | HX711 setup, TimerOne sampling, FIFO handoff, `M2`/`D2` UART emission.                |
+| `Core/Inc/config.h`      | Serial rate, scale constants, sampling period, payload schema, status bits, metadata. |
+| `Core/Inc/fifo_buffer.h` | FIFO used to decouple interrupt capture from serial output.                           |
+| `../platformio.ini`      | PlatformIO environment, dependencies, upload/monitor settings.                        |
 
 ## Prerequisites
 
@@ -18,50 +75,70 @@ Install the required VS Code extension:
 
 You do not need to install PlatformIO Core separately when using the VS Code extension.
 
-## Open And Configure The Project In VS Code
+## Open and configure the project in VS Code
 
-Open the repository root in VS Code, not only `Handgrip_Firmware/`. PlatformIO reads the project configuration from the root [platformio.ini](platformio.ini).
+Open the **repository root** in VS Code, not only `Handgrip_Firmware/`.
+
+PlatformIO reads the project configuration from the root file:
+
+```text
+platformio.ini
+```
 
 The current project environment is:
 
-- Environment: `nanoatmega328`
-- Platform: `atmelavr`
-- Framework: `arduino`
-- Board: `Arduino Nano ATmega328`
+| Field       | Value                  |
+| ----------- | ---------------------- |
+| Environment | `nanoatmega328`        |
+| Platform    | `atmelavr`             |
+| Framework   | `arduino`              |
+| Board       | Arduino Nano ATmega328 |
 
-Important: this project uses the Arduino Nano variant with the **old bootloader**. In PlatformIO, keep the board as `nanoatmega328`. Do not switch to the board labeled `Arduino Nano ATmega328 (New Bootloader)`.
+Important: this project uses the Arduino Nano variant with the **old bootloader**. Keep the board as `nanoatmega328`. Do not switch to the PlatformIO board labeled `Arduino Nano ATmega328 (New Bootloader)` unless the physical board has been replaced and validated.
 
-The most relevant configuration points are:
+## Runtime defaults
 
-- [platformio.ini](platformio.ini): PlatformIO environment, dependencies, upload port, monitor port, monitor speed.
-- [Handgrip_Firmware/Core/Inc/config.h](Handgrip_Firmware/Core/Inc/config.h): `SAMPLING_PERIOD_US`, `CALIBRATE_SCALE_MODE`, `SCALE_FACTOR`, `SCALE_OFFSET`.
-- [Handgrip_Firmware/Core/Src/main.cpp](Handgrip_Firmware/Core/Src/main.cpp): HX711 pin assignment and the serial output format.
+| Setting                             | Current value        | Source              |
+| ----------------------------------- | -------------------- | ------------------- |
+| HX711 data pin                      | Arduino `D2`         | `Core/Src/main.cpp` |
+| HX711 clock pin                     | Arduino `D3`         | `Core/Src/main.cpp` |
+| Serial baud                         | `115200`             | `Core/Inc/config.h` |
+| Sampling period                     | `5000 us` timer tick | `Core/Inc/config.h` |
+| Expected HX711 output rate metadata | `93.0 Hz`            | `Core/Inc/config.h` |
+| Payload schema                      | `2`                  | `Core/Inc/config.h` |
 
-Default runtime settings from the current code:
+The firmware polls the HX711 in a non-blocking timer interrupt. A timer tick does not guarantee a new sample; if the HX711 is not ready, the firmware records a status bit and returns without blocking.
 
-- HX711 `DAT` pin on Arduino `D2`
-- HX711 `CLK` pin on Arduino `D3`
-- Serial baud rate `115200`
-- Sampling period `12500 us` (`80 Hz`)
+## Firmware workflow
 
-## Firmware Workflow
+### 1. Review calibration constants
 
-### 1. Review Calibration Settings
+Before building, open:
 
-Before building, open [Handgrip_Firmware/Core/Inc/config.h](Handgrip_Firmware/Core/Inc/config.h) and confirm:
+```text
+Handgrip_Firmware/Core/Inc/config.h
+```
 
-- `CALIBRATE_SCALE_MODE`
-  - `1U`: calibration mode
-  - `0U`: normal application mode
-- `SCALE_FACTOR`
-- `SCALE_OFFSET`
-- `SAMPLING_PERIOD_US`
+Review:
 
-If you are calibrating the device, set `CALIBRATE_SCALE_MODE` to `1U`, upload, collect the calibration result, then update `SCALE_FACTOR` and `SCALE_OFFSET` and switch back to `0U`.
+| Constant              | Meaning                                                |
+| --------------------- | ------------------------------------------------------ |
+| `SCALE_FACTOR`        | Firmware scaling factor used only for `current_units`. |
+| `SCALE_OFFSET`        | Firmware offset used only for `current_units`.         |
+| `SAMPLING_PERIOD_US`  | Timer tick period for non-blocking HX711 polling.      |
+| `HANDGRIP_FORCE_UNIT` | Unit label emitted in `M2` metadata.                   |
 
-### 2. Confirm The PlatformIO Environment
+During calibration, `raw_count` remains the authoritative target signal even if `SCALE_FACTOR` and `SCALE_OFFSET` are still placeholders.
 
-Open [platformio.ini](platformio.ini) and verify that the environment is still:
+### 2. Confirm PlatformIO environment
+
+From the repository root, inspect:
+
+```text
+platformio.ini
+```
+
+Expected environment:
 
 ```ini
 [env:nanoatmega328]
@@ -70,170 +147,172 @@ board = nanoatmega328
 framework = arduino
 ```
 
-The project already declares these dependencies:
+Expected dependencies:
 
 - `robtillaart/HX711@^0.6.3`
 - `paulstoffregen/TimerOne@^1.2`
 
 PlatformIO installs them automatically during the first build.
 
-### 3. Build The Project
+### 3. Build the project
 
-You can build from the VS Code UI in either of these ways:
-
-1. Click the `Build` checkmark in the PlatformIO toolbar.
-2. Open the PlatformIO side panel and run `Project Tasks > nanoatmega328 > General > Build`.
-
-PlatformIO shortcut:
-
-- `Ctrl+Alt+B`: build
-
-Command-line alternative from the repository root:
+Command-line build from the repository root:
 
 ```bash
 pio run -e nanoatmega328
 ```
 
-### 4. Connect The Arduino Nano
+VS Code alternatives:
 
-Connect the Arduino Nano by USB. This project is configured for Linux-style serial device names:
+- click the PlatformIO `Build` checkmark,
+- or run `Project Tasks > nanoatmega328 > General > Build`.
 
-- `upload_port = /dev/ttyUSB*`
-- `monitor_port = /dev/ttyUSB*`
+### 4. Connect the Arduino Nano
 
-If your adapter enumerates differently, update [platformio.ini](platformio.ini) to the correct port such as `/dev/ttyUSB0` or `/dev/ttyACM0`.
+Connect the Arduino Nano by USB.
 
-### 5. Upload The Firmware
+Linux-style serial examples:
 
-Upload from VS Code in either of these ways:
+```text
+/dev/ttyUSB0
+/dev/ttyACM0
+```
 
-1. Click the `Upload` right-arrow icon in the PlatformIO toolbar.
-2. Open the PlatformIO side panel and run `Project Tasks > nanoatmega328 > General > Upload`.
+The project currently uses wildcard-style PlatformIO serial settings. If needed, update `platformio.ini` to the specific connected port.
 
-PlatformIO shortcut:
+### 5. Upload firmware
 
-- `Ctrl+Alt+U`: upload
-
-Command-line alternative:
+Command-line upload:
 
 ```bash
 pio run -e nanoatmega328 -t upload
 ```
 
-If upload fails immediately, re-check that the connected board is the old-bootloader Arduino Nano and not the `New Bootloader` variant.
+VS Code alternatives:
 
-### 6. Open The Serial Monitor (optional if not using LSL_Bridge & LSL_Viewer)
+- click the PlatformIO `Upload` arrow,
+- or run `Project Tasks > nanoatmega328 > General > Upload`.
 
-The firmware emits serial frames at `115200` baud with this format:
+If upload fails immediately, re-check:
 
-```text
-D,<seq>,<timestamp_us>,<value_gr>
-```
+- board uses the old bootloader,
+- serial port is correct,
+- no other process has the serial port open.
 
-Open the serial monitor from VS Code:
-
-1. Click the plug icon in the PlatformIO toolbar.
-2. Or run `Project Tasks > nanoatmega328 > Monitor > Monitor`.
-
-PlatformIO shortcut:
-
-- `Ctrl+Alt+S`: serial monitor
-
-Command-line alternative:
+### 6. Open the serial monitor
 
 ```bash
 pio device monitor -b 115200
 ```
 
-If the firmware is running correctly, you should see lines like:
+Expected metadata frame near boot:
 
 ```text
-D,42,1234567,315.25
+M2,2,2.0.0-calibration-schema,unknown,93.000,1.000000000,0.000,N
 ```
 
-## Hardware Connections
+Expected data frames while running:
 
-The current hardware topology from the project notes is:
-
-- Arduino Nano with old bootloader
-- HX711 load-cell amplifier
-- Load-cell wires connected to the HX711 module
-
-### Wiring Diagram
-
-```mermaid
-flowchart LR
-    LC[Load Cell]
-    HX[HX711 Module]
-    NANO[Arduino Nano ATmega328\nOld Bootloader]
-
-    LC -->|Red Pair -> RED| HX
-    LC -->|Black Pair -> BLA| HX
-    LC -->|White Pair -> WHT| HX
-    LC -->|Green Pair -> GRN| HX
-    LC -.->|Yellow shield not connected| HX
-
-    HX -->|VCC| V5[5V]
-    HX -->|DAT| D2[D2]
-    HX -->|CLK| D3[D3]
-    HX -->|GND| GND[GND]
-
-    V5 --> NANO
-    D2 --> NANO
-    D3 --> NANO
-    GND --> NANO
+```text
+D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>
 ```
 
-### Connection Table
+Example:
 
-#### HX711 Module To Arduino Nano
+```text
+D2,42,1234567,-842133,12.345678,0
+```
 
-| HX711 pin | Cable color | Arduino Nano pin |
-| --- | --- | --- |
-| VCC | Rojo | 5V |
-| DAT | Cafe | D2 |
-| CLK | Azul | D3 |
-| GND | Negro | GND |
+If you see legacy lines like this, the firmware or documentation is stale:
 
-#### Load Cell To HX711 Module
+```text
+legacy D-prefix three-field value frame
+```
 
-| Load-cell wire | Meaning | HX711 terminal |
-| --- | --- | --- |
-| Red pair | VCC | RED |
-| Black pair | GND | BLA |
-| White pair | Signal + | WHT |
-| Green pair | Signal - | GRN |
-| Yellow | Shield against EMI | Not connected |
+Do not update downstream tools for the legacy schema unless you are intentionally supporting old recordings.
 
-## Reference Photos
+## Current serial protocol
 
-Sensor to HX711 module:
+See the detailed protocol reference:
 
-![Sensor to HX711 module](../Documentation/assets/sensor_to_adc_module.jpeg)
+```text
+Handgrip_Firmware/docs/serial-protocol.md
+```
 
-HX711 module to Arduino Nano:
+Current data frame:
 
-![HX711 module to Arduino Nano](../Documentation/assets/adc_module_to_arduino.jpeg)
+```text
+D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>
+```
 
-ADC module part number:
+Field summary:
 
-![ADC module part number](../Documentation/assets/adc_part-number.jpeg)
+| Field           | Meaning                                                     |
+| --------------- | ----------------------------------------------------------- |
+| `seq`           | Monotonic sample sequence number.                           |
+| `timestamp_us`  | Device timestamp in microseconds from `micros()`.           |
+| `raw_count`     | HX711 raw ADC count before firmware scale/offset.           |
+| `current_units` | Current scaled force/value according to firmware constants. |
+| `status`        | Acquisition status bitfield.                                |
 
-MCU reference photo 1:
+Status bit summary:
 
-![MCU reference 1](../Documentation/assets/mcu_1.jpeg)
+| Bit mask | Meaning                          |
+| -------: | -------------------------------- |
+| `0x0000` | OK.                              |
+| `0x0001` | FIFO overflow.                   |
+| `0x0002` | HX711 not ready on a timer tick. |
+| `0x0004` | Scale conversion invalid.        |
 
-MCU reference photo 2:
+## Hardware connections
 
-![MCU reference 2](../Documentation/assets/mcu_2.jpeg)
+Current topology:
 
-## Expected Build And Runtime Result
+- Arduino Nano with old bootloader,
+- HX711 load-cell amplifier,
+- load cell connected to HX711,
+- host PC connected to Arduino over USB serial.
+
+### HX711 module to Arduino Nano
+
+| HX711 pin | Arduino Nano pin |
+| --------- | ---------------- |
+| `VCC`     | `5V`             |
+| `DAT`     | `D2`             |
+| `CLK`     | `D3`             |
+| `GND`     | `GND`            |
+
+### Load cell to HX711 module
+
+Use the wiring for the active target handgrip hardware revision. Older exploratory HX710B/ADC photos are not canonical for the current handoff path unless specifically restored by a maintainer.
+
+## Expected build and runtime result
 
 After the environment is configured correctly:
 
 1. PlatformIO resolves the `HX711` and `TimerOne` dependencies.
 2. The project builds for `env:nanoatmega328`.
 3. The firmware uploads to the Arduino Nano over USB.
-4. The serial monitor shows `D,<seq>,<timestamp_us>,<value_gr>` lines at `115200` baud.
+4. The serial monitor shows one `M2` line near boot.
+5. The serial monitor shows continuous `D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>` lines at `115200` baud.
+6. `LSL_Bridge` can parse the target stream and publish `HandgripTarget`.
 
-If any of those steps fail, check the selected board, the serial port, and the calibration settings in [Handgrip_Firmware/Core/Inc/config.h](Handgrip_Firmware/Core/Inc/config.h).
+## Troubleshooting
+
+| Symptom                       | Likely cause                                  | First check                                                |
+| ----------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
+| Upload fails                  | Wrong bootloader/port                         | Confirm `nanoatmega328`, serial port, and no open monitor. |
+| No serial output              | Firmware not running or wrong baud            | Open monitor at `115200`; reset board.                     |
+| Only legacy `D,` lines appear | Old firmware image or stale branch            | Rebuild/upload current firmware.                           |
+| Bridge drops target lines     | Malformed D2 schema or wrong firmware         | Compare serial monitor against `docs/serial-protocol.md`.  |
+| Frequent nonzero status       | HX711 not ready, FIFO pressure, invalid scale | Inspect `status` bitfield and host serial consumption.     |
+| `current_units` is `nan`      | Invalid scale factor                          | Check `SCALE_FACTOR`; use `raw_count` for calibration.     |
+
+## Further documentation
+
+| Goal                             | Document                                    |
+| -------------------------------- | ------------------------------------------- |
+| Understand D2/M2 serial protocol | `Handgrip_Firmware/docs/serial-protocol.md` |
+| Understand root stream contracts | `docs/architecture/stream-contracts.md`     |
+| Understand bridge output         | `LSL_Bridge/docs/stream-contracts.md`       |
+| Run calibration workflow         | `docs/workflows/handgrip-calibration.md`    |

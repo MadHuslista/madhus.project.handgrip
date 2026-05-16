@@ -197,10 +197,10 @@ Examples:
   handgrip-cal preflight --config conf/default.yaml
 
   # Record a live session (with automation bypass)
-  handgrip-cal record --config conf/protocol_static_staircase.yaml --yes
+  handgrip-cal record --config conf/protocol_static_reversible_staircase_v3.yaml --yes
 
   # Preview recording without touching hardware
-  handgrip-cal record --config conf/protocol_static_staircase.yaml --dry-run
+  handgrip-cal record --config conf/protocol_static_reversible_staircase_v3.yaml --dry-run
 
   # Segment and fit a recorded session
   handgrip-cal segment ./session_dir
@@ -243,7 +243,7 @@ Exit codes:
         "record",
         help="Run the configured live recording protocol.",
     )
-    p.add_argument("--config", default="conf/protocol_static_staircase.yaml")
+    p.add_argument("--config", default="conf/protocol_static_reversible_staircase_v3.yaml")
     p.add_argument("--session-id", default=None)
     _add_common_flags(p, dry_run=True, yes=True)
     p.set_defaults(func=_cmd_record)

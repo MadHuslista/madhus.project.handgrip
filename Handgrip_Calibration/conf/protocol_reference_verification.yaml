@@ -7,7 +7,7 @@ session:
   copy_component_configs:
   - ../LSL_Bridge/conf/config.yaml
   - ../LSL_Viewer/conf/config.yaml
-  - ../RS485_GUI/config.yaml
+  - ../RS485_GUI/config/config.yaml
 streams:
   target:
     name: HandgripTarget
