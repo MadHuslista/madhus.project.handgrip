@@ -2,7 +2,7 @@
 
 **Status:** Canonical root configuration reference  
 **Component:** `Handgrip_Firmware`  
-**Detailed component doc:** `Handgrip_Firmware/docs/configuration.md`  
+**Detailed component doc:** [`Handgrip_Firmware/docs/configuration.md`](../../Handgrip_Firmware/docs/configuration.md)  
 **Config sources:** `platformio.ini`, `Handgrip_Firmware/Core/Inc/config.h`, selected private constants in `Core/Src/main.cpp`
 
 ## Summary
@@ -31,7 +31,7 @@ Firmware configuration controls the Arduino Nano build target, HX711 polling beh
 Changing firmware payload fields is not a local firmware edit. Update together:
 
 1. firmware source/config,
-2. `Handgrip_Firmware/docs/serial-protocol.md`,
+2. [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md),
 3. `LSL_Bridge` parser/config/tests,
-4. root `docs/architecture/stream-contracts.md`,
+4. root [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md),
 5. viewer/calibration/analysis docs that consume target channels.

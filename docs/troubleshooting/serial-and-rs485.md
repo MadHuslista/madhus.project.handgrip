@@ -2,7 +2,7 @@
 
 **Status:** Canonical symptom-first troubleshooting doc  
 **Symptoms covered:** No serial port, wrong A/B, baud mismatch, no Active-Send frames  
-**Related docs:** `docs/workflows/target-only-quickstart.md`, `docs/workflows/reference-only-quickstart.md`, `RS485_GUI/docs/active-send-and-modbus.md`
+**Related docs:** [`docs/workflows/target-only-quickstart.md`](../workflows/target-only-quickstart.md), [`docs/workflows/reference-only-quickstart.md`](../workflows/reference-only-quickstart.md), [`RS485_GUI/docs/active-send-and-modbus.md`](../../RS485_GUI/docs/active-send-and-modbus.md)
 
 ## Summary
 

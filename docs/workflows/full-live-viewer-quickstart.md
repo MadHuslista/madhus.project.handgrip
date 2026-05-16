@@ -3,7 +3,7 @@
 **Status:** Canonical operator quickstart  
 **Audience:** Operators and student maintainers  
 **Scope:** Start full live system: reference acquisition, LSL bridge, and viewer  
-**Related docs:** `docs/architecture/runtime-processes.md`, `docs/architecture/stream-contracts.md`
+**Related docs:** [`docs/architecture/runtime-processes.md`](../architecture/runtime-processes.md), [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)
 
 ## Summary
 
@@ -77,7 +77,7 @@ Stop before calibration if:
 
 ## Troubleshooting links
 
-- `docs/troubleshooting/lsl-streams.md`
-- `docs/troubleshooting/viewer-lag-or-xy-delay.md`
-- `docs/architecture/timestamping-and-synchronization.md`
-- `docs/workflows/handgrip-calibration.md`
+- [`docs/troubleshooting/lsl-streams.md`](../troubleshooting/lsl-streams.md)
+- [`docs/troubleshooting/viewer-lag-or-xy-delay.md`](../troubleshooting/viewer-lag-or-xy-delay.md)
+- [`docs/architecture/timestamping-and-synchronization.md`](../architecture/timestamping-and-synchronization.md)
+- [`docs/workflows/handgrip-calibration.md`](handgrip-calibration.md)

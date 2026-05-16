@@ -3,7 +3,7 @@
 **Status:** Canonical operator workflow  
 **Audience:** Operators and student maintainers  
 **Scope:** VS Code + PlatformIO setup, build/upload, serial monitor, D2 validation  
-**Related docs:** `Handgrip_Firmware/README.md`, `Handgrip_Firmware/docs/serial-protocol.md`
+**Related docs:** [`Handgrip_Firmware/README.md`](../../Handgrip_Firmware/README.md), [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md)
 
 ## Summary
 
@@ -129,6 +129,6 @@ Stop before live workflow if:
 
 ## Troubleshooting links
 
-- `Handgrip_Firmware/docs/serial-protocol.md`
-- `docs/troubleshooting/serial-and-rs485.md`
-- `docs/architecture/stream-contracts.md`
+- [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md)
+- [`docs/troubleshooting/serial-and-rs485.md`](../troubleshooting/serial-and-rs485.md)
+- [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)

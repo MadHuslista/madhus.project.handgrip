@@ -2,7 +2,7 @@
 
 **Status:** Canonical symptom-first troubleshooting doc  
 **Symptoms covered:** Manifest errors, missing stage outputs, invalid filter candidates  
-**Related docs:** `docs/workflows/handgrip-analysis.md`, `Handgrip_Analysis/docs/stages.md`, `Handgrip_Analysis/docs/filter-design.md`
+**Related docs:** [`docs/workflows/handgrip-analysis.md`](../workflows/handgrip-analysis.md), [`Handgrip_Analysis/docs/stages.md`](../../Handgrip_Analysis/docs/stages.md), [`Handgrip_Analysis/docs/filter-design.md`](../../Handgrip_Analysis/docs/filter-design.md)
 
 ## Summary
 

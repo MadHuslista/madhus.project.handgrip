@@ -35,8 +35,8 @@ If working from the repository root, ensure the workspace install still includes
 6. `LSL_Bridge/src/lsl_bridge/io/csv_sinks.py`
    - update target CSV fieldnames and row output if persisted.
 7. Docs/configs for consumers:
-   - `docs/architecture/stream-contracts.md`,
-   - `LSL_Bridge/docs/stream-contracts.md`,
+   - [`docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md),
+   - [`LSL_Bridge/docs/stream-contracts.md`](stream-contracts.md),
    - `LSL_Viewer` config/docs,
    - `Handgrip_Calibration` config/docs.
 
@@ -122,8 +122,8 @@ Files to inspect/edit:
 
 - `LSL_Bridge/src/lsl_bridge/core/timestamping.py`,
 - `LSL_Bridge/conf/config.yaml` under `target_timestamping`,
-- `LSL_Bridge/docs/timestamping.md`,
-- root `docs/architecture/timestamping-and-synchronization.md`.
+- [`LSL_Bridge/docs/timestamping.md`](timestamping.md),
+- root [`docs/architecture/timestamping-and-synchronization.md`](../../docs/architecture/timestamping-and-synchronization.md).
 
 Required tests:
 
@@ -145,8 +145,8 @@ Files:
 
 - `LSL_Bridge/src/lsl_bridge/io/csv_sinks.py`,
 - `tests/integration/test_csv_sinks.py`,
-- `LSL_Bridge/docs/stream-contracts.md`,
-- `LSL_Bridge/docs/architecture.md`.
+- [`LSL_Bridge/docs/stream-contracts.md`](stream-contracts.md),
+- [`LSL_Bridge/docs/architecture.md`](architecture.md).
 
 Required test:
 

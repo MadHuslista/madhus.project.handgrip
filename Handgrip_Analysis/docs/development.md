@@ -14,9 +14,9 @@
 | ---------------------------------------------------- | ----------------------------------- |
 | `src/handgrip_analysis/...` or `scripts/stageN_*.py` | Stage implementation.               |
 | `conf/analysis/stageN.yaml`                          | Stage defaults.                     |
-| `Handgrip_Analysis/docs/stages.md`                   | Purpose/input/output documentation. |
-| `Handgrip_Analysis/docs/configuration.md`            | Config reference.                   |
-| `Handgrip_Analysis/docs/reports-and-outputs.md`      | Output artifacts.                   |
+| [`Handgrip_Analysis/docs/stages.md`](stages.md)                   | Purpose/input/output documentation. |
+| [`Handgrip_Analysis/docs/configuration.md`](configuration.md)            | Config reference.                   |
+| [`Handgrip_Analysis/docs/reports-and-outputs.md`](reports-and-outputs.md)      | Output artifacts.                   |
 | `tests/`                                             | Unit/integration coverage.          |
 
 ### Required contract
@@ -121,9 +121,9 @@ uv run ha-stage --help
 
 ## Documentation update checklist
 
-- [ ] `docs/stages.md` updated if stage behavior changes.
+- [ ] [`docs/stages.md`](stages.md) updated if stage behavior changes.
 - [ ] `docs/configuration.md` updated for new config keys.
-- [ ] `docs/filter-design.md` updated for new filter family or Stage 6 metric.
+- [ ] [`docs/filter-design.md`](filter-design.md) updated for new filter family or Stage 6 metric.
 - [ ] `docs/reports-and-outputs.md` updated for new artifacts.
-- [ ] Root `docs/workflows/handgrip-analysis.md` still matches CLI usage.
+- [ ] Root [`docs/workflows/handgrip-analysis.md`](../../docs/workflows/handgrip-analysis.md) still matches CLI usage.
 - [ ] Generated examples remain under `docs/examples/analysis-output/` if curated.

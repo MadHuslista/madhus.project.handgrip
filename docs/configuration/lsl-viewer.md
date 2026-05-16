@@ -2,7 +2,7 @@
 
 **Status:** Canonical root configuration reference  
 **Component:** `LSL_Viewer`  
-**Detailed component doc:** `LSL_Viewer/docs/configuration.md`  
+**Detailed component doc:** [`LSL_Viewer/docs/configuration.md`](../../LSL_Viewer/docs/configuration.md)  
 **Config source:** `LSL_Viewer/conf/config.yaml`
 
 ## Summary

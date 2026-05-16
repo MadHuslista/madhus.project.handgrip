@@ -2,7 +2,7 @@
 
 **Status:** Canonical root configuration reference  
 **Component:** `Handgrip_Calibration`  
-**Detailed component doc:** `Handgrip_Calibration/docs/configuration.md`  
+**Detailed component doc:** [`Handgrip_Calibration/docs/configuration.md`](../../Handgrip_Calibration/docs/configuration.md)  
 **Config sources:** `Handgrip_Calibration/conf/*.yaml`
 
 ## Summary

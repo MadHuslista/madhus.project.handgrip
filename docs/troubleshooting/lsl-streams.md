@@ -2,7 +2,7 @@
 
 **Status:** Canonical symptom-first troubleshooting doc  
 **Symptoms covered:** Streams not visible, wrong names, stale outlets  
-**Related docs:** `docs/architecture/stream-contracts.md`, `LSL_Bridge/docs/stream-contracts.md`, `docs/workflows/full-live-viewer-quickstart.md`
+**Related docs:** [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md), [`LSL_Bridge/docs/stream-contracts.md`](../../LSL_Bridge/docs/stream-contracts.md), [`docs/workflows/full-live-viewer-quickstart.md`](../workflows/full-live-viewer-quickstart.md)
 
 ## Summary
 
@@ -18,7 +18,7 @@ Use this guide when `LSL_Viewer` or `Handgrip_Calibration` cannot find `Handgrip
 | Target serial missing    | Bridge target logs    | Validate firmware D2 output.                              |
 | Reference IPC missing    | Bridge reference logs | Start `RS485_GUI` and confirm IPC topic.                  |
 | Firewall/network issue   | LSL discovery tools   | Keep processes on same host/network; check firewall.      |
-| Wrong stream names       | Configs/docs differ   | Align names with `docs/architecture/stream-contracts.md`. |
+| Wrong stream names       | Configs/docs differ   | Align names with [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md). |
 
 ## Symptom: wrong stream names
 

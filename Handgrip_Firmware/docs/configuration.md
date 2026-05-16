@@ -100,8 +100,8 @@ Design intent:
 Changing schema requires updating:
 
 - `main.cpp` emit logic,
-- `serial-protocol.md`,
-- root `docs/architecture/stream-contracts.md`,
+- [`serial-protocol.md`](serial-protocol.md),
+- root [`docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md),
 - `LSL_Bridge` parser/tests/config,
 - viewer/calibration/analysis assumptions.
 

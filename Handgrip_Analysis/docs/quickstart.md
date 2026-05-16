@@ -5,7 +5,7 @@
 - Use this quickstart to run offline `Handgrip_Analysis` on saved data.
 - Run analysis only after acquisition/calibration data or curated CSV inputs exist.
 - Start with `--help`, then run either all stages from a manifest or one stage on a specific input.
-- Treat command examples as canonical shapes; if the active CLI differs, update this doc and `docs/workflows/handgrip-analysis.md` together.
+- Treat command examples as canonical shapes; if the active CLI differs, update this doc and [`docs/workflows/handgrip-analysis.md`](../../docs/workflows/handgrip-analysis.md) together.
 
 ## Prerequisites
 

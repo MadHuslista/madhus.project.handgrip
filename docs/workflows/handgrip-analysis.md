@@ -3,7 +3,7 @@
 **Status:** Canonical operator workflow  
 **Audience:** Maintainers, analysts, and principal investigator  
 **Scope:** Offline signal analysis, stage execution, manifests, outputs, Stage 6 filter design interpretation  
-**Related docs:** `Handgrip_Analysis/README.md`, `Handgrip_Analysis/docs/stages.md`, `Handgrip_Analysis/docs/filter-design.md`
+**Related docs:** [`Handgrip_Analysis/README.md`](../../Handgrip_Analysis/README.md), [`Handgrip_Analysis/docs/stages.md`](../../Handgrip_Analysis/docs/stages.md), [`Handgrip_Analysis/docs/filter-design.md`](../../Handgrip_Analysis/docs/filter-design.md)
 
 ## Summary
 
@@ -79,7 +79,7 @@ uv run ha-stage stage=stage6 \
   filter_config=conf/filters/candidates.yaml
 ```
 
-If the current CLI uses a different command shape, update this workflow and `Handgrip_Analysis/docs/quickstart.md` together.
+If the current CLI uses a different command shape, update this workflow and [`Handgrip_Analysis/docs/quickstart.md`](../../Handgrip_Analysis/docs/quickstart.md) together.
 
 ## 5 — Output locations
 
@@ -140,7 +140,7 @@ Stop and troubleshoot if:
 
 ## Troubleshooting links
 
-- `Handgrip_Analysis/README.md`
-- `Handgrip_Analysis/docs/configuration.md`
-- `Handgrip_Analysis/docs/filter-design.md`
-- `docs/architecture/data-and-output-lifecycle.md`
+- [`Handgrip_Analysis/README.md`](../../Handgrip_Analysis/README.md)
+- [`Handgrip_Analysis/docs/configuration.md`](../../Handgrip_Analysis/docs/configuration.md)
+- [`Handgrip_Analysis/docs/filter-design.md`](../../Handgrip_Analysis/docs/filter-design.md)
+- [`docs/architecture/data-and-output-lifecycle.md`](../architecture/data-and-output-lifecycle.md)

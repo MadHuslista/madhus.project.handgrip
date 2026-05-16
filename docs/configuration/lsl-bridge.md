@@ -2,7 +2,7 @@
 
 **Status:** Canonical root configuration reference  
 **Component:** `LSL_Bridge`  
-**Detailed component doc:** `LSL_Bridge/docs/configuration.md`  
+**Detailed component doc:** [`LSL_Bridge/docs/configuration.md`](../../LSL_Bridge/docs/configuration.md)  
 **Config source:** `LSL_Bridge/conf/config.yaml`
 
 ## Summary

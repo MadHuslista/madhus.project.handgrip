@@ -157,12 +157,12 @@ Changing the serial protocol is a cross-component migration. If any field is add
 
 1. `Handgrip_Firmware/Core/Src/main.cpp`
 2. `Handgrip_Firmware/Core/Inc/config.h`
-3. `Handgrip_Firmware/docs/serial-protocol.md`
+3. [`Handgrip_Firmware/docs/serial-protocol.md`](serial-protocol.md)
 4. `LSL_Bridge/src/lsl_bridge/core/parser.py`
 5. `LSL_Bridge/conf/config.yaml`
 6. `LSL_Bridge/tests/unit/test_parser.py`
-7. `LSL_Bridge/docs/stream-contracts.md`
-8. `docs/architecture/stream-contracts.md`
+7. [`LSL_Bridge/docs/stream-contracts.md`](../../LSL_Bridge/docs/stream-contracts.md)
+8. [`docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md)
 9. `Handgrip_Calibration` stream/channel assumptions
 10. viewer and analysis docs that mention target channels
 

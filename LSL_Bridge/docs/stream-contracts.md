@@ -167,7 +167,7 @@ If any field, channel label, channel order, stream name, or IPC field changes, u
 1. `LSL_Bridge/conf/config.yaml`,
 2. bridge source code,
 3. parser/reference publisher tests,
-4. root `docs/architecture/stream-contracts.md`,
+4. root [`docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md),
 5. this document,
 6. `LSL_Viewer` config/docs,
 7. `Handgrip_Calibration` config/docs.

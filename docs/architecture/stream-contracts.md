@@ -28,7 +28,7 @@ Read this document if you need to:
 | Component owner             | Root architecture docs; implemented primarily by `LSL_Bridge`                                                                                                 |
 | Primary producer components | `Handgrip_Firmware`, `RS485_GUI`, `LSL_Bridge`, `Handgrip_Calibration`                                                                                        |
 | Primary consumer components | `LSL_Viewer`, `Handgrip_Calibration`, recordings, analysis workflows                                                                                          |
-| Related docs                | `docs/architecture/dataflow.md`, `Handgrip_Firmware/docs/serial-protocol.md`, `LSL_Bridge/docs/stream-contracts.md`, `Handgrip_Calibration/docs/protocols.md` |
+| Related docs                | [`docs/architecture/dataflow.md`](dataflow.md), [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md), [`LSL_Bridge/docs/stream-contracts.md`](../../LSL_Bridge/docs/stream-contracts.md), [`Handgrip_Calibration/docs/protocols.md`](../../Handgrip_Calibration/docs/protocols.md) |
 
 ---
 
@@ -270,7 +270,7 @@ Expected artifact classes:
 | candidate/model-selection JSON                    | Alternative model comparisons when enabled.                                                       |
 | report Markdown/HTML                              | Human-readable result interpretation.                                                             |
 
-Exact artifact names and optional outputs should be documented in `Handgrip_Calibration/docs/reports-and-outputs.md` and `Handgrip_Calibration/docs/recording.md`. This root document defines artifact roles, not every implementation filename.
+Exact artifact names and optional outputs should be documented in [`Handgrip_Calibration/docs/reports-and-outputs.md`](../../Handgrip_Calibration/docs/reports-and-outputs.md) and [`Handgrip_Calibration/docs/recording.md`](../../Handgrip_Calibration/docs/recording.md). This root document defines artifact roles, not every implementation filename.
 
 ---
 

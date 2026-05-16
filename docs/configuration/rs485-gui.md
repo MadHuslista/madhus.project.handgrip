@@ -2,7 +2,7 @@
 
 **Status:** Canonical root configuration reference  
 **Component:** `RS485_GUI`  
-**Detailed component doc:** `RS485_GUI/docs/configuration.md`  
+**Detailed component doc:** [`RS485_GUI/docs/configuration.md`](../../RS485_GUI/docs/configuration.md)  
 **Config source:** `RS485_GUI/config/config.yaml`
 
 ## Summary

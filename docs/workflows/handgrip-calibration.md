@@ -3,7 +3,7 @@
 **Status:** Canonical operator workflow  
 **Audience:** Calibration operators, maintainers, and principal investigator  
 **Scope:** From validated live streams to calibration recording, fitting, report generation, applying values, and validation  
-**Related docs:** `Handgrip_Calibration/docs/protocols.md`, `docs/hardware/force-fixture.md`, `docs/architecture/stream-contracts.md`
+**Related docs:** [`Handgrip_Calibration/docs/protocols.md`](../../Handgrip_Calibration/docs/protocols.md), [`docs/hardware/force-fixture.md`](../hardware/force-fixture.md), [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)
 
 ## Summary
 
@@ -190,7 +190,7 @@ Stop and troubleshoot if:
 
 ## Troubleshooting links
 
-- `Handgrip_Calibration/docs/protocols.md`
-- `docs/troubleshooting/calibration-recording.md`
-- `docs/architecture/data-and-output-lifecycle.md`
-- `docs/architecture/timestamping-and-synchronization.md`
+- [`Handgrip_Calibration/docs/protocols.md`](../../Handgrip_Calibration/docs/protocols.md)
+- [`docs/troubleshooting/calibration-recording.md`](../troubleshooting/calibration-recording.md)
+- [`docs/architecture/data-and-output-lifecycle.md`](../architecture/data-and-output-lifecycle.md)
+- [`docs/architecture/timestamping-and-synchronization.md`](../architecture/timestamping-and-synchronization.md)

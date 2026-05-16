@@ -3,7 +3,7 @@
 **Status:** Canonical root architecture document  
 **Audience:** Developers, maintainers, and calibration operators  
 **Scope:** Timing assumptions for firmware, RS485 reference acquisition, LSL, viewer alignment, and calibration fitting  
-**Related docs:** `docs/architecture/stream-contracts.md`, `docs/workflows/handgrip-calibration.md`
+**Related docs:** [`docs/architecture/stream-contracts.md`](stream-contracts.md), [`docs/workflows/handgrip-calibration.md`](../workflows/handgrip-calibration.md)
 
 ## Summary
 

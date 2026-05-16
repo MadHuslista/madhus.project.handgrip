@@ -125,7 +125,7 @@ Use documentation status deliberately:
 
 | Status                      | Meaning                                                                         | Location                                                       |
 | --------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Canonical                   | Current operating procedure or current system contract                          | `README.md`, `docs/`, component `docs/`                        |
+| Canonical                   | Current operating procedure or current system contract                          | [`README.md`](../README.md), `docs/`, component `docs/`                        |
 | Component reference         | Current component-specific workflow/config/architecture detail                  | `<component>/docs/`                                            |
 | Hardware reference fallback | Source manual, datasheet, or vendor reference used to verify details            | `docs/hardware/references/`                                    |
 | Example output              | Curated output that teaches interpretation but is not source of truth           | `docs/examples/`                                               |

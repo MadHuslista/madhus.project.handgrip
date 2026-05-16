@@ -3,7 +3,7 @@
 **Status:** Curated example, not canonical source data  
 **Audience:** Maintainers and reviewers interpreting `Handgrip_Analysis` outputs  
 **Source class:** Existing `Handgrip_Analysis/data/analysis_results/stage6/` outputs and filter-design report  
-**Related docs:** `docs/workflows/handgrip-analysis.md`, `Handgrip_Analysis/docs/filter-design.md`, `Handgrip_Analysis/docs/reports-and-outputs.md`
+**Related docs:** [`docs/workflows/handgrip-analysis.md`](../../workflows/handgrip-analysis.md), [`Handgrip_Analysis/docs/filter-design.md`](../../../Handgrip_Analysis/docs/filter-design.md), [`Handgrip_Analysis/docs/reports-and-outputs.md`](../../../Handgrip_Analysis/docs/reports-and-outputs.md)
 
 ## Summary
 

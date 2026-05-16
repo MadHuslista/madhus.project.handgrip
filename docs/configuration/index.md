@@ -3,7 +3,7 @@
 **Status:** Canonical root configuration index  
 **Audience:** Operators, maintainers, and student developers  
 **Scope:** Where configuration lives, what each config controls, and where to find detailed references  
-**Related docs:** `docs/architecture/repository-layout.md`, `docs/architecture/stream-contracts.md`, component `docs/configuration.md` files
+**Related docs:** [`docs/architecture/repository-layout.md`](../architecture/repository-layout.md), [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md), component `docs/configuration.md` files
 
 ## Summary
 

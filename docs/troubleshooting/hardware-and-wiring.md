@@ -2,7 +2,7 @@
 
 **Status:** Canonical symptom-first troubleshooting doc  
 **Symptoms covered:** No board display, wrong load sign, unstable reading, overload  
-**Related docs:** `docs/workflows/physical-setup.md`, `docs/hardware/pm58-wiring-and-bringup.md`, `docs/hardware/force-fixture.md`
+**Related docs:** [`docs/workflows/physical-setup.md`](../workflows/physical-setup.md), [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md), [`docs/hardware/force-fixture.md`](../hardware/force-fixture.md)
 
 ## Summary
 

@@ -3,7 +3,7 @@
 **Status:** Canonical development primer  
 **Audience:** Student maintainers and developers editing YAML/configuration files  
 **Scope:** Hydra/OmegaConf-style dotlist overrides, config precedence, component-local configs, protocol configs, safe change workflow, reproducibility snapshots  
-**Related docs:** `docs/configuration/index.md`, component `docs/configuration.md` files
+**Related docs:** [`docs/configuration/index.md`](../configuration/index.md), component `docs/configuration.md` files
 
 ## Summary
 
@@ -111,7 +111,7 @@ uv run lsl-bridge serial.port=/dev/serial/by-id/<target-device>
 Example: stable serial-port default
 
 1. Edit `LSL_Bridge/conf/config.yaml`.
-2. Update `LSL_Bridge/docs/configuration.md` if the documented default changes.
+2. Update [`LSL_Bridge/docs/configuration.md`](../../LSL_Bridge/docs/configuration.md) if the documented default changes.
 3. Run target-only quickstart.
 
 ## How to capture configs for reproducibility

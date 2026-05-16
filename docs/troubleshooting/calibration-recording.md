@@ -2,7 +2,7 @@
 
 **Status:** Canonical symptom-first troubleshooting doc  
 **Symptoms covered:** Missing target/reference CSV, failed preflight, bad session ID  
-**Related docs:** `docs/workflows/handgrip-calibration.md`, `Handgrip_Calibration/docs/recording.md`, `Handgrip_Calibration/docs/protocols.md`
+**Related docs:** [`docs/workflows/handgrip-calibration.md`](../workflows/handgrip-calibration.md), [`Handgrip_Calibration/docs/recording.md`](../../Handgrip_Calibration/docs/recording.md), [`Handgrip_Calibration/docs/protocols.md`](../../Handgrip_Calibration/docs/protocols.md)
 
 ## Summary
 
@@ -37,7 +37,7 @@ uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase
 | One stream missing                    | recording logs          | Fix LSL stream discovery.                     |
 | Output path changed                   | config/report path      | Inspect protocol/config output section.       |
 | Session ID mistyped                   | folder name             | Copy exact session ID from record output.     |
-| File naming differs                   | component version       | Use `Handgrip_Calibration/docs/recording.md`. |
+| File naming differs                   | component version       | Use [`Handgrip_Calibration/docs/recording.md`](../../Handgrip_Calibration/docs/recording.md). |
 
 Minimum expected artifact classes:
 

@@ -93,9 +93,9 @@ It does not own:
 
 ## Architecture validation checklist
 
-- [ ] CLI subcommands are documented in `quickstart.md` and this architecture doc.
-- [ ] Config path behavior is documented in `configuration.md`.
-- [ ] LSL inputs are documented in `recording.md`.
-- [ ] Model selection is documented in `fitting-and-model-selection.md`.
-- [ ] Outputs are documented in `reports-and-outputs.md`.
-- [ ] Deployment is documented in `applying-calibration-results.md`.
+- [ ] CLI subcommands are documented in [`quickstart.md`](quickstart.md) and this architecture doc.
+- [ ] Config path behavior is documented in [`configuration.md`](configuration.md).
+- [ ] LSL inputs are documented in [`recording.md`](recording.md).
+- [ ] Model selection is documented in [`fitting-and-model-selection.md`](fitting-and-model-selection.md).
+- [ ] Outputs are documented in [`reports-and-outputs.md`](reports-and-outputs.md).
+- [ ] Deployment is documented in [`applying-calibration-results.md`](applying-calibration-results.md).

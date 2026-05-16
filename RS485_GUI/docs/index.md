@@ -29,7 +29,7 @@
 | IPC event topic              | `rs485.event.v1`                              |
 | Recommended published signal | `net_value` as `reference_force_N`            |
 | Downstream consumer          | `LSL_Bridge`                                  |
-| Root contract doc            | `../../docs/architecture/stream-contracts.md` |
+| Root contract doc            | [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md) |
 
 ## Documentation map
 
@@ -72,10 +72,10 @@ Expected result:
 
 ## Validation checklist
 
-- [ ] `RS485_GUI/README.md` links to this component docs index.
-- [ ] `quickstart.md` can be followed by an operator without reading source code.
-- [ ] `configuration.md` documents each top-level config section.
-- [ ] `ipc-schema.md` preserves `rs485.measurement.v1`, `reference_force_N`, `reference_clock_s`, `reference_status`, `board_profile`, and `session_id`.
-- [ ] `logging-and-outputs.md` explains `raw_signal.ndjson`, `interpreted_signal.ndjson`, `gui_signal.csv`, `event.log`, and `acquisition_debug.log`.
-- [ ] `architecture.md` keeps the source layers clear: `core`, `transport`, `io`, `ui`, `config`, `worker`, `app`.
-- [ ] `development.md` explains which tests to update when adding parser fields, UI controls, or logger outputs.
+- [ ] [`RS485_GUI/README.md`](../README.md) links to this component docs index.
+- [ ] [`quickstart.md`](quickstart.md) can be followed by an operator without reading source code.
+- [ ] [`configuration.md`](configuration.md) documents each top-level config section.
+- [ ] [`ipc-schema.md`](ipc-schema.md) preserves `rs485.measurement.v1`, `reference_force_N`, `reference_clock_s`, `reference_status`, `board_profile`, and `session_id`.
+- [ ] [`logging-and-outputs.md`](logging-and-outputs.md) explains `raw_signal.ndjson`, `interpreted_signal.ndjson`, `gui_signal.csv`, `event.log`, and `acquisition_debug.log`.
+- [ ] [`architecture.md`](architecture.md) keeps the source layers clear: `core`, `transport`, `io`, `ui`, `config`, `worker`, `app`.
+- [ ] [`development.md`](development.md) explains which tests to update when adding parser fields, UI controls, or logger outputs.

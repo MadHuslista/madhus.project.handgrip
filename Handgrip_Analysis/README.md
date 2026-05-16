@@ -145,11 +145,11 @@ uv run ha-stage1 --help
 uv run ha-stage6 --help
 ```
 
-If your installed entry points differ, check the active `pyproject.toml` and update this README plus `docs/workflows/handgrip-analysis.md` together.
+If your installed entry points differ, check the active `pyproject.toml` and update this README plus [`docs/workflows/handgrip-analysis.md`](../docs/workflows/handgrip-analysis.md) together.
 
 ## Further docs
 
 - [`docs/index.md`](docs/index.md) — analysis documentation map.
 - [`../docs/workflows/handgrip-analysis.md`](../docs/workflows/handgrip-analysis.md) — root analysis workflow.
 - [`../docs/architecture/data-and-output-lifecycle.md`](../docs/architecture/data-and-output-lifecycle.md) — output lifecycle and generated artifact policy.
-- [`README_filter_design_report.md`](README_filter_design_report.md) — current filter-design report source until migrated into `docs/filter-design.md`.
+- [`README_filter_design_report.md`](README_filter_design_report.md) — current filter-design report source until migrated into [`docs/filter-design.md`](docs/filter-design.md).

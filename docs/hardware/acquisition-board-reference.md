@@ -1,7 +1,7 @@
 ---
 title: High-Speed Acquisition Instrument Reference
 status: canonical-reference
-source: Documentation/high_speed_acquisition_instrument_reorganized_manual.md
+source: [Documentation/high_speed_acquisition_instrument_reorganized_manual.md](../../Documentation/high_speed_acquisition_instrument_reorganized_manual.md)
 last-reviewed: 2026-05-15
 phase: 3
 ---

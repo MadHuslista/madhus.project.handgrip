@@ -3,7 +3,7 @@
 **Status:** Canonical root architecture document  
 **Audience:** Operators and maintainers  
 **Scope:** Which processes run during each workflow and in what order  
-**Related docs:** `docs/workflows/full-live-viewer-quickstart.md`, `docs/architecture/dataflow.md`
+**Related docs:** [`docs/workflows/full-live-viewer-quickstart.md`](../workflows/full-live-viewer-quickstart.md), [`docs/architecture/dataflow.md`](dataflow.md)
 
 ## Summary
 
@@ -75,16 +75,16 @@ Offline analysis does not require live LSL streams unless a specific future stag
 
 | Symptom                                   | Likely owner                             | Start here                                    |
 | ----------------------------------------- | ---------------------------------------- | --------------------------------------------- |
-| No `/dev/ttyUSB*` appears                 | OS/adapter/cable                         | `docs/troubleshooting/serial-and-rs485.md`    |
-| Board display reacts but GUI does not     | RS485 wiring or board communication menu | `docs/workflows/reference-only-quickstart.md` |
-| Firmware serial monitor shows no D2 lines | Firmware/upload/HX711 wiring             | `docs/workflows/firmware-setup.md`            |
-| Viewer cannot find streams                | Bridge not running or wrong stream names | `docs/troubleshooting/lsl-streams.md`         |
-| Calibration preflight fails               | Missing LSL stream or wrong config       | `docs/workflows/handgrip-calibration.md`      |
+| No `/dev/ttyUSB*` appears                 | OS/adapter/cable                         | [`docs/troubleshooting/serial-and-rs485.md`](../troubleshooting/serial-and-rs485.md)    |
+| Board display reacts but GUI does not     | RS485 wiring or board communication menu | [`docs/workflows/reference-only-quickstart.md`](../workflows/reference-only-quickstart.md) |
+| Firmware serial monitor shows no D2 lines | Firmware/upload/HX711 wiring             | [`docs/workflows/firmware-setup.md`](../workflows/firmware-setup.md)            |
+| Viewer cannot find streams                | Bridge not running or wrong stream names | [`docs/troubleshooting/lsl-streams.md`](../troubleshooting/lsl-streams.md)         |
+| Calibration preflight fails               | Missing LSL stream or wrong config       | [`docs/workflows/handgrip-calibration.md`](../workflows/handgrip-calibration.md)      |
 
 ## Validation checklist
 
 - [ ] `RS485_GUI` can run alone and show reference data.
 - [ ] `LSL_Bridge` can run with target-only mode or with both target/reference paths.
-- [ ] `LSL_Viewer` discovers stream names from `docs/architecture/stream-contracts.md`.
+- [ ] `LSL_Viewer` discovers stream names from [`docs/architecture/stream-contracts.md`](stream-contracts.md).
 - [ ] `handgrip-cal preflight` passes before `record`.
 - [ ] Analysis commands run on saved files without live hardware.

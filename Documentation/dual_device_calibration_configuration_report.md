@@ -978,8 +978,8 @@ That is the cleanest high-confidence fallback.
 ## Sources
 
 ### Uploaded material
-- **[A1]** Reorganized acquisition-board manual extracted from the uploaded board documentation and photos: `high_speed_acquisition_instrument_reorganized_manual.md`.
-- **[A2]** Practical PM58 + acquisition-board bring-up / wiring note extracted from your uploaded material: `pm58_acquisition_board_manual.md`.
+- **[A1]** Reorganized acquisition-board manual extracted from the uploaded board documentation and photos: [`high_speed_acquisition_instrument_reorganized_manual.md`](high_speed_acquisition_instrument_reorganized_manual.md).
+- **[A2]** Practical PM58 + acquisition-board bring-up / wiring note extracted from your uploaded material: [`pm58_acquisition_board_manual.md`](pm58_acquisition_board_manual.md).
 
 ### Web / primary references
 - **[W1] HX711 datasheet** — selectable **10 SPS / 80 SPS**, settling-time behavior, bridge-oriented ADC design, 50/60 Hz rejection.  

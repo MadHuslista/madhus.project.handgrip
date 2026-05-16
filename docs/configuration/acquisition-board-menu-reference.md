@@ -2,8 +2,8 @@
 
 **Status:** Canonical root hardware/configuration reference  
 **Device:** High-speed acquisition instrument used with the PM58 reference load cell  
-**Primary readable source:** `docs/hardware/acquisition-board-reference.md`  
-**Design rationale source:** `Documentation/dual_device_calibration_configuration_report.md`  
+**Primary readable source:** [`docs/hardware/acquisition-board-reference.md`](../hardware/acquisition-board-reference.md)  
+**Design rationale source:** [`Documentation/dual_device_calibration_configuration_report.md`](../../Documentation/dual_device_calibration_configuration_report.md)  
 **Fallback references:** acquisition-board PDFs under `docs/hardware/references/acquisition-board/`
 
 ## Summary

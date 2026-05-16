@@ -11,7 +11,7 @@
 ### Files to edit
 
 1. Copy `conf/template.yaml` to `conf/protocol_<name>.yaml`.
-2. Add protocol purpose/status to `docs/protocols.md`.
+2. Add protocol purpose/status to [`docs/protocols.md`](protocols.md).
 3. Add operator instructions if it is production-facing.
 4. Add config reference notes to `docs/configuration.md` if it introduces new fields.
 
@@ -19,11 +19,11 @@
 
 | Decision                                      | Document it in                                         |
 | --------------------------------------------- | ------------------------------------------------------ |
-| production vs diagnostic vs smoke             | `protocols.md`                                         |
-| primary fitting vs holdout vs validation-only | `protocols.md`                                         |
+| production vs diagnostic vs smoke             | [`protocols.md`](protocols.md)                                         |
+| primary fitting vs holdout vs validation-only | [`protocols.md`](protocols.md)                                         |
 | force levels and repeats                      | protocol YAML + operator doc                           |
-| quality gates                                 | protocol YAML + `configuration.md`                     |
-| expected outputs                              | `reports-and-outputs.md` if new artifact class appears |
+| quality gates                                 | protocol YAML + [`configuration.md`](configuration.md)                     |
+| expected outputs                              | [`reports-and-outputs.md`](reports-and-outputs.md) if new artifact class appears |
 
 ### Validation
 
@@ -38,7 +38,7 @@ uv run handgrip-cal record --config conf/protocol_<name>.yaml --dry-run
 
 - fitting/model source file,
 - config schema or candidate list,
-- `docs/fitting-and-model-selection.md`,
+- [`docs/fitting-and-model-selection.md`](fitting-and-model-selection.md),
 - report rendering if new metrics/plots are produced,
 - tests for model behavior and selection policy.
 
@@ -83,19 +83,19 @@ uv run handgrip-cal record --config conf/protocol_<name>.yaml --dry-run
 
 If a new recording artifact is added, update:
 
-1. `docs/recording.md`,
+1. [`docs/recording.md`](recording.md),
 2. `docs/reports-and-outputs.md`,
-3. `../../docs/architecture/data-and-output-lifecycle.md`,
+3. [`../../docs/architecture/data-and-output-lifecycle.md`](../../docs/architecture/data-and-output-lifecycle.md),
 4. tests that validate session completeness.
 
 ## Change stream/channel assumptions
 
 This is a cross-component change. Update:
 
-- `../../docs/architecture/stream-contracts.md`,
-- `LSL_Bridge/docs/stream-contracts.md`,
-- `LSL_Viewer/docs/configuration.md`,
-- `Handgrip_Calibration/docs/recording.md`,
+- [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md),
+- [`LSL_Bridge/docs/stream-contracts.md`](../../LSL_Bridge/docs/stream-contracts.md),
+- [`LSL_Viewer/docs/configuration.md`](../../LSL_Viewer/docs/configuration.md),
+- [`Handgrip_Calibration/docs/recording.md`](recording.md),
 - protocol YAML channel mappings,
 - stream discovery/preflight tests.
 

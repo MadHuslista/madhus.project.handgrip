@@ -37,7 +37,7 @@
 ## Step 3 — Open repository root
 
 - **Do:** Open the repository root directory.
-- **Expected result:** root `platformio.ini` is visible next to `README.md`, `docs/`, and the component directories.
+- **Expected result:** root `platformio.ini` is visible next to [`README.md`](../../README.md), `docs/`, and the component directories.
 - **Failure signal:** PlatformIO reports no project, or build paths do not resolve.
 - **Next branch:** Close folder and reopen the root directory.
 
@@ -203,6 +203,6 @@ pio device monitor -e nanoatmega328 -b 115200
 
 ## Next steps
 
-- If D2 output is valid, run the target-only quickstart: `docs/workflows/target-only-quickstart.md`.
+- If D2 output is valid, run the target-only quickstart: [`docs/workflows/target-only-quickstart.md`](../../docs/workflows/target-only-quickstart.md).
 - If upload or serial validation fails, use [`troubleshooting.md`](troubleshooting.md).
 - If you need to interpret D2 fields, use [`serial-protocol.md`](serial-protocol.md).

@@ -2,7 +2,7 @@
 
 **Status:** Canonical root configuration reference  
 **Component:** `Handgrip_Analysis`  
-**Detailed component doc:** `Handgrip_Analysis/docs/configuration.md`  
+**Detailed component doc:** [`Handgrip_Analysis/docs/configuration.md`](../../Handgrip_Analysis/docs/configuration.md)  
 **Config sources:** `Handgrip_Analysis/conf/**/*.yaml`
 
 ## Summary

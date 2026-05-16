@@ -1,7 +1,7 @@
 ---
 title: PM58 Wiring and Bring-Up Manual
 status: canonical-workflow
-source: Documentation/pm58_acquisition_board_manual.md
+source: [Documentation/pm58_acquisition_board_manual.md](../../Documentation/pm58_acquisition_board_manual.md)
 last-reviewed: 2026-05-15
 phase: 3
 ---
@@ -10,7 +10,7 @@ phase: 3
 >
 > **Audience:** Use this when setting up the reference acquisition chain, teaching the wiring to another operator, validating a new bench setup, or diagnosing a no-signal/no-communication condition.
 >
-> **Scope boundary:** This document covers PM58 wiring, AC board power, RS485 host connection, and basic validation. Use `docs/hardware/force-fixture.md` for the mechanical force-path setup and `docs/hardware/acquisition-board-reference.md` for the full acquisition-board menu reference.
+> **Scope boundary:** This document covers PM58 wiring, AC board power, RS485 host connection, and basic validation. Use [`docs/hardware/force-fixture.md`](force-fixture.md) for the mechanical force-path setup and [`docs/hardware/acquisition-board-reference.md`](acquisition-board-reference.md) for the full acquisition-board menu reference.
 
 ## Fast operator summary
 

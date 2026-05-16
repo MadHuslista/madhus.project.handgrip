@@ -5,8 +5,8 @@
 - `Handgrip_Calibration` records protocol-guided calibration sessions, fits target raw counts to reference force, generates reports, and validates selected models.
 - The canonical primary protocol is `conf/protocol_static_reversible_staircase_v3.yaml`.
 - Calibration should fit `reference_force_N = f(target_raw_count)`; firmware `current_units` is a diagnostic/deployment convenience channel, not the primary fitting input.
-- Start with `quickstart.md` for operator use, then read `protocols.md`, `recording.md`, `fitting-and-model-selection.md`, and `reports-and-outputs.md` for deeper use.
-- Developers should use `architecture.md` and `development.md` before adding protocols, models, or report sections.
+- Start with [`quickstart.md`](quickstart.md) for operator use, then read [`protocols.md`](protocols.md), [`recording.md`](recording.md), [`fitting-and-model-selection.md`](fitting-and-model-selection.md), and [`reports-and-outputs.md`](reports-and-outputs.md) for deeper use.
+- Developers should use [`architecture.md`](architecture.md) and [`development.md`](development.md) before adding protocols, models, or report sections.
 
 ## Audience
 
@@ -21,11 +21,11 @@
 
 Before running calibration, these upstream checks should pass:
 
-1. `docs/workflows/physical-setup.md` confirms the PM58 and target are in the same force path.
-2. `docs/workflows/firmware-setup.md` confirms target firmware emits D2 frames.
-3. `docs/workflows/reference-only-quickstart.md` confirms RS485 GUI receives reference force.
-4. `docs/workflows/full-live-viewer-quickstart.md` confirms `HandgripTarget` and `HandgripReference` are live.
-5. `docs/architecture/stream-contracts.md` confirms target/reference stream semantics.
+1. [`docs/workflows/physical-setup.md`](../../docs/workflows/physical-setup.md) confirms the PM58 and target are in the same force path.
+2. [`docs/workflows/firmware-setup.md`](../../docs/workflows/firmware-setup.md) confirms target firmware emits D2 frames.
+3. [`docs/workflows/reference-only-quickstart.md`](../../docs/workflows/reference-only-quickstart.md) confirms RS485 GUI receives reference force.
+4. [`docs/workflows/full-live-viewer-quickstart.md`](../../docs/workflows/full-live-viewer-quickstart.md) confirms `HandgripTarget` and `HandgripReference` are live.
+5. [`docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md) confirms target/reference stream semantics.
 
 ## Documentation map
 
@@ -64,10 +64,10 @@ uv run handgrip-cal report data/calibration/<session_id> --config conf/protocol_
 
 ## Validation checklist
 
-- [ ] `README.md` links to this docs index.
-- [ ] `protocols.md` labels v3 as primary and `protocol_static_staircase.yaml` as legacy/basic.
-- [ ] `configuration.md` documents `../RS485_GUI/config/config.yaml` as the correct snapshot path.
-- [ ] `recording.md` documents `HandgripTarget`, `HandgripReference`, events, and session IDs.
-- [ ] `fitting-and-model-selection.md` states `reference_force_N = f(target_raw_count)`.
-- [ ] `reports-and-outputs.md` explains fit/report artifacts and plots.
-- [ ] `applying-calibration-results.md` explains firmware/bridge/report deployment targets and validation.
+- [ ] [`README.md`](../../README.md) links to this docs index.
+- [ ] [`protocols.md`](protocols.md) labels v3 as primary and `protocol_static_staircase.yaml` as legacy/basic.
+- [ ] [`configuration.md`](configuration.md) documents `../RS485_GUI/config/config.yaml` as the correct snapshot path.
+- [ ] [`recording.md`](recording.md) documents `HandgripTarget`, `HandgripReference`, events, and session IDs.
+- [ ] [`fitting-and-model-selection.md`](fitting-and-model-selection.md) states `reference_force_N = f(target_raw_count)`.
+- [ ] [`reports-and-outputs.md`](reports-and-outputs.md) explains fit/report artifacts and plots.
+- [ ] [`applying-calibration-results.md`](applying-calibration-results.md) explains firmware/bridge/report deployment targets and validation.

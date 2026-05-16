@@ -2,7 +2,7 @@
 
 **Status:** Canonical symptom-first troubleshooting doc  
 **Symptoms covered:** XY delay, reference lag, display-only shift vs real timestamp issue  
-**Related docs:** `LSL_Viewer/docs/xy-correlation.md`, `docs/architecture/timestamping-and-synchronization.md`, `LSL_Bridge/docs/timestamping.md`
+**Related docs:** [`LSL_Viewer/docs/xy-correlation.md`](../../LSL_Viewer/docs/xy-correlation.md), [`docs/architecture/timestamping-and-synchronization.md`](../architecture/timestamping-and-synchronization.md), [`LSL_Bridge/docs/timestamping.md`](../../LSL_Bridge/docs/timestamping.md)
 
 ## Summary
 
@@ -14,8 +14,8 @@ A delayed XY plot is a symptom to diagnose, not automatic proof that recorded da
 
 | Cause                                   | Why                                | Check                                         |
 | --------------------------------------- | ---------------------------------- | --------------------------------------------- |
-| Reference interpolation window mismatch | Target/reference rates differ      | `LSL_Viewer/docs/xy-correlation.md` settings. |
-| Timestamp anchor drift                  | Device clock and host time diverge | `LSL_Bridge/docs/timestamping.md`.            |
+| Reference interpolation window mismatch | Target/reference rates differ      | [`LSL_Viewer/docs/xy-correlation.md`](../../LSL_Viewer/docs/xy-correlation.md) settings. |
+| Timestamp anchor drift                  | Device clock and host time diverge | [`LSL_Bridge/docs/timestamping.md`](../../LSL_Bridge/docs/timestamping.md).            |
 | Buffer pruning bug                      | Viewer keeps unmatched old samples | Viewer alignment tests/logs.                  |
 | Display render backlog                  | Browser cannot keep up             | Compare saved data vs visual plot.            |
 

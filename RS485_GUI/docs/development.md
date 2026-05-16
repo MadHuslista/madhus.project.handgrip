@@ -4,7 +4,7 @@
 
 - This guide explains how to modify `RS485_GUI` without breaking the reference acquisition contract.
 - Add behavior at the layer that owns it: parser fields in core/transport, UI controls in UI, logs in IO, config keys in config, and bridge payload changes in publisher/schema docs.
-- Every change that affects `rs485.measurement.v1` must also update `LSL_Bridge` expectations and root `docs/architecture/stream-contracts.md`.
+- Every change that affects `rs485.measurement.v1` must also update `LSL_Bridge` expectations and root [`docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md).
 - Prefer small pure-function changes with unit tests before modifying worker/UI side effects.
 
 ## Development setup
@@ -33,8 +33,8 @@ uv run pytest tests/e2e/test_cli.py
 | -------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | Add decoded board field    | `core/codec.py`, possibly `transport/active_send.py` or `transport/modbus.py` | `tests/unit/test_codec.py`, `tests/integration/test_active_send_parser.py` |
 | Add plotted signal         | `core/signals.py`, possibly `ui/layout.py`                                    | `tests/unit/test_signals.py`                                               |
-| Add IPC field              | `io/publisher.py`, `docs/ipc-schema.md`, root stream contracts                | publisher/bridge tests if available                                        |
-| Add log column/file field  | `io/logger.py`, `docs/logging-and-outputs.md`                                 | `tests/integration/test_file_logger.py`                                    |
+| Add IPC field              | `io/publisher.py`, [`docs/ipc-schema.md`](ipc-schema.md), root stream contracts                | publisher/bridge tests if available                                        |
+| Add log column/file field  | `io/logger.py`, [`docs/logging-and-outputs.md`](logging-and-outputs.md)                                 | `tests/integration/test_file_logger.py`                                    |
 | Add UI control             | `ui/layout.py`, `state.py`, config if persistent                              | UI/e2e test if available; manual quickstart                                |
 | Add config key             | `config/config.yaml`, `config/schema.py`, `docs/configuration.md`             | `tests/unit/test_config.py`                                                |
 | Change Active-Send parser  | `transport/active_send.py`, `core/codec.py`                                   | `tests/integration/test_active_send_parser.py`                             |
@@ -160,7 +160,7 @@ uv run pytest tests/integration/test_file_logger.py
 
 Update:
 
-- `docs/logging-and-outputs.md`,
+- [`docs/logging-and-outputs.md`](logging-and-outputs.md),
 - `docs/configuration.md` if new config keys are added.
 
 ## How to update IPC payloads
@@ -169,8 +169,8 @@ IPC fields are cross-component contracts.
 
 Before changing `io/publisher.py`, check:
 
-- `docs/architecture/stream-contracts.md`,
-- `LSL_Bridge/docs/stream-contracts.md`,
+- [`docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md),
+- [`LSL_Bridge/docs/stream-contracts.md`](../../LSL_Bridge/docs/stream-contracts.md),
 - `LSL_Bridge` IPC subscriber/parser expectations,
 - calibration configs and docs that expect `reference_force_N`.
 

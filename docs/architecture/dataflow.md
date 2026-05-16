@@ -3,7 +3,7 @@
 **Status:** Canonical root architecture document  
 **Audience:** Operators, maintainers, and developers  
 **Scope:** Physical-force-to-software-data path across firmware, RS485 acquisition, LSL, viewer, calibration, and analysis  
-**Related docs:** `docs/system-overview.md`, `docs/architecture/stream-contracts.md`, `docs/workflows/full-live-viewer-quickstart.md`
+**Related docs:** [`docs/system-overview.md`](../system-overview.md), [`docs/architecture/stream-contracts.md`](stream-contracts.md), [`docs/workflows/full-live-viewer-quickstart.md`](../workflows/full-live-viewer-quickstart.md)
 
 ## Summary
 

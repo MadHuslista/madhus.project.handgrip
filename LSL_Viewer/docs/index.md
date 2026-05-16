@@ -64,10 +64,10 @@ It does **not** own:
 
 ## Validation checklist
 
-- [ ] `README.md` links to this component docs index.
-- [ ] `quickstart.md` explains live viewer startup and expected plots.
-- [ ] `configuration.md` documents all top-level `conf/config.yaml` sections.
-- [ ] `xy-correlation.md` clearly states that XY alignment is display-only.
-- [ ] `live-csv-xdf-modes.md` distinguishes live and replay behavior.
-- [ ] `architecture.md` identifies buffer/UI/plotting boundaries.
-- [ ] `development.md` names relevant source files and tests.
+- [ ] [`README.md`](../../README.md) links to this component docs index.
+- [ ] [`quickstart.md`](quickstart.md) explains live viewer startup and expected plots.
+- [ ] [`configuration.md`](configuration.md) documents all top-level `conf/config.yaml` sections.
+- [ ] [`xy-correlation.md`](xy-correlation.md) clearly states that XY alignment is display-only.
+- [ ] [`live-csv-xdf-modes.md`](live-csv-xdf-modes.md) distinguishes live and replay behavior.
+- [ ] [`architecture.md`](architecture.md) identifies buffer/UI/plotting boundaries.
+- [ ] [`development.md`](development.md) names relevant source files and tests.

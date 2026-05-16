@@ -70,9 +70,9 @@ Downstream tools should consume the bridge outputs instead of reading firmware s
 
 ## Validation checklist
 
-- [ ] `quickstart.md` can start the bridge with explicit `serial.port=...`.
-- [ ] `configuration.md` explains every top-level `conf/config.yaml` section.
-- [ ] `stream-contracts.md` preserves target/reference/event stream schemas.
-- [ ] `timestamping.md` explains `host_receive` and `device_clock_anchor` policies.
-- [ ] `architecture.md` maps source modules to runtime responsibilities.
-- [ ] `development.md` explains safe extension steps and tests.
+- [ ] [`quickstart.md`](quickstart.md) can start the bridge with explicit `serial.port=...`.
+- [ ] [`configuration.md`](configuration.md) explains every top-level `conf/config.yaml` section.
+- [ ] [`stream-contracts.md`](stream-contracts.md) preserves target/reference/event stream schemas.
+- [ ] [`timestamping.md`](timestamping.md) explains `host_receive` and `device_clock_anchor` policies.
+- [ ] [`architecture.md`](architecture.md) maps source modules to runtime responsibilities.
+- [ ] [`development.md`](development.md) explains safe extension steps and tests.

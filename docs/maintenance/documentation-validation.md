@@ -42,11 +42,11 @@ python3 scripts/validate_docs.py --repo-root . --docs-only
 
 By default, the validator checks:
 
-- `README.md`
+- [`README.md`](../../README.md)
 - `docs/` except `docs/archive/`
-- component `README.md` files
+- component [`README.md`](../../README.md) files
 - component `docs/` folders
-- generated-output status `README.md` files when present
+- generated-output status [`README.md`](../../README.md) files when present
 
 By default, it ignores:
 

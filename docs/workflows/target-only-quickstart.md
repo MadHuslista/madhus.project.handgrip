@@ -3,7 +3,7 @@
 **Status:** Canonical operator quickstart  
 **Audience:** Operators and maintainers  
 **Scope:** Validate Arduino/HX711 target device and `HandgripTarget` stream without requiring the reference board  
-**Related docs:** `docs/workflows/firmware-setup.md`, `Handgrip_Firmware/docs/serial-protocol.md`
+**Related docs:** [`docs/workflows/firmware-setup.md`](firmware-setup.md), [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md)
 
 ## Summary
 
@@ -60,7 +60,7 @@ Stop and troubleshoot before proceeding if any required stream, serial device, o
 
 ## Troubleshooting links
 
-- `docs/troubleshooting/serial-and-rs485.md`
-- `docs/troubleshooting/lsl-streams.md`
-- `docs/architecture/runtime-processes.md`
-- `docs/architecture/stream-contracts.md`
+- [`docs/troubleshooting/serial-and-rs485.md`](../troubleshooting/serial-and-rs485.md)
+- [`docs/troubleshooting/lsl-streams.md`](../troubleshooting/lsl-streams.md)
+- [`docs/architecture/runtime-processes.md`](../architecture/runtime-processes.md)
+- [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)

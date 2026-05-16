@@ -40,7 +40,7 @@
 
 ## Stream/channel configuration
 
-The canonical root contract is `../../docs/architecture/stream-contracts.md`.
+The canonical root contract is [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md).
 
 Minimum calibration input contract:
 
@@ -106,7 +106,7 @@ Run a different protocol explicitly:
 uv run handgrip-cal record --config conf/protocol_reference_verification.yaml
 ```
 
-Avoid undocumented ad-hoc changes to stream names or channel labels. If the stream contract changes, update `../../docs/architecture/stream-contracts.md`, `LSL_Bridge` docs/config, viewer docs/config, and calibration docs/config together.
+Avoid undocumented ad-hoc changes to stream names or channel labels. If the stream contract changes, update [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md), `LSL_Bridge` docs/config, viewer docs/config, and calibration docs/config together.
 
 ## Validation checklist
 

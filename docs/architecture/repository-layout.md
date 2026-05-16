@@ -3,7 +3,7 @@
 **Status:** Canonical root architecture document  
 **Audience:** Maintainers, student developers, and future collaborators  
 **Scope:** How the repository is organized and where to edit safely  
-**Related docs:** `docs/development/python-project-structure-primer.md`, component `docs/index.md` files
+**Related docs:** [`docs/development/python-project-structure-primer.md`](../development/python-project-structure-primer.md), component [`docs/index.md`](../index.md) files
 
 ## Summary
 
@@ -33,13 +33,13 @@ handgrip-suite/
 
 | Path                    | Type                          | Responsibility                                             | First doc                        |
 | ----------------------- | ----------------------------- | ---------------------------------------------------------- | -------------------------------- |
-| `Handgrip_Firmware/`    | PlatformIO / Arduino firmware | Target handgrip data acquisition and D2 UART stream        | `Handgrip_Firmware/README.md`    |
-| `RS485_GUI/`            | Python application            | Reference-board acquisition, GUI, logs, ZMQ IPC            | `RS485_GUI/README.md`            |
-| `LSL_Bridge/`           | Python application            | Publish target/reference LSL streams                       | `LSL_Bridge/README.md`           |
-| `LSL_Viewer/`           | Python application            | Live/replay visualization and XY correlation               | `LSL_Viewer/README.md`           |
-| `Handgrip_Calibration/` | Python CLI package            | Calibration sessions, fitting, reports, holdout validation | `Handgrip_Calibration/README.md` |
-| `Handgrip_Analysis/`    | Python CLI package            | Offline analysis stages and filter design                  | `Handgrip_Analysis/README.md`    |
-| `docs/`                 | Markdown documentation        | Canonical system docs                                      | `docs/index.md`                  |
+| `Handgrip_Firmware/`    | PlatformIO / Arduino firmware | Target handgrip data acquisition and D2 UART stream        | [`Handgrip_Firmware/README.md`](../../Handgrip_Firmware/README.md)    |
+| `RS485_GUI/`            | Python application            | Reference-board acquisition, GUI, logs, ZMQ IPC            | [`RS485_GUI/README.md`](../../RS485_GUI/README.md)            |
+| `LSL_Bridge/`           | Python application            | Publish target/reference LSL streams                       | [`LSL_Bridge/README.md`](../../LSL_Bridge/README.md)           |
+| `LSL_Viewer/`           | Python application            | Live/replay visualization and XY correlation               | [`LSL_Viewer/README.md`](../../LSL_Viewer/README.md)           |
+| `Handgrip_Calibration/` | Python CLI package            | Calibration sessions, fitting, reports, holdout validation | [`Handgrip_Calibration/README.md`](../../Handgrip_Calibration/README.md) |
+| `Handgrip_Analysis/`    | Python CLI package            | Offline analysis stages and filter design                  | [`Handgrip_Analysis/README.md`](../../Handgrip_Analysis/README.md)    |
+| `docs/`                 | Markdown documentation        | Canonical system docs                                      | [`docs/index.md`](../index.md)                  |
 | `Documentation/`        | Legacy/source material        | Source references and historical docs                      | Archive/migration source only    |
 
 ## Where to edit
@@ -48,7 +48,7 @@ handgrip-suite/
 | -------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------- |
 | Change firmware serial schema          | `Handgrip_Firmware/Core/Inc/config.h`, firmware protocol docs, bridge parser tests         | Viewer/calibration code only.       |
 | Change reference-board serial settings | `RS485_GUI/config/config.yaml`, acquisition-board docs                                     | LSL viewer config.                  |
-| Change LSL stream names/channels       | `LSL_Bridge/conf/config.yaml`, `docs/architecture/stream-contracts.md`, downstream configs | One consumer only.                  |
+| Change LSL stream names/channels       | `LSL_Bridge/conf/config.yaml`, [`docs/architecture/stream-contracts.md`](stream-contracts.md), downstream configs | One consumer only.                  |
 | Change viewer plot behavior            | `LSL_Viewer/conf/config.yaml`, viewer docs, viewer source                                  | Bridge or firmware.                 |
 | Add calibration protocol               | `Handgrip_Calibration/conf/protocol_*.yaml`, calibration protocol docs, tests              | Hard-coded CLI logic unless needed. |
 | Add analysis stage                     | `Handgrip_Analysis/src/handgrip_analysis/`, analysis docs, tests                           | Generated output folders.           |
@@ -104,8 +104,8 @@ Generated outputs belong in component data/output directories, not in canonical 
 
 ## Validation checklist
 
-- [ ] Every component has `README.md`.
-- [ ] Every component has `docs/index.md`.
-- [ ] Root `docs/index.md` links to all major workflows.
+- [ ] Every component has [`README.md`](../../README.md).
+- [ ] Every component has [`docs/index.md`](../index.md).
+- [ ] Root [`docs/index.md`](../index.md) links to all major workflows.
 - [ ] Root architecture docs link to component docs instead of duplicating implementation details.
 - [ ] Generated outputs are not presented as maintained instructions.

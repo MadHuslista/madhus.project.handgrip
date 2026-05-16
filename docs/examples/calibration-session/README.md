@@ -3,7 +3,7 @@
 **Status:** Curated example, not canonical source data  
 **Audience:** Operators, maintainers, and reviewers learning how to interpret calibration outputs  
 **Source class:** Existing `Handgrip_Calibration/data/calibration/<session_id>/` outputs  
-**Related docs:** `docs/workflows/handgrip-calibration.md`, `Handgrip_Calibration/docs/reports-and-outputs.md`, `docs/architecture/data-and-output-lifecycle.md`
+**Related docs:** [`docs/workflows/handgrip-calibration.md`](../../workflows/handgrip-calibration.md), [`Handgrip_Calibration/docs/reports-and-outputs.md`](../../../Handgrip_Calibration/docs/reports-and-outputs.md), [`docs/architecture/data-and-output-lifecycle.md`](../../architecture/data-and-output-lifecycle.md)
 
 ## Summary
 
