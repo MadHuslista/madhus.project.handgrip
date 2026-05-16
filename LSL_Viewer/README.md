@@ -1,130 +1,130 @@
-# LSL Viewer v0.6.0
+# LSL Viewer
 
-Dual-native-stream handgrip force viewer — live LSL, CSV replay, and XDF replay modes.
+## Summary
 
-## What changed in v0.6.0 — dataZoom, minor ticks, and axis-span refactor
+`LSL_Viewer` is the browser-based visualization tool for the Handgrip Suite. It reads live LSL streams or replay files and displays target/reference signals, XY correlation, and optional validation/marker overlays.
 
-**v0.6.0 changes:** Interactive zoom and pan (ECharts `dataZoom`) is now enabled on all charts — slider handles appear below time-series panels and on both axes of the XY panel, with inside-scroll zoom available throughout. Minor ticks are shown on all axes, and the y-axis of each time-domain panel uses `scale: true` for auto-range. The XY axis-span helper was renamed `update_xy_span`, its signature extended with an explicit `lock` argument, and its return value changed to a ready-to-merge ECharts options dict (`{xAxis, yAxis}`) — eliminating the `opts_xy["xAxis"].update(…)` fan-out at the call site. Axis limits are rounded to two decimal places in both locked and adaptive modes. The page layout was reorganised so the control bar and XY panel share a 2-column row above the six time-series panels, and both panel heights were increased for better readability.
+It is an observer and diagnostic tool. It should not redefine acquisition semantics, calibration math, or firmware/bridge contracts.
 
-## What changed in v0.5.0 — XY-first square ECharts layout
+## When to use this component
 
-**Root cause fixed (v0.3.0):** `plt.pause()` called `QWidget.activateWindow()` at 20 Hz, stealing OS keyboard focus on every frame.
+Use this component when you need to:
 
-**v0.3.0 fix:** NiceGUI renders in a browser tab — no native OS window, focus stealing is architecturally impossible.
+- inspect live `HandgripTarget` and `HandgripReference` streams,
+- visually validate target/reference behavior before calibration,
+- diagnose XY correlation, lag, or alignment symptoms,
+- replay CSV/XDF data for inspection,
+- check whether display-only downsampling or axis behavior affects interpretation.
 
-**v0.4.0 fix:** Real-time rendering performance. The v0.3.0 Plotly backend was too slow for the data rate. Every `chart.update()` call serialised full trace arrays to JSON, transmitted them over the WebSocket, and Plotly.js ran a full diff before painting — repeating for all 7 panels at 20 Hz.
+Do not use this component to:
 
-**v0.4.1 fix:** Robust ECharts render handoff. The browser chart element owns the authoritative `options` object, chart updates are pushed through an explicit EChart sink boundary, ECharts `large` mode is disabled by default, and display-only render budgets bound the payload sent to the browser.
+- acquire RS485 data directly,
+- parse target firmware UART directly,
+- fit calibration models,
+- permanently apply filtering/calibration corrections.
 
-**v0.5.0 changes:** The XY correlation panel is now first in the page, rendered as a connected faded line path, and all chart boxes use square aspect ratio. Downsampling is configurable from the Hydra config with `viewer.render.downsample_enabled`.
+## First command
 
-**Current backend:** Apache ECharts via NiceGUI's `ui.echart()`. Key improvements:
-
-| Concern            | Plotly (v0.3.0)              | ECharts (v0.6.0)                               |
-| ------------------ | ---------------------------- | ---------------------------------------------- |
-| Renderer           | SVG (DOM node per point)     | HTML5 Canvas (pixel buffer)                    |
-| Update model       | `Plotly.react()` + JSON diff | Element-owned `options` + explicit update sink |
-| Large-data path    | None                         | Explicit display-only render budgets           |
-| Animation overhead | Always present               | `animation: False` throughout                  |
-| Marker overlay     | Separate shape layer         | `markLine` on first series                     |
-| Dependency         | `plotly>=5.18`               | Built into NiceGUI (ECharts bundled)           |
-
----
-
-## Architecture
-
-```
-src/lsl_viewer/
-├── cli.py                  # Hydra entry point
-├── config.py               # Structured config (AppConfig, ServerCfg, …)
-├── types.py                # DualWindow, ViewerState, FigureHandles
-├── errors.py
-├── logging_setup.py
-├── core/                   # UNCHANGED — pure functional core
-│   ├── alignment.py        #   XY interpolation, time-shift computation
-│   ├── timing.py           #   LSL interval / clock metrics
-│   ├── replay.py           #   CSV/XDF loaders, window_from_replay
-│   └── stream.py           #   LSL stream connect + fetch
-└── viz/                    # NiceGUI + ECharts rendering layer
-    ├── state.py            #   compute_axis_limits, update_xy_span, floorf, ceilf (pure)
-    ├── dashboard.py        #   render_info_text (pure, 4-column monospace)
-    ├── markers.py          #   NDJSON loader + get_marker_x_positions (ECharts)
-    ├── charts.py           #   ChartHandles, build_chart_handles, update_charts
-    ├── panels.py           #   NiceGUI page layout — ui.echart, ui.keyboard
-    └── app.py              #   run_live_mode_nicegui, run_replay_mode_nicegui
-```
-
-**Core layer is 100% unchanged** across all three versions.
-
-### XY faded line collection
-
-20 pre-allocated ECharts line series (`N_XY_BUCKETS`). Each bucket covers a freshness band; its `lineStyle.color` carries the corresponding alpha. Data entries are display-ready `[x, y]` points, with no `None` line-break sentinels and no ECharts `large` mode. Boundary points are duplicated only between occupied age buckets to preserve a continuous-looking path while keeping a constant series count.
-
-### Render budgeting
-
-Raw acquisition/replay windows remain intact. Only the browser payload is bounded:
-
-```yaml
-viewer:
-  render:
-    downsample_enabled: true
-    max_points_time_series: 1200
-    max_points_xy: 1500
-```
-
-Set `downsample_enabled: false` to send the full current display window to ECharts. Keeping it enabled protects the browser renderer from unbounded per-refresh payloads while preserving correctness and replayability in the core data path.
-
-### Calibration marker overlay
-
-`refresh_marker_cache()` reads the NDJSON file only when its mtime changes (fixes the original per-frame re-read bug). `get_marker_x_positions()` returns relative x positions. `_apply_markline()` attaches them as an ECharts `markLine` on series 0 of each time-domain panel — no separate shape layer needed.
-
----
-
-## Installation
+From `LSL_Viewer/`:
 
 ```bash
-uv sync --extra dev
+uv run lsl-viewer
 ```
 
-**Dependency change from v0.3.0:** `plotly>=5.18` removed. ECharts is bundled with NiceGUI.
-
----
-
-## Usage
+Live reference-validation mode:
 
 ```bash
-# Live mode (default)
-lsl-viewer
+uv run lsl-viewer mode=live_with_reference_validation
+```
 
-# Live mode with reference validation
-lsl-viewer mode=live_with_reference_validation
+CSV replay example:
 
-# CSV replay
-lsl-viewer mode=csv_replay \
+```bash
+uv run lsl-viewer mode=csv_replay \
   reference.target_csv_path=./data/target.csv \
   reference.reference_csv_path=./data/reference.csv
-
-# XDF replay
-lsl-viewer mode=xdf_replay reference.xdf_path=./data/session.xdf
 ```
 
-Opens at `http://127.0.0.1:8765` by default (configure via `viewer.server.*`).
+## Expected result
 
-## Keyboard shortcuts
+Expected successful behavior:
 
-| Key | Action                  |
-| --- | ----------------------- |
-| `c` | Clear plots             |
-| `p` | Pause / resume          |
-| `x` | Toggle XY lock-max-span |
+- viewer web UI opens, typically at `http://127.0.0.1:8765`,
+- target and reference streams are discovered when `LSL_Bridge` is running,
+- target/reference time series update under applied force,
+- XY correlation reacts to synchronized force changes,
+- keyboard controls such as clear/pause behave as documented.
 
-Handled by `ui.keyboard` (browser key events — OS focus on viewer not required).
+Stop before calibration if the viewer shows missing/frozen streams or persistent growing XY delay.
+
+## Configuration
+
+Primary config:
+
+```text
+LSL_Viewer/conf/config.yaml
+```
+
+Main configuration areas:
+
+| Area | Purpose |
+| --- | --- |
+| mode | live, validation, CSV replay, XDF replay. |
+| stream discovery | Expected LSL stream names and channel labels. |
+| buffers | Retention windows and sample handling. |
+| plots | Time-series, XY correlation, dimensions, axis behavior. |
+| server | Host, port, browser UI behavior. |
+| keyboard/UI | Clear, pause, XY lock, toggles. |
+
+Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
+
+## Common workflows
+
+| Goal | Document |
+| --- | --- |
+| Run full live viewer stack | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
+| Understand live process order | [`../docs/architecture/runtime-processes.md`](../docs/architecture/runtime-processes.md) |
+| Understand stream contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) |
+| Debug timestamp/XY delay | [`../docs/architecture/timestamping-and-synchronization.md`](../docs/architecture/timestamping-and-synchronization.md) |
+| Navigate component docs | [`docs/index.md`](docs/index.md) |
+
+## Repository layout
+
+```text
+LSL_Viewer/
+├── README.md
+├── conf/
+│   └── config.yaml
+├── docs/
+│   └── index.md
+├── src/
+│   └── lsl_viewer/
+│       ├── app/
+│       ├── ui/
+│       ├── streams/
+│       └── ...
+└── tests/
+```
 
 ## Tests
 
+Run from `LSL_Viewer/` after dependencies are installed:
+
 ```bash
-uv run pytest            # all tests
-uv run pytest tests/unit/      # pure logic
-uv run pytest tests/integration/  # ECharts model/sink/update logic
-uv run pytest tests/e2e/       # subprocess CLI smoke tests
+uv run pytest
 ```
+
+Useful targeted subsets:
+
+```bash
+uv run pytest tests/unit
+uv run pytest tests/integration
+uv run pytest tests/e2e
+```
+
+## Further docs
+
+- [`docs/index.md`](docs/index.md) — LSL Viewer documentation map.
+- [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) — operator workflow.
+- [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) — root stream/data contracts.
+- [`../docs/architecture/timestamping-and-synchronization.md`](../docs/architecture/timestamping-and-synchronization.md) — timing and alignment model.

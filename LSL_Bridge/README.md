@@ -1,153 +1,134 @@
 # LSL Bridge
 
-Publishes two native LSL streams consumed by the **Handgrip_Calibration** module:
+## Summary
 
-| Stream              | Type         | Source                              | Rate                 |
-| ------------------- | ------------ | ----------------------------------- | -------------------- |
-| `HandgripTarget`    | Force (6 ch) | Arduino/HX711 over UART             | Irregular ~93–100 Hz |
-| `HandgripReference` | Force (4 ch) | RS485 acquisition board via ZMQ IPC | Regular 500 Hz       |
+`LSL_Bridge` converts the two live acquisition sources into canonical Lab Streaming Layer streams:
 
-An operational marker stream (`HandgripComponentEvents`) is also published for
-component-level events (serial connects, timestamp anchor resets, IPC gaps).
+- target Arduino/HX711 firmware UART → `HandgripTarget`,
+- RS485 GUI ZeroMQ IPC → `HandgripReference`,
+- operational diagnostics → `HandgripComponentEvents`.
 
----
+It is the stream publication boundary for the Handgrip Suite. Viewer, calibration, and recording workflows should consume its LSL outputs instead of reading firmware serial or RS485 IPC directly.
 
-## Requirements
+## When to use this component
 
-- Python ≥ 3.11
-- [`uv`](https://github.com/astral-sh/uv) (recommended) or `pip`
-- `pylsl`, `pyserial`, `pyzmq`, `hydra-core`, `omegaconf`
+Use this component when you need to:
 
----
+- publish target/reference LSL streams,
+- validate firmware D2 parsing,
+- consume the `RS485_GUI` IPC topic,
+- inspect stream/channel contracts,
+- debug timestamping, dropped samples, or stream discovery.
 
-## Installation
+Do not use this component to:
 
-```bash
-# With uv (recommended)
-uv venv
-uv pip install -e ".[dev]"
+- configure the acquisition-board front-panel menu,
+- perform calibration fitting,
+- render the main operator plots,
+- modify target firmware constants.
 
-# With pip
-pip install -e ".[dev]"
-```
+## First command
 
----
-
-## Usage
+From `LSL_Bridge/`:
 
 ```bash
-# Default config
-python -m lsl_bridge
-
-# Override serial port
-python -m lsl_bridge serial.port=/dev/ttyUSB0
-
-# Debug logging (writes to lsl_bridge_debug.log)
-python -m lsl_bridge logging=debug
-
-# Override log level only
-python -m lsl_bridge logging.level=DEBUG
-
-# Disable file logging
-python -m lsl_bridge logging.file=null
-
-# Non-interactive / CI
-python -m lsl_bridge session.session_id=session_001
+uv run lsl-bridge
 ```
 
----
+With explicit target serial port:
+
+```bash
+uv run lsl-bridge serial.port=/dev/ttyUSB_TARGET
+```
+
+For older invocation style, this may also work depending on the active environment:
+
+```bash
+uv run python -m lsl_bridge serial.port=/dev/ttyUSB_TARGET
+```
+
+## Expected result
+
+Expected successful behavior:
+
+- target serial connection opens,
+- firmware `M2` metadata is observed,
+- firmware `D2` lines are parsed,
+- `RS485_GUI` IPC messages are consumed when the reference GUI is running,
+- `HandgripTarget` and `HandgripReference` LSL streams appear,
+- `LSL_Viewer` and `Handgrip_Calibration preflight` can discover the streams.
+
+Stop if parser errors are continuous or only one expected stream appears.
 
 ## Configuration
 
-All configuration lives in `conf/config.yaml`.  The full precedence chain is:
+Primary config:
 
+```text
+LSL_Bridge/conf/config.yaml
 ```
-CLI overrides  >  conf/logging/<group>.yaml  >  conf/config.yaml  >  built-in defaults
-```
 
-Key sections:
+Main configuration areas:
 
-| Section                                | Description                                                    |
-| -------------------------------------- | -------------------------------------------------------------- |
-| `streams.target` / `streams.reference` | LSL stream names, types, channels, chunk sizes, schema strings |
-| `serial`                               | Port, baud rate, timeouts, reconnect backoff                   |
-| `rs485_ipc`                            | ZMQ endpoint, topic, HWM, poll/backoff intervals               |
-| `target_timestamping`                  | `host_receive` or `device_clock_anchor` policy                 |
-| `processing`                           | Filter chain (butterworth, 1-pole, drift corrector)            |
-| `csv`                                  | Output paths, append mode, flush interval                      |
-| `logging`                              | Level, file path, format string                                |
+| Area | Purpose |
+| --- | --- |
+| serial target input | Target Arduino port, baud, parser behavior. |
+| reference IPC input | ZMQ endpoint/topic for `RS485_GUI`. |
+| LSL outlets | Stream names, types, channel names, nominal rates, metadata. |
+| timestamping | Host/device timestamp policy, gap detection, anchor behavior. |
+| processing | Optional filtering/calibration/derived channels. |
+| logging/CSV | Debug logs and optional saved target/reference data. |
 
----
+Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
 
-## Project Structure
+## Common workflows
 
-```
-lsl_bridge/
-├── pyproject.toml
+| Goal | Document |
+| --- | --- |
+| Validate target path only | [`../docs/workflows/target-only-quickstart.md`](../docs/workflows/target-only-quickstart.md) |
+| Run full live viewer stack | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
+| Understand bridge stream contracts | [`docs/stream-contracts.md`](docs/stream-contracts.md) |
+| Understand root data contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) |
+| Debug timing/synchronization | [`../docs/architecture/timestamping-and-synchronization.md`](../docs/architecture/timestamping-and-synchronization.md) |
+
+## Repository layout
+
+```text
+LSL_Bridge/
+├── README.md
 ├── conf/
 │   ├── config.yaml
 │   └── logging/
-│       ├── default.yaml
-│       └── debug.yaml
-├── src/lsl_bridge/
-│   ├── __init__.py          # version
-│   ├── __main__.py          # python -m lsl_bridge
-│   ├── app.py               # Hydra entry point + serial loop
-│   ├── types.py             # shared dataclasses + Processor protocol
-│   ├── logging_setup.py     # console + file handler wiring
-│   ├── core/
-│   │   ├── filter.py        # signal processing filters
-│   │   ├── parser.py        # D2/M2 UART protocol parser
-│   │   ├── timestamping.py  # device-clock → LSL clock resolvers
-│   │   └── processing.py    # importlib processor loader
-│   ├── io/
-│   │   ├── csv_sinks.py     # target + reference CSV writers
-│   │   ├── lsl_outlets.py   # StreamOutlet builders
-│   │   └── serial_utils.py  # port metadata + settle helpers
-│   └── publishers/
-│       ├── events.py        # ComponentEventOutlet
-│       └── reference.py     # RS485IpcReferencePublisher (ZMQ thread)
+├── docs/
+│   ├── index.md
+│   └── stream-contracts.md
+├── src/
+│   └── lsl_bridge/
+│       ├── core/
+│       ├── io/
+│       └── ...
 └── tests/
-    ├── unit/
-    │   ├── test_filter.py
-    │   ├── test_parser.py
-    │   └── test_timestamping.py
-    └── integration/
-        └── test_csv_sinks.py
 ```
 
----
+## Tests
 
-## Running Tests
+Run from `LSL_Bridge/` after dependencies are installed:
 
 ```bash
-pytest tests/
+uv run pytest
 ```
 
-Unit tests (`test_filter.py`, `test_parser.py`, `test_timestamping.py`) have
-zero external dependencies — no LSL runtime, no serial port, no ZMQ required.
+Targeted checks commonly used after stream/parser edits:
 
-Integration tests (`test_csv_sinks.py`) write to a `tmp_path` fixture and
-also require no hardware.
+```bash
+uv run pytest tests/unit/test_parser.py
+uv run pytest tests/unit/test_timestamping.py
+uv run pytest tests/integration/test_csv_sinks.py
+```
 
----
+## Further docs
 
-## Schema
-
-Stream schema strings are configured under `streams.*.schema` and
-`component_events.schema` in `conf/config.yaml`. The IPC message schema
-enforced by the reference publisher is `rs485_ipc.expected_schema`.
-
----
-
-## Changelog
-
-### v2.0.0
-- Migrated to `src/` layout with modular subpackages
-- Logging wired to both console **and** file (configurable via `logging.file`)
-- All magic constants promoted to `conf/config.yaml`
-- Channel counts derived dynamically from config (no hardcoded `6` / `4`)
-- Legacy RS485 IPC field aliases (`rs485_raw`, `rs485_clock`, `status_word`) removed
-- `except Exception` in ZMQ receive loop narrowed to `except zmq.ZMQError`
-- `except Exception` in optional ZMQ import narrowed to `except ImportError`
-- Full unit and integration test suite added
+- [`docs/index.md`](docs/index.md) — LSL Bridge documentation map.
+- [`docs/stream-contracts.md`](docs/stream-contracts.md) — bridge-specific stream contracts.
+- [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) — root stream/data contracts.
+- [`../Handgrip_Firmware/docs/serial-protocol.md`](../Handgrip_Firmware/docs/serial-protocol.md) — firmware M2/D2 protocol.
