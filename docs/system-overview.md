@@ -93,7 +93,7 @@ Handgrip_Analysis
 | `HandgripComponentEvents`                                                                                  | `LSL_Bridge`           | Diagnostics / recordings             | Operational markers for gaps, reconnects, and component events.    |
 | Calibration session directory                                                                              | `Handgrip_Calibration` | Fit/report/analysis workflows        | Reproducible container for raw data, events, configs, and reports. |
 
-Detailed stream definitions belong in [`architecture/stream-contracts.md`](architecture/stream-contracts.md) and [`../LSL_Bridge/docs/stream-contracts.md`](../LSL_Bridge/docs/stream-contracts.md).
+Detailed stream definitions belong in [`architecture/stream-contracts.md`](architecture/stream-contracts.md) and [`LSL_Bridge/docs/stream-contracts.md`](../LSL_Bridge/docs/stream-contracts.md).
 
 ## Output locations
 
@@ -112,40 +112,12 @@ Generated outputs are not canonical documentation unless curated under [`example
 | Component      | Main config source                                              | Detailed docs                                                                                    |
 | -------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Root workspace | `pyproject.toml`, `platformio.ini`                              | [`development/workspace-setup.md`](development/workspace-setup.md)                               |
-| Firmware       | `Handgrip_Firmware/Core/Inc/config.h`, `platformio.ini`         | [`../Handgrip_Firmware/docs/configuration.md`](../Handgrip_Firmware/docs/configuration.md)       |
-| RS485 GUI      | `RS485_GUI/config/config.yaml`                                  | [`../RS485_GUI/docs/configuration.md`](../RS485_GUI/docs/configuration.md)                       |
-| LSL Bridge     | `LSL_Bridge/conf/config.yaml`, `LSL_Bridge/conf/logging/*.yaml` | [`../LSL_Bridge/docs/configuration.md`](../LSL_Bridge/docs/configuration.md)                     |
-| LSL Viewer     | `LSL_Viewer/conf/config.yaml`                                   | [`../LSL_Viewer/docs/configuration.md`](../LSL_Viewer/docs/configuration.md)                     |
-| Calibration    | `Handgrip_Calibration/conf/*.yaml`                              | [`../Handgrip_Calibration/docs/configuration.md`](../Handgrip_Calibration/docs/configuration.md) |
-| Analysis       | `Handgrip_Analysis/conf/**/*.yaml`                              | [`../Handgrip_Analysis/docs/configuration.md`](../Handgrip_Analysis/docs/configuration.md)       |
-
-## Canonical vs archive/reference material
-
-Use documentation status deliberately:
-
-| Status                      | Meaning                                                                         | Location                                                       |
-| --------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Canonical                   | Current operating procedure or current system contract                          | [`README.md`](../README.md), `docs/`, component `docs/`        |
-| Component reference         | Current component-specific workflow/config/architecture detail                  | `<component>/docs/`                                            |
-| Hardware reference fallback | Source manual, datasheet, or vendor reference used to verify details            | `docs/hardware/references/`                                    |
-| Example output              | Curated output that teaches interpretation but is not source of truth           | `docs/examples/`                                               |
-| Historical                  | Useful past reasoning, old plans, or development notes                          | `docs/archive/`                                                |
-| Deprecated                  | Old hardware or old architecture material that must not guide current operation | `docs/archive/deprecated/` or removed from the handoff package |
-
-Important rule:
-
-> If a current workflow contradicts an archived or fallback reference document, the current canonical workflow wins until a maintainer updates the docs after validation.
-
-## Current implementation boundaries
-
-| Boundary                    | Owner component                           | Do not bypass by...                                                                          |
-| --------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Firmware serial protocol    | `Handgrip_Firmware` + `LSL_Bridge` parser | Editing viewer/calibration assumptions without updating stream contract docs.                |
-| Reference-board acquisition | `RS485_GUI`                               | Reading the RS485 board directly from calibration unless intentionally designing a new path. |
-| LSL stream publication      | `LSL_Bridge`                              | Creating duplicate stream names from other apps.                                             |
-| Live visualization          | `LSL_Viewer`                              | Treating browser downsampling as data-path downsampling.                                     |
-| Calibration model/export    | `Handgrip_Calibration`                    | Manually copying constants without report/session traceability.                              |
-| Filter design               | `Handgrip_Analysis`                       | Applying filters without stage/report validation.                                            |
+| Firmware       | `Handgrip_Firmware/Core/Inc/config.h`, `platformio.ini`         | [`Handgrip_Firmware/docs/configuration.md`](../Handgrip_Firmware/docs/configuration.md)       |
+| RS485 GUI      | `RS485_GUI/config/config.yaml`                                  | [`RS485_GUI/docs/configuration.md`](../RS485_GUI/docs/configuration.md)                       |
+| LSL Bridge     | `LSL_Bridge/conf/config.yaml`, `LSL_Bridge/conf/logging/*.yaml` | [`LSL_Bridge/docs/configuration.md`](../LSL_Bridge/docs/configuration.md)                     |
+| LSL Viewer     | `LSL_Viewer/conf/config.yaml`                                   | [`LSL_Viewer/docs/configuration.md`](../LSL_Viewer/docs/configuration.md)                     |
+| Calibration    | `Handgrip_Calibration/conf/*.yaml`                              | [`Handgrip_Calibration/docs/configuration.md`](../Handgrip_Calibration/docs/configuration.md) |
+| Analysis       | `Handgrip_Analysis/conf/**/*.yaml`                              | [`Handgrip_Analysis/docs/configuration.md`](../Handgrip_Analysis/docs/configuration.md)       |
 
 ## Next steps for readers
 

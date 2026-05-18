@@ -3,7 +3,7 @@
 ## Summary
 
 - **Handgrip Suite** is the end-to-end repository for acquiring, visualizing, calibrating, and analyzing handgrip force data.
-- The system combines a **target handgrip device** based on Arduino Nano + HX711/HX711-style load-cell acquisition with a **reference force chain** based on a PM58 load cell connected to a high-speed RS485 acquisition board.
+- The system combines a **target handgrip device** based on Arduino Nano + HX711 load-cell acquisition with a **reference force chain** based on a PM58 load cell connected to a high-speed RS485 acquisition board.
 - The host software stack is split into focused components: `RS485_GUI`, `LSL_Bridge`, `LSL_Viewer`, `Handgrip_Calibration`, and `Handgrip_Analysis`.
 - The documentation is organized from **high-level operation** to **low-level implementation**: start here, then move to workflows, then component docs, then configuration and development references.
 - This root README is intentionally short. The full documentation map starts at [`docs/index.md`](docs/index.md).
@@ -12,11 +12,12 @@
 
 ```mermaid
 flowchart TD
-    Hardware[PM58 Load Cell \n& Acquisition Board] -->|Modbus RS485| RS485_GUI[RS485 GUI]
+    Streams>"Dual Streams"]
+    Hardware("PM58 Load Cell \n& Acquisition Board\n(reference)") -->|Modbus RS485| RS485_GUI(RS485 GUI)
     RS485_GUI -->|ZeroMQ IPC| Bridge(LSL_Bridge)
-    FW(Handgrip_Firmware \nADC: HX711 &\nMCU: Arduino Nano) -->|UART Serial| Bridge
+    FW("Handgrip_Firmware \nADC: HX711 &\nMCU: Arduino Nano\n(target)\n") -->|UART Serial| Bridge
     Bridge --> |s: HandgripReference| Streams
-    Bridge ~~~ |"LSL Streams\n Sync capables"| Streams(Dual Streams)
+    Bridge ~~~ |"LSL Streams\n Sync capables"| Streams
     Bridge --> |s: HandgripTarget| Streams
     Streams -->| Live | Viewer(LSL_Viewer)
     Streams -->|Captured Data| Calibration(Handgrip_Calibration)
@@ -36,27 +37,17 @@ Following the system architecture, here are the entry points and purposes for ea
 - [Handgrip_Analysis](Handgrip_Analysis/docs/index.md): Frequency analysis for noise/drift/dynamics of the Handgrip's calibrated force signal. Evalulate an extensible set of predefined DSP filters, and returns exact filter parameters to be set on the LSL_Bridge filtered channel for production real-time streaming. 
 
 
-
-## What to read when
-
-| I want...                             | Start here                                                                                                   | Then read                                                                                                                                                                                                                                  |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Understand what the whole suite does. | [`docs/start-here.md`](docs/start-here.md)                                                                   | [`docs/system-overview.md`](docs/system-overview.md), [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                     |
-| See what to connect physically        | [`docs/workflows/physical-setup.md`](docs/workflows/physical-setup.md)                                       | [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md), [`docs/workflows/full-live-viewer-quickstart.md`](docs/workflows/full-live-viewer-quickstart.md), [`docs/troubleshooting/index.md`](docs/troubleshooting/index.md) |
-| Understand repo structure             | [`docs/development/python-project-structure-primer.md`](docs/development/python-project-structure-primer.md) | Component docs under `*/docs/index.md`, [`docs/architecture/repository-layout.md`](docs/architecture/repository-layout.md), [`docs/configuration/index.md`](docs/configuration/index.md)                                                   |
-| Load the Handgrip Firmware            | [`Handgrip_Firmware/README.md`](Handgrip_Firmware/README.md)                                                 | [`Handgrip_Firmware/docs/index.md`](Handgrip_Firmware/docs/index.md), [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md)                                                                                               |
-| Calibrate the Handgrip                | [`Handgrip_Calibration/docs/index.md`](Handgrip_Calibration/docs/index.md)                                   | [`Handgrip_Analysis/docs/index.md`](Handgrip_Analysis/docs/index.md), [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)     |
-| Extend the features                   | [`docs/system-overview.md`](docs/system-overview.md)                                                         | [`docs/architecture/index.md`](docs/architecture/index.md), [`docs/hardware/index.md`](docs/hardware/index.md), [`docs/archive/index.md`](docs/archive/index.md)                                                                           |
-
-
-
 ## Fastest safe quickstart
 
 > **Status:** These are navigation-level commands. Use the linked workflow docs for the validated step-by-step procedure, expected outputs, and failure branches.
 
-From the repository root:
+Install UV Python package manager from: `https://docs.astral.sh/uv/getting-started/installation/`
+
+Then, run from the repository root:
 
 ```bash
+uv venv .venv
+source .venv/bin/activate
 uv sync
 ```
 
@@ -91,7 +82,7 @@ For the full operational path, read [`docs/workflows/full-live-viewer-quickstart
 | Reference-only quickstart | Validate acquisition board → RS485 GUI → IPC without target chain             | [`docs/workflows/reference-only-quickstart.md`](docs/workflows/reference-only-quickstart.md)     |
 | Full live viewer          | Start RS485 GUI, LSL bridge, and viewer in the correct order                  | [`docs/workflows/full-live-viewer-quickstart.md`](docs/workflows/full-live-viewer-quickstart.md) |
 | Handgrip calibration      | Record calibration sessions, fit models, generate reports, validate constants | [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md)               |
-| Handgrip analysis         | Run offline signal characterization and filter-design workflows               | [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                     |
+| Handgrip analysis         | Run target offline signal characterization and filter-design workflows               | [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                     |
 
 ## Components
 
@@ -104,13 +95,30 @@ For the full operational path, read [`docs/workflows/full-live-viewer-quickstart
 | `Handgrip_Calibration` | Calibration protocols, session recording, model fitting, reports   | [`Handgrip_Calibration/README.md`](Handgrip_Calibration/README.md) | [`Handgrip_Calibration/docs/index.md`](Handgrip_Calibration/docs/index.md) |
 | `Handgrip_Analysis`    | Offline analysis stages and DSP/filter candidate evaluation        | [`Handgrip_Analysis/README.md`](Handgrip_Analysis/README.md)       | [`Handgrip_Analysis/docs/index.md`](Handgrip_Analysis/docs/index.md)       |
 
+
+## What to read and when
+
+| I want...                             | Start here                                                                                                   | Then read                                                                                                                                                                                                                                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Understand what the whole suite does. | [`docs/start-here.md`](docs/start-here.md)                                                                   | [`docs/system-overview.md`](docs/system-overview.md), [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                     |
+| See what to connect physically        | [`docs/workflows/physical-setup.md`](docs/workflows/physical-setup.md)                                       | [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md), [`docs/workflows/full-live-viewer-quickstart.md`](docs/workflows/full-live-viewer-quickstart.md), [`docs/troubleshooting/index.md`](docs/troubleshooting/index.md) |
+| Understand repo structure             | [`docs/development/python-project-structure-primer.md`](docs/development/python-project-structure-primer.md) | Component docs under `*/docs/index.md`, [`docs/architecture/repository-layout.md`](docs/architecture/repository-layout.md), [`docs/configuration/index.md`](docs/configuration/index.md)                                                   |
+| Load the Handgrip Firmware            | [`Handgrip_Firmware/README.md`](Handgrip_Firmware/README.md)                                                 | [`Handgrip_Firmware/docs/index.md`](Handgrip_Firmware/docs/index.md), [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md)                                                                                               |
+| Calibrate the Handgrip                | [`Handgrip_Calibration/docs/index.md`](Handgrip_Calibration/docs/index.md)                                   | [`Handgrip_Analysis/docs/index.md`](Handgrip_Analysis/docs/index.md), [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)     |
+| Extend the features                   | [`docs/system-overview.md`](docs/system-overview.md)                                                         | [`docs/architecture/index.md`](docs/architecture/index.md), [`docs/hardware/index.md`](docs/hardware/index.md), [`docs/archive/index.md`](docs/archive/index.md)                                                                           |
+
+
 ## Installation and validation
 
 ### Python workspace
 
 Recommended from the repository root:
 
+Install UV Python package manager from: `https://docs.astral.sh/uv/getting-started/installation/`
+
 ```bash
+uv venv .venv
+source .venv/bin/activate
 uv sync
 uv run pytest
 ```
