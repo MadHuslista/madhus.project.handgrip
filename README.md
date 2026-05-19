@@ -1,5 +1,18 @@
 # Handgrip Suite
 
+- [Handgrip Suite](#handgrip-suite)
+  - [Summary](#summary)
+    - [System Architecture](#system-architecture)
+    - [Components](#components)
+  - [Quickstart](#quickstart)
+    - [What to read and when](#what-to-read-and-when)
+  - [Main workflows available](#main-workflows-available)
+  - [Installation and validation](#installation-and-validation)
+    - [Python workspace](#python-workspace)
+    - [Firmware workspace](#firmware-workspace)
+  - [Documentation map](#documentation-map)
+
+
 ## Summary
 
 - **Handgrip Suite** is the end-to-end repository for acquiring, visualizing, calibrating, and analyzing handgrip force data.
@@ -23,8 +36,6 @@ flowchart TD
     Streams -->|Captured Data| Calibration(Handgrip_Calibration)
     Calibration -->|Calibration Data/Files| Analysis(Handgrip_Analysis)
 ```
-
-[TOC]
 
 ### Components
 
