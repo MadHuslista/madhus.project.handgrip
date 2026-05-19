@@ -6,28 +6,11 @@
 
 It owns the PM58/acquisition-board host-side acquisition path. Downstream components should consume its IPC output through `LSL_Bridge`, not reimplement board parsing independently.
 
-## When to use this component
-
-Use this component when you need to:
-
-- validate PM58/acquisition-board communication,
-- inspect live reference force values,
-- switch between Modbus RTU polling and vendor Active-Send acquisition modes,
-- publish `rs485.measurement.v1` messages for `LSL_Bridge`,
-- log raw/interpreted reference acquisition data.
-
-Do not use this component to:
-
-- parse target Arduino firmware D2 lines,
-- publish LSL streams directly,
-- run calibration fitting,
-- display target/reference XY correlation.
-
-Those responsibilities belong to `LSL_Bridge`, `Handgrip_Calibration`, and `LSL_Viewer`.
-
 ## First command
 
 From `RS485_GUI/`:
+> This should be enough to start the application with default settings and connect to the acquisition board if it's on a standard port. 
+> Adjustments could be done directly on the UI or by providing config overrides as needed.
 
 ```bash
 uv run rs485-gui
@@ -79,15 +62,15 @@ Full configuration reference is planned at [`docs/configuration.md`](docs/config
 
 ## Common workflows
 
-| Goal                                     | Document                                                                                               |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Validate reference chain only            | [`../docs/workflows/reference-only-quickstart.md`](../docs/workflows/reference-only-quickstart.md)     |
-| Run full live viewer stack               | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
-| Understand PM58/acquisition-board wiring | [`../docs/hardware/pm58-wiring-and-bringup.md`](../docs/hardware/pm58-wiring-and-bringup.md)           |
-| Understand stream and IPC contracts      | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                 |
-| Navigate component docs                  | [`docs/index.md`](docs/index.md)                                                                       |
+| Goal                                     | Document                                                                                            |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Validate reference chain only            | [`docs/workflows/reference-only-quickstart.md`](../docs/workflows/reference-only-quickstart.md)     |
+| Run full live viewer stack               | [`docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
+| Understand PM58/acquisition-board wiring | [`docs/hardware/pm58-wiring-and-bringup.md`](../docs/hardware/pm58-wiring-and-bringup.md)           |
+| Understand stream and IPC contracts      | [`docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                 |
+| Navigate component docs                  | [`RS485_GUI/docs/index.md`](docs/index.md)                                                          |
 
-## Repository layout
+## Library layout
 
 ```text
 RS485_GUI/
@@ -127,7 +110,7 @@ If hardware is unavailable, prioritize parser/config/unit tests and validate liv
 
 ## Further docs
 
-- [`docs/index.md`](docs/index.md) — RS485 GUI documentation map.
-- [`../docs/workflows/reference-only-quickstart.md`](../docs/workflows/reference-only-quickstart.md) — operator workflow.
-- [`../docs/hardware/acquisition-board-reference.md`](../docs/hardware/acquisition-board-reference.md) — acquisition-board reference.
-- [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) — root stream and IPC contracts.
+- [`RS485_GUI/docs/index.md`](docs/index.md) — RS485 GUI documentation map.
+- [`docs/workflows/reference-only-quickstart.md`](../docs/workflows/reference-only-quickstart.md) — operator workflow.
+- [`docs/hardware/acquisition-board-reference.md`](../docs/hardware/acquisition-board-reference.md) — acquisition-board reference.
+- [`docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) — root stream and IPC contracts.

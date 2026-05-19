@@ -7,16 +7,6 @@
 - `LSL_Bridge` consumes its IPC output and publishes the `HandgripReference` LSL stream.
 - Start this component before `LSL_Bridge` in the full live workflow.
 
-## Component contract
-
-| Contract            | Value                          |
-| ------------------- | ------------------------------ |
-| Primary command     | `uv run rs485-gui`             |
-| Main config         | `RS485_GUI/config/config.yaml` |
-| Acquisition modes   | `active_send`, `modbus_rtu`    |
-| IPC topic           | `rs485.measurement.v1`         |
-| Downstream consumer | `LSL_Bridge`                   |
-
 ## Documentation map
 
 | Document                                               | Purpose                                                          |
