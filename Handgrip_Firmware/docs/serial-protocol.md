@@ -8,26 +8,6 @@
 - `status` is a bitfield that makes acquisition/timing problems explicit instead of hidden.
 - `LSL_Bridge` expects a strict D2 parser contract; do not make the parser permissive without a deliberate cross-component migration.
 
-## Audience
-
-Read this document if you need to:
-
-- validate target firmware output in a serial monitor,
-- understand what `LSL_Bridge` expects from the target device,
-- debug dropped target samples,
-- update calibration constants in firmware,
-- extend the target stream with additional fields.
-
-## Status
-
-| Field        | Value                                                                                |
-| ------------ | ------------------------------------------------------------------------------------ |
-| Canonical    | Yes                                                                                  |
-| Applies to   | `Handgrip_Firmware` schema 2 / `HANDGRIP_PAYLOAD_SCHEMA = 2U`                        |
-| Source files | `Core/Inc/config.h`, `Core/Src/main.cpp`, `LSL_Bridge/src/lsl_bridge/core/parser.py` |
-| Consumers    | `LSL_Bridge`, `LSL_Viewer`, `Handgrip_Calibration`, downstream analysis outputs      |
-| Replaces     | Legacy D-prefix target output documentation                                          |
-
 ## Frame types
 
 The firmware emits ASCII CSV lines over UART at `SERIAL_BAUD_RATE = 115200`.

@@ -13,25 +13,6 @@ D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>
 
 `raw_count` is the calibration-authoritative target value. `current_units` is a firmware-scaled convenience value and should not replace raw-count fitting unless a workflow explicitly says so.
 
-## When to use this component
-
-Use this component when you need to:
-
-- build or upload firmware to the target Arduino Nano,
-- validate target-side serial output,
-- inspect or update firmware constants in `Core/Inc/config.h`,
-- debug target sampling/status issues,
-- change the low-level HX711 acquisition path.
-
-Do not use this component to:
-
-- run calibration protocols,
-- fit calibration models,
-- publish Lab Streaming Layer streams,
-- visualize target/reference correlation.
-
-Those responsibilities belong to `Handgrip_Calibration`, `LSL_Bridge`, and `LSL_Viewer`.
-
 ## First command
 
 From the repository root:

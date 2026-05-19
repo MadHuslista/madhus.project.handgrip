@@ -67,9 +67,10 @@ The firmware uses TimerOne with:
 SAMPLING_PERIOD_US = 5000U
 ```
 
-This is a 200 Hz timer tick. The HX711 practical output rate is lower, expected around 93 Hz in this firmware metadata.
-
-The ISR does not block waiting for HX711. Instead:
+This is a 200 Hz timer tick. 
+The Empirical maximum frequency for the HX711 is ~92Hz
+Sampling done at >= 2 x 92Hz allows for non-blocking reads on IRQ, that don't risk missing samples due to slow ADC conversion.
+- If sensor is not ready, 200Hz ensure that the new sample will be captured within the next IRQ.
 
 ```text
 if (!_scale.is_ready()) {
@@ -77,12 +78,6 @@ if (!_scale.is_ready()) {
     return;
 }
 ```
-
-Why this is correct:
-
-- blocking inside the ISR would increase timing risk,
-- non-ready ticks are expected when timer tick is faster than ADC conversion rate,
-- status bits make timing irregularity visible to the host.
 
 ## Sensor sample structure
 
