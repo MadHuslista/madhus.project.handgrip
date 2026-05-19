@@ -24,7 +24,9 @@ flowchart TD
     Calibration -->|Calibration Data/Files| Analysis(Handgrip_Analysis)
 ```
 
-### Modules
+[TOC]
+
+### Components
 
 Following the system architecture, here are the entry points and purposes for each module:
 
@@ -37,11 +39,12 @@ Following the system architecture, here are the entry points and purposes for ea
 - [Handgrip_Analysis](Handgrip_Analysis/docs/index.md): Frequency analysis for noise/drift/dynamics of the Handgrip's calibrated force signal. Evalulate an extensible set of predefined DSP filters, and returns exact filter parameters to be set on the LSL_Bridge filtered channel for production real-time streaming. 
 
 
-## Fastest safe quickstart
+## Quickstart
 
 > **Status:** These are navigation-level commands. Use the linked workflow docs for the validated step-by-step procedure, expected outputs, and failure branches.
 
-Install UV Python package manager from: `https://docs.astral.sh/uv/getting-started/installation/`
+Install UV Python package manager from: 
+- [https://docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/)
 
 Then, run from the repository root:
 
@@ -72,31 +75,7 @@ Expected high-level result:
 
 For the full operational path, read [`docs/workflows/full-live-viewer-quickstart.md`](docs/workflows/full-live-viewer-quickstart.md).
 
-## Main workflows
-
-| Workflow                  | Purpose                                                                       | Document                                                                                         |
-| ------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Physical setup            | Connect PM58, handgrip, acquisition board, RS485, and host PC safely          | [`docs/workflows/physical-setup.md`](docs/workflows/physical-setup.md)                           |
-| Firmware setup            | Build/upload Arduino Nano firmware and validate serial frames                 | [`Handgrip_Firmware/docs/workflow.md`](Handgrip_Firmware/docs/workflow.md)                       |
-| Target-only quickstart    | Validate target firmware → bridge → `HandgripTarget` without reference chain  | [`docs/workflows/target-only-quickstart.md`](docs/workflows/target-only-quickstart.md)           |
-| Reference-only quickstart | Validate acquisition board → RS485 GUI → IPC without target chain             | [`docs/workflows/reference-only-quickstart.md`](docs/workflows/reference-only-quickstart.md)     |
-| Full live viewer          | Start RS485 GUI, LSL bridge, and viewer in the correct order                  | [`docs/workflows/full-live-viewer-quickstart.md`](docs/workflows/full-live-viewer-quickstart.md) |
-| Handgrip calibration      | Record calibration sessions, fit models, generate reports, validate constants | [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md)               |
-| Handgrip analysis         | Run target offline signal characterization and filter-design workflows        | [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                     |
-
-## Components
-
-| Component              | Role                                                               | Entry point                                                        | Detailed docs                                                              |
-| ---------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| `Handgrip_Firmware`    | Arduino Nano + HX711 firmware for target handgrip serial data      | [`Handgrip_Firmware/README.md`](Handgrip_Firmware/README.md)       | [`Handgrip_Firmware/docs/index.md`](Handgrip_Firmware/docs/index.md)       |
-| `RS485_GUI`            | Reference acquisition-board GUI, logging, and ZeroMQ IPC publisher | [`RS485_GUI/README.md`](RS485_GUI/README.md)                       | [`RS485_GUI/docs/index.md`](RS485_GUI/docs/index.md)                       |
-| `LSL_Bridge`           | Publishes target/reference streams to Lab Streaming Layer          | [`LSL_Bridge/README.md`](LSL_Bridge/README.md)                     | [`LSL_Bridge/docs/index.md`](LSL_Bridge/docs/index.md)                     |
-| `LSL_Viewer`           | Live/CSV/XDF visualization and XY correlation viewer               | [`LSL_Viewer/README.md`](LSL_Viewer/README.md)                     | [`LSL_Viewer/docs/index.md`](LSL_Viewer/docs/index.md)                     |
-| `Handgrip_Calibration` | Calibration protocols, session recording, model fitting, reports   | [`Handgrip_Calibration/README.md`](Handgrip_Calibration/README.md) | [`Handgrip_Calibration/docs/index.md`](Handgrip_Calibration/docs/index.md) |
-| `Handgrip_Analysis`    | Offline analysis stages and DSP/filter candidate evaluation        | [`Handgrip_Analysis/README.md`](Handgrip_Analysis/README.md)       | [`Handgrip_Analysis/docs/index.md`](Handgrip_Analysis/docs/index.md)       |
-
-
-## What to read and when
+### What to read and when
 
 | I want to…                           | Start here                                                                                                   | Then read                                                                                                                                                                    |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -109,13 +88,29 @@ For the full operational path, read [`docs/workflows/full-live-viewer-quickstart
 | Troubleshoot a problem               | [`docs/troubleshooting/index.md`](docs/troubleshooting/index.md)                                             | Component `*/docs/` troubleshooting links                                                                                                                                    |
 
 
+---
+
+## Main workflows available
+
+| Workflow                  | Purpose                                                                       | Document                                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Physical setup            | Connect PM58, handgrip, acquisition board, RS485, and host PC safely          | [`docs/workflows/physical-setup.md`](docs/workflows/physical-setup.md)                           |
+| Firmware setup            | Build/upload Arduino Nano firmware and validate serial frames                 | [`Handgrip_Firmware/docs/workflow.md`](Handgrip_Firmware/docs/workflow.md)                       |
+| Target-only quickstart    | Validate target firmware → bridge → `HandgripTarget` without reference chain  | [`docs/workflows/target-only-quickstart.md`](docs/workflows/target-only-quickstart.md)           |
+| Reference-only quickstart | Validate acquisition board → RS485 GUI → IPC without target chain             | [`docs/workflows/reference-only-quickstart.md`](docs/workflows/reference-only-quickstart.md)     |
+| Full live viewer          | Start RS485 GUI, LSL bridge, and viewer in the correct order                  | [`docs/workflows/full-live-viewer-quickstart.md`](docs/workflows/full-live-viewer-quickstart.md) |
+| Handgrip calibration      | Record calibration sessions, fit models, generate reports, validate constants | [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md)               |
+| Handgrip analysis         | Run target offline signal characterization and filter-design workflows        | [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                     |
+
+
 ## Installation and validation
 
 ### Python workspace
 
 Recommended from the repository root:
 
-Install UV Python package manager from: `https://docs.astral.sh/uv/getting-started/installation/`
+Install UV Python package manager from: 
+- [`https://docs.astral.sh/uv/getting-started/installation/`](https://docs.astral.sh/uv/getting-started/installation/)
 
 ```bash
 uv venv .venv
@@ -124,7 +119,7 @@ uv sync
 uv run pytest
 ```
 
-The root `pyproject.toml` installs the local Python components as editable packages:
+The root `pyproject.toml` installs the local Python components as editable paon the Handgrip suiteckages:
 
 - `rs485-gui`
 - `lsl-bridge`
