@@ -34,12 +34,12 @@ uv run lsl-viewer mode=live_with_reference_validation
 
 A NiceGUI browser UI opens at `http://127.0.0.1:8765` by default. Expected panels:
 
-| UI element | Expected behavior |
-| --- | --- |
-| Target raw plot | Updates when force is applied to the target handgrip |
-| Reference plot | Updates from PM58/acquisition-board reference force |
-| XY correlation | Shows relationship between reference force and target signal |
-| Timing / overlay panels | Compare target/reference timing |
+| UI element              | Expected behavior                                            |
+| ----------------------- | ------------------------------------------------------------ |
+| Target raw plot         | Updates when force is applied to the target handgrip         |
+| Reference plot          | Updates from PM58/acquisition-board reference force          |
+| XY correlation          | Shows relationship between reference force and target signal |
+| Timing / overlay panels | Compare target/reference timing                              |
 
 ## CSV replay mode
 
@@ -75,19 +75,10 @@ See [LSL_Viewer/docs/configuration.md](configuration.md).
 
 ## Output locations
 
-| Output | Default |
-| --- | --- |
-| Browser UI | `http://127.0.0.1:8765` |
+| Output     | Default                                                           |
+| ---------- | ----------------------------------------------------------------- |
+| Browser UI | `http://127.0.0.1:8765`                                           |
 | Viewer log | `handgrip_realtime_viewer.log` (controlled by `logging.log_file`) |
-
-## Stop conditions
-
-Stop before calibration if:
-
-- `HandgripTarget` or `HandgripReference` is missing,
-- one stream is frozen while the other responds,
-- XY correlation delay grows over time in `raw_lsl` mode,
-- viewer logs repeated stream-resolution or channel-label errors.
 
 ## Troubleshooting links
 

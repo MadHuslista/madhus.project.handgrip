@@ -10,23 +10,6 @@
 
 It is the stream publication boundary for the Handgrip Suite. Viewer, calibration, and recording workflows should consume its LSL outputs instead of reading firmware serial or RS485 IPC directly.
 
-## When to use this component
-
-Use this component when you need to:
-
-- publish target/reference LSL streams,
-- validate firmware D2 parsing,
-- consume the `RS485_GUI` IPC topic,
-- inspect stream/channel contracts,
-- debug timestamping, dropped samples, or stream discovery.
-
-Do not use this component to:
-
-- configure the acquisition-board front-panel menu,
-- perform calibration fitting,
-- render the main operator plots,
-- modify target firmware constants.
-
 ## First command
 
 From `LSL_Bridge/`:

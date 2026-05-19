@@ -6,43 +6,12 @@
 
 It is an observer and diagnostic tool. It should not redefine acquisition semantics, calibration math, or firmware/bridge contracts.
 
-## When to use this component
-
-Use this component when you need to:
-
-- inspect live `HandgripTarget` and `HandgripReference` streams,
-- visually validate target/reference behavior before calibration,
-- diagnose XY correlation, lag, or alignment symptoms,
-- replay CSV/XDF data for inspection,
-- check whether display-only downsampling or axis behavior affects interpretation.
-
-Do not use this component to:
-
-- acquire RS485 data directly,
-- parse target firmware UART directly,
-- fit calibration models,
-- permanently apply filtering/calibration corrections.
-
 ## First command
 
 From `LSL_Viewer/`:
 
 ```bash
 uv run lsl-viewer
-```
-
-Live reference-validation mode:
-
-```bash
-uv run lsl-viewer mode=live_with_reference_validation
-```
-
-CSV replay example:
-
-```bash
-uv run lsl-viewer mode=csv_replay \
-  reference.target_csv_path=./data/target.csv \
-  reference.reference_csv_path=./data/reference.csv
 ```
 
 ## Expected result
@@ -53,7 +22,7 @@ Expected successful behavior:
 - target and reference streams are discovered when `LSL_Bridge` is running,
 - target/reference time series update under applied force,
 - XY correlation reacts to synchronized force changes,
-- keyboard controls such as clear/pause behave as documented.
+- controls such as clear/pause behave as documented.
 
 Stop before calibration if the viewer shows missing/frozen streams or persistent growing XY delay.
 
