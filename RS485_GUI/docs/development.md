@@ -122,7 +122,7 @@ If the UI control affects acquisition, ensure the change is thread-safe. Avoid d
 Update:
 
 - `docs/configuration.md` if config-backed,
-- `docs/quickstart.md` if operator-facing,
+- `docs/workflow.md` if operator-facing,
 - e2e/UI tests if present.
 
 ## How to add logger outputs

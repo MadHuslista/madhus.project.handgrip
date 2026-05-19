@@ -1,18 +1,15 @@
 ---
 title: High-Speed Acquisition Instrument Reference
 status: canonical-reference
-source: [Documentation/high_speed_acquisition_instrument_reorganized_manual.md](../../Documentation/high_speed_acquisition_instrument_reorganized_manual.md)
 last-reviewed: 2026-05-15
-phase: 3
 ---
 
 > **Canonical status:** This is the canonical acquisition-board reference for the Handgrip Suite handoff documentation.
 >
 > **How to use:** Start here when you need the full menu map, board terminal map, RS485/Modbus/Active-Send options, analog output details, fault messages, or safety boundaries.
 >
-> **Source handling:** This document keeps the reorganized manual mostly intact. The original PDFs remain under `docs/hardware/references/acquisition-board/` as fallback vendor/source references.
+> **Fallback references:** Source PDFs are under `docs/hardware/references/acquisition-board/`.
 >
-> **Image path policy:** Images referenced from this document must live under `docs/hardware/assets/` and be linked as `assets/<file>`.
 
 # High-Speed Acquisition Instrument  
 ## Reorganized Markdown Manual for the 96×48 Dual-Display Load-Cell Indicator / Transmitter
@@ -26,23 +23,6 @@ phase: 3
 | Configure RS485 / Active-Send             | [`C5.CoM` — RS485 communication](#14-c5com--rs485-communication)                                                                               |
 | Configure PM58 calibration on the board   | [`C2.CAL` — Calibration](#11-c2cal--calibration)                                                                                               |
 | Interpret error messages                  | [Faults and status messages](#20-faults-and-status-messages)                                                                                   |
-
-
-**Document purpose.**  
-This is a reorganized, clarified Markdown version of the board manual you uploaded, adapted for the specific full-feature AC-powered unit shown in your photos. It preserves the PDF content, fixes the structure, adds practical operating procedures, and explicitly marks places where the original manual is ambiguous because of machine translation.
-
-**What I found on the web.**
-- A public duplicate of essentially the same Chinese/English manual is hosted on an AliExpress CDN.
-- I did **not** find a richer official manufacturer manual for this exact front panel / terminal map.
-- I did find several similar Chinese weighing-transmitter / force-indicator manuals that corroborate the interpretation of:
-  - the `10 / 40 / 640 / 1280 Hz` sampling-rate parameter,
-  - the speed-vs-stability tradeoff of digital filtering,
-  - the use of stability detection before accepting zeroing / calibration.
-
-**Confidence model used in this rewrite.**
-- **High confidence:** items explicitly present in the uploaded PDF and your device photos.
-- **Medium confidence:** operating procedures reconstructed from the menu structure, key legend, and behavior common to similar instruments.
-- **Lower confidence:** places where the source manual is obviously mistranslated or incomplete, especially around “dynamic tracking,” “stable weight,” and some relay / analog-output wording.
 
 ---
 
@@ -994,3 +974,59 @@ Where this Markdown provides step-by-step procedures that were **not explicitly 
 Use them as a practical commissioning guide, but validate on the real device during setup.
 
 ---
+
+## Recommended calibration configuration
+
+The following table captures the recommended menu settings for the Handgrip calibration reference chain. The priority is reproducible calibration, not generic weighing-indicator operation.
+
+### System settings (`C1.SyS`)
+
+| Menu code | Label             | Recommended value | Effect                                    | Risk if wrong                                     |
+| --------- | ----------------- | ----------------- | ----------------------------------------- | ------------------------------------------------- |
+| `100.SP`  | Internal sampling | `640 Hz`          | Internal ADC acquisition rate             | Too low loses timing detail                       |
+| `101.GA`  | ADC gain          | `128B`            | Matches PM58 mV/V range to ADC resolution | Wrong gain can saturate or reduce resolution      |
+| `102.ME`  | Median filter     | `3`               | Suppresses impulse outliers               | Too high adds lag                                 |
+| `103.rV`  | Average filter    | `5`               | Modest reference smoothing                | Too high adds lag                                 |
+| `105.uN`  | Unit              | `N`               | Reference force in Newtons                | Unit mismatch causes conversion errors in reports |
+| `106.bi`  | Decimal point     | `1`               | Display granularity                       | Too fine makes stability windows unrealistic      |
+| `108.ro`  | Maximum range     | `900.0 N`         | Defines operating cap                     | Unsafe or saturated range if wrong                |
+| `109.di`  | DI input function | `NoNE`            | Prevents accidental remote zero/tare      | Stray input can silently zero during calibration  |
+
+### Reference calibration (`C2.CAL`)
+
+| Menu code | Label                 | Recommended value | Notes                                                       |
+| --------- | --------------------- | ----------------- | ----------------------------------------------------------- |
+| `201.Mo`  | Calibration mode      | `Load`            | Use known-load calibration; datasheet mode is lower quality |
+| `204.SE`  | Datasheet sensitivity | `1.504 mV/V`      | PM58 certificate value; used for datasheet backup mode      |
+| `205.rE`  | Excitation            | `5.000 V`         | Board excitation reference                                  |
+
+### Advanced functions (`C4.AdV`) — disable hidden corrections
+
+| Menu code | Label                | Recommended value | Why                                             |
+| --------- | -------------------- | ----------------- | ----------------------------------------------- |
+| `400.CV`  | Creep tracking       | `0`               | Hides real drift during calibration             |
+| `401.dZ`  | Display zero mask    | `0`               | Hides real offset                               |
+| `402.tV`  | Dynamic tracking     | `0`               | Can distort force trace                         |
+| `404.SV`  | Stable weight switch | `0`               | Hides evolving signal                           |
+| `406.PZ`  | Power-on zero        | `0`               | Prevents silent baseline shift at startup       |
+| `409.AZ`  | Auto-zero            | `0`               | Prevents hidden drift correction during session |
+
+### RS485 communication (`C5.CoM`)
+
+| Menu code | Label            | Recommended value | Notes                                  |
+| --------- | ---------------- | ----------------- | -------------------------------------- |
+| `500.Ar`  | Address          | `1`               | Must match `RS485_GUI` config          |
+| `501.br`  | Baud             | `460800`          | Required for Active-Send at 500 Hz     |
+| `502.Vb`  | Parity           | `none`            | Must match `RS485_GUI` config          |
+| `503.so`  | Stop bits        | `1`               | Must match `RS485_GUI` config          |
+| `504.AS`  | RS485 mode       | `1` (Active-Send) | Recommended; `0` = Modbus RTU fallback |
+| `505.AF`  | Active-Send rate | `500 Hz`          | High enough to preserve timing detail  |
+
+### Commissioning sequence
+
+1. Configure `C1.SyS` system settings.
+2. Configure `C2.CAL` reference calibration with a known traceable load.
+3. Disable hidden corrections under `C4.AdV`.
+4. Configure RS485 under `C5.CoM`.
+5. Validate reference acquisition in `RS485_GUI` before calibration recording.
+6. Backup settings only after validation.

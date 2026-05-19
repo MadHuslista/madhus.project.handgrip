@@ -70,7 +70,7 @@ Canonical mapping:
 - **Do:** Connect the target handgrip sensor path to the Arduino/HX711 firmware device.
 - **Expected result:** Arduino powers over USB and firmware emits D2 frames after upload.
 - **Failure signal:** No serial device appears, no D2 frames appear, or status indicates acquisition faults.
-- **Next branch:** Use [`docs/workflows/firmware-setup.md`](firmware-setup.md) and [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md).
+- **Next branch:** Use [`Handgrip_Firmware/docs/workflow.md`](../../Handgrip_Firmware/docs/workflow.md) and [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md).
 
 Minimum validation:
 

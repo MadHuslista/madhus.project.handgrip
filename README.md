@@ -28,7 +28,7 @@ flowchart TD
 
 Following the system architecture, here are the entry points and purposes for each module:
 
-- [PM58 Load Cell & Acquisition Board](docs/workflows/physical_setup.md): Physical sensing and wiring stack for the reference-force acquisition board. 
+- [PM58 Load Cell & Acquisition Board](docs/workflows/physical-setup.md): Physical sensing and wiring stack for the reference-force acquisition board. 
 - [RS485_GUI](RS485_GUI/docs/index.md): GUI tool for connecting to the PM58 acquisition board and stream to the LSL_Bridge layer on real-time. 
 - [Handgrip_Firmware](Handgrip_Firmware/docs/index.md): Firmware that samples the Handgrip's HX711 load-cell data ready telemetry over for UART serial. 
 - [LSL_Bridge](LSL_Bridge/docs/index.md): Middleware that ingests both signals and publishes a synchronized Lab Streaming Layer streams (`HandgripTarget`, `HandgripReference`). 
@@ -77,12 +77,12 @@ For the full operational path, read [`docs/workflows/full-live-viewer-quickstart
 | Workflow                  | Purpose                                                                       | Document                                                                                         |
 | ------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Physical setup            | Connect PM58, handgrip, acquisition board, RS485, and host PC safely          | [`docs/workflows/physical-setup.md`](docs/workflows/physical-setup.md)                           |
-| Firmware setup            | Build/upload Arduino Nano firmware and validate serial frames                 | [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md)                           |
+| Firmware setup            | Build/upload Arduino Nano firmware and validate serial frames                 | [`Handgrip_Firmware/docs/workflow.md`](Handgrip_Firmware/docs/workflow.md)                       |
 | Target-only quickstart    | Validate target firmware → bridge → `HandgripTarget` without reference chain  | [`docs/workflows/target-only-quickstart.md`](docs/workflows/target-only-quickstart.md)           |
 | Reference-only quickstart | Validate acquisition board → RS485 GUI → IPC without target chain             | [`docs/workflows/reference-only-quickstart.md`](docs/workflows/reference-only-quickstart.md)     |
 | Full live viewer          | Start RS485 GUI, LSL bridge, and viewer in the correct order                  | [`docs/workflows/full-live-viewer-quickstart.md`](docs/workflows/full-live-viewer-quickstart.md) |
 | Handgrip calibration      | Record calibration sessions, fit models, generate reports, validate constants | [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md)               |
-| Handgrip analysis         | Run target offline signal characterization and filter-design workflows               | [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                     |
+| Handgrip analysis         | Run target offline signal characterization and filter-design workflows        | [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                     |
 
 ## Components
 
@@ -98,14 +98,15 @@ For the full operational path, read [`docs/workflows/full-live-viewer-quickstart
 
 ## What to read and when
 
-| I want...                             | Start here                                                                                                   | Then read                                                                                                                                                                                                                                  |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Understand what the whole suite does. | [`docs/start-here.md`](docs/start-here.md)                                                                   | [`docs/system-overview.md`](docs/system-overview.md), [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                     |
-| See what to connect physically        | [`docs/workflows/physical-setup.md`](docs/workflows/physical-setup.md)                                       | [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md), [`docs/workflows/full-live-viewer-quickstart.md`](docs/workflows/full-live-viewer-quickstart.md), [`docs/troubleshooting/index.md`](docs/troubleshooting/index.md) |
-| Understand repo structure             | [`docs/development/python-project-structure-primer.md`](docs/development/python-project-structure-primer.md) | Component docs under `*/docs/index.md`, [`docs/architecture/repository-layout.md`](docs/architecture/repository-layout.md), [`docs/configuration/index.md`](docs/configuration/index.md)                                                   |
-| Load the Handgrip Firmware            | [`Handgrip_Firmware/README.md`](Handgrip_Firmware/README.md)                                                 | [`Handgrip_Firmware/docs/index.md`](Handgrip_Firmware/docs/index.md), [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md)                                                                                               |
-| Calibrate the Handgrip                | [`Handgrip_Calibration/docs/index.md`](Handgrip_Calibration/docs/index.md)                                   | [`Handgrip_Analysis/docs/index.md`](Handgrip_Analysis/docs/index.md), [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)     |
-| Extend the features                   | [`docs/system-overview.md`](docs/system-overview.md)                                                         | [`docs/architecture/index.md`](docs/architecture/index.md), [`docs/hardware/index.md`](docs/hardware/index.md), [`docs/archive/index.md`](docs/archive/index.md)                                                                           |
+| I want to…                           | Start here                                                                                                   | Then read                                                                                                                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Understand what the whole suite does | [`docs/system-overview.md`](docs/system-overview.md)                                                         | [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)             |
+| Connect hardware                     | [`docs/workflows/physical-setup.md`](docs/workflows/physical-setup.md)                                       | [`Handgrip_Firmware/docs/workflow.md`](Handgrip_Firmware/docs/workflow.md), [`docs/workflows/full-live-viewer-quickstart.md`](docs/workflows/full-live-viewer-quickstart.md) |
+| Understand repo structure            | [`docs/development/python-project-structure-primer.md`](docs/development/python-project-structure-primer.md) | Component `*/docs/index.md` files, [`docs/architecture/repository-layout.md`](docs/architecture/repository-layout.md)                                                        |
+| Build/upload firmware                | [`Handgrip_Firmware/docs/workflow.md`](Handgrip_Firmware/docs/workflow.md)                                   | [`Handgrip_Firmware/docs/index.md`](Handgrip_Firmware/docs/index.md)                                                                                                         |
+| Calibrate the handgrip               | [`docs/workflows/handgrip-calibration.md`](docs/workflows/handgrip-calibration.md)                           | [`Handgrip_Calibration/docs/workflow.md`](Handgrip_Calibration/docs/workflow.md)                                                                                             |
+| Run signal analysis                  | [`docs/workflows/handgrip-analysis.md`](docs/workflows/handgrip-analysis.md)                                 | [`Handgrip_Analysis/docs/workflow.md`](Handgrip_Analysis/docs/workflow.md)                                                                                                   |
+| Troubleshoot a problem               | [`docs/troubleshooting/index.md`](docs/troubleshooting/index.md)                                             | Component `*/docs/` troubleshooting links                                                                                                                                    |
 
 
 ## Installation and validation
@@ -141,22 +142,17 @@ pio run -e nanoatmega328 -t upload
 pio device monitor -e nanoatmega328
 ```
 
-Read [`docs/workflows/firmware-setup.md`](docs/workflows/firmware-setup.md) before uploading or changing firmware constants.
+Read [`Handgrip_Firmware/docs/workflow.md`](Handgrip_Firmware/docs/workflow.md) before uploading or changing firmware constants.
 
 ## Documentation map
 
 Start at [`docs/index.md`](docs/index.md).
 
-High-level navigation:
-
-- [`docs/start-here.md`](docs/start-here.md) — friendly conceptual introduction.
-- [`docs/system-overview.md`](docs/system-overview.md) — architecture without code internals.
+- [`docs/system-overview.md`](docs/system-overview.md) — what the suite does, physical chains, dataflow, start order.
 - [`docs/workflows/`](docs/workflows/) — operator workflows.
-- [`docs/hardware/`](docs/hardware/) — physical setup, PM58, acquisition board, references, photos.
-- [`docs/configuration/`](docs/configuration/) — configuration references.
+- [`docs/hardware/`](docs/hardware/) — physical setup, PM58, acquisition board, references.
+- [`docs/configuration/`](docs/configuration/) — configuration reference map.
 - [`docs/architecture/`](docs/architecture/) — dataflow, stream contracts, runtime processes.
-- [`docs/development/`](docs/development/) — source-layout, extension, testing, maintenance.
-- [`docs/troubleshooting/`](docs/troubleshooting/) — symptom-first troubleshooting.
-- [`docs/examples/`](docs/examples/) — curated example outputs.
-- [`docs/archive/`](docs/archive/) — historical/deprecated material.
+- [`docs/development/`](docs/development/) — source layout, extension, testing.
+- [`docs/troubleshooting/`](docs/troubleshooting/) — symptom-first debugging.
 

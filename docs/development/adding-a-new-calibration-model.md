@@ -16,7 +16,7 @@
 | [`Handgrip_Calibration/docs/fitting-and-model-selection.md`](../../Handgrip_Calibration/docs/fitting-and-model-selection.md)   | Model rationale, metrics, residual interpretation.            |
 | [`Handgrip_Calibration/docs/reports-and-outputs.md`](../../Handgrip_Calibration/docs/reports-and-outputs.md)                   | New fit/report artifacts if any.                              |
 | [`Handgrip_Calibration/docs/applying-calibration-results.md`](../../Handgrip_Calibration/docs/applying-calibration-results.md) | Deployment guidance if model is deployable.                   |
-| [`docs/configuration/handgrip-calibration.md`](../configuration/handgrip-calibration.md)                                       | Root config reference if config keys are user-facing.         |
+| [`Handgrip_Calibration/docs/configuration.md`](../../Handgrip_Calibration/docs/configuration.md)                               | Config reference if config keys are user-facing.              |
 | tests under `Handgrip_Calibration/tests/`                                                                                      | Synthetic, noisy, outlier, and report behavior tests.         |
 
 ## Data contracts affected

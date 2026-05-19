@@ -2,72 +2,39 @@
 
 ## Summary
 
-- `LSL_Viewer` is the browser-based visualization component for live LSL streams and CSV/XDF replay.
-- It is an observer/diagnostic tool: it must not redefine acquisition, calibration, or stream semantics.
-- It displays `HandgripTarget`, `HandgripReference`, time-series panels, XY correlation, timing diagnostics, and optional calibration marker overlays.
-- Display downsampling and XY alignment are **viewer-local** operations. They do not modify LSL streams, replay files, or calibration data.
+- `LSL_Viewer` provides real-time visualization of LSL streams and replay of saved CSV/XDF files.
+- It displays target/reference time series, timing diagnostics, and XY correlation.
+- It does not create scientific source data. Its outputs are browser visualization and diagnostic logs.
 
-## Audience
+## Component contract
 
-| Reader               | Use this page to...                                                                 |
-| -------------------- | ----------------------------------------------------------------------------------- |
-| Operator             | Start the viewer and validate expected plots before calibration.                    |
-| Calibration operator | Check target/reference behavior and XY correlation without changing data semantics. |
-| Maintainer           | Find configuration, architecture, and development references.                       |
-| Student developer    | Learn where to add plots, controls, channel labels, or replay behavior safely.      |
-
-## Component boundary
-
-`LSL_Viewer` consumes data from:
-
-- live LSL streams published by `LSL_Bridge`,
-- CSV replay files from bridge/calibration outputs,
-- XDF replay files when `pyxdf` is installed,
-- optional calibration marker event files.
-
-It does **not** own:
-
-- firmware serial parsing,
-- RS485 acquisition,
-- LSL stream publication,
-- calibration model fitting,
-- persistent DSP/filter deployment.
+| Contract                | Value                                                                |
+| ----------------------- | -------------------------------------------------------------------- |
+| Primary command         | `uv run lsl-viewer`                                                  |
+| Main config             | `LSL_Viewer/conf/config.yaml`                                        |
+| Modes                   | `live`, `live_with_reference_validation`, `csv_replay`, `xdf_replay` |
+| Default browser address | `http://127.0.0.1:8765`                                              |
 
 ## Documentation map
 
-| Document                                         | Purpose                                                      |
-| ------------------------------------------------ | ------------------------------------------------------------ |
-| [`quickstart.md`](quickstart.md)                 | Run the live viewer and validate expected plots.             |
-| [`configuration.md`](configuration.md)           | Full `conf/config.yaml` reference.                           |
-| [`xy-correlation.md`](xy-correlation.md)         | XY plot behavior, alignment policy, lag troubleshooting.     |
-| [`live-csv-xdf-modes.md`](live-csv-xdf-modes.md) | Live mode, live validation mode, CSV replay, XDF replay.     |
-| [`architecture.md`](architecture.md)             | Stream buffers, UI refresh, plotting model, marker overlays. |
-| [`development.md`](development.md)               | Add plots, signals, toggles, replay behavior, and tests.     |
+| Document                                       | Purpose                                                                    |
+| ---------------------------------------------- | -------------------------------------------------------------------------- |
+| [workflow.md](workflow.md)                     | Live, CSV replay, and XDF replay modes; expected display behavior          |
+| [configuration.md](configuration.md)           | Full config reference: mode, stream names, replay paths, server, rendering |
+| [live-csv-xdf-modes.md](live-csv-xdf-modes.md) | Mode details and replay-specific behavior                                  |
+| [xy-correlation.md](xy-correlation.md)         | XY correlation panel interpretation and axis-lock behavior                 |
+| [architecture.md](architecture.md)             | Core/viz layers and runtime dataflow                                       |
+| [development.md](development.md)               | How to add panels, charts, modes, and tests                                |
 
-## Related system docs
+## Reading guide
 
-| System doc                                                                                                                   | Why it matters                                                 |
-| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| [`../../docs/workflows/full-live-viewer-quickstart.md`](../../docs/workflows/full-live-viewer-quickstart.md)                 | Full process order: `RS485_GUI` → `LSL_Bridge` → `LSL_Viewer`. |
-| [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md)                                 | Canonical target/reference/event stream contracts.             |
-| [`../../docs/architecture/timestamping-and-synchronization.md`](../../docs/architecture/timestamping-and-synchronization.md) | Timing assumptions and lag diagnosis.                          |
-| [`../../docs/workflows/handgrip-calibration.md`](../../docs/workflows/handgrip-calibration.md)                               | How viewer validation fits into calibration.                   |
-| [`../../docs/troubleshooting/viewer-lag-or-xy-delay.md`](../../docs/troubleshooting/viewer-lag-or-xy-delay.md)               | Symptom-first lag troubleshooting once created.                |
+- To start the viewer in any mode: [LSL_Viewer/docs/workflow.md](workflow.md)
+- To configure stream names or replay paths: [LSL_Viewer/docs/configuration.md](configuration.md)
+- To understand XY correlation behavior: [LSL_Viewer/docs/xy-correlation.md](xy-correlation.md)
+- To understand the codebase: [LSL_Viewer/docs/architecture.md](architecture.md)
 
-## Expected runtime streams
+## Related docs
 
-| Stream                                     | Producer               | Viewer role                                              |
-| ------------------------------------------ | ---------------------- | -------------------------------------------------------- |
-| `HandgripTarget`                           | `LSL_Bridge`           | Target raw count, filtered/current units, device timing. |
-| `HandgripReference`                        | `LSL_Bridge`           | Reference force and reference timing.                    |
-| `HandgripCalibrationMarkers` / events file | `Handgrip_Calibration` | Optional marker overlays during replay/analysis.         |
-
-## Validation checklist
-
-- [ ] [`README.md`](../../README.md) links to this component docs index.
-- [ ] [`quickstart.md`](quickstart.md) explains live viewer startup and expected plots.
-- [ ] [`configuration.md`](configuration.md) documents all top-level `conf/config.yaml` sections.
-- [ ] [`xy-correlation.md`](xy-correlation.md) clearly states that XY alignment is display-only.
-- [ ] [`live-csv-xdf-modes.md`](live-csv-xdf-modes.md) distinguishes live and replay behavior.
-- [ ] [`architecture.md`](architecture.md) identifies buffer/UI/plotting boundaries.
-- [ ] [`development.md`](development.md) names relevant source files and tests.
+- [docs/workflows/full-live-viewer-quickstart.md](../../docs/workflows/full-live-viewer-quickstart.md) — multi-component live viewer workflow
+- [docs/architecture/timestamping-and-synchronization.md](../../docs/architecture/timestamping-and-synchronization.md)
+- [docs/troubleshooting/viewer-lag-or-xy-delay.md](../../docs/troubleshooting/viewer-lag-or-xy-delay.md)

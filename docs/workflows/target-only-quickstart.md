@@ -1,9 +1,8 @@
 # Target-Only Quickstart
 
 **Status:** Canonical operator quickstart  
-**Audience:** Operators and maintainers  
 **Scope:** Validate Arduino/HX711 target device and `HandgripTarget` stream without requiring the reference board  
-**Related docs:** [`docs/workflows/firmware-setup.md`](firmware-setup.md), [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md)
+**Related docs:** [`Handgrip_Firmware/docs/workflow.md`](../../Handgrip_Firmware/docs/workflow.md), [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md)
 
 ## Summary
 

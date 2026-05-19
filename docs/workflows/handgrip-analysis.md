@@ -1,146 +1,63 @@
 # Handgrip Analysis Workflow
 
-**Status:** Canonical operator workflow  
-**Audience:** Maintainers, analysts, and principal investigator  
-**Scope:** Offline signal analysis, stage execution, manifests, outputs, Stage 6 filter design interpretation  
-**Related docs:** [`Handgrip_Analysis/README.md`](../../Handgrip_Analysis/README.md), [`Handgrip_Analysis/docs/stages.md`](../../Handgrip_Analysis/docs/stages.md), [`Handgrip_Analysis/docs/filter-design.md`](../../Handgrip_Analysis/docs/filter-design.md)
-
 ## Summary
 
-`Handgrip_Analysis` is the offline analysis framework for characterizing signal quality and evaluating DSP/filter alternatives. It should consume saved calibration/session/CSV data, not live streams, unless a future stage explicitly documents live behavior.
+This workflow runs after calibration session data exists. It covers preparing inputs, running analysis stages, and applying filter recommendations from Stage 6.
 
-## 1 — Required input data organization
+For the full step-by-step workflow — including recording source data, exporting files, creating manifests, and running each stage — see [Handgrip_Analysis/docs/workflow.md](../../Handgrip_Analysis/docs/workflow.md).
 
-Inputs should be organized so every run can be traced back to a source session or source file.
+## Required upstream state
 
-Recommended structure:
+Before running analysis:
 
-```text
-Handgrip_Analysis/
-├── data/
-│   ├── manifests/
-│   ├── raw/ or imported/
-│   └── analysis_results/
-└── conf/
-```
+1. At least one calibration session recorded and files exported. See [docs/workflows/handgrip-calibration.md](handgrip-calibration.md).
+2. Target signal CSVs placed in `Handgrip_Analysis/data/calibration_signals/`.
+3. A manifest CSV created or updated under `Handgrip_Analysis/data/manifests/`. See [Handgrip_Analysis/docs/workflow.md — Phase 1](../../Handgrip_Analysis/docs/workflow.md).
+4. `uv sync` completed.
 
-Each input file should have clear provenance:
-
-- source session ID,
-- date/time,
-- target/reference identity,
-- protocol name,
-- relevant config snapshot or link.
-
-## 2 — Manifest requirements
-
-A manifest should tell the analysis stage what files to load and how to label them.
-
-Minimum expected manifest concepts:
-
-| Field class            | Purpose                                             |
-| ---------------------- | --------------------------------------------------- |
-| source path            | CSV/session file to analyze.                        |
-| session/protocol label | Human-readable provenance.                          |
-| signal/channel mapping | Which columns represent time/value/force/raw count. |
-| condition label        | Rest/load/dynamic/filter candidate/etc.             |
-| output grouping        | How reports aggregate results.                      |
-
-If a stage fails because a column is missing, fix the manifest or input export instead of hard-coding path-specific behavior.
-
-## 3 — Stage list
-
-| Stage   | Purpose                           | Typical output                        |
-| ------- | --------------------------------- | ------------------------------------- |
-| Stage 1 | Startup/warm-up behavior          | stabilization metrics and plots.      |
-| Stage 2 | Static rest noise                 | noise metrics, PSD/bandpower.         |
-| Stage 3 | Loaded drift/creep                | drift slopes and hold stability.      |
-| Stage 4 | Real handgrip dynamics            | rise/peak/release dynamics.           |
-| Stage 5 | Interference/condition comparison | condition comparison report.          |
-| Stage 6 | Filter candidate benchmark/design | rankings, recommendation YAML/report. |
-
-## 4 — Commands to run all vs single stages
-
-Exact CLI names may vary by installed package entry points. Use the component README and `--help` to confirm.
-
-From `Handgrip_Analysis/`:
+## Quick command reference
 
 ```bash
 cd Handgrip_Analysis
-uv run ha-stage --help
-```
 
-Single-stage example:
+# Run all stages from a manifest
+uv run ha-run-all \
+  manifest=data/manifests/all_runnable_manifest.csv \
+  base_outdir=data/analysis_results/batch_run
 
-```bash
+# Run Stage 6 filter design
 uv run ha-stage stage=stage6 \
   manifest=data/manifests/stage6_filter_review_manifest.csv \
   outdir=data/analysis_results/stage6 \
   filter_config=conf/filters/candidates.yaml
 ```
 
-If the current CLI uses a different command shape, update this workflow and [`Handgrip_Analysis/docs/quickstart.md`](../../Handgrip_Analysis/docs/quickstart.md) together.
+## Stage summary
 
-## 5 — Output locations
+| Stage   | Purpose                                       |
+| ------- | --------------------------------------------- |
+| Stage 1 | Startup and warm-up behavior                  |
+| Stage 2 | Static rest noise                             |
+| Stage 3 | Loaded drift and creep                        |
+| Stage 4 | Real grip dynamics                            |
+| Stage 5 | Interference/condition comparison             |
+| Stage 6 | Filter candidate benchmark and recommendation |
 
-Typical output locations:
+## Applying filter recommendations
 
-| Output                 | Typical location                                                     |
-| ---------------------- | -------------------------------------------------------------------- |
-| stage reports          | `Handgrip_Analysis/data/analysis_results/<stage>/`                   |
-| figures                | stage output folder or configured plot path                          |
-| metrics                | JSON/CSV in stage output folder                                      |
-| Stage 6 recommendation | `lsl_bridge_processing_recommendation.yaml` or configured equivalent |
-| curated examples       | `docs/examples/analysis-output/`                                     |
+After Stage 6, apply the recommendation based on target:
 
-Generated analysis output is not canonical documentation unless curated under `docs/examples/`.
+| Target                  | Action                                                       |
+| ----------------------- | ------------------------------------------------------------ |
+| `LSL_Bridge` processing | Update processing config; validate live stream behavior      |
+| Viewer display only     | Update viewer config only                                    |
+| Firmware                | Only if filter must exist on-device; re-validate calibration |
+| Analysis only           | Keep in analysis config/report                               |
 
-## 6 — Interpretation of Stage 6 filter design outputs
+## Detailed documentation
 
-Stage 6 should answer:
-
-1. Which filter candidates were evaluated?
-2. Which metrics were used?
-3. Which candidate best balances noise reduction, lag, signal distortion, and implementation complexity?
-4. Whether the recommendation should be applied in firmware, `LSL_Bridge`, viewer display only, or analysis only.
-
-Interpretation rules:
-
-- Prefer filters that improve signal quality without hiding important dynamics.
-- Do not choose a filter solely because it looks smoother.
-- Treat latency/phase behavior as calibration-relevant.
-- Preserve raw data whenever possible.
-
-## 7 — What to do with selected filter recommendations
-
-| Recommendation target   | Action                                                                                          |
-| ----------------------- | ----------------------------------------------------------------------------------------------- |
-| `LSL_Bridge` processing | Copy/update relevant processing config and validate live stream behavior.                       |
-| Viewer display only     | Change viewer config, not acquisition data path.                                                |
-| Firmware                | Update firmware only if the filter must exist on-device; validate serial and calibration again. |
-| Analysis only           | Keep recommendation in analysis config/report; do not alter live acquisition.                   |
-
-After applying a filter recommendation, rerun a validation subset and compare:
-
-- raw vs filtered signal,
-- lag/phase behavior,
-- calibration residuals,
-- dynamic trial behavior.
-
-## Stop conditions
-
-Stop and troubleshoot if:
-
-- manifest points to missing files,
-- required columns are absent,
-- stage output is empty,
-- Stage 6 report lacks candidate comparison,
-- recommendation cannot be traced back to metrics,
-- selected filter changes calibration interpretation without a validation run.
-
-## Troubleshooting links
-
-- [`Handgrip_Analysis/README.md`](../../Handgrip_Analysis/README.md)
-- [`Handgrip_Analysis/docs/configuration.md`](../../Handgrip_Analysis/docs/configuration.md)
-- [`Handgrip_Analysis/docs/filter-design.md`](../../Handgrip_Analysis/docs/filter-design.md)
-- [`docs/architecture/data-and-output-lifecycle.md`](../architecture/data-and-output-lifecycle.md)
+- [Handgrip_Analysis/docs/workflow.md](../../Handgrip_Analysis/docs/workflow.md) — complete step-by-step workflow
+- [Handgrip_Analysis/docs/stages.md](../../Handgrip_Analysis/docs/stages.md) — stage details and interpretation
+- [Handgrip_Analysis/docs/filter-design.md](../../Handgrip_Analysis/docs/filter-design.md) — Stage 6 interpretation
+- [Handgrip_Analysis/docs/configuration.md](../../Handgrip_Analysis/docs/configuration.md) — config reference
+- [docs/troubleshooting/analysis-pipeline.md](../troubleshooting/analysis-pipeline.md)

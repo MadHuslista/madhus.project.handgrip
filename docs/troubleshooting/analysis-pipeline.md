@@ -85,5 +85,5 @@ Do not apply filter recommendations if:
 
 ```bash
 rg 'Stage 6|filter design|lsl_bridge_processing_recommendation.yaml' Handgrip_Analysis/docs docs/examples/analysis-output/README.md
-rg 'ha-run-all|ha-stage|ha-stage6' Handgrip_Analysis/docs/quickstart.md Handgrip_Analysis/docs/development.md
+rg 'ha-run-all|ha-stage|ha-stage6' Handgrip_Analysis/docs/workflow.md Handgrip_Analysis/docs/development.md
 ```

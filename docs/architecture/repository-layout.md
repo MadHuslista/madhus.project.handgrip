@@ -20,7 +20,6 @@ handgrip-suite/
 ├── pyproject.toml
 ├── platformio.ini
 ├── docs/
-├── Documentation/                  # legacy/source material; not the canonical entry point
 ├── Handgrip_Firmware/
 ├── RS485_GUI/
 ├── LSL_Bridge/
@@ -40,7 +39,6 @@ handgrip-suite/
 | `Handgrip_Calibration/` | Python CLI package            | Calibration sessions, fitting, reports, holdout validation | [`Handgrip_Calibration/README.md`](../../Handgrip_Calibration/README.md) |
 | `Handgrip_Analysis/`    | Python CLI package            | Offline analysis stages and filter design                  | [`Handgrip_Analysis/README.md`](../../Handgrip_Analysis/README.md)       |
 | `docs/`                 | Markdown documentation        | Canonical system docs                                      | [`docs/index.md`](../index.md)                                           |
-| `Documentation/`        | Legacy/source material        | Source references and historical docs                      | Archive/migration source only                                            |
 
 ## Where to edit
 
@@ -92,7 +90,7 @@ Component-level docs:
 ```text
 <Component>/docs/
 ├── index.md
-├── quickstart.md
+├── workflow.md
 ├── configuration.md
 ├── architecture.md
 └── development.md
