@@ -1,10 +1,5 @@
 # Reference-Only Quickstart
 
-**Status:** Canonical operator quickstart  
-**Audience:** Operators and maintainers  
-**Scope:** Validate PM58/acquisition-board → RS485 → `RS485_GUI` path before running the bridge  
-**Related docs:** [`docs/workflows/physical-setup.md`](physical-setup.md), [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md)
-
 ## Summary
 
 Use this workflow to validate the reference chain independently. The expected endpoint is live reference values in `RS485_GUI` and IPC publication to `rs485.measurement.v1`.
@@ -27,6 +22,8 @@ uv run rs485-gui serial.default_port=/dev/ttyUSB_RS485
 
 Replace `/dev/ttyUSB_RS485` with the USB-RS485 adapter path.
 
+After GUI opens, click "Connect" to start acquisition and IPC publishing.   
+
 ## Expected result
 
 - GUI opens in the browser.
@@ -43,15 +40,10 @@ Replace `/dev/ttyUSB_RS485` with the USB-RS485 adapter path.
 | IPC                  | ZeroMQ endpoint configured in `RS485_GUI/config/config.yaml` |
 | board display        | acquisition-board front panel                                |
 
-## Stop conditions
+## Related docs
+- [`docs/workflows/physical-setup.md`](physical-setup.md)
+- [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md)
 
-Stop before launching `LSL_Bridge` if:
-
-- board display does not react to force,
-- `RS485_GUI` receives no frames,
-- serial port is unknown,
-- Active-Send parser reports continuous malformed frames,
-- Modbus fallback polling cannot read documented values.
 
 ## Troubleshooting links
 

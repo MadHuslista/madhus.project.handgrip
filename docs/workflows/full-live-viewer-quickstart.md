@@ -1,10 +1,5 @@
 # Full Live Viewer Quickstart
 
-**Status:** Canonical operator quickstart  
-**Audience:** Operators and student maintainers  
-**Scope:** Start full live system: reference acquisition, LSL bridge, and viewer  
-**Related docs:** [`docs/architecture/runtime-processes.md`](../architecture/runtime-processes.md), [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)
-
 ## Summary
 
 This workflow starts the full live stack so the operator can see target and reference signals together in `LSL_Viewer`.
@@ -19,9 +14,8 @@ Start order:
 
 - Physical setup validated.
 - Firmware setup validated and D2 lines visible.
-- Reference-only quickstart passes.
+- Reference-only workflow passes.
 - Target serial port and RS485 serial port are known.
-- Prior Phase 4 stream-contract docs are installed.
 
 ## Commands
 
@@ -31,6 +25,8 @@ Start order:
 cd RS485_GUI
 uv run rs485-gui serial.default_port=/dev/ttyUSB_RS485
 ```
+
+After GUI opens, click "Connect" to start acquisition and IPC publishing.   
 
 ### Terminal 2 — LSL bridge
 
@@ -64,16 +60,10 @@ Replace serial paths with stable `/dev/serial/by-id/...` paths when possible.
 | `LSL_Bridge` | bridge logs, optional target/reference CSVs, LSL streams. |
 | `LSL_Viewer` | browser view, optional viewer logs.                       |
 
-## Stop conditions
+## Related docs
+- [`docs/architecture/runtime-processes.md`](../architecture/runtime-processes.md)
+- [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)
 
-Stop before calibration if:
-
-- only one LSL stream appears,
-- viewer shows frozen target or reference,
-- force changes only one chain,
-- XY plot delay grows over time,
-- bridge logs continuous parser errors,
-- preflight would fail stream discovery.
 
 ## Troubleshooting links
 

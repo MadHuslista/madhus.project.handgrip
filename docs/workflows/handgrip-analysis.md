@@ -10,10 +10,10 @@ For the full step-by-step workflow — including recording source data, exportin
 
 Before running analysis:
 
-1. At least one calibration session recorded and files exported. See [docs/workflows/handgrip-calibration.md](handgrip-calibration.md).
+1. At least calibration sessions 1-4's recorded files are exported. See [docs/workflows/handgrip-calibration.md](handgrip-calibration.md).
 2. Target signal CSVs placed in `Handgrip_Analysis/data/calibration_signals/`.
-3. A manifest CSV created or updated under `Handgrip_Analysis/data/manifests/`. See [Handgrip_Analysis/docs/workflow.md — Phase 1](../../Handgrip_Analysis/docs/workflow.md).
-4. `uv sync` completed.
+3. A manifests CSV created or updated under `Handgrip_Analysis/data/manifests/` that hold the paths to the exported files under `Handgrip_Analysis/data/calibration_signals/`. See [Handgrip_Analysis/docs/workflow.md — Phase 1](../../Handgrip_Analysis/docs/workflow.md).
+5. `uv sync` completed.
 
 ## Quick command reference
 

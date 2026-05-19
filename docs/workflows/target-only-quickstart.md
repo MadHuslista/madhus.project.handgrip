@@ -1,9 +1,5 @@
 # Target-Only Quickstart
 
-**Status:** Canonical operator quickstart  
-**Scope:** Validate Arduino/HX711 target device and `HandgripTarget` stream without requiring the reference board  
-**Related docs:** [`Handgrip_Firmware/docs/workflow.md`](../../Handgrip_Firmware/docs/workflow.md), [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md)
-
 ## Summary
 
 Use this workflow when you only need to validate the handgrip target path: firmware serial output → `LSL_Bridge` → `HandgripTarget` LSL stream.
@@ -23,7 +19,6 @@ From the repository root or from `LSL_Bridge/`, depending on your environment se
 cd LSL_Bridge
 uv run lsl-bridge serial.port=/dev/ttyUSB_TARGET
 ```
-
 Replace `/dev/ttyUSB_TARGET` with the Arduino target path. Prefer `/dev/serial/by-id/...` when available.
 
 ## Expected result
@@ -53,9 +48,10 @@ rg "HandgripTarget" LSL_Bridge docs
 rg "D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>" Handgrip_Firmware docs
 ```
 
-## Stop conditions
+## Related docs
+- [`Handgrip_Firmware/docs/workflow.md`](../../Handgrip_Firmware/docs/workflow.md)
+- [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md)
 
-Stop and troubleshoot before proceeding if any required stream, serial device, or expected output is missing. Do not continue into calibration when only one of the target/reference chains is validated.
 
 ## Troubleshooting links
 

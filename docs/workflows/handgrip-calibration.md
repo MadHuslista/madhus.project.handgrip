@@ -10,7 +10,7 @@ For the full step-by-step workflow — preflight, recording, fitting, reporting,
 
 Before calibrating:
 
-1. PM58 and handgrip mechanically in the same force path. See [docs/workflows/physical-setup.md](physical-setup.md).
+1. PM58 and handgrip setup mechanically in series, so the force applied to the setup can be shared equally by both devices. See [docs/workflows/physical-setup.md](physical-setup.md).
 2. Firmware emitting D2 frames. See [Handgrip_Firmware/docs/workflow.md](../../Handgrip_Firmware/docs/workflow.md).
 3. `RS485_GUI` running and reference data updating. See [RS485_GUI/docs/workflow.md](../../RS485_GUI/docs/workflow.md).
 4. `LSL_Bridge` publishing `HandgripTarget` and `HandgripReference`. See [LSL_Bridge/docs/workflow.md](../../LSL_Bridge/docs/workflow.md).

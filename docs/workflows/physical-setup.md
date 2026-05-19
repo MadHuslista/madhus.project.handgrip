@@ -1,10 +1,5 @@
 # Physical Setup Workflow
 
-**Status:** Canonical operator workflow  
-**Audience:** Lab operators and student maintainers  
-**Scope:** Hardware identification, wiring, power-up, host serial validation, and force-path validation  
-**Related docs:** [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md), [`docs/hardware/force-fixture.md`](../hardware/force-fixture.md), [`docs/troubleshooting/hardware-and-wiring.md`](../troubleshooting/hardware-and-wiring.md)
-
 ## Summary
 
 This workflow brings the physical system from disconnected hardware to a validated force path ready for software acquisition.
@@ -32,28 +27,23 @@ Required flow:
 
 ## Step 1 — Identify hardware
 
-- **Do:** Confirm all physical components are present.
-- **Expected result:** You can point to each device in the chain.
-- **Failure signal:** Any unknown board/module/cable is present.
-- **Next branch:** Stop and label/photograph hardware before wiring.
-
 Checklist:
 
-| Item                | Expected                              |
-| ------------------- | ------------------------------------- |
-| PM58 load cell      | Label visible and range known.        |
-| Acquisition board   | Rear terminal map visible.            |
-| Arduino target      | USB serial cable available.           |
-| HX711 wiring        | Connected to target load cell path.   |
-| USB-RS485 adapter   | A/B or D+/D- terminals visible.       |
-| Screw press fixture | Stable mechanical alignment possible. |
+| Item                | Expected                                                                 |
+| ------------------- | ------------------------------------------------------------------------ |
+| PM58 load cell      | Label visible and range known.                                           |
+| Acquisition board   | Rear terminal map visible.                                               |
+| Arduino target      | USB serial cable available.                                              |
+| HX711 wiring        | Connected to target load cell path (internally done within the Handgrip) |
+| USB-RS485 adapter   | A/B or D+/D- terminals visible.                                          |
+| Screw press fixture | Stable mechanical alignment possible.                                    |
 
 ## Step 2 — Wire PM58 to acquisition board
 
 - **Do:** Wire the PM58 bridge leads to the acquisition board sensor terminals.
 - **Expected result:** PM58 is connected to excitation and signal terminals.
 - **Failure signal:** Reading is saturated, frozen, very noisy, or sign-inverted unexpectedly.
-- **Next branch:** Use [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md).
+- **More info:** Use [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md).
 
 Canonical mapping:
 
@@ -65,12 +55,14 @@ Canonical mapping:
 | White        | signal -     | `S-`                                                   |
 | Shield/drain | shield       | isolate initially unless grounding plan says otherwise |
 
-## Step 3 — Wire target handgrip / Arduino / HX711
+## Step 3 — Wire target Handgrip  (Arduino / HX711)
 
-- **Do:** Connect the target handgrip sensor path to the Arduino/HX711 firmware device.
+- **Do:** Connect the Handgrip USB serial cable, and review it's output with a serial monitor.
 - **Expected result:** Arduino powers over USB and firmware emits D2 frames after upload.
 - **Failure signal:** No serial device appears, no D2 frames appear, or status indicates acquisition faults.
-- **Next branch:** Use [`Handgrip_Firmware/docs/workflow.md`](../../Handgrip_Firmware/docs/workflow.md) and [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md).
+- **More info:** 
+  - Use [`Handgrip_Firmware/docs/workflow.md`](../../Handgrip_Firmware/docs/workflow.md) to upload a new firmware
+  - and [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md) to understand the D2 frames.
 
 Minimum validation:
 
@@ -152,9 +144,16 @@ Stop before software acquisition if:
 - Screw press force path is not mechanically stable.
 - Any mains wiring is exposed or loose.
 
+## Related docs 
+- [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md)
+- [`docs/hardware/force-fixture.md`](../hardware/force-fixture.md)
+- [`docs/troubleshooting/hardware-and-wiring.md`](../troubleshooting/hardware-and-wiring.md)
+
+
 ## Troubleshooting links
 
 - [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md)
 - [`docs/hardware/force-fixture.md`](../hardware/force-fixture.md)
 - [`docs/troubleshooting/hardware-and-wiring.md`](../troubleshooting/hardware-and-wiring.md)
 - [`docs/troubleshooting/serial-and-rs485.md`](../troubleshooting/serial-and-rs485.md)
+
