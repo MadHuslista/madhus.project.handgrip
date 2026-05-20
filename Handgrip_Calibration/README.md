@@ -95,7 +95,6 @@ Full configuration reference is planned at [`docs/configuration.md`](docs/config
 | Choose a protocol           | [`docs/protocols.md`](docs/protocols.md)                                                                 |
 | Understand stream contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                   |
 | Validate physical fixture   | [`../docs/hardware/force-fixture.md`](../docs/hardware/force-fixture.md)                                 |
-| Understand output lifecycle | [`../docs/architecture/data-and-output-lifecycle.md`](../docs/architecture/data-and-output-lifecycle.md) |
 
 ## Repository layout
 
@@ -151,4 +150,3 @@ python -m handgrip_calibration.cli --help
 - [`docs/protocols.md`](docs/protocols.md) — canonical protocol suite and legacy labels.
 - [`../docs/workflows/handgrip-calibration.md`](../docs/workflows/handgrip-calibration.md) — root operator workflow.
 - [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) — root stream/data contracts.
-- [`../docs/architecture/data-and-output-lifecycle.md`](../docs/architecture/data-and-output-lifecycle.md) — generated artifact lifecycle.

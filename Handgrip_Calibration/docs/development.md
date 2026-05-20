@@ -85,8 +85,7 @@ If a new recording artifact is added, update:
 
 1. [`docs/recording.md`](recording.md),
 2. `docs/reports-and-outputs.md`,
-3. [`../../docs/architecture/data-and-output-lifecycle.md`](../../docs/architecture/data-and-output-lifecycle.md),
-4. tests that validate session completeness.
+3. tests that validate session completeness.
 
 ## Change stream/channel assumptions
 

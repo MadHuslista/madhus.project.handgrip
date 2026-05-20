@@ -98,7 +98,6 @@ Full configuration reference is planned at [`docs/configuration.md`](docs/config
 | Goal                         | Document                                                                                                 |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Run offline analysis         | [`../docs/workflows/handgrip-analysis.md`](../docs/workflows/handgrip-analysis.md)                       |
-| Understand generated outputs | [`../docs/architecture/data-and-output-lifecycle.md`](../docs/architecture/data-and-output-lifecycle.md) |
 | Navigate component docs      | [`docs/index.md`](docs/index.md)                                                                         |
 | Understand stages            | [`docs/stages.md`](docs/stages.md)                                                                       |
 | Interpret filter design      | [`docs/filter-design.md`](docs/filter-design.md)                                                         |
@@ -151,5 +150,4 @@ If your installed entry points differ, check the active `pyproject.toml` and upd
 
 - [`docs/index.md`](docs/index.md) — analysis documentation map.
 - [`../docs/workflows/handgrip-analysis.md`](../docs/workflows/handgrip-analysis.md) — root analysis workflow.
-- [`../docs/architecture/data-and-output-lifecycle.md`](../docs/architecture/data-and-output-lifecycle.md) — output lifecycle and generated artifact policy.
 - [`README_filter_design_report.md`](README_filter_design_report.md) — current filter-design report source until migrated into [`docs/filter-design.md`](docs/filter-design.md).

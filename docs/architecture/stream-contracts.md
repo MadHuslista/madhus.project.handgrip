@@ -8,75 +8,31 @@
 - `LSL_Viewer`, `Handgrip_Calibration`, and downstream recording/analysis workflows should depend on the contracts documented here instead of reverse-engineering source modules.
 - If any stream name, channel label, serial field, IPC topic, or calibration-authoritative signal changes, update this document, the relevant component docs/configs, and tests together.
 
-## Audience
-
-Read this document if you need to:
-
-- understand how live data moves between components,
-- debug stream discovery or missing signals,
-- change a stream name or channel name,
-- add new target/reference channels,
-- validate calibration inputs,
-- maintain compatibility across firmware, bridge, viewer, calibration, and analysis modules.
-
-## Status
-
-| Field                       | Value                                                                                                                                                                                                                                                                                                                        |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status                      | Canonical root architecture document                                                                                                                                                                                                                                                                                         |
-| Scope                       | Cross-component stream, IPC, serial, and session contracts                                                                                                                                                                                                                                                                   |
-| Component owner             | Root architecture docs; implemented primarily by `LSL_Bridge`                                                                                                                                                                                                                                                                |
-| Primary producer components | `Handgrip_Firmware`, `RS485_GUI`, `LSL_Bridge`, `Handgrip_Calibration`                                                                                                                                                                                                                                                       |
-| Primary consumer components | `LSL_Viewer`, `Handgrip_Calibration`, recordings, analysis workflows                                                                                                                                                                                                                                                         |
-| Related docs                | [`docs/architecture/dataflow.md`](dataflow.md), [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md), [`LSL_Bridge/docs/stream-contracts.md`](../../LSL_Bridge/docs/stream-contracts.md), [`Handgrip_Calibration/docs/protocols.md`](../../Handgrip_Calibration/docs/protocols.md) |
-
----
-
-## Minimum required contracts
-
-This table is the minimum cross-component contract set required by the Phase 5 documentation plan.
-
-| Stream / channel          | Source                          | Consumer            | Notes                                   |
-| ------------------------- | ------------------------------- | ------------------- | --------------------------------------- |
-| `HandgripTarget`          | `LSL_Bridge` from firmware UART | Viewer, calibration | D2 payload derived.                     |
-| `HandgripReference`       | `LSL_Bridge` from RS485 GUI IPC | Viewer, calibration | Reference force from acquisition board. |
-| `HandgripComponentEvents` | `LSL_Bridge`                    | Diagnostics         | Connect/disconnect/gap markers.         |
-| `rs485.measurement.v1`    | `RS485_GUI`                     | `LSL_Bridge`        | ZMQ IPC topic.                          |
-
-The detailed sections below are the authoritative expanded contract.
-
----
 
 ## Contract map
 
-```text
-Arduino/HX711 target firmware
-  └─ UART 115200 8N1
-      ├─ M2 metadata line
-      └─ D2 data lines
-          ↓
-LSL_Bridge target parser
-  └─ LSL stream: HandgripTarget
+```mermaid
+flowchart TD
+    FW["Arduino/HX711\ntarget firmware"]
+    FW -->|"UART 115200 8N1\nM2 metadata line\nD2 data lines"| LB_T["LSL_Bridge\ntarget parser"]
+    LB_T -->|"LSL stream"| HT(["HandgripTarget"])
 
-PM58 + acquisition board
-  └─ RS485 / USB-RS485
-      ↓
-RS485_GUI
-  └─ ZeroMQ topic: rs485.measurement.v1
-      ↓
-LSL_Bridge reference IPC subscriber
-  └─ LSL stream: HandgripReference
+    PM58["PM58 +\nacquisition board"]
+    PM58 -->|"RS485 / USB-RS485"| RS["RS485_GUI"]
+    RS -->|"ZeroMQ topic:\nrs485.measurement.v1"| LB_R["LSL_Bridge\nreference IPC subscriber"]
+    LB_R -->|"LSL stream"| HR(["HandgripReference"])
 
-Handgrip_Calibration
-  └─ calibration protocol marker events
-      ↓
-  LSL stream / session event artifacts: HandgripCalibrationMarkers / events.ndjson
+    CAL["Handgrip_Calibration"]
+    CAL -->|"calibration protocol\nmarker events"| CM(["HandgripCalibrationMarkers\n/ events.ndjson"])
 
-LSL streams and session artifacts
-  ├─ LSL_Viewer
-  ├─ Handgrip_Calibration
-  ├─ XDF / CSV recording workflows
-  └─ Handgrip_Analysis / report workflows
+    HT & HR & CM --> CONSUMERS
+
+    subgraph CONSUMERS["LSL streams and session artifacts"]
+        VW["LSL_Viewer"]
+        HC["Handgrip_Calibration"]
+        XDF["XDF / CSV recording\nworkflows"]
+        HA["Handgrip_Analysis\n/ report workflows"]
+    end
 ```
 
 ---
@@ -311,39 +267,7 @@ Any change to these items is a cross-component migration:
 
 ---
 
-## Validation checklist
-
-### Static documentation checks
-
-```bash
-# Confirm current D2 firmware schema is documented.
-rg "D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>" \
-  README.md docs Handgrip_Firmware LSL_Bridge
-
-# Fail if canonical docs still mention the legacy target frame as current.
-if rg "D,<seq>,<timestamp_us>,<value_gr>" README.md docs Handgrip_Firmware LSL_Bridge Handgrip_Calibration LSL_Viewer Handgrip_Analysis; then
-  echo "ERROR: stale legacy firmware schema found in canonical docs" >&2
-  exit 1
-fi
-
-# Confirm required stream/IPC contracts are documented.
-rg "HandgripTarget|HandgripReference|HandgripComponentEvents|rs485.measurement.v1" \
-  README.md docs LSL_Bridge LSL_Viewer Handgrip_Calibration
-
-# Confirm calibration marker contract is preserved.
-rg "HandgripCalibrationMarkers" README.md docs Handgrip_Calibration LSL_Viewer
-
-# Check stale RS485 config snapshot path is gone.
-if rg "\.\./RS485_GUI/config\.yaml|RS485_GUI/config\.yaml" Handgrip_Calibration/conf docs; then
-  echo "ERROR: stale RS485 GUI config path found" >&2
-  exit 1
-fi
-
-# Check canonical RS485 config path appears.
-rg "RS485_GUI/config/config\.yaml" Handgrip_Calibration/conf docs
-```
-
-### Runtime validation checklist
+## Runtime validation checklist
 
 1. Start target firmware serial output.
 2. Confirm `M2` metadata appears at boot.

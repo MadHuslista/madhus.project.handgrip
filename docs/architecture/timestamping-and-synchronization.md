@@ -54,25 +54,6 @@ Recommended treatment:
 | Emit component events                              | Diagnose connects, disconnects, parser failures, gaps.                      |
 | Avoid display-only transformations in data streams | Calibration must use raw/reference data, not viewer convenience transforms. |
 
-## Viewer alignment
-
-The viewer is for operator insight, not the final source of truth for calibration math.
-
-Key rule:
-
-> A visually delayed XY plot is a symptom to investigate, not proof that the saved data is delayed.
-
-When investigating lag:
-
-1. Check target and reference time-series plots independently.
-2. Check LSL timestamps and sample counts.
-3. Check interpolation/alignment mode in viewer config.
-4. Check whether viewer render downsampling is display-only.
-5. Check saved calibration session files before changing acquisition code.
-
-## Calibration alignment
-
-Calibration should fit static holds where timing uncertainty is less dominant. Dynamic trials are useful for validation, lag, hysteresis, and bandwidth checks, but they should not replace stable static-hold fitting unless the protocol explicitly supports that model.
 
 ## Practical validation tests
 
@@ -94,17 +75,6 @@ Calibration should fit static holds where timing uncertainty is less dominant. D
 - Run bridge and viewer.
 - Confirm target/reference streams update simultaneously under a visible force change.
 - Record a short calibration/preflight session and inspect saved sample counts.
-
-## Stop conditions
-
-Stop before calibration if:
-
-- target `seq` is not monotonic,
-- reference samples freeze or jump discontinuously under steady load,
-- bridge logs parser failures continuously,
-- viewer finds only one stream,
-- preflight reports missing target/reference channels,
-- config snapshot paths fail to copy expected component configs.
 
 ## Related docs:
 - [`docs/architecture/stream-contracts.md`](stream-contracts.md)

@@ -5,7 +5,6 @@
 - The repository is a multi-component suite, not a single script.
 - Python components use a source-layout package style: runtime code lives under each component's `src/<package>/` directory.
 - Root docs explain system-level workflows and contracts; component docs explain local implementation details.
-- Generated data, logs, and reports are not canonical documentation unless explicitly curated under `docs/examples/`.
 
 ## Top-level layout
 
@@ -35,17 +34,6 @@ handgrip-suite/
 | `Handgrip_Analysis/`    | Python CLI package            | Offline analysis stages and filter design                  | [`Handgrip_Analysis/README.md`](../../Handgrip_Analysis/README.md)       |
 | `docs/`                 | Markdown documentation        | Canonical system docs                                      | [`docs/index.md`](../index.md)                                           |
 
-## Where to edit
-
-| Goal                                   | Edit here first                                                                                                   | Do not start here                   |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| Change firmware serial schema          | `Handgrip_Firmware/Core/Inc/config.h`, firmware protocol docs, bridge parser tests                                | Viewer/calibration code only.       |
-| Change reference-board serial settings | `RS485_GUI/config/config.yaml`, acquisition-board docs                                                            | LSL viewer config.                  |
-| Change LSL stream names/channels       | `LSL_Bridge/conf/config.yaml`, [`docs/architecture/stream-contracts.md`](stream-contracts.md), downstream configs | One consumer only.                  |
-| Change viewer plot behavior            | `LSL_Viewer/conf/config.yaml`, viewer docs, viewer source                                                         | Bridge or firmware.                 |
-| Add calibration protocol               | `Handgrip_Calibration/conf/protocol_*.yaml`, calibration protocol docs, tests                                     | Hard-coded CLI logic unless needed. |
-| Add analysis stage                     | `Handgrip_Analysis/src/handgrip_analysis/`, analysis docs, tests                                                  | Generated output folders.           |
-
 ## Python source-layout pattern
 
 Typical Python component:
@@ -63,7 +51,10 @@ Component_Name/
 └── tests/
 ```
 
-The `src/` layout prevents accidental imports from the working directory and makes tests more representative of installed behavior.
+The `src/` layout is the current best practice for Python projects. It prevents import errors and ensures that tests run against the installed package, not the local source files.
+More details: 
+    - [Python Packaging User Guide: src layout vs flat layout](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/)
+    - [Python Project Structure: Why the ‘src’ Layout Beats Flat Folders (and How to Use My Free Template)](https://medium.com/@adityaghadge99/python-project-structure-why-the-src-layout-beats-flat-folders-and-how-to-use-my-free-template-808844d16f35)
 
 ## Documentation layout
 
@@ -85,23 +76,11 @@ Component-level docs:
 ```text
 <Component>/docs/
 ├── index.md
-├── workflow.md
-├── configuration.md
-├── architecture.md
-└── development.md
+├── workflow.md         - How to use this component in a typical workflow.
+├── configuration.md    - How to configure this component, including config file format and options.
+├── architecture.md     - Implementation details, data contracts, and design decisions.
+└── development.md      - How to extend or modify this component, including code structure and style guidelines.
 ```
-
-## Generated data and outputs
-
-Generated outputs belong in component data/output directories, not in canonical docs. If an output is useful for teaching, curate a small excerpt under `docs/examples/` and explicitly label it as an example.
-
-## Validation checklist
-
-- [ ] Every component has [`README.md`](../../README.md).
-- [ ] Every component has [`docs/index.md`](../index.md).
-- [ ] Root [`docs/index.md`](../index.md) links to all major workflows.
-- [ ] Root architecture docs link to component docs instead of duplicating implementation details.
-- [ ] Generated outputs are not presented as maintained instructions.
 
 ## Related docs: 
 - [`docs/development/python-project-structure-primer.md`](../development/python-project-structure-primer.md),

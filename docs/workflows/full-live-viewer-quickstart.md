@@ -61,7 +61,6 @@ Replace serial paths with stable `/dev/serial/by-id/...` paths when possible.
 | `LSL_Viewer` | browser view, optional viewer logs.                       |
 
 ## Related docs
-- [`docs/architecture/runtime-processes.md`](../architecture/runtime-processes.md)
 - [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)
 
 

@@ -80,9 +80,9 @@ The reference chain is PM58 load cell → acquisition board. It should be mechan
 The board can be read by `RS485_GUI` through:
 
 - **Active-Send mode** for high-rate push measurements.
-- **Modbus RTU polling** as the documented fallback path.
+- **Modbus RTU polling** as the documented fallback path 
 
-For calibration, the preferred reference profile is high-rate, low-hidden-filtering acquisition. If Active-Send parsing is unstable, fall back to Modbus RTU polling.
+For calibration and production measurement, the preferred reference profile is **Active-Send** because OS-level serial drivers and USB-RS485 adapters may introduce unpredictable latency/jitter that breaks the timing contract, and introduce frequency artifacts on the signal.
 
 ### IPC transformation
 
@@ -95,16 +95,6 @@ For calibration, the preferred reference profile is high-rate, low-hidden-filter
 | `LSL_Viewer`           | `HandgripTarget`, `HandgripReference`, optional marker/event streams | Browser visualization                    | Validate live signals and timing behavior.         |
 | `Handgrip_Calibration` | target/reference LSL streams and markers                             | Calibration session folder + reports     | Fit target raw counts to reference force.          |
 | `Handgrip_Analysis`    | CSV/session/manifest inputs                                          | Stage reports and filter recommendations | Offline signal characterization and DSP decisions. |
-
-## Validation checklist
-
-- [ ] Firmware serial monitor shows `M2` followed by `D2` lines.
-- [ ] `RS485_GUI` shows live reference force and publishes IPC events.
-- [ ] `LSL_Bridge` reports both `HandgripTarget` and `HandgripReference` outlets.
-- [ ] `LSL_Viewer` shows target and reference time series.
-- [ ] Calibration preflight discovers both streams.
-- [ ] Calibration recording produces target/reference CSVs.
-- [ ] Analysis workflow can consume expected inputs from session or manifest files.
 
 
 ## Related docs:

@@ -52,7 +52,6 @@ Full configuration reference is planned at [`docs/configuration.md`](docs/config
 | Goal                          | Document                                                                                                               |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Run full live viewer stack    | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md)                 |
-| Understand live process order | [`../docs/architecture/runtime-processes.md`](../docs/architecture/runtime-processes.md)                               |
 | Understand stream contracts   | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                                 |
 | Debug timestamp/XY delay      | [`../docs/architecture/timestamping-and-synchronization.md`](../docs/architecture/timestamping-and-synchronization.md) |
 | Navigate component docs       | [`docs/index.md`](docs/index.md)                                                                                       |

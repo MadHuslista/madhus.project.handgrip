@@ -57,5 +57,4 @@ rg "D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>" Handgrip_Firmw
 
 - [`docs/troubleshooting/serial-and-rs485.md`](../troubleshooting/serial-and-rs485.md)
 - [`docs/troubleshooting/lsl-streams.md`](../troubleshooting/lsl-streams.md)
-- [`docs/architecture/runtime-processes.md`](../architecture/runtime-processes.md)
 - [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)

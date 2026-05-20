@@ -42,5 +42,4 @@
 
 - [docs/workflows/handgrip-analysis.md](../../docs/workflows/handgrip-analysis.md) — multi-component analysis workflow
 - [Handgrip_Calibration/docs/workflow.md](../../Handgrip_Calibration/docs/workflow.md) — how to record source sessions
-- [docs/architecture/data-and-output-lifecycle.md](../../docs/architecture/data-and-output-lifecycle.md) — generated-output policy
 - [docs/troubleshooting/analysis-pipeline.md](../../docs/troubleshooting/analysis-pipeline.md)
