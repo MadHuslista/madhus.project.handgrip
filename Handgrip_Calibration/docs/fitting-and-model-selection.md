@@ -119,11 +119,3 @@ Only apply this if:
 | Deploying without holdout                      | Fit data is not independent validation.          |
 | Treating hysteresis as a pure software problem | It may be mechanical fixture/load-path behavior. |
 
-## Validation checklist
-
-- [ ] `fit_result.json` exists.
-- [ ] candidate comparison exists.
-- [ ] selected model is deployable or clearly diagnostic-only.
-- [ ] residual threshold passes.
-- [ ] holdout validation is planned or completed.
-- [ ] report states what values to use and where.

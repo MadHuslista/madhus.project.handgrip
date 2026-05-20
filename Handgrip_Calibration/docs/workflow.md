@@ -22,8 +22,6 @@ uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase
 
 Preflight verifies: target stream discovered, reference stream discovered, required channels present, protocol YAML valid, output root writable, config snapshot paths resolvable.
 
-Stop if preflight fails. Do not proceed to recording.
-
 ## 2 — Record calibration session
 
 ```bash
@@ -74,8 +72,6 @@ To interpret the report, answer:
 | Is low-force behavior poor?   | Low-force residuals and candidate model comparison |
 | Is hysteresis visible?        | Up/down hold comparison if available               |
 | Is the validation acceptable? | Holdout metrics, out-of-sample residuals           |
-
-Do not select a more complex model solely because it fits marginally better. Prefer the simplest model that passes validation and residual checks.
 
 See [Handgrip_Calibration/docs/reports-and-outputs.md](reports-and-outputs.md).
 
@@ -131,17 +127,6 @@ uv run handgrip-cal fit       data/calibration/<session_id> \
 uv run handgrip-cal report    data/calibration/<session_id> \
   --config conf/protocol_static_reversible_staircase_v3.yaml
 ```
-
-## Stop conditions
-
-Stop and troubleshoot if:
-
-- preflight cannot find both streams,
-- captured session lacks target or reference data,
-- reference data is frozen, noisy, or saturated,
-- fixture slips or force path is ambiguous,
-- model comparison shows unacceptable residuals,
-- holdout validation fails.
 
 ## Troubleshooting links
 

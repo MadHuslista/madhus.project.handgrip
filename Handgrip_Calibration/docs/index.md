@@ -21,8 +21,7 @@ Before running calibration:
 
 1. [docs/workflows/physical-setup.md](../../docs/workflows/physical-setup.md) — PM58 and target in the same force path
 2. [Handgrip_Firmware/docs/workflow.md](../../Handgrip_Firmware/docs/workflow.md) — firmware emits D2 frames
-3. [docs/workflows/reference-only-quickstart.md](../../docs/workflows/reference-only-quickstart.md) — RS485 GUI receives reference force
-4. [docs/workflows/full-live-viewer-quickstart.md](../../docs/workflows/full-live-viewer-quickstart.md) — both streams live
+3. [docs/workflows/full-live-viewer-quickstart.md](../../docs/workflows/full-live-viewer-quickstart.md) — both streams live
 
 ## Documentation map
 
@@ -49,7 +48,6 @@ Before running calibration:
 
 ## Related docs
 
-- [docs/workflows/handgrip-calibration.md](../../docs/workflows/handgrip-calibration.md) — multi-component calibration workflow
 - [docs/architecture/stream-contracts.md](../../docs/architecture/stream-contracts.md) — target/reference stream contracts
 - [docs/troubleshooting/calibration-recording.md](../../docs/troubleshooting/calibration-recording.md)
 

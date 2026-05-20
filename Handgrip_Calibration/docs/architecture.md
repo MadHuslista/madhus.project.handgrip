@@ -37,40 +37,6 @@ CLI command
 | validation             | Evaluate accepted model on holdout sessions.                          |
 | report                 | Render Markdown/HTML, plots, tables, and deployment recommendations.  |
 
-## Input boundaries
-
-`Handgrip_Calibration` should consume:
-
-- `HandgripTarget` LSL stream,
-- `HandgripReference` LSL stream,
-- optional component events,
-- operator/protocol markers,
-- YAML protocol/config files.
-
-It should not:
-
-- read RS485 hardware directly,
-- parse firmware serial directly,
-- publish LSL force streams,
-- silently change acquisition-board settings.
-
-## Output boundaries
-
-The component owns:
-
-- session folder creation,
-- calibration event records,
-- target/reference capture files,
-- fit artifacts,
-- reports,
-- holdout validation artifacts.
-
-It does not own:
-
-- firmware flashing,
-- RS485 GUI logs,
-- LSL Bridge stream publication,
-- viewer display state.
 
 ## Command architecture
 
@@ -84,18 +50,3 @@ It does not own:
 | `validate-holdout` | holdout session + model artifact | validation result artifacts.        |
 | `demo-data`        | synthetic/session options        | hardware-free demo session.         |
 
-## Reproducibility principles
-
-- Every session should have a stable session ID.
-- Every production session should copy upstream component configs.
-- Every report should identify protocol, session, selected model, and source artifacts.
-- Every deployment should be traceable to a fit session and validation session.
-
-## Architecture validation checklist
-
-- [ ] CLI subcommands are documented in [`workflow.md`](workflow.md) and this architecture doc.
-- [ ] Config path behavior is documented in [`configuration.md`](configuration.md).
-- [ ] LSL inputs are documented in [`recording.md`](recording.md).
-- [ ] Model selection is documented in [`fitting-and-model-selection.md`](fitting-and-model-selection.md).
-- [ ] Outputs are documented in [`reports-and-outputs.md`](reports-and-outputs.md).
-- [ ] Deployment is documented in [`applying-calibration-results.md`](applying-calibration-results.md).

@@ -15,16 +15,7 @@
 3. Add operator instructions if it is production-facing.
 4. Add config reference notes to `docs/configuration.md` if it introduces new fields.
 
-### Required decisions
-
-| Decision                                      | Document it in                                                                   |
-| --------------------------------------------- | -------------------------------------------------------------------------------- |
-| production vs diagnostic vs smoke             | [`protocols.md`](protocols.md)                                                   |
-| primary fitting vs holdout vs validation-only | [`protocols.md`](protocols.md)                                                   |
-| force levels and repeats                      | protocol YAML + operator doc                                                     |
-| quality gates                                 | protocol YAML + [`configuration.md`](configuration.md)                           |
-| expected outputs                              | [`reports-and-outputs.md`](reports-and-outputs.md) if new artifact class appears |
-
+s
 ### Validation
 
 ```bash
@@ -117,12 +108,3 @@ Recommended categories:
 | report        | generated sections, plots, JSON/Markdown outputs.                |
 | holdout       | independent validation metrics and pass/fail behavior.           |
 
-## Development stop conditions
-
-Do not merge if:
-
-- a new protocol lacks docs,
-- a new model lacks metrics and report interpretation,
-- a stream/channel change is not reflected in root stream contracts,
-- generated outputs cannot be traced to source sessions,
-- tests pass only with live hardware and no hardware-free path exists.

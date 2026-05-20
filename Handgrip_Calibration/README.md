@@ -10,33 +10,6 @@ The canonical primary calibration protocol is:
 conf/protocol_static_reversible_staircase_v3.yaml
 ```
 
-Calibration should fit target raw counts against reference force:
-
-```text
-reference_force_N = f(target_raw_count)
-```
-
-Do not treat firmware `current_units` as the primary fitting input unless a workflow explicitly says it is validating already-deployed firmware constants.
-
-## When to use this component
-
-Use this component when you need to:
-
-- run calibration preflight checks,
-- record a protocol-guided calibration session,
-- fit target raw counts to reference force,
-- compare candidate calibration models,
-- generate calibration reports,
-- validate an accepted model with holdout data,
-- export or recommend values for firmware/bridge/downstream use.
-
-Do not use this component to:
-
-- directly configure the acquisition-board menu,
-- acquire RS485 data without `RS485_GUI`,
-- publish target/reference LSL streams,
-- perform general offline DSP/filter design.
-
 ## First command
 
 From `Handgrip_Calibration/`, after the live stack is running:
@@ -77,24 +50,17 @@ Primary config/protocol files:
 | `conf/default.yaml` / `conf/config.yaml`            | Base/default calibration settings, depending on command path. |
 | `conf/template.yaml`                                | Starting point for new protocol definitions.                  |
 
-Important config-path rule:
-
-```yaml
-- ../RS485_GUI/config/config.yaml
-```
-
-Use the real RS485 GUI config path above for component config snapshots. Do not use the stale path `../RS485_GUI/config.yaml`.
-
 Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
 
 ## Common workflows
 
-| Goal                        | Document                                                                                                 |
-| --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Run end-to-end calibration  | [`../docs/workflows/handgrip-calibration.md`](../docs/workflows/handgrip-calibration.md)                 |
-| Choose a protocol           | [`docs/protocols.md`](docs/protocols.md)                                                                 |
-| Understand stream contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                   |
-| Validate physical fixture   | [`../docs/hardware/force-fixture.md`](../docs/hardware/force-fixture.md)                                 |
+| Goal                        | Document                                                                               |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| End-to-end overview         | [`docs/workflows/handgrip-calibration.md`](../docs/workflows/handgrip-calibration.md)  |
+| Detailed workflow steps     | [`docs/workflow.md`](docs/workflow.md)                                                 |
+| Choose a protocol           | [`docs/protocols.md`](docs/protocols.md)                                               |
+| Understand stream contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) |
+| Validate physical fixture   | [`../docs/hardware/force-fixture.md`](../docs/hardware/force-fixture.md)               |
 
 ## Repository layout
 
@@ -138,15 +104,8 @@ uv run handgrip-cal fit /tmp/hg_demo/demo_handgrip_session --config conf/default
 uv run handgrip-cal report /tmp/hg_demo/demo_handgrip_session
 ```
 
-If your environment still uses module invocation, use:
-
-```bash
-python -m handgrip_calibration.cli --help
-```
-
 ## Further docs
 
 - [`docs/index.md`](docs/index.md) — calibration documentation map.
 - [`docs/protocols.md`](docs/protocols.md) — canonical protocol suite and legacy labels.
-- [`../docs/workflows/handgrip-calibration.md`](../docs/workflows/handgrip-calibration.md) — root operator workflow.
 - [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) — root stream/data contracts.
