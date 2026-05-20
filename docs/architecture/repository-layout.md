@@ -1,10 +1,5 @@
 # Repository Layout
 
-**Status:** Canonical root architecture document  
-**Audience:** Maintainers, student developers, and future collaborators  
-**Scope:** How the repository is organized and where to edit safely  
-**Related docs:** [`docs/development/python-project-structure-primer.md`](../development/python-project-structure-primer.md), component [`docs/index.md`](../index.md) files
-
 ## Summary
 
 - The repository is a multi-component suite, not a single script.
@@ -107,3 +102,7 @@ Generated outputs belong in component data/output directories, not in canonical 
 - [ ] Root [`docs/index.md`](../index.md) links to all major workflows.
 - [ ] Root architecture docs link to component docs instead of duplicating implementation details.
 - [ ] Generated outputs are not presented as maintained instructions.
+
+## Related docs: 
+- [`docs/development/python-project-structure-primer.md`](../development/python-project-structure-primer.md),
+- [`docs/index.md`](../index.md) files

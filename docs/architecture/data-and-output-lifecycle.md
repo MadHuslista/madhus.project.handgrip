@@ -1,10 +1,5 @@
 # Data and Output Lifecycle
 
-**Status:** Canonical root architecture document  
-**Audience:** Operators, maintainers, and future collaborators  
-**Scope:** Where data appears, what is canonical, what is generated, and what should be archived  
-**Related docs:** [`docs/workflows/handgrip-calibration.md`](../workflows/handgrip-calibration.md), [`docs/workflows/handgrip-analysis.md`](../workflows/handgrip-analysis.md)
-
 ## Summary
 
 - Live processes produce logs, IPC messages, LSL streams, and optionally CSV recordings.
@@ -110,3 +105,7 @@ stage aggregation / report
 - [ ] Reports state which session ID they describe.
 - [ ] Analysis outputs are tied to manifests or source data paths.
 - [ ] No generated output folder is presented as canonical documentation.
+
+## Related docs:
+- [`docs/workflows/handgrip-calibration.md`](../workflows/handgrip-calibration.md), 
+- [`docs/workflows/handgrip-analysis.md`](../workflows/handgrip-analysis.md)

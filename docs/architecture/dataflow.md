@@ -1,10 +1,5 @@
 # Handgrip Suite Dataflow
 
-**Status:** Canonical root architecture document  
-**Audience:** Operators, maintainers, and developers  
-**Scope:** Physical-force-to-software-data path across firmware, RS485 acquisition, LSL, viewer, calibration, and analysis  
-**Related docs:** [`docs/system-overview.md`](../system-overview.md), [`docs/architecture/stream-contracts.md`](stream-contracts.md), [`docs/workflows/full-live-viewer-quickstart.md`](../workflows/full-live-viewer-quickstart.md)
-
 ## Summary
 
 - The Handgrip Suite has two acquisition paths: the **target path** from the Arduino/HX711 handgrip firmware, and the **reference path** from the PM58 load cell through the RS485 acquisition board.
@@ -110,3 +105,9 @@ For calibration, the preferred reference profile is high-rate, low-hidden-filter
 - [ ] Calibration preflight discovers both streams.
 - [ ] Calibration recording produces target/reference CSVs.
 - [ ] Analysis workflow can consume expected inputs from session or manifest files.
+
+
+## Related docs:
+- [`docs/system-overview.md`](../system-overview.md), 
+- [`docs/architecture/stream-contracts.md`](stream-contracts.md), 
+- [`docs/workflows/full-live-viewer-quickstart.md`](../workflows/full-live-viewer-quickstart.md)

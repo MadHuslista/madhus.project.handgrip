@@ -1,10 +1,5 @@
 # Timestamping and Synchronization
 
-**Status:** Canonical root architecture document  
-**Audience:** Developers, maintainers, and calibration operators  
-**Scope:** Timing assumptions for firmware, RS485 reference acquisition, LSL, viewer alignment, and calibration fitting  
-**Related docs:** [`docs/architecture/stream-contracts.md`](stream-contracts.md), [`docs/workflows/handgrip-calibration.md`](../workflows/handgrip-calibration.md)
-
 ## Summary
 
 - Timing is a system property, not a single-module detail.
@@ -110,3 +105,7 @@ Stop before calibration if:
 - viewer finds only one stream,
 - preflight reports missing target/reference channels,
 - config snapshot paths fail to copy expected component configs.
+
+## Related docs:
+- [`docs/architecture/stream-contracts.md`](stream-contracts.md)
+- [`docs/workflows/handgrip-calibration.md`](../workflows/handgrip-calibration.md)

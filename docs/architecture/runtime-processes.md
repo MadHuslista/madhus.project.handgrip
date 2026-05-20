@@ -1,10 +1,5 @@
 # Runtime Processes
 
-**Status:** Canonical root architecture document  
-**Audience:** Operators and maintainers  
-**Scope:** Which processes run during each workflow and in what order  
-**Related docs:** [`docs/workflows/full-live-viewer-quickstart.md`](../workflows/full-live-viewer-quickstart.md), [`docs/architecture/dataflow.md`](dataflow.md)
-
 ## Summary
 
 - A full live workflow normally runs three host-side processes: `RS485_GUI`, `LSL_Bridge`, and `LSL_Viewer`.
@@ -88,3 +83,8 @@ Offline analysis does not require live LSL streams unless a specific future stag
 - [ ] `LSL_Viewer` discovers stream names from [`docs/architecture/stream-contracts.md`](stream-contracts.md).
 - [ ] `handgrip-cal preflight` passes before `record`.
 - [ ] Analysis commands run on saved files without live hardware.
+
+
+## Related docs:
+- [`docs/workflows/full-live-viewer-quickstart.md`](../workflows/full-live-viewer-quickstart.md), 
+- [`docs/architecture/dataflow.md`](dataflow.md)
