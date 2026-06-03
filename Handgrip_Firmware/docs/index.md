@@ -20,11 +20,11 @@ Minimum validation: `seq` increases monotonically, `raw_count` changes when forc
 
 | Document                                 | Purpose                                                                       |
 | ---------------------------------------- | ----------------------------------------------------------------------------- |
-| [workflow.md](workflow.md)               | Build, upload, and serial validation workflow                                 |
-| [serial-protocol.md](serial-protocol.md) | Canonical M2/D2 schema, field meanings, status bitfield, parser contract      |
-| [configuration.md](configuration.md)     | `config.h`, `platformio.ini`, sampling, scale factor, offset, safe-edit rules |
-| [architecture.md](architecture.md)       | TimerOne acquisition, non-blocking HX711 polling, FIFO handoff, serial output |
-| [troubleshooting.md](troubleshooting.md) | Upload errors, bootloader mismatch, serial permissions, no D2 output          |
+| [Handgrip_Firmware/docs/workflow.md](workflow.md)               | Build, upload, and serial validation workflow                                 |
+| [Handgrip_Firmware/docs/serial-protocol.md](serial-protocol.md) | Canonical M2/D2 schema, field meanings, status bitfield, parser contract      |
+| [Handgrip_Firmware/docs/configuration.md](configuration.md)     | `config.h`, `platformio.ini`, sampling, scale factor, offset, safe-edit rules |
+| [Handgrip_Firmware/docs/architecture.md](architecture.md)       | TimerOne acquisition, non-blocking HX711 polling, FIFO handoff, serial output |
+| [Handgrip_Firmware/docs/troubleshooting.md](troubleshooting.md) | Upload errors, bootloader mismatch, serial permissions, no D2 output          |
 
 ## Reading guide
 
@@ -51,7 +51,7 @@ Minimum validation: `seq` increases monotonically, `raw_count` changes when forc
 
 ## Safe edit order
 
-1. Read [configuration.md](configuration.md) before changing constants.
-2. Read [serial-protocol.md](serial-protocol.md) before changing anything emitted over UART.
-3. Read [architecture.md](architecture.md) before changing ISR/FIFO behavior.
+1. Read [Handgrip_Firmware/docs/configuration.md](configuration.md) before changing constants.
+2. Read [Handgrip_Firmware/docs/serial-protocol.md](serial-protocol.md) before changing anything emitted over UART.
+3. Read [Handgrip_Firmware/docs/architecture.md](architecture.md) before changing ISR/FIFO behavior.
 4. After any schema change, update `LSL_Bridge`, root stream contracts, calibration docs, and tests together.

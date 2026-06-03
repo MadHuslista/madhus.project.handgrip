@@ -72,17 +72,17 @@ Important constants:
 | `HANDGRIP_PAYLOAD_SCHEMA` | Current payload schema. Expected value: `2`.   |
 | `HANDGRIP_FORCE_UNIT`     | Unit emitted in M2 metadata, normally `N`.     |
 
-Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
+Full configuration reference is planned at [Handgrip_Firmware/docs/configuration.md](docs/configuration.md).
 
 ## Common workflows
 
 | Goal                                        | Document                                                                                               |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Build and upload firmware                   | [`docs/workflow.md`](docs/workflow.md)                           |
-| Understand D2/M2 serial output              | [`docs/serial-protocol.md`](docs/serial-protocol.md)                                                   |
-| Understand cross-component stream contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                 |
-| Validate target-only stream path            | [`../docs/workflows/target-only-quickstart.md`](../docs/workflows/target-only-quickstart.md)           |
-| Run full live viewer workflow               | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
+| Build and upload firmware                   | [Handgrip_Firmware/docs/workflow.md](docs/workflow.md)                           |
+| Understand D2/M2 serial output              | [Handgrip_Firmware/docs/serial-protocol.md](docs/serial-protocol.md)                                                   |
+| Understand cross-component stream contracts | [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md)                 |
+| Validate target-only stream path            | [docs/workflows/target-only-quickstart.md](../docs/workflows/target-only-quickstart.md)           |
+| Run full live viewer workflow               | [docs/workflows/full-live-viewer-quickstart.md](../docs/workflows/full-live-viewer-quickstart.md) |
 
 ## Repository layout
 
@@ -114,7 +114,7 @@ Then verify D2 stream consumption through `LSL_Bridge` and the target-only quick
 
 ## Further docs
 
-- [`docs/index.md`](docs/index.md) — firmware documentation map.
-- [`docs/serial-protocol.md`](docs/serial-protocol.md) — canonical M2/D2 serial protocol.
-- [`docs/workflow.md`](docs/workflow.md) — operator workflow.
-- [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) — root stream/data contracts.
+- [Handgrip_Firmware/docs/index.md](docs/index.md) — firmware documentation map.
+- [Handgrip_Firmware/docs/serial-protocol.md](docs/serial-protocol.md) — canonical M2/D2 serial protocol.
+- [Handgrip_Firmware/docs/workflow.md](docs/workflow.md) — operator workflow.
+- [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md) — root stream/data contracts.

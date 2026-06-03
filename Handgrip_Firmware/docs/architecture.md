@@ -144,6 +144,8 @@ D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>
 
 If `current_units` is NaN, firmware prints literal `nan`.
 
+For the full M2/D2 field definitions and the status bitfield values, see [Handgrip_Firmware/docs/serial-protocol.md](serial-protocol.md).
+
 ## HX711 dependency
 
 The firmware depends on:
