@@ -1,9 +1,6 @@
 # Configuration System Primer
 
-**Status:** Canonical development primer  
-**Audience:** Student maintainers and developers editing YAML/configuration files  
-**Scope:** Hydra/OmegaConf-style dotlist overrides, config precedence, component-local configs, protocol configs, safe change workflow, reproducibility snapshots  
-**Related docs:** [`docs/configuration/index.md`](../configuration/index.md), component `docs/configuration.md` files
+Related docs: [docs/configuration/index.md](../configuration/index.md), component `docs/configuration.md` files.
 
 ## Summary
 
@@ -58,14 +55,7 @@ Practical implications:
 
 ## Component-local configs
 
-| Component              | Config root                           | Notes                                                                                     |
-| ---------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `RS485_GUI`            | `RS485_GUI/config/config.yaml`        | Serial transport, parser profile, logging, GUI display, IPC publishing.                   |
-| `LSL_Bridge`           | `LSL_Bridge/conf/config.yaml`         | Target serial, reference IPC, LSL outlets, timestamping, CSV sinks, processing.           |
-| `LSL_Viewer`           | `LSL_Viewer/conf/config.yaml`         | Stream names, channel labels, live/replay modes, XY alignment, display-only downsampling. |
-| `Handgrip_Calibration` | `Handgrip_Calibration/conf/*.yaml`    | Protocols, stream requirements, recording outputs, fitting/report settings.               |
-| `Handgrip_Analysis`    | `Handgrip_Analysis/conf/**/*.yaml`    | Stage settings, manifests, filter candidates, output/report behavior.                     |
-| `Handgrip_Firmware`    | `Handgrip_Firmware/Core/Inc/config.h` | Compile-time constants, D2 schema metadata, sampling period, scale/offset.                |
+Configuration is component-owned. For each component's config root and a link to its detailed configuration doc, see [docs/configuration/index.md](../configuration/index.md); each component `docs/configuration.md` documents what its own config controls.
 
 ## Protocol configs
 
@@ -111,7 +101,7 @@ uv run lsl-bridge serial.port=/dev/serial/by-id/<target-device>
 Example: stable serial-port default
 
 1. Edit `LSL_Bridge/conf/config.yaml`.
-2. Update [`LSL_Bridge/docs/configuration.md`](../../LSL_Bridge/docs/configuration.md) if the documented default changes.
+2. Update [LSL_Bridge/docs/configuration.md](../../LSL_Bridge/docs/configuration.md) if the documented default changes.
 3. Run target-only quickstart.
 
 ## How to capture configs for reproducibility

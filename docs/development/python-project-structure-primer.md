@@ -1,9 +1,6 @@
 # Python Project Structure Primer
 
-**Status:** Canonical development primer  
-**Audience:** Research Python users, student maintainers, and future contributors  
-**Scope:** Repository layout, Python source-layout packages, editable installs, entry points, tests, configs, and safe run/edit workflow  
-**Related docs:** [`docs/architecture/repository-layout.md`](../architecture/repository-layout.md), [`docs/configuration/index.md`](../configuration/index.md), component `docs/development.md` files
+Related docs: [docs/architecture/repository-layout.md](../architecture/repository-layout.md), [docs/configuration/index.md](../configuration/index.md), component `docs/development.md` files.
 
 ## Summary
 
@@ -167,23 +164,9 @@ uv run pytest
 
 ## Configs
 
-Configuration is component-owned.
+Configuration is component-owned. For the per-component config paths and their detailed docs, see [docs/configuration/index.md](../configuration/index.md).
 
-| Component   | Main config path                                        | Docs                                                                                             |
-| ----------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Firmware    | `platformio.ini`, `Handgrip_Firmware/Core/Inc/config.h` | [`Handgrip_Firmware/docs/configuration.md`](../../Handgrip_Firmware/docs/configuration.md)       |
-| RS485 GUI   | `RS485_GUI/config/config.yaml`                          | [`RS485_GUI/docs/configuration.md`](../../RS485_GUI/docs/configuration.md)                       |
-| LSL Bridge  | `LSL_Bridge/conf/config.yaml`                           | [`LSL_Bridge/docs/configuration.md`](../../LSL_Bridge/docs/configuration.md)                     |
-| LSL Viewer  | `LSL_Viewer/conf/config.yaml`                           | [`LSL_Viewer/docs/configuration.md`](../../LSL_Viewer/docs/configuration.md)                     |
-| Calibration | `Handgrip_Calibration/conf/*.yaml`                      | [`Handgrip_Calibration/docs/configuration.md`](../../Handgrip_Calibration/docs/configuration.md) |
-| Analysis    | `Handgrip_Analysis/conf/**/*.yaml`                      | [`Handgrip_Analysis/docs/configuration.md`](../../Handgrip_Analysis/docs/configuration.md)       |
-
-If a config change affects stream names, channel names, serial schema, or calibration semantics, also update:
-
-- [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md),
-- relevant component docs,
-- tests or validation scripts,
-- example workflow docs.
+If a config change affects stream names, channel names, serial schema, or calibration semantics, also update [docs/architecture/stream-contracts.md](../architecture/stream-contracts.md), the relevant component docs, tests or validation scripts, and example workflow docs.
 
 ## Why not edit installed `site-packages`
 
