@@ -17,26 +17,18 @@
 | Manifest root      | `Handgrip_Analysis/data/manifests/`           |
 | Output root        | `Handgrip_Analysis/data/analysis_results/`    |
 
-## Documentation map
-
-| Document                                         | Purpose                                                                 |
-| ------------------------------------------------ | ----------------------------------------------------------------------- |
-| [Handgrip_Analysis/docs/workflow.md](workflow.md)                       | Data preparation, running stages, applying filter recommendations       |
-| [Handgrip_Analysis/docs/stages.md](stages.md)                           | Stage 1–6 purpose, input, output, and interpretation                    |
-| [Handgrip_Analysis/docs/configuration.md](configuration.md)             | Full config tree reference and safe-edit guidance                       |
-| [Handgrip_Analysis/docs/filter-design.md](filter-design.md)             | Stage 6 candidate review workflow and interpretation                    |
-| [Handgrip_Analysis/docs/reports-and-outputs.md](reports-and-outputs.md) | Output tree, generated reports, figures, metrics, recommendation files  |
-| [Handgrip_Analysis/docs/architecture.md](architecture.md)               | CLI, stages, config, IO, DSP, plotting, and report layers               |
-| [Handgrip_Analysis/docs/development.md](development.md)                 | How to add stages, metrics, filter families, report sections, and tests |
-
 ## Reading guide
 
-- To record source data, build manifests, and run stages: [Handgrip_Analysis/docs/workflow.md](workflow.md)
-- To understand what each stage produces: [Handgrip_Analysis/docs/stages.md](stages.md)
-- To safely edit configuration: [Handgrip_Analysis/docs/configuration.md](configuration.md)
-- To interpret Stage 6 filter results: [Handgrip_Analysis/docs/filter-design.md](filter-design.md)
-- To apply a filter recommendation to `LSL_Bridge`: [Handgrip_Analysis/docs/filter-design.md](filter-design.md), then [LSL_Bridge/docs/configuration.md](../../LSL_Bridge/docs/configuration.md)
-- To add a stage, metric, or filter family: [Handgrip_Analysis/docs/development.md](development.md)
+| I want to…                                          | Read                                                                                                                                         |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prepare data, build manifests, and run stages       | [Handgrip_Analysis/docs/workflow.md](workflow.md)                                                                                            |
+| Understand what each stage 1–6 produces             | [Handgrip_Analysis/docs/stages.md](stages.md)                                                                                                |
+| Safely edit configuration                           | [Handgrip_Analysis/docs/configuration.md](configuration.md)                                                                                  |
+| Interpret Stage 6 filter results                    | [Handgrip_Analysis/docs/filter-design.md](filter-design.md)                                                                                  |
+| Read the output tree, reports, figures, and metrics | [Handgrip_Analysis/docs/reports-and-outputs.md](reports-and-outputs.md)                                                                      |
+| Understand CLI/stage/IO/DSP internals               | [Handgrip_Analysis/docs/architecture.md](architecture.md)                                                                                    |
+| Add a stage, metric, or filter family               | [Handgrip_Analysis/docs/development.md](development.md)                                                                                      |
+| Apply a filter recommendation to `LSL_Bridge`       | [Handgrip_Analysis/docs/filter-design.md](filter-design.md), then [LSL_Bridge/docs/configuration.md](../../LSL_Bridge/docs/configuration.md) |
 
 ## Related docs
 

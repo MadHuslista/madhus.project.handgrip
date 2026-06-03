@@ -7,25 +7,17 @@
 - `LSL_Bridge` consumes its IPC output and publishes the `HandgripReference` LSL stream.
 - Start this component before `LSL_Bridge` in the full live workflow.
 
-## Documentation map
-
-| Document                                               | Purpose                                                          |
-| ------------------------------------------------------ | ---------------------------------------------------------------- |
-| [RS485_GUI/docs/workflow.md](workflow.md)                             | Connect to the acquisition board, validate UI/log/IPC output     |
-| [RS485_GUI/docs/configuration.md](configuration.md)                   | Full `config/config.yaml` reference                              |
-| [RS485_GUI/docs/active-send-and-modbus.md](active-send-and-modbus.md) | Modbus RTU polling vs Active-Send                                |
-| [RS485_GUI/docs/ipc-schema.md](ipc-schema.md)                         | ZMQ topics, measurement payload, event payload                   |
-| [RS485_GUI/docs/logging-and-outputs.md](logging-and-outputs.md)       | Log files, output paths, overwrite/append behavior               |
-| [RS485_GUI/docs/architecture.md](architecture.md)                     | Core/transport/io/ui/config layers and runtime dataflow          |
-| [RS485_GUI/docs/development.md](development.md)                       | How to add parser fields, UI controls, logger outputs, and tests |
-
 ## Reading guide
 
-- To start the GUI and validate reference data: [RS485_GUI/docs/workflow.md](workflow.md)
-- To edit serial or device configuration: [RS485_GUI/docs/configuration.md](configuration.md)
-- To understand Active-Send vs Modbus: [RS485_GUI/docs/active-send-and-modbus.md](active-send-and-modbus.md)
-- To understand the IPC output format: [RS485_GUI/docs/ipc-schema.md](ipc-schema.md)
-- To understand the codebase: [RS485_GUI/docs/architecture.md](architecture.md)
+| I want to…                                        | Read                                                                  |
+| ------------------------------------------------- | --------------------------------------------------------------------- |
+| Start the GUI and validate reference data         | [RS485_GUI/docs/workflow.md](workflow.md)                             |
+| Edit serial or device configuration               | [RS485_GUI/docs/configuration.md](configuration.md)                   |
+| Understand Active-Send vs Modbus                  | [RS485_GUI/docs/active-send-and-modbus.md](active-send-and-modbus.md) |
+| Understand the IPC output format                  | [RS485_GUI/docs/ipc-schema.md](ipc-schema.md)                         |
+| Understand log files and output paths             | [RS485_GUI/docs/logging-and-outputs.md](logging-and-outputs.md)       |
+| Understand core/transport/io/ui internals         | [RS485_GUI/docs/architecture.md](architecture.md)                     |
+| Add parser fields, UI controls, or logger outputs | [RS485_GUI/docs/development.md](development.md)                       |
 
 ## Related docs
 

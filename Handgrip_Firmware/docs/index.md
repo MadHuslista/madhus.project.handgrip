@@ -16,23 +16,15 @@ D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>
 
 Minimum validation: `seq` increases monotonically, `raw_count` changes when force changes, `LSL_Bridge` can parse D2 frames and publish `HandgripTarget`.
 
-## Documentation map
-
-| Document                                 | Purpose                                                                       |
-| ---------------------------------------- | ----------------------------------------------------------------------------- |
-| [Handgrip_Firmware/docs/workflow.md](workflow.md)               | Build, upload, and serial validation workflow                                 |
-| [Handgrip_Firmware/docs/serial-protocol.md](serial-protocol.md) | Canonical M2/D2 schema, field meanings, status bitfield, parser contract      |
-| [Handgrip_Firmware/docs/configuration.md](configuration.md)     | `config.h`, `platformio.ini`, sampling, scale factor, offset, safe-edit rules |
-| [Handgrip_Firmware/docs/architecture.md](architecture.md)       | TimerOne acquisition, non-blocking HX711 polling, FIFO handoff, serial output |
-| [Handgrip_Firmware/docs/troubleshooting.md](troubleshooting.md) | Upload errors, bootloader mismatch, serial permissions, no D2 output          |
-
 ## Reading guide
 
-- To build and validate the firmware: [Handgrip_Firmware/docs/workflow.md](workflow.md)
-- To understand the serial frame format: [Handgrip_Firmware/docs/serial-protocol.md](serial-protocol.md)
-- To safely edit configuration constants: [Handgrip_Firmware/docs/configuration.md](configuration.md)
-- To understand the firmware internals: [Handgrip_Firmware/docs/architecture.md](architecture.md)
-- To diagnose build or upload failures: [Handgrip_Firmware/docs/troubleshooting.md](troubleshooting.md)
+| I want to…                                               | Read                                                            |
+| -------------------------------------------------------- | --------------------------------------------------------------- |
+| Build, upload, and validate the firmware                 | [Handgrip_Firmware/docs/workflow.md](workflow.md)               |
+| Understand the M2/D2 frames, fields, and status bitfield | [Handgrip_Firmware/docs/serial-protocol.md](serial-protocol.md) |
+| Safely edit firmware constants                           | [Handgrip_Firmware/docs/configuration.md](configuration.md)     |
+| Understand firmware internals (TimerOne, HX711, FIFO)    | [Handgrip_Firmware/docs/architecture.md](architecture.md)       |
+| Diagnose build, upload, or no-D2 failures                | [Handgrip_Firmware/docs/troubleshooting.md](troubleshooting.md) |
 
 ## Related docs
 

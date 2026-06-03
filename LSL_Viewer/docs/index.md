@@ -15,23 +15,16 @@
 | Modes                   | `live`, `live_with_reference_validation`, `csv_replay`, `xdf_replay` |
 | Default browser address | `http://127.0.0.1:8765`                                              |
 
-## Documentation map
-
-| Document                                       | Purpose                                                                    |
-| ---------------------------------------------- | -------------------------------------------------------------------------- |
-| [LSL_Viewer/docs/workflow.md](workflow.md)                     | Live, CSV replay, and XDF replay modes; expected display behavior          |
-| [LSL_Viewer/docs/configuration.md](configuration.md)           | Full config reference: mode, stream names, replay paths, server, rendering |
-| [LSL_Viewer/docs/live-csv-xdf-modes.md](live-csv-xdf-modes.md) | Mode details and replay-specific behavior                                  |
-| [LSL_Viewer/docs/xy-correlation.md](xy-correlation.md)         | XY correlation panel interpretation and axis-lock behavior                 |
-| [LSL_Viewer/docs/architecture.md](architecture.md)             | Core/viz layers and runtime dataflow                                       |
-| [LSL_Viewer/docs/development.md](development.md)               | How to add panels, charts, modes, and tests                                |
-
 ## Reading guide
 
-- To start the viewer in any mode: [LSL_Viewer/docs/workflow.md](workflow.md)
-- To configure stream names or replay paths: [LSL_Viewer/docs/configuration.md](configuration.md)
-- To understand XY correlation behavior: [LSL_Viewer/docs/xy-correlation.md](xy-correlation.md)
-- To understand the codebase: [LSL_Viewer/docs/architecture.md](architecture.md)
+| I want to…                                      | Read                                                           |
+| ----------------------------------------------- | -------------------------------------------------------------- |
+| Start the viewer in any mode                    | [LSL_Viewer/docs/workflow.md](workflow.md)                     |
+| Configure stream names, replay paths, or server | [LSL_Viewer/docs/configuration.md](configuration.md)           |
+| Understand mode details and replay behavior     | [LSL_Viewer/docs/live-csv-xdf-modes.md](live-csv-xdf-modes.md) |
+| Interpret the XY correlation panel              | [LSL_Viewer/docs/xy-correlation.md](xy-correlation.md)         |
+| Understand core/viz internals                   | [LSL_Viewer/docs/architecture.md](architecture.md)             |
+| Add panels, charts, or modes                    | [LSL_Viewer/docs/development.md](development.md)               |
 
 ## Related docs
 

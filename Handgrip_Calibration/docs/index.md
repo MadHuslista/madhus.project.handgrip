@@ -23,29 +23,20 @@ Before running calibration:
 2. [Handgrip_Firmware/docs/workflow.md](../../Handgrip_Firmware/docs/workflow.md) — firmware emits D2 frames
 3. [docs/workflows/full-live-viewer-quickstart.md](../../docs/workflows/full-live-viewer-quickstart.md) — both streams live
 
-## Documentation map
-
-| Document                                                           | Purpose                                                                   |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| [Handgrip_Calibration/docs/workflow.md](workflow.md)                                         | Preflight → record → fit → report → holdout validation                    |
-| [Handgrip_Calibration/docs/protocols.md](protocols.md)                                       | Protocol suite, canonical v3 protocol, holdout validation, legacy labels  |
-| [Handgrip_Calibration/docs/configuration.md](configuration.md)                               | Full protocol YAML reference and safe override guidance                   |
-| [Handgrip_Calibration/docs/recording.md](recording.md)                                       | LSL inputs, session files, events, quality telemetry, provenance          |
-| [Handgrip_Calibration/docs/fitting-and-model-selection.md](fitting-and-model-selection.md)   | Model alternatives, metrics, residuals, candidate ranking                 |
-| [Handgrip_Calibration/docs/reports-and-outputs.md](reports-and-outputs.md)                   | Report files, plots, tables, JSON artifacts                               |
-| [Handgrip_Calibration/docs/applying-calibration-results.md](applying-calibration-results.md) | Which values to use, where to apply them, deployment validation           |
-| [Handgrip_Calibration/docs/architecture.md](architecture.md)                                 | CLI to modules: preflight, record, segment, fit, report, validate-holdout |
-| [Handgrip_Calibration/docs/development.md](development.md)                                   | Add protocols, models, or report sections safely                          |
-| [Handgrip_Calibration/docs/calibration-manual.md](calibration-manual.md)                     | Extended manual: protocol phases, CSV schema, fitting criteria, dynamic validation, drift tracking |
-
 ## Reading guide
 
-- To run calibration: [Handgrip_Calibration/docs/workflow.md](workflow.md)
-- To understand protocol options: [Handgrip_Calibration/docs/protocols.md](protocols.md)
-- To interpret model selection: [Handgrip_Calibration/docs/fitting-and-model-selection.md](fitting-and-model-selection.md)
-- To understand session output files: [Handgrip_Calibration/docs/recording.md](recording.md)
-- To apply results to firmware or bridge: [Handgrip_Calibration/docs/applying-calibration-results.md](applying-calibration-results.md)
-- To extend or maintain the component: [Handgrip_Calibration/docs/development.md](development.md)
+| I want to…                                                             | Read                                                                                         |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Run calibration (preflight → record → fit → report → holdout)          | [Handgrip_Calibration/docs/workflow.md](workflow.md)                                         |
+| Choose a protocol (canonical v3, holdout, legacy labels)               | [Handgrip_Calibration/docs/protocols.md](protocols.md)                                       |
+| Edit protocol YAML safely                                              | [Handgrip_Calibration/docs/configuration.md](configuration.md)                               |
+| Understand session output files (events, quality, provenance)          | [Handgrip_Calibration/docs/recording.md](recording.md)                                       |
+| Interpret model selection (metrics, residuals, ranking)                | [Handgrip_Calibration/docs/fitting-and-model-selection.md](fitting-and-model-selection.md)   |
+| Read reports, plots, and JSON artifacts                                | [Handgrip_Calibration/docs/reports-and-outputs.md](reports-and-outputs.md)                   |
+| Apply results to firmware or bridge                                    | [Handgrip_Calibration/docs/applying-calibration-results.md](applying-calibration-results.md) |
+| Understand CLI-to-module internals                                     | [Handgrip_Calibration/docs/architecture.md](architecture.md)                                 |
+| Add protocols, models, or report sections                              | [Handgrip_Calibration/docs/development.md](development.md)                                   |
+| Read the extended manual (phases, CSV schema, fitting criteria, drift) | [Handgrip_Calibration/docs/calibration-manual.md](calibration-manual.md)                     |
 
 ## Related docs
 

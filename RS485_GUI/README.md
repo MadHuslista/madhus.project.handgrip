@@ -98,9 +98,6 @@ uv run pytest tests/integration
 
 If hardware is unavailable, prioritize parser/config/unit tests and validate live acquisition later with the reference-only quickstart.
 
-## Further docs
+## Documentation
 
-- [RS485_GUI/docs/index.md](docs/index.md) — RS485 GUI documentation map.
-- [docs/workflows/reference-only-quickstart.md](../docs/workflows/reference-only-quickstart.md) — operator workflow.
-- [docs/hardware/acquisition-board-reference.md](../docs/hardware/acquisition-board-reference.md) — acquisition-board reference.
-- [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md) — root stream and IPC contracts.
+Full reading guide, per-document map, and related cross-component docs: [RS485_GUI/docs/index.md](docs/index.md).

@@ -93,14 +93,9 @@ Main configuration areas:
 
 Full configuration reference is planned at [Handgrip_Analysis/docs/configuration.md](docs/configuration.md).
 
-## Common workflows
+## Documentation
 
-| Goal                         | Document                                                                                                 |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Run offline analysis         | [docs/workflows/handgrip-analysis.md](../docs/workflows/handgrip-analysis.md)                       |
-| Navigate component docs      | [Handgrip_Analysis/docs/index.md](docs/index.md)                                                                         |
-| Understand stages            | [Handgrip_Analysis/docs/stages.md](docs/stages.md)                                                                       |
-| Interpret filter design      | [Handgrip_Analysis/docs/filter-design.md](docs/filter-design.md)                                                         |
+Full reading guide, per-document map, and related cross-component docs: [Handgrip_Analysis/docs/index.md](docs/index.md).
 
 ## Repository layout
 
@@ -145,9 +140,3 @@ uv run ha-stage6 --help
 ```
 
 If your installed entry points differ, check the active `pyproject.toml` and update this README plus [docs/workflows/handgrip-analysis.md](../docs/workflows/handgrip-analysis.md) together.
-
-## Further docs
-
-- [Handgrip_Analysis/docs/index.md](docs/index.md) — analysis documentation map.
-- [docs/workflows/handgrip-analysis.md](../docs/workflows/handgrip-analysis.md) — root analysis workflow.
-- [Handgrip_Analysis/README_filter_design_report.md](README_filter_design_report.md) — current filter-design report source until migrated into [Handgrip_Analysis/docs/filter-design.md](docs/filter-design.md).

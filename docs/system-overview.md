@@ -106,7 +106,7 @@ Full stream definitions: [docs/architecture/stream-contracts.md](architecture/st
 | `Handgrip_Calibration` | `Handgrip_Calibration/data/calibration/<session_id>/` | CSVs, events, fit outputs, reports             |
 | `Handgrip_Analysis`    | `Handgrip_Analysis/data/analysis_results/`            | Stage reports, figures, filter recommendations |
 
-Generated outputs are not canonical documentation unless curated under [docs/examples/](examples/).
+Generated outputs are not canonical documentation unless curated under [docs/examples](examples/).
 
 ## Where configs live
 

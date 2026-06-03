@@ -47,14 +47,9 @@ Main configuration areas:
 
 Full configuration reference is planned at [LSL_Viewer/docs/configuration.md](docs/configuration.md).
 
-## Common workflows
+## Documentation
 
-| Goal                          | Document                                                                                                               |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Run full live viewer stack    | [docs/workflows/full-live-viewer-quickstart.md](../docs/workflows/full-live-viewer-quickstart.md)                 |
-| Understand stream contracts   | [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md)                                 |
-| Debug timestamp/XY delay      | [docs/architecture/timestamping-and-synchronization.md](../docs/architecture/timestamping-and-synchronization.md) |
-| Navigate component docs       | [LSL_Viewer/docs/index.md](docs/index.md)                                                                                       |
+Full reading guide, per-document map, and related cross-component docs: [LSL_Viewer/docs/index.md](docs/index.md).
 
 ## Repository layout
 
@@ -89,10 +84,3 @@ uv run pytest tests/unit
 uv run pytest tests/integration
 uv run pytest tests/e2e
 ```
-
-## Further docs
-
-- [LSL_Viewer/docs/index.md](docs/index.md) — LSL Viewer documentation map.
-- [docs/workflows/full-live-viewer-quickstart.md](../docs/workflows/full-live-viewer-quickstart.md) — operator workflow.
-- [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md) — root stream/data contracts.
-- [docs/architecture/timestamping-and-synchronization.md](../docs/architecture/timestamping-and-synchronization.md) — timing and alignment model.

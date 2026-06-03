@@ -52,15 +52,9 @@ Primary config/protocol files:
 
 Full configuration reference is planned at [Handgrip_Calibration/docs/configuration.md](docs/configuration.md).
 
-## Common workflows
+## Documentation
 
-| Goal                        | Document                                                                               |
-| --------------------------- | -------------------------------------------------------------------------------------- |
-| End-to-end overview         | [docs/workflows/handgrip-calibration.md](../docs/workflows/handgrip-calibration.md)  |
-| Detailed workflow steps     | [Handgrip_Calibration/docs/workflow.md](docs/workflow.md)                                                 |
-| Choose a protocol           | [Handgrip_Calibration/docs/protocols.md](docs/protocols.md)                                               |
-| Understand stream contracts | [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md) |
-| Validate physical fixture   | [docs/hardware/force-fixture.md](../docs/hardware/force-fixture.md)               |
+Full reading guide, per-document map, and related cross-component docs: [Handgrip_Calibration/docs/index.md](docs/index.md).
 
 ## Repository layout
 
@@ -103,9 +97,3 @@ uv run handgrip-cal demo-data --output /tmp/hg_demo
 uv run handgrip-cal fit /tmp/hg_demo/demo_handgrip_session --config conf/default.yaml
 uv run handgrip-cal report /tmp/hg_demo/demo_handgrip_session
 ```
-
-## Further docs
-
-- [Handgrip_Calibration/docs/index.md](docs/index.md) — calibration documentation map.
-- [Handgrip_Calibration/docs/protocols.md](docs/protocols.md) — canonical protocol suite and legacy labels.
-- [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md) — root stream/data contracts.
