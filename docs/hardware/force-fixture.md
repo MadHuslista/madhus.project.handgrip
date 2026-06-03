@@ -10,7 +10,7 @@ The fixture has three documentation stages:
 2. **PM58 + handgrip connected to acquisition board** — proves the mechanical path is connected to the electrical reference chain.
 3. **Screw press controlled-force setup** — proves the system can apply repeatable controlled force for static holds, calibration, and verification.
 
-Use this document before executing Handgrip calibration. Use [`docs/hardware/pm58-wiring-and-bringup.md`](pm58-wiring-and-bringup.md) for electrical wiring and [`docs/hardware/acquisition-board-reference.md`](acquisition-board-reference.md) for acquisition-board menus.
+Use this document before executing Handgrip calibration. Use [docs/hardware/pm58-wiring-and-bringup.md](pm58-wiring-and-bringup.md) for electrical wiring and [docs/hardware/acquisition-board-reference.md](acquisition-board-reference.md) for acquisition-board menus.
 
 ## Safety and mechanical assumptions
 
@@ -152,7 +152,7 @@ The PM58 and handgrip must experience the same axial force with minimal off-axis
 
 - [ ] All required fixture photos are committed under `docs/hardware/assets/`.
 - [ ] PM58 and handgrip are mechanically in series.
-- [ ] PM58 wiring has passed the bring-up checklist in [`pm58-wiring-and-bringup.md`](pm58-wiring-and-bringup.md).
+- [ ] PM58 wiring has passed the bring-up checklist in [docs/hardware/pm58-wiring-and-bringup.md](pm58-wiring-and-bringup.md).
 - [ ] Screw press applies force without slipping or visible off-axis deformation.
 - [ ] Reference signal responds monotonically to force.
 - [ ] Target signal responds monotonically to force.

@@ -6,7 +6,7 @@ last-reviewed: 2026-05-15
 
 > **Canonical status:** This is the canonical PM58 + acquisition-board wiring and bring-up workflow for the Handgrip Suite.
 >
-> **Scope boundary:** This document covers PM58 wiring, AC board power, RS485 host connection, and basic validation. Use [`docs/hardware/force-fixture.md`](force-fixture.md) for the mechanical force-path setup and [`docs/hardware/acquisition-board-reference.md`](acquisition-board-reference.md) for the full acquisition-board menu reference.
+> **Scope boundary:** This document covers PM58 wiring, AC board power, RS485 host connection, and basic validation. Use [docs/hardware/force-fixture.md](force-fixture.md) for the mechanical force-path setup and [docs/hardware/acquisition-board-reference.md](acquisition-board-reference.md) for the full acquisition-board menu reference.
 
 ## Fast operator summary
 
@@ -113,13 +113,13 @@ This guide explains how to:
 
 Use these image references while following the steps.
 
-- **Fig. 1 — Rear terminal map / full-feature selection**: [rear-terminal-map_full-feature-selection.jpg](assets/rear-terminal-map_full-feature-selection.jpg)
-- **Fig. 2 — AC input sticker close-up**: [ac-input-sticker_close-up.jpg](assets/ac-input-sticker_close-up.jpg)
-- **Fig. 3 — Front panel / buttons / indicators**: [front-panel_buttons_indicators.jpg](assets/front-panel_buttons_indicators.jpg)
-- **Fig. 4 — PM58 load cell label**: [pm58-load-cell_label.jpg](assets/pm58-load-cell_label.jpg)
-- **Fig. 5 — PM58 certificate + wire colors**: [pm58-certificate_wire-colors.jpg](assets/pm58-certificate_wire-colors.jpg)
-- **Fig. 6 — Google Lens translated rear label**: [rear-label_google-lens-translation.jpg](assets/rear-label_google-lens-translation.jpg)
-- **Fig. 7 — Original certificate photo**: [original-certificate_photo.jpg](assets/pm58-certificate_wire-colors.jpg)
+- **Fig. 1 — Rear terminal map / full-feature selection**: [docs/hardware/assets/rear-terminal-map_full-feature-selection.jpg](assets/rear-terminal-map_full-feature-selection.jpg)
+- **Fig. 2 — AC input sticker close-up**: [docs/hardware/assets/ac-input-sticker_close-up.jpg](assets/ac-input-sticker_close-up.jpg)
+- **Fig. 3 — Front panel / buttons / indicators**: [docs/hardware/assets/front-panel_buttons_indicators.jpg](assets/front-panel_buttons_indicators.jpg)
+- **Fig. 4 — PM58 load cell label**: [docs/hardware/assets/pm58-load-cell_label.jpg](assets/pm58-load-cell_label.jpg)
+- **Fig. 5 — PM58 certificate + wire colors**: [docs/hardware/assets/pm58-certificate_wire-colors.jpg](assets/pm58-certificate_wire-colors.jpg)
+- **Fig. 6 — Google Lens translated rear label**: [docs/hardware/assets/rear-label_google-lens-translation.jpg](assets/rear-label_google-lens-translation.jpg)
+- **Fig. 7 — Original certificate photo**: [docs/hardware/assets/pm58-certificate_wire-colors.jpg](assets/pm58-certificate_wire-colors.jpg)
 
 ---
 
