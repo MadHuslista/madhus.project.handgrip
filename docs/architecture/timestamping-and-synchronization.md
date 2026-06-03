@@ -77,5 +77,5 @@ Recommended treatment:
 - Record a short calibration/preflight session and inspect saved sample counts.
 
 ## Related docs:
-- [`docs/architecture/stream-contracts.md`](stream-contracts.md)
-- [`docs/workflows/handgrip-calibration.md`](../workflows/handgrip-calibration.md)
+- [docs/architecture/stream-contracts.md](stream-contracts.md)
+- [docs/workflows/handgrip-calibration.md](../workflows/handgrip-calibration.md)
