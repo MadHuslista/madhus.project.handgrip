@@ -63,6 +63,37 @@ Exact filenames are implementation-owned, but a complete session should contain 
 | metadata               | JSON/YAML manifest       | Session identity and protocol metadata.  |
 
 
+## Preflight acceptance gates
+
+Do not start the protocol until all gates pass:
+
+| Gate                   | Pass criterion                                                             |
+| ---------------------- | -------------------------------------------------------------------------- |
+| Reference live rate    | `498–500 Hz` preferred, `>= 495 Hz` minimum                               |
+| Target live rate       | approximately `85–105 Hz`                                                  |
+| Reference max gap      | below `0.020 s`                                                            |
+| Target max gap         | below `0.100 s`                                                            |
+| Reference zero noise   | low enough that a 3 s hold passes `max_hold_reference_std_N: 0.5`         |
+| Force response sign    | reference and target move monotonically in the same physical direction     |
+| No target parser drops | `target_status` does not show persistent not-ready/overflow conditions     |
+
+These thresholds correspond to the `QualityConfig` defaults in the protocol YAML:
+
+```yaml
+quality:
+  reference_expected_hz: 500
+  reference_min_hz: 495
+  reference_max_gap_s: 0.02
+  target_expected_hz_min: 85
+  target_expected_hz_max: 105
+  target_max_gap_s: 0.1
+  max_hold_reference_std_N: 0.5
+  max_hold_reference_slope_N_per_s: 0.2
+  max_baseline_drift_N_per_min: 0.5
+  min_hold_target_samples: 20
+  min_hold_reference_samples: 100
+```
+
 ## Recommended acquisition board configuration for recording
 
 Before recording, ensure the acquisition board is configured for clean calibration-quality reference output. Key settings:

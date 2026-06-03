@@ -36,7 +36,6 @@ Before running calibration:
 | Apply results to firmware or bridge                                    | [Handgrip_Calibration/docs/applying-calibration-results.md](applying-calibration-results.md) |
 | Understand CLI-to-module internals                                     | [Handgrip_Calibration/docs/architecture.md](architecture.md)                                 |
 | Add protocols, models, or report sections                              | [Handgrip_Calibration/docs/development.md](development.md)                                   |
-| Read the extended manual (phases, CSV schema, fitting criteria, drift) | [Handgrip_Calibration/docs/calibration-manual.md](calibration-manual.md)                     |
 
 ## Related docs
 

@@ -108,6 +108,24 @@ Only apply this if:
 - the report explicitly recommends firmware deployment,
 - post-deployment validation is run.
 
+## Drift tracking across sessions
+
+When repeating calibration over time, compare these fields across `fit_result.json` files:
+
+```text
+session_id, selected_model_id, a, b, rmse_N, max_abs_error_N,
+max_abs_error_percent_range, passes_residual_threshold, selection_likelihood
+```
+
+| Observation                         | Interpretation                            | Action                                           |
+| ----------------------------------- | ----------------------------------------- | ------------------------------------------------ |
+| `a` changes, `b` stable             | Sensitivity/span change.                  | Inspect HX711/load-cell gain path and mechanics. |
+| `b` changes, `a` stable             | Offset/zero shift.                        | Inspect preload, tare, thermal zero drift.       |
+| Both `a` and `b` shift              | Mechanical setup changed or sensor aging. | Repeat reference-only verification.              |
+| RMSE rises but coefficients similar | Noisy holds or operator instability.      | Improve hold stability or fixture.               |
+| Hysteresis diagnostic worsens       | Fixture compliance/contact issue.         | Inspect load path and preloading.                |
+| Drift diagnostic worsens            | Warm-up or creep.                         | Add warm-up; verify auto-zero is disabled.       |
+
 ## Common interpretation mistakes
 
 | Mistake                                        | Why it is wrong                                  |

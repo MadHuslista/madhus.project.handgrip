@@ -91,6 +91,20 @@ Reports should preserve at least:
 - deployment recommendation,
 - holdout result if available.
 
+## Dynamic validation targets
+
+After static fitting, use dynamic trial data from the session to check behavior beyond static equilibrium. Initial targets for a 100 N operating range:
+
+| Metric                         | Target                                                      |
+| ------------------------------ | ----------------------------------------------------------- |
+| Static max absolute error      | `<= 0.5 N`                                                  |
+| Static RMSE                    | `<= 0.25–0.35 N` preferred                                  |
+| Dynamic lag                    | Document first; set a limit once experiment needs are known |
+| Post-squeeze baseline recovery | `<= 0.5 N` after settling                                   |
+| Slow-ramp monotonicity         | No large reversals outside measured noise                   |
+
+Do not optimize dynamic metrics until the static fit is stable.
+
 ## Output lifecycle
 
 - Keep full reports with the session folder.
