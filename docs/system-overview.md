@@ -16,25 +16,7 @@ The normal live workflow starts the reference acquisition app first, then the LS
 
 ## Physical chain
 
-```text
-Target handgrip sensor path
-  Handgrip sensor(s)
-    → HX711 load-cell ADC
-    → Arduino Nano running Handgrip_Firmware
-    → USB serial to host PC
-    → LSL_Bridge target input
-    → LSL stream: HandgripTarget
-
-Reference force path
-  PM58 reference load cell
-    → High-speed acquisition board sensor input
-    → RS485 output
-    → USB-RS485 adapter
-    → RS485_GUI on host PC
-    → ZeroMQ IPC topic: rs485.measurement.v1
-    → LSL_Bridge reference input
-    → LSL stream: HandgripReference
-```
+The target path runs: Handgrip sensor → HX711 ADC → Arduino Nano firmware → USB serial → `LSL_Bridge` → `HandgripTarget` LSL stream. The reference path runs: PM58 load cell → acquisition board → RS485 → `RS485_GUI` → ZeroMQ IPC → `LSL_Bridge` → `HandgripReference` LSL stream. For the full dataflow diagram see [docs/architecture/dataflow.md](architecture/dataflow.md).
 
 During calibration the target and reference chains must experience the same mechanical force path. See [docs/hardware/force-fixture.md](hardware/force-fixture.md).
 
@@ -52,17 +34,7 @@ For end-to-end dataflow see [docs/architecture/dataflow.md](architecture/dataflo
 
 ## Stream and data contracts
 
-| Contract                                                       | Producer               | Consumer                             |
-| -------------------------------------------------------------- | ---------------------- | ------------------------------------ |
-| `D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>` | `Handgrip_Firmware`    | `LSL_Bridge`                         |
-| `M2,<payload_schema>,<firmware_version>,...`                   | `Handgrip_Firmware`    | `LSL_Bridge`, session metadata       |
-| `rs485.measurement.v1`                                         | `RS485_GUI`            | `LSL_Bridge`                         |
-| `HandgripTarget`                                               | `LSL_Bridge`           | `LSL_Viewer`, `Handgrip_Calibration` |
-| `HandgripReference`                                            | `LSL_Bridge`           | `LSL_Viewer`, `Handgrip_Calibration` |
-| `HandgripComponentEvents`                                      | `LSL_Bridge`           | Diagnostics / recordings             |
-| Calibration session directory                                  | `Handgrip_Calibration` | Fit/report/analysis workflows        |
-
-Full stream definitions: [docs/architecture/stream-contracts.md](architecture/stream-contracts.md), [LSL_Bridge/docs/stream-contracts.md](../LSL_Bridge/docs/stream-contracts.md).
+Contracts in this suite: firmware UART (`M2`/`D2`), RS485 IPC (`rs485.measurement.v1`), and three LSL streams (`HandgripTarget`, `HandgripReference`, `HandgripComponentEvents`). Full ownership map and authoritative definitions: [docs/architecture/stream-contracts.md](architecture/stream-contracts.md).
 
 ## Output locations
 
@@ -77,6 +49,16 @@ Full stream definitions: [docs/architecture/stream-contracts.md](architecture/st
 Generated outputs are not canonical documentation unless curated under [docs/examples](examples/).
 
 Full configuration map: [docs/configuration/index.md](configuration/index.md).
+
+## Typical first-time sequence
+
+1. Connect hardware and wire PM58. See [docs/workflows/physical-setup.md](workflows/physical-setup.md).
+2. Upload firmware and validate serial output. See [Handgrip_Firmware/docs/workflow.md](../Handgrip_Firmware/docs/workflow.md).
+3. Validate the reference chain. See [docs/workflows/reference-only-quickstart.md](workflows/reference-only-quickstart.md).
+4. Validate the target chain. See [docs/workflows/target-only-quickstart.md](workflows/target-only-quickstart.md).
+5. Start the full live viewer. See [docs/workflows/full-live-viewer-quickstart.md](workflows/full-live-viewer-quickstart.md).
+6. Calibrate the handgrip. See [docs/workflows/handgrip-calibration.md](workflows/handgrip-calibration.md).
+7. Run signal analysis. See [docs/workflows/handgrip-analysis.md](workflows/handgrip-analysis.md).
 
 ## Where to go next
 
