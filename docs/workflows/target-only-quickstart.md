@@ -28,17 +28,6 @@ Replace `/dev/ttyUSB_TARGET` with the Arduino target path. Prefer `/dev/serial/b
 - LSL outlet `HandgripTarget` is published.
 - Applying force changes the target stream.
 
-## Where outputs/logs appear
-
-Typical locations depend on `LSL_Bridge/conf/config.yaml`:
-
-| Output              | Location                                      |
-| ------------------- | --------------------------------------------- |
-| bridge logs         | `LSL_Bridge/logs/` or configured logging path |
-| optional target CSV | configured bridge CSV output path             |
-| LSL stream          | live LSL network, not a file                  |
-
-
 ## Related docs
 - [Handgrip_Firmware/docs/workflow.md](../../Handgrip_Firmware/docs/workflow.md)
 - [Handgrip_Firmware/docs/serial-protocol.md](../../Handgrip_Firmware/docs/serial-protocol.md)

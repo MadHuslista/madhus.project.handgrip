@@ -48,39 +48,7 @@ During calibration the target and reference chains must experience the same mech
 | `uv run handgrip-cal ...`                       | `Handgrip_Calibration` | LSL streams / recorded sessions | Calibration datasets, reports            | 4           |
 | `uv run ha-stage ...` / `uv run ha-run-all ...` | `Handgrip_Analysis`    | CSV inputs and manifests        | Analysis reports, filter recommendations | Offline     |
 
-## Runtime dataflow
-
-```text
-RS485_GUI
-  ├── reads: /dev/ttyUSBx from acquisition board
-  ├── writes: logs / CSV / NDJSON as configured
-  └── publishes: ZeroMQ topic rs485.measurement.v1
-
-Handgrip_Firmware
-  └── emits: M2 metadata frames + D2 data frames over serial
-
-LSL_Bridge
-  ├── reads: target serial D2/M2 frames
-  ├── reads: RS485_GUI ZeroMQ IPC messages
-  ├── publishes: HandgripTarget LSL stream
-  ├── publishes: HandgripReference LSL stream
-  └── optionally writes: target/reference CSV logs
-
-LSL_Viewer
-  ├── reads: live LSL streams or replay files
-  └── displays: time series, reference validation, XY correlation, markers
-
-Handgrip_Calibration
-  ├── reads: LSL streams during recording
-  ├── writes: session CSVs, events, quality telemetry
-  ├── fits: candidate calibration models
-  └── writes: calibration reports and model exports
-
-Handgrip_Analysis
-  ├── reads: captured CSVs and manifests
-  ├── computes: staged signal metrics and filter candidates
-  └── writes: plots, reports, recommendations
-```
+For end-to-end dataflow see [docs/architecture/dataflow.md](architecture/dataflow.md).
 
 ## Stream and data contracts
 
@@ -107,17 +75,6 @@ Full stream definitions: [docs/architecture/stream-contracts.md](architecture/st
 | `Handgrip_Analysis`    | `Handgrip_Analysis/data/analysis_results/`            | Stage reports, figures, filter recommendations |
 
 Generated outputs are not canonical documentation unless curated under [docs/examples](examples/).
-
-## Where configs live
-
-| Component   | Main config source                                      | Detailed docs                                                                               |
-| ----------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Firmware    | `Handgrip_Firmware/Core/Inc/config.h`, `platformio.ini` | [Handgrip_Firmware/docs/configuration.md](../Handgrip_Firmware/docs/configuration.md)       |
-| RS485 GUI   | `RS485_GUI/config/config.yaml`                          | [RS485_GUI/docs/configuration.md](../RS485_GUI/docs/configuration.md)                       |
-| LSL Bridge  | `LSL_Bridge/conf/config.yaml`                           | [LSL_Bridge/docs/configuration.md](../LSL_Bridge/docs/configuration.md)                     |
-| LSL Viewer  | `LSL_Viewer/conf/config.yaml`                           | [LSL_Viewer/docs/configuration.md](../LSL_Viewer/docs/configuration.md)                     |
-| Calibration | `Handgrip_Calibration/conf/*.yaml`                      | [Handgrip_Calibration/docs/configuration.md](../Handgrip_Calibration/docs/configuration.md) |
-| Analysis    | `Handgrip_Analysis/conf/**/*.yaml`                      | [Handgrip_Analysis/docs/configuration.md](../Handgrip_Analysis/docs/configuration.md)       |
 
 Full configuration map: [docs/configuration/index.md](configuration/index.md).
 

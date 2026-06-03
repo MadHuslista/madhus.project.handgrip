@@ -52,14 +52,6 @@ Replace serial paths with stable `/dev/serial/by-id/...` paths when possible.
 | `LSL_Bridge` | Publishes `HandgripTarget` and `HandgripReference`.    |
 | `LSL_Viewer` | Shows target/reference time series and XY correlation. |
 
-## Where outputs/logs appear
-
-| Component    | Outputs                                                   |
-| ------------ | --------------------------------------------------------- |
-| `RS485_GUI`  | GUI, RS485 raw/interpreted logs, IPC publisher logs.      |
-| `LSL_Bridge` | bridge logs, optional target/reference CSVs, LSL streams. |
-| `LSL_Viewer` | browser view, optional viewer logs.                       |
-
 ## Related docs
 - [docs/architecture/stream-contracts.md](../architecture/stream-contracts.md)
 

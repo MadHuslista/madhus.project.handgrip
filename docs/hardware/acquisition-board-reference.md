@@ -931,50 +931,6 @@ The PDF provides a master/slave Modbus-RTU register map. The table below ports t
 
 ---
 
-## 25. What this rewrite changes versus the PDF
-
-This Markdown keeps the PDF content but improves it by:
-1. grouping settings by function,
-2. translating “peeling” into tare semantics,
-3. separating cosmetic zeroing from true zero calibration,
-4. turning scattered parameter definitions into usable procedures,
-5. surfacing the practical differences between:
-   - zero,
-   - tare,
-   - startup zero,
-   - automatic zero,
-   - display-zero range,
-   - peak threshold / interval,
-   - relay source / relay mode / hysteresis,
-   - Modbus mode vs active-send mode,
-   - analog source vs analog electrical format.
-
----
-
-## 26. Source provenance
-
-### Primary sources
-1. Uploaded machine-translated PDF manual for the board.
-2. Uploaded photos of the front panel and rear terminal label.
-3. Uploaded PM58 load-cell certificate / label.
-
-### Public web sources used for validation / corroboration
-1. Public duplicate of the same manual hosted on AliExpress CDN.
-2. Similar Chinese weighing-transmitter / force-indicator manuals used only to clarify:
-   - A/D rate interpretation,
-   - filter tradeoffs,
-   - stable-detection gating of calibration / zero functions.
-
-### Important caution
-Where this Markdown provides step-by-step procedures that were **not explicitly spelled out** in the source PDF, those procedures are best-effort reconstructions based on:
-- the menu definitions,
-- the key legends,
-- common behavior of comparable weighing indicators.
-
-Use them as a practical commissioning guide, but validate on the real device during setup.
-
----
-
 ## Recommended calibration configuration
 
 The following table captures the recommended menu settings for the Handgrip calibration reference chain. The priority is reproducible calibration, not generic weighing-indicator operation.

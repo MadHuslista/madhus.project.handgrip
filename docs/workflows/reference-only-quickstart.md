@@ -31,22 +31,12 @@ After GUI opens, click "Connect" to start acquisition and IPC publishing.
 - Logs show valid measurement frames.
 - IPC publisher is active on the configured endpoint/topic.
 
-## Where outputs/logs appear
-
-| Output               | Location                                                     |
-| -------------------- | ------------------------------------------------------------ |
-| GUI                  | browser window / NiceGUI URL                                 |
-| raw/interpreted logs | configured `RS485_GUI` logger output directory               |
-| IPC                  | ZeroMQ endpoint configured in `RS485_GUI/config/config.yaml` |
-| board display        | acquisition-board front panel                                |
-
 ## Related docs
+
 - [docs/workflows/physical-setup.md](physical-setup.md)
 - [docs/hardware/pm58-wiring-and-bringup.md](../hardware/pm58-wiring-and-bringup.md)
 
-
 ## Troubleshooting links
 
-- [docs/hardware/pm58-wiring-and-bringup.md](../hardware/pm58-wiring-and-bringup.md)
 - `docs/hardware/rs485-modbus-active-send.md`
 - [docs/troubleshooting/serial-and-rs485.md](../troubleshooting/serial-and-rs485.md)
