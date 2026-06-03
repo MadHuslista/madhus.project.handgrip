@@ -72,18 +72,9 @@ Prefer the simplest candidate that:
 - does not hide mechanical or sensor problems,
 - can be deployed in the intended target component.
 
-## Current recommendation pattern
+## Current recommendation
 
-Based on the current filter reassessment source report:
-
-| Role                             | Recommendation                                       | Rationale                                                                 |
-| -------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------- |
-| Primary characterization channel | 2nd-order Butterworth low-pass at 15 Hz, fs = 100 Hz | Best realism/noise tradeoff after outlier artifact fix.                   |
-| Optional stable-display channel  | 2nd-order Butterworth low-pass at 10 Hz, fs = 100 Hz | Smoother display; more dynamic suppression.                               |
-| Baseline handling                | State-based tare and unloaded-only baseline tracking | Avoids corrupting grip-event DC/slow force content.                       |
-| High-pass                        | Not recommended for primary force channel            | Distorts ramp/hold events and removes meaningful slow/static force.       |
-| Band-pass                        | Not recommended for primary force channel            | Same high-pass problem plus low-pass constraints.                         |
-| Notch/band-reject                | Not needed in main path for current data             | Low-pass addresses high-frequency contamination without notch complexity. |
+For the current documented recommendation baseline, see [Handgrip_Analysis/docs/stages.md](stages.md#stage-6--filter-design-candidate-benchmark).
 
 ## Deployment targets
 

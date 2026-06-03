@@ -52,6 +52,8 @@ Exact paths are config-owned. The run command should print or log the output dir
 
 ## Figures
 
+### General guidance
+
 Figures should include:
 
 - clear title,
@@ -65,6 +67,8 @@ Avoid unlabeled “nice looking” plots. A plot that cannot be traced to input/
 
 ## Reports
 
+### General guidance
+
 Reports should start with:
 
 - conclusion / recommended action,
@@ -74,6 +78,8 @@ Reports should start with:
 - interpretation,
 - limitations,
 - next validation step.
+
+### Stage 6 reports
 
 For Stage 6, include:
 
