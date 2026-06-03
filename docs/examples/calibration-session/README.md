@@ -2,7 +2,7 @@
 
 ## Summary
 
-This directory is for small, curated examples that teach how to interpret calibration outputs. Do not copy entire calibration session folders here. Keep raw/scientific data in `Handgrip_Calibration/data/calibration/<session_id>/`.
+Small, curated excerpts showing how to interpret calibration outputs. Raw session data belongs in `Handgrip_Calibration/data/calibration/<session_id>/`.
 
 ## What a complete calibration session usually contains
 
@@ -58,8 +58,6 @@ docs/examples/calibration-session/
 ├── selected-report-excerpts.md
 └── selected-plot-notes.md
 ```
-
-Do not copy full session folders or raw datasets into this docs example directory.
 
 ## Related docs:
 

@@ -2,7 +2,7 @@
 
 ## Summary
 
-This directory is for small examples showing how to read analysis outputs, especially Stage 6 filter-design artifacts. Do not copy complete analysis output trees here unless intentionally curated.
+Small, curated excerpts showing how to read analysis outputs, especially Stage 6 filter-design artifacts.
 
 ## Stage 6 example interpretation
 
