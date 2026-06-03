@@ -806,29 +806,11 @@ This is chosen by `109.di`:
 
 ---
 
-## 22. Operating notes on ambiguous terms
-
-The source PDF is machine-translated and some terms are unclear. This rewrite uses the following interpretations:
-
-| Source term                | Recommended interpretation                             |
-| -------------------------- | ------------------------------------------------------ |
-| “peeling”                  | tare                                                   |
-| “zero point calibration”   | persistent zero calibration                            |
-| “display zeroing”          | cosmetic zero display without resetting internal value |
-| “dynamic tracking”         | dynamic drift / motion tracking behavior               |
-| “stable weight switch”     | show only final stable value                           |
-| “return difference”        | hysteresis                                             |
-| “mailing address”          | communication / Modbus address                         |
-| “load ballast calibration” | real applied-weight calibration                        |
-| “data digital calibration” | digital-entry calibration using sensor specs           |
-
----
-
-## 23. Modbus register map
+## 22. Modbus register map
 
 The PDF provides a master/slave Modbus-RTU register map. The table below ports the documented content into a more readable form.
 
-### 23.1 Read-only measurement values
+### 22.1 Read-only measurement values
 
 |  Dec | Hex      |   PLC | Name                    | Type               | Access | Notes                |
 | ---: | -------- | ----: | ----------------------- | ------------------ | ------ | -------------------- |
@@ -841,7 +823,7 @@ The PDF provides a master/slave Modbus-RTU register map. The table below ports t
 |    6 | `0x0006` | 40007 | Internal code low word  | 32-bit signed low  | R      | ADC internal code    |
 |    7 | `0x0007` | 40008 | Internal code high word | 32-bit signed high | R      | ADC internal code    |
 
-### 23.2 Shared configuration / status registers
+### 22.2 Shared configuration / status registers
 
 |  Dec | Hex      |   PLC | Name                         | Type               | Access | Meaning                                                                                                                         |
 | ---: | -------- | ----: | ---------------------------- | ------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -866,7 +848,7 @@ The PDF provides a master/slave Modbus-RTU register map. The table below ports t
 |   26 | `0x001A` | 40027 | Stable range division        | 16-bit unsigned    | R/W    | `0–5`                                                                                                                           |
 |   27 | `0x001B` | 40028 | Stable time                  | 16-bit unsigned    | R/W    | `100–9999 ms`                                                                                                                   |
 
-### 23.3 Relay 1 registers
+### 22.3 Relay 1 registers
 
 |  Dec | Hex      |   PLC | Name                          | Type                 | Access |
 | ---: | -------- | ----: | ----------------------------- | -------------------- | ------ |
@@ -879,7 +861,7 @@ The PDF provides a master/slave Modbus-RTU register map. The table below ports t
 |   34 | `0x0022` | 40035 | Relay 1 lower limit low word  | 16-bit unsigned low  | R/W    |
 |   35 | `0x0023` | 40036 | Relay 1 lower limit high word | 16-bit unsigned high | R/W    |
 
-### 23.4 Relay 2 registers
+### 22.4 Relay 2 registers
 
 |  Dec | Hex      |   PLC | Name                          | Type                 | Access |
 | ---: | -------- | ----: | ----------------------------- | -------------------- | ------ |
@@ -892,7 +874,7 @@ The PDF provides a master/slave Modbus-RTU register map. The table below ports t
 |   42 | `0x002A` | 40043 | Relay 2 lower limit low word  | 16-bit unsigned low  | R/W    |
 |   43 | `0x002B` | 40044 | Relay 2 lower limit high word | 16-bit unsigned high | R/W    |
 
-### 23.5 Relay 3 registers
+### 22.5 Relay 3 registers
 
 |  Dec | Hex      |   PLC | Name                          | Type                 | Access |
 | ---: | -------- | ----: | ----------------------------- | -------------------- | ------ |
@@ -907,7 +889,7 @@ The PDF provides a master/slave Modbus-RTU register map. The table below ports t
 
 ---
 
-## 24. Validation and commissioning checklist
+## 23. Validation and commissioning checklist
 
 ### Electrical
 - [ ] Correct board version identified (AC vs DC)

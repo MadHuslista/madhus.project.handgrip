@@ -6,7 +6,7 @@ last-reviewed: 2026-05-15
 
 > **Canonical status:** This is the canonical PM58 + acquisition-board wiring and bring-up workflow for the Handgrip Suite.
 >
-> **Scope boundary:** This document covers PM58 wiring, AC board power, RS485 host connection, and basic validation. Use [docs/hardware/force-fixture.md](force-fixture.md) for the mechanical force-path setup and [docs/hardware/acquisition-board-reference.md](acquisition-board-reference.md) for the full acquisition-board menu reference.
+> **Scope boundary:** This document covers PM58 wiring, AC board power, RS485 host connection, and basic validation. Use [docs/hardware/force-fixture.md](force-fixture.md) for the mechanical force-path setup, [docs/hardware/acquisition-board-reference.md](acquisition-board-reference.md) for the full acquisition-board menu reference, and [docs/hardware/dual-device-calibration-configuration.md](dual-device-calibration-configuration.md) for the recommended RS485/Active-Send calibration profile (460800 baud, 500 Hz).
 
 ## Fast operator summary
 
