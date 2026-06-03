@@ -7,6 +7,15 @@
 - **Modbus RTU polling** is the simpler fallback/debug mode when Active-Send is not configured or not stable.
 - Both modes produce the same internal `MeasurementFrame` abstraction and can feed the same logging, UI, and IPC publisher paths.
 
+## Background: RS485 vs Modbus
+
+RS485 and Modbus are complementary, not competing. RS485 (EIA/TIA-485) is the physical layer — differential signalling over twisted pair on a multipoint bus. Modbus is the application-layer message format (function codes and registers) that rides over that link. RS485 is the wire; Modbus is the language spoken on it.
+
+- **Modbus RTU** is a passive poll/response scheme: the host requests registers and the board answers only when asked. It is deterministic and simple to inspect, but its effective rate is transaction-limited.
+- **Active-Send** is not a Modbus protocol variant. The board is configured to autonomously and continuously push measurement frames over the same RS485 link, removing the per-sample request round-trip. This is what makes the high reference rate (500 Hz) used for calibration achievable.
+
+Both modes carry the same 11-register board payload, which is decoded into one internal `MeasurementFrame` and published through the same path; see [RS485_GUI/docs/ipc-schema.md](ipc-schema.md) for the published field contract.
+
 ## Mode comparison
 
 | Area              | Active-Send                                       | Modbus RTU polling                                   |

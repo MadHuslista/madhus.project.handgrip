@@ -25,11 +25,6 @@ ls -l /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || true
 
 Use the USB-RS485 adapter path. Confirm it is not the Arduino/HX711 target serial path.
 
-Stable Linux path (preferred):
-
-```bash
-/dev/serial/by-id/<rs485-adapter-id>
-```
 
 ## 2 — Review configuration
 
@@ -39,7 +34,7 @@ Before starting, confirm `RS485_GUI/config/config.yaml` has the correct:
 - `device.mode` — `active_send` (recommended) or `modbus_rtu` (fallback),
 - `serial.default_baudrate` — `460800` for Active-Send, `9600`–`115200` for Modbus RTU.
 
-See [RS485_GUI/docs/configuration.md](configuration.md) and [RS485_GUI/docs/active-send-and-modbus.md](active-send-and-modbus.md).
+For more details, see [RS485_GUI/docs/configuration.md](configuration.md) and [RS485_GUI/docs/active-send-and-modbus.md](active-send-and-modbus.md).
 
 ## 3 — Start the GUI
 
@@ -56,22 +51,6 @@ Or with an explicit port override:
 uv run rs485-gui serial.default_port=/dev/ttyUSB_RS485
 ```
 
-For Active-Send at 500 Hz:
-
-```bash
-uv run rs485-gui \
-  serial.default_port=/dev/ttyUSB_RS485 \
-  device.mode=active_send \
-  serial.default_baudrate=460800
-```
-
-For Modbus RTU fallback:
-
-```bash
-uv run rs485-gui \
-  serial.default_port=/dev/ttyUSB_RS485 \
-  device.mode=modbus_rtu
-```
 
 ## 4 — Validate reference data
 

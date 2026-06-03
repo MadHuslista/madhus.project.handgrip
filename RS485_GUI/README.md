@@ -9,7 +9,7 @@ It owns the PM58/acquisition-board host-side acquisition path. Downstream compon
 ## First command
 
 From `RS485_GUI/`:
-> This should be enough to start the application with default settings and connect to the acquisition board if it's on a standard port. 
+> This should be enough to start the application with default settings ready to connect to the acquisition board if it's on a standard port. 
 > Adjustments could be done directly on the UI or by providing config overrides as needed.
 
 ```bash
@@ -56,19 +56,9 @@ Main configuration areas:
 | `ui`                          | Browser UI host/port, refresh cadence, plot behavior.       |
 | `logger`                      | CSV/NDJSON/event logging behavior and output paths.         |
 | `ipc`                         | ZeroMQ publisher endpoint and topic configuration.          |
-| parser/signal settings        | Board payload interpretation and selected displayed signal. |
+| `parser` / signal settings    | Board payload interpretation and selected displayed signal. |
 
-Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
-
-## Common workflows
-
-| Goal                                     | Document                                                                                            |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Validate reference chain only            | [`docs/workflows/reference-only-quickstart.md`](../docs/workflows/reference-only-quickstart.md)     |
-| Run full live viewer stack               | [`docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) |
-| Understand PM58/acquisition-board wiring | [`docs/hardware/pm58-wiring-and-bringup.md`](../docs/hardware/pm58-wiring-and-bringup.md)           |
-| Understand stream and IPC contracts      | [`docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                 |
-| Navigate component docs                  | [`RS485_GUI/docs/index.md`](docs/index.md)                                                          |
+Full configuration reference is planned at [RS485_GUI/docs/configuration.md](docs/configuration.md).
 
 ## Library layout
 
@@ -110,7 +100,7 @@ If hardware is unavailable, prioritize parser/config/unit tests and validate liv
 
 ## Further docs
 
-- [`RS485_GUI/docs/index.md`](docs/index.md) — RS485 GUI documentation map.
-- [`docs/workflows/reference-only-quickstart.md`](../docs/workflows/reference-only-quickstart.md) — operator workflow.
-- [`docs/hardware/acquisition-board-reference.md`](../docs/hardware/acquisition-board-reference.md) — acquisition-board reference.
-- [`docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) — root stream and IPC contracts.
+- [RS485_GUI/docs/index.md](docs/index.md) — RS485 GUI documentation map.
+- [docs/workflows/reference-only-quickstart.md](../docs/workflows/reference-only-quickstart.md) — operator workflow.
+- [docs/hardware/acquisition-board-reference.md](../docs/hardware/acquisition-board-reference.md) — acquisition-board reference.
+- [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md) — root stream and IPC contracts.

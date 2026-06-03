@@ -169,7 +169,7 @@ Any change to IPC field names or topic names is a cross-component change. Update
 1. `RS485_GUI/config/config.yaml`,
 2. `RS485_GUI/src/rs485_gui/io/publisher.py`,
 3. `LSL_Bridge` subscriber/parser/config,
-4. [`docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md),
+4. [docs/architecture/stream-contracts.md](../../docs/architecture/stream-contracts.md),
 5. this document,
 6. bridge and GUI tests.
 

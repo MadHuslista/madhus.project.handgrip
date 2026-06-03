@@ -11,13 +11,13 @@
 
 | Document                                               | Purpose                                                          |
 | ------------------------------------------------------ | ---------------------------------------------------------------- |
-| [workflow.md](workflow.md)                             | Connect to the acquisition board, validate UI/log/IPC output     |
-| [configuration.md](configuration.md)                   | Full `config/config.yaml` reference                              |
-| [active-send-and-modbus.md](active-send-and-modbus.md) | Modbus RTU polling vs Active-Send                                |
-| [ipc-schema.md](ipc-schema.md)                         | ZMQ topics, measurement payload, event payload                   |
-| [logging-and-outputs.md](logging-and-outputs.md)       | Log files, output paths, overwrite/append behavior               |
-| [architecture.md](architecture.md)                     | Core/transport/io/ui/config layers and runtime dataflow          |
-| [development.md](development.md)                       | How to add parser fields, UI controls, logger outputs, and tests |
+| [RS485_GUI/docs/workflow.md](workflow.md)                             | Connect to the acquisition board, validate UI/log/IPC output     |
+| [RS485_GUI/docs/configuration.md](configuration.md)                   | Full `config/config.yaml` reference                              |
+| [RS485_GUI/docs/active-send-and-modbus.md](active-send-and-modbus.md) | Modbus RTU polling vs Active-Send                                |
+| [RS485_GUI/docs/ipc-schema.md](ipc-schema.md)                         | ZMQ topics, measurement payload, event payload                   |
+| [RS485_GUI/docs/logging-and-outputs.md](logging-and-outputs.md)       | Log files, output paths, overwrite/append behavior               |
+| [RS485_GUI/docs/architecture.md](architecture.md)                     | Core/transport/io/ui/config layers and runtime dataflow          |
+| [RS485_GUI/docs/development.md](development.md)                       | How to add parser fields, UI controls, logger outputs, and tests |
 
 ## Reading guide
 
@@ -33,18 +33,3 @@
 - [docs/hardware/pm58-wiring-and-bringup.md](../../docs/hardware/pm58-wiring-and-bringup.md) — PM58 wiring and board bring-up
 - [docs/hardware/acquisition-board-reference.md](../../docs/hardware/acquisition-board-reference.md) — full acquisition-board menu reference
 - [docs/troubleshooting/serial-and-rs485.md](../../docs/troubleshooting/serial-and-rs485.md)
-## Minimal workflow
-
-```bash
-cd RS485_GUI
-uv run rs485-gui serial.default_port=/dev/ttyUSB_RS485
-``` 
-
-Expected result:
-
-- NiceGUI browser UI opens
-- Acquisition-board can be connected successfully and measurements update when force changes.
-- `RS485_GUI/logs/` receives configured logs.
-- IPC publisher binds to `tcp://127.0.0.1:5557` when acquisition starts.
-- `LSL_Bridge` can consume `rs485.measurement.v1` and publish `HandgripReference`.
-

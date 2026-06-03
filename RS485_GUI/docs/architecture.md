@@ -197,7 +197,7 @@ The dataclass schema in `config/schema.py` is documentation/validation support, 
 - Add new board decode fields in `core/codec.py` or transport decode code, not UI first.
 - Register new plot signals in `core/signals.py`.
 - Expose new persisted fields in `io/logger.py`.
-- Expose bridge-required fields in `io/publisher.py` and update [`ipc-schema.md`](ipc-schema.md).
+- Expose bridge-required fields in `io/publisher.py` and update [RS485_GUI/docs/ipc-schema.md](ipc-schema.md).
 - Add UI controls in `ui/layout.py` and refresh behavior in `ui/refresh.py`.
 - Add tests in the smallest layer that owns the behavior.
 
@@ -205,9 +205,9 @@ The dataclass schema in `config/schema.py` is documentation/validation support, 
 
 | Change             | Tests/docs to update                                                                                      |
 | ------------------ | --------------------------------------------------------------------------------------------------------- |
-| Register decode    | `tests/unit/test_codec.py`, [`active-send-and-modbus.md`](active-send-and-modbus.md).                     |
-| Signal registry    | `tests/unit/test_signals.py`, [`configuration.md`](configuration.md).                                     |
-| File logging       | `tests/integration/test_file_logger.py`, [`logging-and-outputs.md`](logging-and-outputs.md).              |
-| IPC payload        | publisher tests/bridge tests where available, [`ipc-schema.md`](ipc-schema.md), root stream contracts.    |
-| Active-Send parser | `tests/integration/test_active_send_parser.py`, [`active-send-and-modbus.md`](active-send-and-modbus.md). |
-| Config key         | `tests/unit/test_config.py`, [`configuration.md`](configuration.md).                                      |
+| Register decode    | `tests/unit/test_codec.py`, [RS485_GUI/docs/active-send-and-modbus.md](active-send-and-modbus.md).                     |
+| Signal registry    | `tests/unit/test_signals.py`, [RS485_GUI/docs/configuration.md](configuration.md).                                     |
+| File logging       | `tests/integration/test_file_logger.py`, [RS485_GUI/docs/logging-and-outputs.md](logging-and-outputs.md).              |
+| IPC payload        | publisher tests/bridge tests where available, [RS485_GUI/docs/ipc-schema.md](ipc-schema.md), root stream contracts.    |
+| Active-Send parser | `tests/integration/test_active_send_parser.py`, [RS485_GUI/docs/active-send-and-modbus.md](active-send-and-modbus.md). |
+| Config key         | `tests/unit/test_config.py`, [RS485_GUI/docs/configuration.md](configuration.md).                                      |
