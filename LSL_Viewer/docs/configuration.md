@@ -231,13 +231,3 @@ Replay input paths:
 | `max_bytes`    | `10485760`                     | Rotating log max size.         |
 | `backup_count` | `3`                            | Rotating log backup count.     |
 
-## Validation commands
-
-```bash
-rg 'mode: live' LSL_Viewer/conf/config.yaml
-rg 'name: HandgripTarget' LSL_Viewer/conf/config.yaml
-rg 'name: HandgripReference' LSL_Viewer/conf/config.yaml
-rg 'raw_label: target_raw_count' LSL_Viewer/conf/config.yaml
-rg 'raw_label: reference_force_N' LSL_Viewer/conf/config.yaml
-rg 'mode: raw_lsl' LSL_Viewer/conf/config.yaml
-```

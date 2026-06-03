@@ -236,7 +236,4 @@ pio device monitor -e nanoatmega328 -b 115200
 ls -l /dev/serial/by-id/ 2>/dev/null || true
 ls -l /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || true
 
-# Search docs/source for D2 schema
-rg "D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>" \
-  README.md docs Handgrip_Firmware LSL_Bridge
 ```

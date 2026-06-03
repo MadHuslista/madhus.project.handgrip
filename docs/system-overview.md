@@ -131,5 +131,5 @@ Full configuration map: [docs/configuration/index.md](configuration/index.md).
 | Calibrate the handgrip              | [docs/workflows/handgrip-calibration.md](workflows/handgrip-calibration.md)                           |
 | Run signal analysis                 | [docs/workflows/handgrip-analysis.md](workflows/handgrip-analysis.md)                                 |
 | Understand a specific component     | Component `*/docs/index.md` files                                                                     |
-| Modify or extend the code           | [docs/development/python-project-structure-primer.md](development/python-project-structure-primer.md) |
+| Modify or extend the code           | Component `*/docs/development.md` files                                                               |
 | Troubleshoot a problem              | [docs/troubleshooting/index.md](troubleshooting/index.md)                                             |

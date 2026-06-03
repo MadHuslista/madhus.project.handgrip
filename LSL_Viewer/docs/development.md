@@ -153,11 +153,3 @@ Keep `dejitter_timestamps=False` unless there is a documented reason to alter XD
 | `tests/integration/test_csv_replay.py` | CSV replay loading and required column behavior.                   |
 | `tests/e2e/test_cli.py`                | CLI/Hydra help, invalid modes, missing replay path errors.         |
 
-## Pre-merge checklist
-
-- [ ] Config docs updated.
-- [ ] Root stream-contract docs updated if a shared contract changed.
-- [ ] Live and replay modes both handle the new behavior.
-- [ ] Render downsampling still does not mutate source windows.
-- [ ] Tests added or updated.
-- [ ] Quickstart still runs with default config.

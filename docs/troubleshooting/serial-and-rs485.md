@@ -78,26 +78,7 @@ Ensure acquisition board communication menu and `RS485_GUI/config/config.yaml` a
 
 ## Fallback path
 
-If Active-Send is unstable, validate the chain with Modbus RTU polling first. Polling is slower but easier to debug.
+If Active-Send is unstable, validate the chain with Modbus RTU polling first. Polling is slower and introduces jitter on the sampling rate, but easier to debug.
 
-## Validation commands
-
-```bash
-# Firmware target serial schema docs
-rg 'D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>' Handgrip_Firmware docs
-
-# RS485 GUI config and IPC docs
-rg 'rs485.measurement.v1' RS485_GUI docs/architecture
-```
-
-## Stop conditions
-
-Stop before calibration if:
-
-- serial device identity is unknown,
-- target and RS485 adapter ports are confused,
-- Active-Send frames are missing,
-- parser reports continuous malformed frames,
-- board display does not match host data.
 
 **Related docs:** [docs/workflows/target-only-quickstart.md](../workflows/target-only-quickstart.md), [docs/workflows/reference-only-quickstart.md](../workflows/reference-only-quickstart.md), [RS485_GUI/docs/active-send-and-modbus.md](../../RS485_GUI/docs/active-send-and-modbus.md)

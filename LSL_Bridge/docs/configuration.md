@@ -213,12 +213,3 @@ See [LSL_Bridge/docs/architecture.md](architecture.md) for CSV sink ownership an
 | `hydra.output_subdir` | `null`  | Avoids `.hydra` output subdir.                         |
 | `hydra.job.chdir`     | `false` | Keeps process CWD stable for relative paths.           |
 
-## Validation commands
-
-```bash
-# Confirm key config contracts.
-rg 'name: HandgripTarget|name: HandgripReference|name: HandgripComponentEvents' LSL_Bridge/conf/config.yaml
-rg 'topic: rs485.measurement.v1|expected_schema: rs485.measurement.v1' LSL_Bridge/conf/config.yaml
-rg 'policy: device_clock_anchor|max_anchor_drift_s' LSL_Bridge/conf/config.yaml
-rg 'data_prefix: D2|metadata_prefix: M2' LSL_Bridge/conf/config.yaml
-```

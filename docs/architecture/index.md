@@ -13,10 +13,3 @@ This folder contains system-level architecture docs for the Handgrip Suite.
 | [docs/architecture/stream-contracts.md](stream-contracts.md)                                 | Serial, IPC, LSL, marker, and session contracts.                |
 | [docs/architecture/timestamping-and-synchronization.md](timestamping-and-synchronization.md) | Host/device timestamping, drift, gaps, and viewer alignment.    |
 
-## Validation
-
-Run:
-
-```bash
-python3 ../../scripts/validate_docs.py --repo-root ../..
-```

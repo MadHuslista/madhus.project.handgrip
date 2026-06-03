@@ -1,4 +1,4 @@
-# Viewer Lag or XY Delay Troubleshooting
+# LSL Viewer Lag or XY Delay Troubleshooting
 
 **Symptoms covered:** XY delay, reference lag, display-only shift vs real timestamp issue  
 
@@ -63,13 +63,5 @@ Use this decision table:
 | Reanchor target timestamping | Device clock drift exceeds bridge threshold.               |
 | Validate RS485 profile       | Reference stream itself is delayed or bursty.              |
 
-## Stop conditions
-
-Stop before calibration if:
-
-- saved data shows unresolved target/reference lag,
-- viewer and preflight disagree about stream timestamps,
-- reference gaps exceed configured thresholds,
-- dynamic validation shows unacceptable lag for intended use.
 
 **Related docs:** [LSL_Viewer/docs/xy-correlation.md](../../LSL_Viewer/docs/xy-correlation.md), [docs/architecture/timestamping-and-synchronization.md](../architecture/timestamping-and-synchronization.md), [LSL_Bridge/docs/timestamping.md](../../LSL_Bridge/docs/timestamping.md)

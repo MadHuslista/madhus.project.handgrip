@@ -228,8 +228,3 @@ uv run pytest tests/unit/test_config.py
 uv run rs485-gui --help
 ```
 
-Also validate from root docs:
-
-```bash
-rg "rs485.measurement.v1|reference_force_N|reference_clock_s|reference_status" RS485_GUI/docs ../../docs/architecture/stream-contracts.md
-```

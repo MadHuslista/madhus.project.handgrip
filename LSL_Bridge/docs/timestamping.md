@@ -130,6 +130,4 @@ Debug order:
 
 ```bash
 uv run pytest tests/unit/test_timestamping.py
-rg "target_timestamping" LSL_Bridge/conf/config.yaml LSL_Bridge/docs
-rg "device_clock_anchor|max_anchor_drift_s|host_receive" LSL_Bridge/docs/timestamping.md
 ```

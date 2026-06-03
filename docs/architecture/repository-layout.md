@@ -82,6 +82,6 @@ Component-level docs:
 └── development.md      - How to extend or modify this component, including code structure and style guidelines.
 ```
 
-## Related docs: 
-- [docs/development/python-project-structure-primer.md](../development/python-project-structure-primer.md),
-- [docs/index.md](../index.md) files
+## Related docs
+
+- [docs/index.md](../index.md)

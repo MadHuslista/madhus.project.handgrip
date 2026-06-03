@@ -65,11 +65,6 @@ Required tests:
 uv run pytest tests/unit/test_parser.py
 ```
 
-Recommended static checks:
-
-```bash
-rg "D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>" README.md docs Handgrip_Firmware LSL_Bridge
-```
 
 ## Add a reference IPC field safely
 
@@ -162,14 +157,3 @@ uv run pytest tests/integration/test_csv_sinks.py
 - do not change stream contracts unless new data is needed,
 - do not hide acquisition defects in a display transform.
 
-## Release checklist for bridge changes
-
-- [ ] Parser tests pass.
-- [ ] Timestamping tests pass.
-- [ ] Filter tests pass if processing changed.
-- [ ] CSV integration tests pass if persistence changed.
-- [ ] Root stream contracts updated.
-- [ ] LSL Bridge component docs updated.
-- [ ] Viewer/calibration configs updated if channels changed.
-- [ ] Manual full-live workflow validated.
-- [ ] Calibration preflight validates both streams.

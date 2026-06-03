@@ -179,6 +179,4 @@ uv run pytest tests/unit/test_parser.py
 uv run pytest tests/unit/test_timestamping.py
 uv run pytest tests/integration/test_csv_sinks.py
 
-rg "HandgripTarget|HandgripReference|HandgripComponentEvents" LSL_Bridge/conf/config.yaml LSL_Bridge/docs
-rg "rs485.measurement.v1" LSL_Bridge/conf/config.yaml LSL_Bridge/docs ../../docs/architecture/stream-contracts.md
 ```

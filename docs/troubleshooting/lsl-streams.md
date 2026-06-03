@@ -55,21 +55,5 @@ cd ../LSL_Viewer && uv run lsl-viewer
 
 5. Re-run calibration preflight.
 
-## Validation commands
-
-```bash
-rg 'HandgripTarget|HandgripReference|HandgripComponentEvents|HandgripCalibrationMarkers' docs LSL_Bridge LSL_Viewer Handgrip_Calibration
-rg 'rs485.measurement.v1' docs RS485_GUI LSL_Bridge
-```
-
-## Stop conditions
-
-Stop before recording if:
-
-- only one of target/reference streams exists,
-- target stream updates but reference stream is frozen,
-- stream names do not match calibration config,
-- stale duplicate streams are visible,
-- preflight resolves streams inconsistently across repeated runs.
 
 **Related docs:** [docs/architecture/stream-contracts.md](../architecture/stream-contracts.md), [LSL_Bridge/docs/stream-contracts.md](../../LSL_Bridge/docs/stream-contracts.md), [docs/workflows/full-live-viewer-quickstart.md](../workflows/full-live-viewer-quickstart.md)

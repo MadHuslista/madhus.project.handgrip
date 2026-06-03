@@ -38,15 +38,6 @@ Typical locations depend on `LSL_Bridge/conf/config.yaml`:
 | optional target CSV | configured bridge CSV output path             |
 | LSL stream          | live LSL network, not a file                  |
 
-## Validation commands
-
-```bash
-# Confirm docs/config mention target stream
-rg "HandgripTarget" LSL_Bridge docs
-
-# Confirm firmware schema in docs
-rg "D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>" Handgrip_Firmware docs
-```
 
 ## Related docs
 - [Handgrip_Firmware/docs/workflow.md](../../Handgrip_Firmware/docs/workflow.md)

@@ -155,6 +155,4 @@ pio run -e nanoatmega328
 pio run -e nanoatmega328 -t upload
 pio device monitor -e nanoatmega328 -b 115200
 
-rg "SCALE_FACTOR|SCALE_OFFSET|SAMPLING_PERIOD_US|HANDGRIP_PAYLOAD_SCHEMA" \
-  Handgrip_Firmware/Core/Inc/config.h
 ```

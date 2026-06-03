@@ -72,21 +72,5 @@ Typical artifacts include:
 - plots,
 - `lsl_bridge_processing_recommendation.yaml` or equivalent recommendation file.
 
-## Stop conditions
-
-Do not apply filter recommendations if:
-
-- input sampling rate is uncertain,
-- candidate comparison omitted raw baseline,
-- latency/phase behavior was not considered,
-- recommendation target is ambiguous,
-- calibration residuals were not rechecked after applying a processing change.
-
-## Validation commands
-
-```bash
-rg 'Stage 6|filter design|lsl_bridge_processing_recommendation.yaml' Handgrip_Analysis/docs docs/examples/analysis-output/README.md
-rg 'ha-run-all|ha-stage|ha-stage6' Handgrip_Analysis/docs/workflow.md Handgrip_Analysis/docs/development.md
-```
 
 **Related docs:** [docs/workflows/handgrip-analysis.md](../workflows/handgrip-analysis.md), [Handgrip_Analysis/docs/stages.md](../../Handgrip_Analysis/docs/stages.md), [Handgrip_Analysis/docs/filter-design.md](../../Handgrip_Analysis/docs/filter-design.md)

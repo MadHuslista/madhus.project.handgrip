@@ -176,7 +176,5 @@ Any change to IPC field names or topic names is a cross-component change. Update
 ## Validation commands
 
 ```bash
-rg "rs485.measurement.v1|rs485.event.v1" RS485_GUI docs LSL_Bridge
-rg "reference_force_N|reference_clock_s|reference_status|board_profile|session_id" RS485_GUI/src RS485_GUI/docs LSL_Bridge docs
 uv run pytest RS485_GUI/tests/integration/test_file_logger.py
 ```

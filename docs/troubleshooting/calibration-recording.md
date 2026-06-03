@@ -79,29 +79,5 @@ session:
     - ../RS485_GUI/config/config.yaml
 ```
 
-Do not use stale path:
-
-```yaml
-- ../RS485_GUI/config.yaml
-```
-
-## Stop conditions
-
-Stop before fitting if:
-
-- target data is missing,
-- reference data is missing,
-- events/markers are missing,
-- stream names were wrong during record,
-- force fixture slipped during recording,
-- config snapshots did not capture component configs.
-
-## Validation commands
-
-```bash
-rg 'protocol_static_reversible_staircase_v3.yaml' Handgrip_Calibration docs/workflows/handgrip-calibration.md
-rg 'HandgripTarget|HandgripReference|HandgripCalibrationMarkers' Handgrip_Calibration docs/architecture/stream-contracts.md
-rg '\.\./RS485_GUI/config/config\.yaml' Handgrip_Calibration Handgrip_Calibration/docs/configuration.md
-```
 
 **Related docs:** [docs/workflows/handgrip-calibration.md](../workflows/handgrip-calibration.md), [Handgrip_Calibration/docs/recording.md](../../Handgrip_Calibration/docs/recording.md), [Handgrip_Calibration/docs/protocols.md](../../Handgrip_Calibration/docs/protocols.md)
