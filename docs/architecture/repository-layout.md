@@ -26,13 +26,13 @@ handgrip-suite/
 
 | Path                    | Type                          | Responsibility                                             | First doc                                                                |
 | ----------------------- | ----------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `Handgrip_Firmware/`    | PlatformIO / Arduino firmware | Target handgrip data acquisition and D2 UART stream        | [`Handgrip_Firmware/README.md`](../../Handgrip_Firmware/README.md)       |
-| `RS485_GUI/`            | Python application            | Reference-board acquisition, GUI, logs, ZMQ IPC            | [`RS485_GUI/README.md`](../../RS485_GUI/README.md)                       |
-| `LSL_Bridge/`           | Python application            | Publish target/reference LSL streams                       | [`LSL_Bridge/README.md`](../../LSL_Bridge/README.md)                     |
-| `LSL_Viewer/`           | Python application            | Live/replay visualization and XY correlation               | [`LSL_Viewer/README.md`](../../LSL_Viewer/README.md)                     |
-| `Handgrip_Calibration/` | Python CLI package            | Calibration sessions, fitting, reports, holdout validation | [`Handgrip_Calibration/README.md`](../../Handgrip_Calibration/README.md) |
-| `Handgrip_Analysis/`    | Python CLI package            | Offline analysis stages and filter design                  | [`Handgrip_Analysis/README.md`](../../Handgrip_Analysis/README.md)       |
-| `docs/`                 | Markdown documentation        | Canonical system docs                                      | [`docs/index.md`](../index.md)                                           |
+| `Handgrip_Firmware/`    | PlatformIO / Arduino firmware | Target handgrip data acquisition and D2 UART stream        | [Handgrip_Firmware/README.md](../../Handgrip_Firmware/README.md)       |
+| `RS485_GUI/`            | Python application            | Reference-board acquisition, GUI, logs, ZMQ IPC            | [RS485_GUI/README.md](../../RS485_GUI/README.md)                       |
+| `LSL_Bridge/`           | Python application            | Publish target/reference LSL streams                       | [LSL_Bridge/README.md](../../LSL_Bridge/README.md)                     |
+| `LSL_Viewer/`           | Python application            | Live/replay visualization and XY correlation               | [LSL_Viewer/README.md](../../LSL_Viewer/README.md)                     |
+| `Handgrip_Calibration/` | Python CLI package            | Calibration sessions, fitting, reports, holdout validation | [Handgrip_Calibration/README.md](../../Handgrip_Calibration/README.md) |
+| `Handgrip_Analysis/`    | Python CLI package            | Offline analysis stages and filter design                  | [Handgrip_Analysis/README.md](../../Handgrip_Analysis/README.md)       |
+| `docs/`                 | Markdown documentation        | Canonical system docs                                      | [docs/index.md](../index.md)                                           |
 
 ## Python source-layout pattern
 
@@ -83,5 +83,5 @@ Component-level docs:
 ```
 
 ## Related docs: 
-- [`docs/development/python-project-structure-primer.md`](../development/python-project-structure-primer.md),
-- [`docs/index.md`](../index.md) files
+- [docs/development/python-project-structure-primer.md](../development/python-project-structure-primer.md),
+- [docs/index.md](../index.md) files

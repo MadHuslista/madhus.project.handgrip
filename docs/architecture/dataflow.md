@@ -98,6 +98,6 @@ For calibration and production measurement, the preferred reference profile is *
 
 
 ## Related docs:
-- [`docs/system-overview.md`](../system-overview.md), 
-- [`docs/architecture/stream-contracts.md`](stream-contracts.md), 
-- [`docs/workflows/full-live-viewer-quickstart.md`](../workflows/full-live-viewer-quickstart.md)
+- [docs/system-overview.md](../system-overview.md), 
+- [docs/architecture/stream-contracts.md](stream-contracts.md), 
+- [docs/workflows/full-live-viewer-quickstart.md](../workflows/full-live-viewer-quickstart.md)
