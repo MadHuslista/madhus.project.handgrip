@@ -8,7 +8,8 @@ Analysis operates exclusively on saved files. It must not be run until calibrati
 
 ## Prerequisites
 
-- At least calibration sessions recorded and available. See [Handgrip_Calibration/docs/workflow.md](../../Handgrip_Calibration/docs/workflow.md).
+- Target CSV captures available: either direct `LSL_Bridge` recordings or `Handgrip_Calibration` session exports. See [Phase 1](#phase-1--prepare-input-data) below.
+- `LSL_Bridge` running and producing valid `D2` frames before recording. See [LSL_Bridge/docs/workflow.md](../../LSL_Bridge/docs/workflow.md).
 - Python dependencies installed: `uv sync` from repo root.
 - Config files present under `Handgrip_Analysis/conf/`.
 
@@ -18,18 +19,42 @@ Analysis operates exclusively on saved files. It must not be run until calibrati
 
 ### 1.1 Record source sessions
 
-Source data for analysis comes from `Handgrip_Calibration` recording sessions. Run each protocol type you need:
+Analysis requires CSV files in the `LSL_Bridge` target stream format. Two recording paths produce compatible files:
 
-| Analysis purpose                  | Protocol to record                                                   |
-| --------------------------------- | -------------------------------------------------------------------- |
-| Startup/warm-up (Stage 1)         | Any protocol run from a cold start                                   |
-| Static noise (Stage 2)            | Record a static rest hold after warm-up                              |
-| Loaded drift/creep (Stage 3)      | Record a sustained constant-load hold                                |
-| Real grip dynamics (Stage 4)      | Record fast-max, ramp-hold, and sustained-hold squeeze trials        |
-| Interference comparison (Stage 5) | Record under multiple conditions (different positions, environments) |
-| Filter design (Stage 6)           | Reuses Stage 2 and Stage 4 outputs                                   |
+**Direct `LSL_Bridge` recording** — suitable for all characterization stages without a calibration session:
 
-Each session produces files under:
+Start `LSL_Bridge` with CSV sinks enabled, run the capture protocol, then copy and rename the output file. See [LSL_Bridge/docs/workflow.md](../../LSL_Bridge/docs/workflow.md) for bridge startup, configuration, and output locations.
+
+**`Handgrip_Calibration` session** — required when calibrating sensor model parameters:
+
+Run `handgrip-cal record` to produce a session folder containing `target.csv`. See [Handgrip_Calibration/docs/workflow.md](../../Handgrip_Calibration/docs/workflow.md).
+
+Both paths produce CSV files with the required `target_raw_count` column. Full column reference: [LSL_Bridge/docs/stream-contracts.md](../../LSL_Bridge/docs/stream-contracts.md).
+
+#### Bridge-side settings during characterization
+
+Before recording any stage, confirm these settings in `LSL_Bridge/conf/config.yaml`:
+
+- Prefer 80 SPS on the HX711 during characterization.
+- Log the least-processed signal available.
+- Keep both `target_raw_count` and `target_filtered_units` in the output CSV (`csv.target.enabled: true`).
+- Do not change mechanics, cabling, or mounting between trials unless that change is the test condition.
+- Record condition metadata externally (ambient temperature, protocol, power source).
+
+#### Per-stage capture protocols
+
+| Stage   | Protocol                                                                                                                                                                                   |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Stage 1 | Cold start. No hand contact, no load. Record continuously for 15–30 minutes. Repeat at least 5 times if possible.                                                                         |
+| Stage 2 | After Stage 1 warm-up, thermally stable. No load, no hand contact. Record 10–20 minutes.                                                                                                  |
+| Stage 3 | After warm-up, apply a stable known load. Hold for 10–20 minutes. Optionally include pre-load and post-unload windows in the same file.                                                   |
+| Stage 4 | One file per trial. Include a few seconds of quiet baseline before each grip event. Trial types: `fast_max`, `ramp_hold`, `sustained_hold`. Repeat each trial type several times.          |
+| Stage 5 | One rest capture per condition. Change only one condition at a time (e.g. battery vs USB power, display on vs off, cable fixed vs disturbed).                                              |
+| Stage 6 | Reuses Stage 2 and Stage 4 outputs. No new capture needed.                                                                                                                                 |
+
+Full per-stage purpose, input requirements, and interpretation: [Handgrip_Analysis/docs/stages.md](stages.md).
+
+Handgrip_Calibration session outputs are under:
 
 ```text
 Handgrip_Calibration/data/calibration/<session_id>/
@@ -37,17 +62,29 @@ Handgrip_Calibration/data/calibration/<session_id>/
 
 ### 1.2 Export signals to analysis input directory
 
+Copy one file per trial into the analysis input directory:
+
+```text
+Handgrip_Analysis/data/calibration_signals/
+```
+
+**From a direct `LSL_Bridge` recording:**
+
+The bridge writes to a fixed path. After each trial capture, copy and rename the file before starting the next trial (the bridge overwrites it on restart):
+
+```text
+LSL_Bridge/data/target_handgrip_samples_v2.csv  →  copy and rename
+```
+
+**From a `Handgrip_Calibration` session:**
+
 Each calibration session writes its captured target stream to:
 
 ```text
 Handgrip_Calibration/data/calibration/<session_id>/target.csv
 ```
 
-This is the `TargetCsvSink` output (see [LSL_Bridge/docs/stream-contracts.md](../../LSL_Bridge/docs/stream-contracts.md) for its column layout). Copy or symlink one such file per trial into the analysis input directory:
-
-```text
-Handgrip_Analysis/data/calibration_signals/
-```
+This is the `TargetCsvSink` output. See [LSL_Bridge/docs/stream-contracts.md](../../LSL_Bridge/docs/stream-contracts.md) for the column layout.
 
 Recommended file naming convention:
 

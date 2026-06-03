@@ -24,6 +24,14 @@
 
 Determine whether the signal needs an initial warm-up/discard period before reliable use.
 
+### Capture protocol
+
+- Start from power-off or cold start.
+- No hand contact, no load on the sensor.
+- Begin recording immediately after power-on.
+- Record continuously for 15–30 minutes.
+- Repeat at least 5 times if possible.
+
 ### Inputs
 
 - target or reference capture beginning near startup,
@@ -47,6 +55,12 @@ Use Stage 1 to decide whether operators should wait before recording calibration
 ### Purpose
 
 Measure the noise floor and spectral content when no force is applied.
+
+### Capture protocol
+
+- Wait until the sensor is thermally stable (after Stage 1 warm-up period).
+- No load, no hand contact.
+- Record 10–20 minutes.
 
 ### Inputs
 
@@ -72,6 +86,12 @@ Use Stage 2 to decide whether low-pass or notch candidates are justified. A freq
 
 Measure whether the signal changes under constant load.
 
+### Capture protocol
+
+- After warm-up, apply a stable known load.
+- Hold for 10–20 minutes.
+- Optionally include pre-load and post-unload windows in the same file for zero-return assessment.
+
 ### Inputs
 
 - static loaded hold capture,
@@ -94,6 +114,20 @@ Use Stage 3 to separate sensor/fixture drift from random noise. Do not solve mec
 ### Purpose
 
 Characterize realistic grip events such as ramp, hold, squeeze, release, and fatigue-like behavior.
+
+### Capture protocol
+
+- Record one file per trial.
+- Include a few seconds of quiet baseline before each grip event.
+- Repeat each trial type several times.
+
+Recommended trial types:
+
+| Trial type       | Protocol                                                   |
+| ---------------- | ---------------------------------------------------------- |
+| `fast_max`       | Squeeze as fast and hard as possible, hold 1–2 s, release. |
+| `ramp_hold`      | Ramp over ~1–2 s, hold 3–5 s, release.                     |
+| `sustained_hold` | Fast squeeze, sustain 5–10 s, release.                     |
 
 ### Inputs
 
@@ -120,6 +154,19 @@ Use Stage 4 as the main dynamic realism check for candidate filters. A filter th
 
 Compare signal behavior across conditions: cabling, power, board mode, fixture state, filter candidate, or operator condition.
 
+### Capture protocol
+
+- Record one rest capture per condition.
+- Change only one condition at a time.
+
+Suggested conditions to compare:
+
+- battery vs USB power,
+- display on vs off,
+- cable fixed vs intentionally disturbed,
+- BLE/radio on vs off,
+- enclosure open vs closed.
+
 ### Inputs
 
 - multi-condition captures,
@@ -142,6 +189,10 @@ Use Stage 5 to identify environmental or setup conditions that should be fixed b
 ### Purpose
 
 Evaluate digital filter candidates against the signal goal: preserve realistic force behavior while reducing non-essential noise/contamination.
+
+### Capture protocol
+
+No new capture needed. Stage 6 reuses outputs from Stage 2 (noise evidence) and Stage 4 (dynamic evidence). Ensure both are present in the manifest before running Stage 6.
 
 ### Inputs
 
