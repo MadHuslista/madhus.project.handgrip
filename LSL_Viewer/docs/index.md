@@ -19,12 +19,12 @@
 
 | Document                                       | Purpose                                                                    |
 | ---------------------------------------------- | -------------------------------------------------------------------------- |
-| [workflow.md](workflow.md)                     | Live, CSV replay, and XDF replay modes; expected display behavior          |
-| [configuration.md](configuration.md)           | Full config reference: mode, stream names, replay paths, server, rendering |
-| [live-csv-xdf-modes.md](live-csv-xdf-modes.md) | Mode details and replay-specific behavior                                  |
-| [xy-correlation.md](xy-correlation.md)         | XY correlation panel interpretation and axis-lock behavior                 |
-| [architecture.md](architecture.md)             | Core/viz layers and runtime dataflow                                       |
-| [development.md](development.md)               | How to add panels, charts, modes, and tests                                |
+| [LSL_Viewer/docs/workflow.md](workflow.md)                     | Live, CSV replay, and XDF replay modes; expected display behavior          |
+| [LSL_Viewer/docs/configuration.md](configuration.md)           | Full config reference: mode, stream names, replay paths, server, rendering |
+| [LSL_Viewer/docs/live-csv-xdf-modes.md](live-csv-xdf-modes.md) | Mode details and replay-specific behavior                                  |
+| [LSL_Viewer/docs/xy-correlation.md](xy-correlation.md)         | XY correlation panel interpretation and axis-lock behavior                 |
+| [LSL_Viewer/docs/architecture.md](architecture.md)             | Core/viz layers and runtime dataflow                                       |
+| [LSL_Viewer/docs/development.md](development.md)               | How to add panels, charts, modes, and tests                                |
 
 ## Reading guide
 

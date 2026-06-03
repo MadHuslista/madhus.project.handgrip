@@ -45,16 +45,16 @@ Main configuration areas:
 | server           | Host, port, browser UI behavior.                        |
 | keyboard/UI      | Clear, pause, XY lock, toggles.                         |
 
-Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
+Full configuration reference is planned at [LSL_Viewer/docs/configuration.md](docs/configuration.md).
 
 ## Common workflows
 
 | Goal                          | Document                                                                                                               |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Run full live viewer stack    | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md)                 |
-| Understand stream contracts   | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                                 |
-| Debug timestamp/XY delay      | [`../docs/architecture/timestamping-and-synchronization.md`](../docs/architecture/timestamping-and-synchronization.md) |
-| Navigate component docs       | [`docs/index.md`](docs/index.md)                                                                                       |
+| Run full live viewer stack    | [docs/workflows/full-live-viewer-quickstart.md](../docs/workflows/full-live-viewer-quickstart.md)                 |
+| Understand stream contracts   | [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md)                                 |
+| Debug timestamp/XY delay      | [docs/architecture/timestamping-and-synchronization.md](../docs/architecture/timestamping-and-synchronization.md) |
+| Navigate component docs       | [LSL_Viewer/docs/index.md](docs/index.md)                                                                                       |
 
 ## Repository layout
 
@@ -92,7 +92,7 @@ uv run pytest tests/e2e
 
 ## Further docs
 
-- [`docs/index.md`](docs/index.md) — LSL Viewer documentation map.
-- [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md) — operator workflow.
-- [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) — root stream/data contracts.
-- [`../docs/architecture/timestamping-and-synchronization.md`](../docs/architecture/timestamping-and-synchronization.md) — timing and alignment model.
+- [LSL_Viewer/docs/index.md](docs/index.md) — LSL Viewer documentation map.
+- [docs/workflows/full-live-viewer-quickstart.md](../docs/workflows/full-live-viewer-quickstart.md) — operator workflow.
+- [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md) — root stream/data contracts.
+- [docs/architecture/timestamping-and-synchronization.md](../docs/architecture/timestamping-and-synchronization.md) — timing and alignment model.
