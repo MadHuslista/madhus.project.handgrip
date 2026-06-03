@@ -82,4 +82,4 @@ Before recording, ensure the acquisition board is configured for clean calibrati
 | Active-Send rate (`505.AF`)  | `500 Hz`          | High enough to preserve timing detail                          |
 | Baud (`501.br`)              | `460800`          | Required for 500 Hz Active-Send                                |
 
-For the full menu reference and commissioning sequence, see [docs/hardware/acquisition-board-reference.md](../../docs/hardware/acquisition-board-reference.md).
+For the full per-register rationale behind these recommended values, see [docs/hardware/dual-device-calibration-configuration.md](../../docs/hardware/dual-device-calibration-configuration.md). For the complete board menu reference and commissioning sequence, see [docs/hardware/acquisition-board-reference.md](../../docs/hardware/acquisition-board-reference.md).

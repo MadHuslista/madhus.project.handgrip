@@ -27,15 +27,16 @@ Before running calibration:
 
 | Document                                                           | Purpose                                                                   |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| [workflow.md](workflow.md)                                         | Preflight → record → fit → report → holdout validation                    |
-| [protocols.md](protocols.md)                                       | Protocol suite, canonical v3 protocol, holdout validation, legacy labels  |
-| [configuration.md](configuration.md)                               | Full protocol YAML reference and safe override guidance                   |
-| [recording.md](recording.md)                                       | LSL inputs, session files, events, quality telemetry, provenance          |
-| [fitting-and-model-selection.md](fitting-and-model-selection.md)   | Model alternatives, metrics, residuals, candidate ranking                 |
-| [reports-and-outputs.md](reports-and-outputs.md)                   | Report files, plots, tables, JSON artifacts                               |
-| [applying-calibration-results.md](applying-calibration-results.md) | Which values to use, where to apply them, deployment validation           |
-| [architecture.md](architecture.md)                                 | CLI to modules: preflight, record, segment, fit, report, validate-holdout |
-| [development.md](development.md)                                   | Add protocols, models, or report sections safely                          |
+| [Handgrip_Calibration/docs/workflow.md](workflow.md)                                         | Preflight → record → fit → report → holdout validation                    |
+| [Handgrip_Calibration/docs/protocols.md](protocols.md)                                       | Protocol suite, canonical v3 protocol, holdout validation, legacy labels  |
+| [Handgrip_Calibration/docs/configuration.md](configuration.md)                               | Full protocol YAML reference and safe override guidance                   |
+| [Handgrip_Calibration/docs/recording.md](recording.md)                                       | LSL inputs, session files, events, quality telemetry, provenance          |
+| [Handgrip_Calibration/docs/fitting-and-model-selection.md](fitting-and-model-selection.md)   | Model alternatives, metrics, residuals, candidate ranking                 |
+| [Handgrip_Calibration/docs/reports-and-outputs.md](reports-and-outputs.md)                   | Report files, plots, tables, JSON artifacts                               |
+| [Handgrip_Calibration/docs/applying-calibration-results.md](applying-calibration-results.md) | Which values to use, where to apply them, deployment validation           |
+| [Handgrip_Calibration/docs/architecture.md](architecture.md)                                 | CLI to modules: preflight, record, segment, fit, report, validate-holdout |
+| [Handgrip_Calibration/docs/development.md](development.md)                                   | Add protocols, models, or report sections safely                          |
+| [Handgrip_Calibration/docs/calibration-manual.md](calibration-manual.md)                     | Extended manual: protocol phases, CSV schema, fitting criteria, dynamic validation, drift tracking |
 
 ## Reading guide
 
@@ -49,6 +50,7 @@ Before running calibration:
 ## Related docs
 
 - [docs/architecture/stream-contracts.md](../../docs/architecture/stream-contracts.md) — target/reference stream contracts
+- [docs/hardware/dual-device-calibration-configuration.md](../../docs/hardware/dual-device-calibration-configuration.md) — recommended acquisition-board + target settings for calibration
 - [docs/troubleshooting/calibration-recording.md](../../docs/troubleshooting/calibration-recording.md)
 
 ## Minimal command path

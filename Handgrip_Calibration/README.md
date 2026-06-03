@@ -50,17 +50,17 @@ Primary config/protocol files:
 | `conf/default.yaml` / `conf/config.yaml`            | Base/default calibration settings, depending on command path. |
 | `conf/template.yaml`                                | Starting point for new protocol definitions.                  |
 
-Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
+Full configuration reference is planned at [Handgrip_Calibration/docs/configuration.md](docs/configuration.md).
 
 ## Common workflows
 
 | Goal                        | Document                                                                               |
 | --------------------------- | -------------------------------------------------------------------------------------- |
-| End-to-end overview         | [`docs/workflows/handgrip-calibration.md`](../docs/workflows/handgrip-calibration.md)  |
-| Detailed workflow steps     | [`docs/workflow.md`](docs/workflow.md)                                                 |
-| Choose a protocol           | [`docs/protocols.md`](docs/protocols.md)                                               |
-| Understand stream contracts | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) |
-| Validate physical fixture   | [`../docs/hardware/force-fixture.md`](../docs/hardware/force-fixture.md)               |
+| End-to-end overview         | [docs/workflows/handgrip-calibration.md](../docs/workflows/handgrip-calibration.md)  |
+| Detailed workflow steps     | [Handgrip_Calibration/docs/workflow.md](docs/workflow.md)                                                 |
+| Choose a protocol           | [Handgrip_Calibration/docs/protocols.md](docs/protocols.md)                                               |
+| Understand stream contracts | [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md) |
+| Validate physical fixture   | [docs/hardware/force-fixture.md](../docs/hardware/force-fixture.md)               |
 
 ## Repository layout
 
@@ -106,6 +106,6 @@ uv run handgrip-cal report /tmp/hg_demo/demo_handgrip_session
 
 ## Further docs
 
-- [`docs/index.md`](docs/index.md) — calibration documentation map.
-- [`docs/protocols.md`](docs/protocols.md) — canonical protocol suite and legacy labels.
-- [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) — root stream/data contracts.
+- [Handgrip_Calibration/docs/index.md](docs/index.md) — calibration documentation map.
+- [Handgrip_Calibration/docs/protocols.md](docs/protocols.md) — canonical protocol suite and legacy labels.
+- [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md) — root stream/data contracts.
