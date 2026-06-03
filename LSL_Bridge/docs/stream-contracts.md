@@ -5,7 +5,7 @@
 - `LSL_Bridge` owns runtime conversion from target UART and RS485 IPC into Lab Streaming Layer streams.
 - The target side consumes current firmware `M2` / `D2` frames.
 - The reference side consumes `RS485_GUI` ZeroMQ messages on `rs485.measurement.v1`.
-- This document is the component-specific implementation contract. The root contract remains [`../../docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md).
+- This document is the canonical contract for the bridge's LSL streams, reference IPC input, and CSV outputs. The system-level map of all contracts is [docs/architecture/stream-contracts.md](../../docs/architecture/stream-contracts.md).
 
 ## Inputs
 
@@ -167,7 +167,7 @@ If any field, channel label, channel order, stream name, or IPC field changes, u
 1. `LSL_Bridge/conf/config.yaml`,
 2. bridge source code,
 3. parser/reference publisher tests,
-4. root [`docs/architecture/stream-contracts.md`](../../docs/architecture/stream-contracts.md),
+4. root [docs/architecture/stream-contracts.md](../../docs/architecture/stream-contracts.md),
 5. this document,
 6. `LSL_Viewer` config/docs,
 7. `Handgrip_Calibration` config/docs.

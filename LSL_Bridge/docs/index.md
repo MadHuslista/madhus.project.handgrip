@@ -19,12 +19,12 @@
 
 | Document                                   | Purpose                                                                            |
 | ------------------------------------------ | ---------------------------------------------------------------------------------- |
-| [workflow.md](workflow.md)                 | Prerequisites, startup options, stream validation, output paths                    |
-| [configuration.md](configuration.md)       | Full config reference: serial, IPC, streams, timestamping, CSV, processing filters |
-| [stream-contracts.md](stream-contracts.md) | Stream names, channel labels, sample rates, event schema                           |
-| [timestamping.md](timestamping.md)         | LSL clock offset, dejitter, interpolation, gap handling                            |
-| [architecture.md](architecture.md)         | Core/io/publishers layers and runtime dataflow                                     |
-| [development.md](development.md)           | How to add channels, parser fields, publishers, and tests                          |
+| [LSL_Bridge/docs/workflow.md](workflow.md)                 | Prerequisites, startup options, stream validation, output paths                    |
+| [LSL_Bridge/docs/configuration.md](configuration.md)       | Full config reference: serial, IPC, streams, timestamping, CSV, processing filters |
+| [LSL_Bridge/docs/stream-contracts.md](stream-contracts.md) | Stream names, channel labels, sample rates, event schema                           |
+| [LSL_Bridge/docs/timestamping.md](timestamping.md)         | LSL clock offset, dejitter, interpolation, gap handling                            |
+| [LSL_Bridge/docs/architecture.md](architecture.md)         | Core/io/publishers layers and runtime dataflow                                     |
+| [LSL_Bridge/docs/development.md](development.md)           | How to add channels, parser fields, publishers, and tests                          |
 
 ## Reading guide
 

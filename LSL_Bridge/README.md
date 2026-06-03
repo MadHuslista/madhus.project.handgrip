@@ -62,17 +62,17 @@ Main configuration areas:
 | processing          | Optional filtering/calibration/derived channels.              |
 | logging/CSV         | Debug logs and optional saved target/reference data.          |
 
-Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
+Full configuration reference is planned at [LSL_Bridge/docs/configuration.md](docs/configuration.md).
 
 ## Common workflows
 
 | Goal                               | Document                                                                                                               |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Validate target path only          | [`../docs/workflows/target-only-quickstart.md`](../docs/workflows/target-only-quickstart.md)                           |
-| Run full live viewer stack         | [`../docs/workflows/full-live-viewer-quickstart.md`](../docs/workflows/full-live-viewer-quickstart.md)                 |
-| Understand bridge stream contracts | [`docs/stream-contracts.md`](docs/stream-contracts.md)                                                                 |
-| Understand root data contracts     | [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md)                                 |
-| Debug timing/synchronization       | [`../docs/architecture/timestamping-and-synchronization.md`](../docs/architecture/timestamping-and-synchronization.md) |
+| Validate target path only          | [docs/workflows/target-only-quickstart.md](../docs/workflows/target-only-quickstart.md)                           |
+| Run full live viewer stack         | [docs/workflows/full-live-viewer-quickstart.md](../docs/workflows/full-live-viewer-quickstart.md)                 |
+| Understand bridge stream contracts | [LSL_Bridge/docs/stream-contracts.md](docs/stream-contracts.md)                                                                 |
+| Understand root data contracts     | [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md)                                 |
+| Debug timing/synchronization       | [docs/architecture/timestamping-and-synchronization.md](../docs/architecture/timestamping-and-synchronization.md) |
 
 ## Repository layout
 
@@ -111,7 +111,7 @@ uv run pytest tests/integration/test_csv_sinks.py
 
 ## Further docs
 
-- [`docs/index.md`](docs/index.md) — LSL Bridge documentation map.
-- [`docs/stream-contracts.md`](docs/stream-contracts.md) — bridge-specific stream contracts.
-- [`../docs/architecture/stream-contracts.md`](../docs/architecture/stream-contracts.md) — root stream/data contracts.
-- [`../Handgrip_Firmware/docs/serial-protocol.md`](../Handgrip_Firmware/docs/serial-protocol.md) — firmware M2/D2 protocol.
+- [LSL_Bridge/docs/index.md](docs/index.md) — LSL Bridge documentation map.
+- [LSL_Bridge/docs/stream-contracts.md](docs/stream-contracts.md) — bridge-specific stream contracts.
+- [docs/architecture/stream-contracts.md](../docs/architecture/stream-contracts.md) — root stream/data contracts.
+- [Handgrip_Firmware/docs/serial-protocol.md](../Handgrip_Firmware/docs/serial-protocol.md) — firmware M2/D2 protocol.

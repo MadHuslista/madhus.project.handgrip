@@ -153,7 +153,7 @@ Reference channels:
 | `max_anchor_drift_s`    | `0.050`               | Re-anchor if device-derived time drifts too far from host arrival.                            | Tune when viewer shows growing reference/target lag. |
 | `monotonic_epsilon_s`   | `1e-9`                | Minimum monotonic increment guard.                                                            | Do not change unless debugging timestamp precision.  |
 
-See [`timestamping.md`](timestamping.md).
+See [LSL_Bridge/docs/timestamping.md](timestamping.md).
 
 ## `protocol`
 
@@ -193,7 +193,7 @@ Important: the processing output `target_filtered_units` is for display/QA unles
 | `csv.reference.append`             | `false`                                          | Truncate vs append.                    |
 | `csv.reference.flush_every_n_rows` | `25`                                             | Batches higher-rate reference writes.  |
 
-See [`architecture.md`](architecture.md) for CSV sink ownership and [`stream-contracts.md`](stream-contracts.md) for CSV field meanings.
+See [LSL_Bridge/docs/architecture.md](architecture.md) for CSV sink ownership and [LSL_Bridge/docs/stream-contracts.md](stream-contracts.md) for CSV field meanings.
 
 ## `logging`
 
