@@ -17,12 +17,10 @@ From `Handgrip_Analysis/`:
 uv run ha-run-all --help
 ```
 
-Run a single stage with the relevant stage entry point or script. Example static-noise run:
+Run a single stage with the relevant stage entry point. Example static-noise run:
 
 ```bash
-uv run ha-stage2 analysis=stage2 \
-  input=data/calibration_signals/example_static_rest.csv \
-  outdir=data/analysis_results/stage_2
+uv run ha-stage2 manifest=data/manifests/stage2_manifest.csv outdir=data/analysis_results/stage2
 ```
 
 Run from a manifest when prepared:
@@ -136,7 +134,7 @@ For a quick CLI smoke check:
 ```bash
 uv run ha-run-all --help
 uv run ha-stage1 --help
-uv run ha-stage6 --help
+uv run ha-stage6-design --help
 ```
 
 If your installed entry points differ, check the active `pyproject.toml` and update this README plus [docs/workflows/handgrip-analysis.md](../docs/workflows/handgrip-analysis.md) together.
