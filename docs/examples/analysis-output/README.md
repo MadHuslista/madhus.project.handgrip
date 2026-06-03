@@ -1,10 +1,5 @@
 # Curated Analysis Output Example
 
-**Status:** Curated example, not canonical source data  
-**Audience:** Maintainers and reviewers interpreting `Handgrip_Analysis` outputs  
-**Source class:** Existing `Handgrip_Analysis/data/analysis_results/stage6/` outputs and filter-design report  
-**Related docs:** [`docs/workflows/handgrip-analysis.md`](../../workflows/handgrip-analysis.md), [`Handgrip_Analysis/docs/filter-design.md`](../../../Handgrip_Analysis/docs/filter-design.md), [`Handgrip_Analysis/docs/reports-and-outputs.md`](../../../Handgrip_Analysis/docs/reports-and-outputs.md)
-
 ## Summary
 
 This directory is for small examples showing how to read analysis outputs, especially Stage 6 filter-design artifacts. Do not copy complete analysis output trees here unless intentionally curated.
@@ -56,3 +51,9 @@ Before copying `lsl_bridge_processing_recommendation.yaml` into the live bridge 
 ## Curation rule
 
 This directory may contain short narrative excerpts and selected tables. Keep full generated output in `Handgrip_Analysis/data/analysis_results/`.
+
+## Related docs:
+
+- [docs/workflows/handgrip-analysis.md](../../workflows/handgrip-analysis.md)
+- [Handgrip_Analysis/docs/filter-design.md](../../../Handgrip_Analysis/docs/filter-design.md)
+- [Handgrip_Analysis/docs/reports-and-outputs.md](../../../Handgrip_Analysis/docs/reports-and-outputs.md)

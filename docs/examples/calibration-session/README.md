@@ -1,10 +1,5 @@
 # Curated Calibration Session Example
 
-**Status:** Curated example, not canonical source data  
-**Audience:** Operators, maintainers, and reviewers learning how to interpret calibration outputs  
-**Source class:** Existing `Handgrip_Calibration/data/calibration/<session_id>/` outputs  
-**Related docs:** [`docs/workflows/handgrip-calibration.md`](../../workflows/handgrip-calibration.md), [`Handgrip_Calibration/docs/reports-and-outputs.md`](../../../Handgrip_Calibration/docs/reports-and-outputs.md)
-
 ## Summary
 
 This directory is for small, curated examples that teach how to interpret calibration outputs. Do not copy entire calibration session folders here. Keep raw/scientific data in `Handgrip_Calibration/data/calibration/<session_id>/`.
@@ -65,3 +60,8 @@ docs/examples/calibration-session/
 ```
 
 Do not copy full session folders or raw datasets into this docs example directory.
+
+## Related docs:
+
+- [docs/workflows/handgrip-calibration.md](../../workflows/handgrip-calibration.md)
+- [Handgrip_Calibration/docs/reports-and-outputs.md](../../../Handgrip_Calibration/docs/reports-and-outputs.md)
