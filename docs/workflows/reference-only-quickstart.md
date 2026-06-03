@@ -41,12 +41,12 @@ After GUI opens, click "Connect" to start acquisition and IPC publishing.
 | board display        | acquisition-board front panel                                |
 
 ## Related docs
-- [`docs/workflows/physical-setup.md`](physical-setup.md)
-- [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md)
+- [docs/workflows/physical-setup.md](physical-setup.md)
+- [docs/hardware/pm58-wiring-and-bringup.md](../hardware/pm58-wiring-and-bringup.md)
 
 
 ## Troubleshooting links
 
-- [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md)
+- [docs/hardware/pm58-wiring-and-bringup.md](../hardware/pm58-wiring-and-bringup.md)
 - `docs/hardware/rs485-modbus-active-send.md`
-- [`docs/troubleshooting/serial-and-rs485.md`](../troubleshooting/serial-and-rs485.md)
+- [docs/troubleshooting/serial-and-rs485.md](../troubleshooting/serial-and-rs485.md)

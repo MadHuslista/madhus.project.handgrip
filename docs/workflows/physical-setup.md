@@ -43,7 +43,7 @@ Checklist:
 - **Do:** Wire the PM58 bridge leads to the acquisition board sensor terminals.
 - **Expected result:** PM58 is connected to excitation and signal terminals.
 - **Failure signal:** Reading is saturated, frozen, very noisy, or sign-inverted unexpectedly.
-- **More info:** Use [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md).
+- **More info:** Use [docs/hardware/pm58-wiring-and-bringup.md](../hardware/pm58-wiring-and-bringup.md).
 
 Canonical mapping:
 
@@ -61,8 +61,8 @@ Canonical mapping:
 - **Expected result:** Arduino powers over USB and firmware emits D2 frames after upload.
 - **Failure signal:** No serial device appears, no D2 frames appear, or status indicates acquisition faults.
 - **More info:** 
-  - Use [`Handgrip_Firmware/docs/workflow.md`](../../Handgrip_Firmware/docs/workflow.md) to upload a new firmware
-  - and [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md) to understand the D2 frames.
+  - Use [Handgrip_Firmware/docs/workflow.md](../../Handgrip_Firmware/docs/workflow.md) to upload a new firmware
+  - and [Handgrip_Firmware/docs/serial-protocol.md](../../Handgrip_Firmware/docs/serial-protocol.md) to understand the D2 frames.
 
 Minimum validation:
 
@@ -125,7 +125,7 @@ ls -l /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || true
 - **Do:** Install PM58 in series with the handgrip and apply controlled force using the screw press.
 - **Expected result:** PM58 board display, target raw counts, viewer plots, and calibration streams all change in the same physical direction.
 - **Failure signal:** Reference changes but target does not, target changes but reference does not, or force path binds/slips.
-- **Next branch:** Use [`docs/hardware/force-fixture.md`](../hardware/force-fixture.md).
+- **Next branch:** Use [docs/hardware/force-fixture.md](../hardware/force-fixture.md).
 
 Expected fixture images:
 
@@ -144,16 +144,10 @@ Stop before software acquisition if:
 - Screw press force path is not mechanically stable.
 - Any mains wiring is exposed or loose.
 
-## Related docs 
-- [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md)
-- [`docs/hardware/force-fixture.md`](../hardware/force-fixture.md)
-- [`docs/troubleshooting/hardware-and-wiring.md`](../troubleshooting/hardware-and-wiring.md)
+## Related docs
 
-
-## Troubleshooting links
-
-- [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md)
-- [`docs/hardware/force-fixture.md`](../hardware/force-fixture.md)
-- [`docs/troubleshooting/hardware-and-wiring.md`](../troubleshooting/hardware-and-wiring.md)
-- [`docs/troubleshooting/serial-and-rs485.md`](../troubleshooting/serial-and-rs485.md)
+- [docs/hardware/pm58-wiring-and-bringup.md](../hardware/pm58-wiring-and-bringup.md)
+- [docs/hardware/force-fixture.md](../hardware/force-fixture.md)
+- [docs/troubleshooting/hardware-and-wiring.md](../troubleshooting/hardware-and-wiring.md)
+- [docs/troubleshooting/serial-and-rs485.md](../troubleshooting/serial-and-rs485.md)
 

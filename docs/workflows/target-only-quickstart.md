@@ -49,12 +49,12 @@ rg "D2,<seq>,<timestamp_us>,<raw_count>,<current_units>,<status>" Handgrip_Firmw
 ```
 
 ## Related docs
-- [`Handgrip_Firmware/docs/workflow.md`](../../Handgrip_Firmware/docs/workflow.md)
-- [`Handgrip_Firmware/docs/serial-protocol.md`](../../Handgrip_Firmware/docs/serial-protocol.md)
+- [Handgrip_Firmware/docs/workflow.md](../../Handgrip_Firmware/docs/workflow.md)
+- [Handgrip_Firmware/docs/serial-protocol.md](../../Handgrip_Firmware/docs/serial-protocol.md)
 
 
 ## Troubleshooting links
 
-- [`docs/troubleshooting/serial-and-rs485.md`](../troubleshooting/serial-and-rs485.md)
-- [`docs/troubleshooting/lsl-streams.md`](../troubleshooting/lsl-streams.md)
-- [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)
+- [docs/troubleshooting/serial-and-rs485.md](../troubleshooting/serial-and-rs485.md)
+- [docs/troubleshooting/lsl-streams.md](../troubleshooting/lsl-streams.md)
+- [docs/architecture/stream-contracts.md](../architecture/stream-contracts.md)

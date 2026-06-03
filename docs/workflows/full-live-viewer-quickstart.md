@@ -61,12 +61,12 @@ Replace serial paths with stable `/dev/serial/by-id/...` paths when possible.
 | `LSL_Viewer` | browser view, optional viewer logs.                       |
 
 ## Related docs
-- [`docs/architecture/stream-contracts.md`](../architecture/stream-contracts.md)
+- [docs/architecture/stream-contracts.md](../architecture/stream-contracts.md)
 
 
 ## Troubleshooting links
 
-- [`docs/troubleshooting/lsl-streams.md`](../troubleshooting/lsl-streams.md)
-- [`docs/troubleshooting/viewer-lag-or-xy-delay.md`](../troubleshooting/viewer-lag-or-xy-delay.md)
-- [`docs/architecture/timestamping-and-synchronization.md`](../architecture/timestamping-and-synchronization.md)
-- [`docs/workflows/handgrip-calibration.md`](handgrip-calibration.md)
+- [docs/troubleshooting/lsl-streams.md](../troubleshooting/lsl-streams.md)
+- [docs/troubleshooting/viewer-lag-or-xy-delay.md](../troubleshooting/viewer-lag-or-xy-delay.md)
+- [docs/architecture/timestamping-and-synchronization.md](../architecture/timestamping-and-synchronization.md)
+- [docs/workflows/handgrip-calibration.md](handgrip-calibration.md)
