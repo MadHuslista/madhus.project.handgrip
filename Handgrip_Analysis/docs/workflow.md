@@ -43,16 +43,9 @@ Before recording any stage, confirm these settings in `LSL_Bridge/conf/config.ya
 
 #### Per-stage capture protocols
 
-| Stage   | Protocol                                                                                                                                                                                   |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Stage 1 | Cold start. No hand contact, no load. Record continuously for 15–30 minutes. Repeat at least 5 times if possible.                                                                         |
-| Stage 2 | After Stage 1 warm-up, thermally stable. No load, no hand contact. Record 10–20 minutes.                                                                                                  |
-| Stage 3 | After warm-up, apply a stable known load. Hold for 10–20 minutes. Optionally include pre-load and post-unload windows in the same file.                                                   |
-| Stage 4 | One file per trial. Include a few seconds of quiet baseline before each grip event. Trial types: `fast_max`, `ramp_hold`, `sustained_hold`. Repeat each trial type several times.          |
-| Stage 5 | One rest capture per condition. Change only one condition at a time (e.g. battery vs USB power, display on vs off, cable fixed vs disturbed).                                              |
-| Stage 6 | Reuses Stage 2 and Stage 4 outputs. No new capture needed.                                                                                                                                 |
+Capture protocols by stage (duration, load conditions, trial types), along with full purpose, input requirements, and interpretation: [Handgrip_Analysis/docs/stages.md](stages.md).
 
-Full per-stage purpose, input requirements, and interpretation: [Handgrip_Analysis/docs/stages.md](stages.md).
+Stage 6 requires no new capture — it reuses Stage 2 and Stage 4 outputs.
 
 Handgrip_Calibration session outputs are under:
 
@@ -186,14 +179,7 @@ uv run ha-stage stage=stage6 \
 
 ### 2.4 Stage purposes and outputs
 
-| Stage   | Purpose                           | Key output                           |
-| ------- | --------------------------------- | ------------------------------------ |
-| Stage 1 | Startup and warm-up behavior      | Stabilization metrics and plots      |
-| Stage 2 | Static rest noise                 | Noise metrics, PSD, bandpower        |
-| Stage 3 | Loaded drift and creep            | Drift slopes, hold stability         |
-| Stage 4 | Real grip dynamics                | Rise/peak/release dynamics           |
-| Stage 5 | Interference/condition comparison | Condition comparison report          |
-| Stage 6 | Filter candidate benchmark        | Rankings, recommendation YAML/report |
+Stage purposes, inputs, and key outputs by stage: [Handgrip_Analysis/docs/stages.md](stages.md).
 
 Output locations:
 
