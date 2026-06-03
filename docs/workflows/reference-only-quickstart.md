@@ -38,5 +38,5 @@ After GUI opens, click "Connect" to start acquisition and IPC publishing.
 
 ## Troubleshooting links
 
-- `docs/hardware/rs485-modbus-active-send.md`
+- [RS485_GUI/docs/active-send-and-modbus.md](../../RS485_GUI/docs/active-send-and-modbus.md)
 - [docs/troubleshooting/serial-and-rs485.md](../troubleshooting/serial-and-rs485.md)

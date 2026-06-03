@@ -12,10 +12,10 @@ Start order:
 
 ## Prerequisites
 
-- Physical setup validated.
-- Firmware setup validated and D2 lines visible.
-- Reference-only workflow passes.
-- Target serial port and RS485 serial port are known.
+- Physical setup validated. See [docs/workflows/physical-setup.md](physical-setup.md).
+- Firmware setup validated and D2 lines visible. See [Handgrip_Firmware/docs/workflow.md](../../Handgrip_Firmware/docs/workflow.md).
+- Reference-only workflow passes. See [docs/workflows/reference-only-quickstart.md](reference-only-quickstart.md).
+- Target serial port and RS485 serial port are known. See [docs/workflows/target-only-quickstart.md](target-only-quickstart.md).
 
 ## Commands
 

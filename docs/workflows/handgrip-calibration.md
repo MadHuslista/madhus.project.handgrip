@@ -18,10 +18,3 @@ Before calibrating:
 
 Once these hold, run the calibration command sequence (preflight → record → fit → report → holdout validation) from [Handgrip_Calibration/docs/workflow.md](../../Handgrip_Calibration/docs/workflow.md).
 
-## Detailed documentation
-
-- [Handgrip_Calibration/docs/workflow.md](../../Handgrip_Calibration/docs/workflow.md) — complete step-by-step workflow
-- [Handgrip_Calibration/docs/recording.md](../../Handgrip_Calibration/docs/recording.md) — session structure and quality requirements
-- [Handgrip_Calibration/docs/fitting-and-model-selection.md](../../Handgrip_Calibration/docs/fitting-and-model-selection.md) — model selection criteria
-- [Handgrip_Calibration/docs/applying-calibration-results.md](../../Handgrip_Calibration/docs/applying-calibration-results.md) — where to apply values
-- [docs/troubleshooting/calibration-recording.md](../troubleshooting/calibration-recording.md)

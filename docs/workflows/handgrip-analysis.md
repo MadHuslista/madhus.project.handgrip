@@ -14,10 +14,3 @@ Before running analysis:
 2. A manifest CSV under `Handgrip_Analysis/data/manifests/` listing the exported files. See [Handgrip_Analysis/docs/workflow.md](../../Handgrip_Analysis/docs/workflow.md).
 3. `uv sync` completed from the repo root.
 
-## Detailed documentation
-
-- [Handgrip_Analysis/docs/workflow.md](../../Handgrip_Analysis/docs/workflow.md) — complete step-by-step workflow
-- [Handgrip_Analysis/docs/stages.md](../../Handgrip_Analysis/docs/stages.md) — stage-by-stage purpose, input, and output
-- [Handgrip_Analysis/docs/filter-design.md](../../Handgrip_Analysis/docs/filter-design.md) — Stage 6 candidate review and interpretation
-- [Handgrip_Analysis/docs/configuration.md](../../Handgrip_Analysis/docs/configuration.md) — config reference
-- [docs/troubleshooting/analysis-pipeline.md](../troubleshooting/analysis-pipeline.md)
