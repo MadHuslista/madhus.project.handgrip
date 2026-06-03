@@ -1,10 +1,11 @@
 # Analysis Pipeline Troubleshooting
 
-**Status:** Canonical symptom-first troubleshooting doc  
-**Symptoms covered:** Manifest errors, missing stage outputs, invalid filter candidates  
-**Related docs:** [`docs/workflows/handgrip-analysis.md`](../workflows/handgrip-analysis.md), [`Handgrip_Analysis/docs/stages.md`](../../Handgrip_Analysis/docs/stages.md), [`Handgrip_Analysis/docs/filter-design.md`](../../Handgrip_Analysis/docs/filter-design.md)
-
 ## Summary
+
+**Symptoms covered:** Manifest errors, missing stage outputs, invalid filter candidates  
+
+
+
 
 Use this guide when `Handgrip_Analysis` cannot load inputs, run stages, or produce expected reports/filter recommendations.
 
@@ -87,3 +88,5 @@ Do not apply filter recommendations if:
 rg 'Stage 6|filter design|lsl_bridge_processing_recommendation.yaml' Handgrip_Analysis/docs docs/examples/analysis-output/README.md
 rg 'ha-run-all|ha-stage|ha-stage6' Handgrip_Analysis/docs/workflow.md Handgrip_Analysis/docs/development.md
 ```
+
+**Related docs:** [docs/workflows/handgrip-analysis.md](../workflows/handgrip-analysis.md), [Handgrip_Analysis/docs/stages.md](../../Handgrip_Analysis/docs/stages.md), [Handgrip_Analysis/docs/filter-design.md](../../Handgrip_Analysis/docs/filter-design.md)

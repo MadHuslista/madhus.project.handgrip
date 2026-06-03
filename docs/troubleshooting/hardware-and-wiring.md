@@ -1,10 +1,8 @@
 # Hardware and Wiring Troubleshooting
 
-**Status:** Canonical symptom-first troubleshooting doc  
-**Symptoms covered:** No board display, wrong load sign, unstable reading, overload  
-**Related docs:** [`docs/workflows/physical-setup.md`](../workflows/physical-setup.md), [`docs/hardware/pm58-wiring-and-bringup.md`](../hardware/pm58-wiring-and-bringup.md), [`docs/hardware/force-fixture.md`](../hardware/force-fixture.md)
-
 ## Summary
+**Symptoms covered:** No board display, wrong load sign, unstable reading, overload  
+
 
 Start here when the physical system does not behave correctly before software acquisition. Do not debug Python until the board display and force path make physical sense.
 
@@ -68,3 +66,5 @@ Apply a small known force. The reference and target should move in the expected 
 - [ ] Target handgrip wiring is secure.
 - [ ] No overload or unstable baseline is present.
 - [ ] Screw press force path is visually aligned.
+
+**Related docs:** [docs/workflows/physical-setup.md](../workflows/physical-setup.md), [docs/hardware/pm58-wiring-and-bringup.md](../hardware/pm58-wiring-and-bringup.md), [docs/hardware/force-fixture.md](../hardware/force-fixture.md)

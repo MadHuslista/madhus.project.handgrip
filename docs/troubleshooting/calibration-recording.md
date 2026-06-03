@@ -1,10 +1,8 @@
 # Calibration Recording Troubleshooting
 
-**Status:** Canonical symptom-first troubleshooting doc  
-**Symptoms covered:** Missing target/reference CSV, failed preflight, bad session ID  
-**Related docs:** [`docs/workflows/handgrip-calibration.md`](../workflows/handgrip-calibration.md), [`Handgrip_Calibration/docs/recording.md`](../../Handgrip_Calibration/docs/recording.md), [`Handgrip_Calibration/docs/protocols.md`](../../Handgrip_Calibration/docs/protocols.md)
-
 ## Summary
+**Symptoms covered:** Missing target/reference CSV, failed preflight, bad session ID  
+
 
 Use this guide when `handgrip-cal preflight`, `record`, `fit`, or `report` cannot find expected streams or files.
 
@@ -37,7 +35,7 @@ uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase
 | One stream missing                    | recording logs          | Fix LSL stream discovery.                                                                     |
 | Output path changed                   | config/report path      | Inspect protocol/config output section.                                                       |
 | Session ID mistyped                   | folder name             | Copy exact session ID from record output.                                                     |
-| File naming differs                   | component version       | Use [`Handgrip_Calibration/docs/recording.md`](../../Handgrip_Calibration/docs/recording.md). |
+| File naming differs                   | component version       | Use [Handgrip_Calibration/docs/recording.md](../../Handgrip_Calibration/docs/recording.md). |
 
 Minimum expected artifact classes:
 
@@ -105,3 +103,5 @@ rg 'protocol_static_reversible_staircase_v3.yaml' Handgrip_Calibration docs/work
 rg 'HandgripTarget|HandgripReference|HandgripCalibrationMarkers' Handgrip_Calibration docs/architecture/stream-contracts.md
 rg '\.\./RS485_GUI/config/config\.yaml' Handgrip_Calibration Handgrip_Calibration/docs/configuration.md
 ```
+
+**Related docs:** [docs/workflows/handgrip-calibration.md](../workflows/handgrip-calibration.md), [Handgrip_Calibration/docs/recording.md](../../Handgrip_Calibration/docs/recording.md), [Handgrip_Calibration/docs/protocols.md](../../Handgrip_Calibration/docs/protocols.md)

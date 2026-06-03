@@ -1,10 +1,8 @@
 # Serial and RS485 Troubleshooting
 
-**Status:** Canonical symptom-first troubleshooting doc  
-**Symptoms covered:** No serial port, wrong A/B, baud mismatch, no Active-Send frames  
-**Related docs:** [`docs/workflows/target-only-quickstart.md`](../workflows/target-only-quickstart.md), [`docs/workflows/reference-only-quickstart.md`](../workflows/reference-only-quickstart.md), [`RS485_GUI/docs/active-send-and-modbus.md`](../../RS485_GUI/docs/active-send-and-modbus.md)
-
 ## Summary
+**Symptoms covered:** No serial port, wrong A/B, baud mismatch, no Active-Send frames  
+
 
 Use this guide when the host PC cannot see the Arduino target or USB-RS485 adapter, or when `RS485_GUI` cannot receive acquisition-board frames.
 
@@ -101,3 +99,5 @@ Stop before calibration if:
 - Active-Send frames are missing,
 - parser reports continuous malformed frames,
 - board display does not match host data.
+
+**Related docs:** [docs/workflows/target-only-quickstart.md](../workflows/target-only-quickstart.md), [docs/workflows/reference-only-quickstart.md](../workflows/reference-only-quickstart.md), [RS485_GUI/docs/active-send-and-modbus.md](../../RS485_GUI/docs/active-send-and-modbus.md)
