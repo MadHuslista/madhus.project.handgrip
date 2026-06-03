@@ -6,26 +6,10 @@
 
 It is file-based by design. Use it after acquisition/calibration data exists, not as the live acquisition authority.
 
-## When to use this component
-
-Use this component when you need to:
-
-- analyze saved target/reference CSV data,
-- quantify startup warm-up / zero drift,
-- characterize rest noise and spectral behavior,
-- measure loaded drift or creep,
-- compare real handgrip dynamics,
-- evaluate interference conditions,
-- rank filter candidates and generate deployment recommendations.
-
-Do not use this component to:
-
-- run live RS485 acquisition,
-- publish LSL streams,
-- record calibration protocols,
-- change firmware constants directly without validation.
-
 ## First command
+
+New recordings can be done with the `LSL_Bridge`. 
+After recording, copy the generated CSV files to `Handgrip_Analysis/data/calibration_signals/` and update the corresponding manifest in `Handgrip_Analysis/data/manifests/` before running the analysis.
 
 From `Handgrip_Analysis/`:
 
@@ -49,18 +33,34 @@ uv run ha-run-all \
   base_outdir=outputs/batch_run
 ```
 
-## Expected result
+## Quickstart 
+  
+Initial Handgrip recordings done following [Handgrip_Analysis/docs/stages.md](docs/stages.md) are available in `data/calibration_signals/` and indexed in `data/manifests/`.
 
-Expected successful behavior:
+To observe the analysis results on these example recordings, go to `Handgrip_Analysis` and run:
 
-- input files/manifests resolve,
-- the selected stage runs without missing-column errors,
-- output folder is created,
-- machine-readable metrics are written,
-- plots/reports are generated,
-- Stage 6 outputs include candidate comparison and a filter recommendation when applicable.
+```bash
+# Per-stage analysis:
+ha-run-all manifest=data/manifests/analysis_stages_1_4_manifest.csv base_outdir=data/analysis_results stages=stage1,stage2,stage3,stage4
+```
 
-Stop if the manifest cannot be traced to source data or if the selected filter recommendation cannot be linked to metrics.
+```bash
+# Filter design review:
+ha-stage stage=stage6 manifest=data/manifests/stage6_filter_review_manifest.csv outdir=data/analysis_results/stage6 filter_config=conf/filters/candidates.yaml
+```
+
+On new recordings, make sure to clean the output directory to ensure that the analysis runs with a clean slate and that all expected outputs are generated.
+
+## Expected results
+
+**Stage 1-5**: Metrics and plots characterizing startup drift, stationary noise, loaded drift/creep, real handgrip dynamics, and interference conditions.
+
+**Stage 6**: 
+Candidate filter performance metrics, plots, and a filter recommendation based on the selected policy.
+In particular review: 
+- Filter Design Report  : `data/analysis_results/stage6/stage6_review_design_report.md`
+- Acceptance Report     : `data/analysis_results/stage6/filter_acceptance_report.md`
+
 
 ## Configuration
 
@@ -91,16 +91,16 @@ Main configuration areas:
 | DSP defaults      | Sampling assumptions, filtering utilities, spectral settings. |
 | filter candidates | Candidate families and parameters for Stage 6 evaluation.     |
 
-Full configuration reference is planned at [`docs/configuration.md`](docs/configuration.md).
+Full configuration reference is planned at [Handgrip_Analysis/docs/configuration.md](docs/configuration.md).
 
 ## Common workflows
 
 | Goal                         | Document                                                                                                 |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Run offline analysis         | [`../docs/workflows/handgrip-analysis.md`](../docs/workflows/handgrip-analysis.md)                       |
-| Navigate component docs      | [`docs/index.md`](docs/index.md)                                                                         |
-| Understand stages            | [`docs/stages.md`](docs/stages.md)                                                                       |
-| Interpret filter design      | [`docs/filter-design.md`](docs/filter-design.md)                                                         |
+| Run offline analysis         | [docs/workflows/handgrip-analysis.md](../docs/workflows/handgrip-analysis.md)                       |
+| Navigate component docs      | [Handgrip_Analysis/docs/index.md](docs/index.md)                                                                         |
+| Understand stages            | [Handgrip_Analysis/docs/stages.md](docs/stages.md)                                                                       |
+| Interpret filter design      | [Handgrip_Analysis/docs/filter-design.md](docs/filter-design.md)                                                         |
 
 ## Repository layout
 
@@ -144,10 +144,10 @@ uv run ha-stage1 --help
 uv run ha-stage6 --help
 ```
 
-If your installed entry points differ, check the active `pyproject.toml` and update this README plus [`docs/workflows/handgrip-analysis.md`](../docs/workflows/handgrip-analysis.md) together.
+If your installed entry points differ, check the active `pyproject.toml` and update this README plus [docs/workflows/handgrip-analysis.md](../docs/workflows/handgrip-analysis.md) together.
 
 ## Further docs
 
-- [`docs/index.md`](docs/index.md) — analysis documentation map.
-- [`../docs/workflows/handgrip-analysis.md`](../docs/workflows/handgrip-analysis.md) — root analysis workflow.
-- [`README_filter_design_report.md`](README_filter_design_report.md) — current filter-design report source until migrated into [`docs/filter-design.md`](docs/filter-design.md).
+- [Handgrip_Analysis/docs/index.md](docs/index.md) — analysis documentation map.
+- [docs/workflows/handgrip-analysis.md](../docs/workflows/handgrip-analysis.md) — root analysis workflow.
+- [Handgrip_Analysis/README_filter_design_report.md](README_filter_design_report.md) — current filter-design report source until migrated into [Handgrip_Analysis/docs/filter-design.md](docs/filter-design.md).

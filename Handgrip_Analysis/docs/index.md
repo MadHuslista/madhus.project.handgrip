@@ -21,13 +21,13 @@
 
 | Document                                         | Purpose                                                                 |
 | ------------------------------------------------ | ----------------------------------------------------------------------- |
-| [workflow.md](workflow.md)                       | Data preparation, running stages, applying filter recommendations       |
-| [stages.md](stages.md)                           | Stage 1–6 purpose, input, output, and interpretation                    |
-| [configuration.md](configuration.md)             | Full config tree reference and safe-edit guidance                       |
-| [filter-design.md](filter-design.md)             | Stage 6 candidate review workflow and interpretation                    |
-| [reports-and-outputs.md](reports-and-outputs.md) | Output tree, generated reports, figures, metrics, recommendation files  |
-| [architecture.md](architecture.md)               | CLI, stages, config, IO, DSP, plotting, and report layers               |
-| [development.md](development.md)                 | How to add stages, metrics, filter families, report sections, and tests |
+| [Handgrip_Analysis/docs/workflow.md](workflow.md)                       | Data preparation, running stages, applying filter recommendations       |
+| [Handgrip_Analysis/docs/stages.md](stages.md)                           | Stage 1–6 purpose, input, output, and interpretation                    |
+| [Handgrip_Analysis/docs/configuration.md](configuration.md)             | Full config tree reference and safe-edit guidance                       |
+| [Handgrip_Analysis/docs/filter-design.md](filter-design.md)             | Stage 6 candidate review workflow and interpretation                    |
+| [Handgrip_Analysis/docs/reports-and-outputs.md](reports-and-outputs.md) | Output tree, generated reports, figures, metrics, recommendation files  |
+| [Handgrip_Analysis/docs/architecture.md](architecture.md)               | CLI, stages, config, IO, DSP, plotting, and report layers               |
+| [Handgrip_Analysis/docs/development.md](development.md)                 | How to add stages, metrics, filter families, report sections, and tests |
 
 ## Reading guide
 
