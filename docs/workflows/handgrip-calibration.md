@@ -16,29 +16,7 @@ Before calibrating:
 4. `LSL_Bridge` publishing `HandgripTarget` and `HandgripReference`. See [LSL_Bridge/docs/workflow.md](../../LSL_Bridge/docs/workflow.md).
 5. Optional: `LSL_Viewer` showing both streams with plausible XY behavior.
 
-## Canonical command sequence
-
-```bash
-uv sync
-cd Handgrip_Calibration
-uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase_v3.yaml
-uv run handgrip-cal record    --config conf/protocol_static_reversible_staircase_v3.yaml
-uv run handgrip-cal fit       data/calibration/<session_id> \
-  --config conf/protocol_static_reversible_staircase_v3.yaml
-uv run handgrip-cal report    data/calibration/<session_id> \
-  --config conf/protocol_static_reversible_staircase_v3.yaml
-```
-
-Stop if preflight fails. Do not proceed to recording.
-
-## Holdout validation
-
-```bash
-uv run handgrip-cal record --config conf/protocol_holdout_verification.yaml
-uv run handgrip-cal validate-holdout data/calibration/<holdout_session_id> \
-  --model data/calibration/<fit_session_id>/fit_result.json \
-  --config conf/protocol_holdout_verification.yaml
-```
+Once these hold, run the calibration command sequence (preflight → record → fit → report → holdout validation) from [Handgrip_Calibration/docs/workflow.md](../../Handgrip_Calibration/docs/workflow.md).
 
 ## Detailed documentation
 
