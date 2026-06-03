@@ -2,10 +2,9 @@
 
 ## Summary
 
-**Symptoms covered:** Manifest errors, missing stage outputs, invalid filter candidates  
+**Symptoms covered:** Manifest errors, missing stage outputs, invalid filter candidates
 
-
-
+**Prerequisite:** [docs/troubleshooting/calibration-recording.md](calibration-recording.md) — confirm calibration sessions and exported CSV files exist before debugging analysis inputs.
 
 Use this guide when `Handgrip_Analysis` cannot load inputs, run stages, or produce expected reports/filter recommendations.
 

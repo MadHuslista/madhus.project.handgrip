@@ -1,6 +1,8 @@
 # LSL Viewer Lag or XY Delay Troubleshooting
 
-**Symptoms covered:** XY delay, reference lag, display-only shift vs real timestamp issue  
+**Symptoms covered:** XY delay, reference lag, display-only shift vs real timestamp issue
+
+**Prerequisite:** [docs/troubleshooting/lsl-streams.md](lsl-streams.md) — confirm both streams are visible and not stale before diagnosing viewer timing.
 
 ## Summary
 
@@ -17,19 +19,9 @@ A delayed XY plot is a symptom to diagnose, not automatic proof that recorded da
 | Buffer pruning bug                      | Viewer keeps unmatched old samples | Viewer alignment tests/logs.                                                             |
 | Display render backlog                  | Browser cannot keep up             | Compare saved data vs visual plot.                                                       |
 
-## Symptom: reference lag only in XY plot
+### Reference lag only in XY plot
 
-If time-series plots react live but XY correlation lags, suspect viewer alignment/interpolation logic before changing acquisition or bridge code.
-
-Check:
-
-- XY alignment mode,
-- target signal label,
-- reference signal label,
-- interpolation gap threshold,
-- max XY points,
-- manual reference shift,
-- render downsampling.
+If time-series plots react live but XY correlation lags, suspect viewer alignment/interpolation logic before changing acquisition or bridge code. Check: XY alignment mode, target/reference signal labels, interpolation gap threshold, max XY points, manual reference shift, render downsampling.
 
 ## Symptom: display-only shift vs real timestamp issue
 

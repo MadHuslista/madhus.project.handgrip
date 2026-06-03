@@ -1,8 +1,9 @@
 # Calibration Recording Troubleshooting
 
 ## Summary
-**Symptoms covered:** Missing target/reference CSV, failed preflight, bad session ID  
+**Symptoms covered:** Failed preflight, missing target/reference CSV, bad session ID
 
+**Prerequisite:** [docs/troubleshooting/lsl-streams.md](lsl-streams.md) — confirm `HandgripTarget` and `HandgripReference` streams are visible before debugging calibration recording.
 
 Use this guide when `handgrip-cal preflight`, `record`, `fit`, or `report` cannot find expected streams or files.
 
@@ -23,6 +24,16 @@ Command:
 ```bash
 cd Handgrip_Calibration
 uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase_v3.yaml
+```
+
+To capture config snapshots, confirm the protocol YAML contains:
+
+```yaml
+session:
+  copy_component_configs:
+    - ../LSL_Bridge/conf/config.yaml
+    - ../LSL_Viewer/conf/config.yaml
+    - ../RS485_GUI/config/config.yaml
 ```
 
 ## Symptom: missing target/reference CSV
@@ -66,18 +77,5 @@ Then run from `Handgrip_Calibration/`:
 ```bash
 uv run handgrip-cal fit data/calibration/<session_id> --config conf/protocol_static_reversible_staircase_v3.yaml
 ```
-
-## Symptom: config snapshot missing
-
-Confirm protocol contains:
-
-```yaml
-session:
-  copy_component_configs:
-    - ../LSL_Bridge/conf/config.yaml
-    - ../LSL_Viewer/conf/config.yaml
-    - ../RS485_GUI/config/config.yaml
-```
-
 
 **Related docs:** [docs/workflows/handgrip-calibration.md](../workflows/handgrip-calibration.md), [Handgrip_Calibration/docs/recording.md](../../Handgrip_Calibration/docs/recording.md), [Handgrip_Calibration/docs/protocols.md](../../Handgrip_Calibration/docs/protocols.md)

@@ -1,8 +1,9 @@
 # Serial and RS485 Troubleshooting
 
 ## Summary
-**Symptoms covered:** No serial port, wrong A/B, baud mismatch, no Active-Send frames  
+**Symptoms covered:** No serial port, wrong A/B, baud mismatch, no Active-Send frames
 
+**Prerequisite:** [docs/troubleshooting/hardware-and-wiring.md](hardware-and-wiring.md) — confirm board powers on and force path is valid before debugging serial.
 
 Use this guide when the host PC cannot see the Arduino target or USB-RS485 adapter, or when `RS485_GUI` cannot receive acquisition-board frames.
 

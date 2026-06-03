@@ -1,8 +1,9 @@
 # Hardware and Wiring Troubleshooting
 
 ## Summary
-**Symptoms covered:** No board display, wrong load sign, unstable reading, overload  
+**Symptoms covered:** No board display, wrong load sign, unstable reading, overload
 
+**Start here** — no upstream prerequisite. Resolve physical system issues in this guide before moving to [docs/troubleshooting/serial-and-rs485.md](serial-and-rs485.md).
 
 Start here when the physical system does not behave correctly before software acquisition. Do not debug Python until the board display and force path make physical sense.
 
