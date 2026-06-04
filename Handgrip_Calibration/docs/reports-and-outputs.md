@@ -20,6 +20,8 @@ The `report` command and its place in the full sequence are documented in [Handg
 | `fit_candidates.json`         | Candidate model metrics and diagnostics.                 |
 | `model_selection_report.json` | Selection rationale, likelihoods, penalties, thresholds. |
 | `calibration_dataset.csv`     | Accepted holds used for fitting.                         |
+| `calibration_hold_dataset_raw.csv` | Pre-correction hold dataset; written if `calibration_artifact.enabled`. |
+| `calibration_artifact_summary.csv` | Per-level direction-balanced medians and exclusions; written if `calibration_artifact.enabled`. |
 | `plots/`                      | Time series, residuals, model comparisons, metric bars.  |
 | config snapshots              | Reproducibility of upstream components.                  |
 
@@ -74,6 +76,21 @@ unless evidence strongly justifies otherwise.
 | model likelihoods           | relative decision weight             | decisive vs marginal winner.                       |
 | robust weights              | robust-fit hold weights              | contaminated holds.                                |
 | hysteresis up/down          | direction split                      | mechanical hysteresis or load-path asymmetry.      |
+
+## calibration_dataset.csv columns
+
+The segmentation process produces `calibration_dataset.csv` with the following semantically significant columns (in addition to legacy core columns):
+
+| Column group | Columns | Meaning |
+|---|---|---|
+| Tail statistics | `target_raw_tail_median`, `target_raw_tail_std`, `target_tail_n_samples`, `reference_force_tail_median_N`, `reference_force_tail_std_N`, `reference_tail_n_samples` | Hold tail-window (last 2 seconds by default) median force, std, and sample count. Used for artifact correction. |
+| Shape correlation | `shape_corr_target_reference` | Normalized cross-correlation between target and reference waveform shapes during the hold (0–1 scale). |
+| Direction artifact sign | `target_direction_sign_match`, `reference_direction_sign_match` | Whether observed relaxation sign (delta) matches expected sign for ascending/descending holds (direction-balanced fixture compensation diagnostic). |
+| Target relaxation metrics | `target_relaxation_start_median`, `target_relaxation_end_median`, `target_relaxation_delta_end_minus_start`, `target_relaxation_slope_per_s`, `target_relaxation_lin_r2`, `target_relaxation_monotonic_fraction`, `target_relaxation_exp_tau_s`, `target_relaxation_exp_r2` | Hold-to-end relaxation behavior: start/end medians, linear slope + R², exponential tau + R², monotonicity. |
+| Reference relaxation metrics | Same 8 fields prefixed `reference_relaxation_` | Reference force relaxation behavior over the hold. |
+| Artifact flag | `calibration_artifact_applied` | Boolean indicating whether direction-balanced artifact correction was applied to this point. |
+
+---
 
 ## Tables to preserve
 
