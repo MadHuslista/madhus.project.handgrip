@@ -1,3 +1,6 @@
+# @package lsl_bridge.__main__
+#  @brief Module entry point for running the bridge via python -m.
+##
 """
 Enable ``python -m lsl_bridge`` as an entry point.
 

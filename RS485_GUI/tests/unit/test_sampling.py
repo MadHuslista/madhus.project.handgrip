@@ -1,4 +1,5 @@
 """Unit tests for rs485_gui.core.sampling."""
+
 from __future__ import annotations
 
 import threading
@@ -66,13 +67,14 @@ class TestSamplingStats:
             except Exception as e:
                 errors.append(e)
 
-        threads = [threading.Thread(target=writer) for _ in range(3)] + \
-                  [threading.Thread(target=reader) for _ in range(2)]
+        threads = [threading.Thread(target=writer) for _ in range(3)] + [
+            threading.Thread(target=reader) for _ in range(2)
+        ]
         for t in threads:
             t.start()
         for t in threads:
             t.join()
-        assert errors == [], f'Thread safety errors: {errors}'
+        assert errors == [], f"Thread safety errors: {errors}"
 
 
 class TestDownsamplePointsForRender:
@@ -101,4 +103,4 @@ class TestDownsamplePointsForRender:
         pts = [(float(i), float(i) * 2) for i in range(100)]
         for factor in (1, 2, 5, 10):
             result = downsample_points_for_render(pts, factor=factor, max_points=10)
-            assert result[-1] == pts[-1], f'Last point lost at factor={factor}'
+            assert result[-1] == pts[-1], f"Last point lost at factor={factor}"

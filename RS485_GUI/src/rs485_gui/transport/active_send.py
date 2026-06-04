@@ -16,6 +16,7 @@ Key design decisions (preserved from original):
 
 Dependency chain: models, constants, core/codec, transport/base
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
+# @brief Represents the ActiveSendBoardTransport component.
 class ActiveSendBoardTransport(BoardTransport):
     """Receives and decodes binary active-send push frames from the board.
 
@@ -48,6 +50,10 @@ class ActiveSendBoardTransport(BoardTransport):
     calibration QA.
     """
 
+    # @brief Init.
+    #
+    #  @param self Parameter description.
+    #  @param app_state Parameter description.
     def __init__(self, app_state: AppState) -> None:
         self.app_state = app_state
         self.ser: serial.Serial | None = None
@@ -79,6 +85,9 @@ class ActiveSendBoardTransport(BoardTransport):
         if self.ser is not None:
             self.ser.reset_input_buffer()
 
+    # @brief Disconnect.
+    #
+    #  @param self Parameter description.
     def disconnect(self) -> None:
         if self.ser and self.ser.is_open:
             self.ser.close()
@@ -88,6 +97,10 @@ class ActiveSendBoardTransport(BoardTransport):
         self._last_assigned_sample_lsl_ts = None
         self._force_timestamp_reanchor = False
 
+    # @brief Read frames.
+    #
+    #  @param self Parameter description.
+    #  @return Result produced by this function.
     def read_frames(self) -> list[MeasurementFrame]:
         """Read one batch of active-send frames and return decoded frames.
 
@@ -96,15 +109,19 @@ class ActiveSendBoardTransport(BoardTransport):
         """
         if self.app_state.parse_profile != ACTIVE_SEND_PARSER_PROFILE:
             raise RuntimeError(
-                f'Only parser profile {ACTIVE_SEND_PARSER_PROFILE!r} is supported. '
-                f'Got: {self.app_state.parse_profile!r}'
+                f"Only parser profile {ACTIVE_SEND_PARSER_PROFILE!r} is supported. "
+                f"Got: {self.app_state.parse_profile!r}"
             )
         frame_bytes_batch, diagnostics = self._read_modbus_response_frames_batch()
         return self._decode_batch(frame_bytes_batch, diagnostics)
 
+    # @brief Send command.
+    #
+    #  @param self Parameter description.
+    #  @param command_name Parameter description.
     def send_command(self, command_name: str) -> None:
         raise RuntimeError(
-            'Board commands are only available in Modbus RTU mode (device.mode=modbus_rtu).'
+            "Board commands are only available in Modbus RTU mode (device.mode=modbus_rtu)."
         )
 
     # ------------------------------------------------------------------
@@ -138,7 +155,7 @@ class ActiveSendBoardTransport(BoardTransport):
             try:
                 self.ser.reset_input_buffer()
             except Exception as exc:
-                LOGGER.warning('Active-send recovery: could not reset serial buffer: %s', exc)
+                LOGGER.warning("Active-send recovery: could not reset serial buffer: %s", exc)
 
         self._force_timestamp_reanchor = True
         stats.recovery_events += 1
@@ -146,11 +163,18 @@ class ActiveSendBoardTransport(BoardTransport):
         stats.last_recovery_warning_count = stats.warning_events_total
         stats.discarded_bytes += dropped_buffer + pending
         LOGGER.warning(
-            'Active-send parser recovery #%d: reason=%s dropped_buffer=%d '
-            'dropped_serial_pending=%d; timing will re-anchor on next valid batch',
-            stats.recovery_events, reason, dropped_buffer, pending,
+            "Active-send parser recovery #%d: reason=%s dropped_buffer=%d "
+            "dropped_serial_pending=%d; timing will re-anchor on next valid batch",
+            stats.recovery_events,
+            reason,
+            dropped_buffer,
+            pending,
         )
 
+    # @brief Maybe log active warning.
+    #
+    #  @param self Parameter description.
+    #  @param message Parameter description.
     def _maybe_log_active_warning(self, message: str) -> None:
         stats = self.app_state.active_send_stats
         cfg = self.app_state.cfg.active_send
@@ -164,23 +188,33 @@ class ActiveSendBoardTransport(BoardTransport):
             return
         if now - stats.last_warning_emit_monotonic >= emit_interval_s:
             LOGGER.warning(
-                'Active-send backlog summary: parsed_ok=%d batches=%d crc_failures=%d '
-                'resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d '
-                'buffer_len=%d max_buffer=%d max_in_waiting=%d '
-                'timestamp_reanchors=%d suppressed=%d',
-                stats.frames_ok, stats.frames_delivered, stats.crc_failures,
-                stats.header_resyncs, stats.buffer_overflow_events,
-                stats.buffer_overflow_bytes, stats.discarded_bytes,
-                len(self.binary_buffer), stats.max_buffer_len, stats.max_in_waiting,
-                stats.timestamp_reanchors, stats.warning_suppressed,
+                "Active-send backlog summary: parsed_ok=%d batches=%d crc_failures=%d "
+                "resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d "
+                "buffer_len=%d max_buffer=%d max_in_waiting=%d "
+                "timestamp_reanchors=%d suppressed=%d",
+                stats.frames_ok,
+                stats.frames_delivered,
+                stats.crc_failures,
+                stats.header_resyncs,
+                stats.buffer_overflow_events,
+                stats.buffer_overflow_bytes,
+                stats.discarded_bytes,
+                len(self.binary_buffer),
+                stats.max_buffer_len,
+                stats.max_in_waiting,
+                stats.timestamp_reanchors,
+                stats.warning_suppressed,
             )
             stats.last_warning_emit_monotonic = now
             stats.warning_suppressed = 0
-            self._maybe_recover_active_stream('warning_threshold')
+            self._maybe_recover_active_stream("warning_threshold")
             return
         stats.warning_suppressed += 1
-        self._maybe_recover_active_stream('warning_threshold')
+        self._maybe_recover_active_stream("warning_threshold")
 
+    # @brief Update active watermarks.
+    #
+    #  @param self Parameter description.
     def _update_active_watermarks(self) -> None:
         stats = self.app_state.active_send_stats
         stats.max_buffer_len = max(stats.max_buffer_len, len(self.binary_buffer))
@@ -190,6 +224,15 @@ class ActiveSendBoardTransport(BoardTransport):
             except Exception:
                 pass
 
+    # @brief Extract modbus response frames.
+    #
+    #  @param self Parameter description.
+    #  @param header Parameter description.
+    #  @param expected_len Parameter description.
+    #  @param bad_hex_limit Parameter description.
+    #  @param max_buffer_bytes Parameter description.
+    #  @param max_frames Parameter description.
+    #  @return Result produced by this function.
     def _extract_modbus_response_frames(
         self,
         *,
@@ -216,18 +259,22 @@ class ActiveSendBoardTransport(BoardTransport):
             del self.binary_buffer[:overflow]
             self._force_timestamp_reanchor = True
             self._maybe_log_active_warning(
-                f'Active-send buffer overflow: discarded {overflow} bytes '
-                f'to keep buffer <= {max_buffer_bytes}'
+                f"Active-send buffer overflow: discarded {overflow} bytes "
+                f"to keep buffer <= {max_buffer_bytes}"
             )
 
+        # @brief Find next crc valid header.
+        #
+        #  @param start_pos Parameter description.
+        #  @return Result produced by this function.
         def _find_next_crc_valid_header(start_pos: int = 0) -> int | None:
             pos = max(0, start_pos)
             while True:
                 idx = self.binary_buffer.find(header, pos)
                 if idx < 0 or len(self.binary_buffer) - idx < expected_len:
                     return None
-                candidate = bytes(self.binary_buffer[idx:idx + expected_len])
-                expected_crc = crc16_modbus(candidate[:-2]).to_bytes(2, byteorder='little')
+                candidate = bytes(self.binary_buffer[idx : idx + expected_len])
+                expected_crc = crc16_modbus(candidate[:-2]).to_bytes(2, byteorder="little")
                 if candidate[-2:] == expected_crc:
                     return idx
                 pos = idx + 1
@@ -244,25 +291,25 @@ class ActiveSendBoardTransport(BoardTransport):
 
             if idx > 0:
                 prefix = bytes(self.binary_buffer[:idx])
-                preview = prefix[:bad_hex_limit].hex(' ')
+                preview = prefix[:bad_hex_limit].hex(" ")
                 stats.discarded_bytes += idx
                 stats.header_resyncs += 1
                 self._force_timestamp_reanchor = True
                 del self.binary_buffer[:idx]
                 self._maybe_log_active_warning(
-                    f'Active-send resync: discarded {idx} leading byte(s) '
-                    f'before header {header.hex(" ")}; preview={preview}'
+                    f"Active-send resync: discarded {idx} leading byte(s) "
+                    f"before header {header.hex(' ')}; preview={preview}"
                 )
 
             if len(self.binary_buffer) < expected_len:
                 break
 
             candidate = bytes(self.binary_buffer[:expected_len])
-            expected_crc = crc16_modbus(candidate[:-2]).to_bytes(2, byteorder='little')
+            expected_crc = crc16_modbus(candidate[:-2]).to_bytes(2, byteorder="little")
             received_crc = candidate[-2:]
             if received_crc != expected_crc:
                 stats.crc_failures += 1
-                stats.last_bad_candidate_hex = candidate[:bad_hex_limit].hex(' ')
+                stats.last_bad_candidate_hex = candidate[:bad_hex_limit].hex(" ")
                 self._force_timestamp_reanchor = True
 
                 valid_idx = _find_next_crc_valid_header(1)
@@ -272,11 +319,11 @@ class ActiveSendBoardTransport(BoardTransport):
                     stats.discarded_bytes += discard
                     stats.header_resyncs += 1
                     self._maybe_log_active_warning(
-                        f'Active-send CRC mismatch; skipped to next CRC-valid header '
-                        f'#{stats.crc_failures}: got={received_crc.hex()} '
-                        f'expected={expected_crc.hex()} skipped={discard} '
-                        f'candidate_len={len(candidate)} '
-                        f'preview={stats.last_bad_candidate_hex}'
+                        f"Active-send CRC mismatch; skipped to next CRC-valid header "
+                        f"#{stats.crc_failures}: got={received_crc.hex()} "
+                        f"expected={expected_crc.hex()} skipped={discard} "
+                        f"candidate_len={len(candidate)} "
+                        f"preview={stats.last_bad_candidate_hex}"
                     )
                     continue
 
@@ -284,10 +331,10 @@ class ActiveSendBoardTransport(BoardTransport):
                 stats.discarded_bytes += 1
                 stats.header_resyncs += 1
                 self._maybe_log_active_warning(
-                    f'Active-send CRC mismatch #{stats.crc_failures}: '
-                    f'got={received_crc.hex()} expected={expected_crc.hex()} '
-                    f'candidate_len={len(candidate)} '
-                    f'preview={stats.last_bad_candidate_hex}'
+                    f"Active-send CRC mismatch #{stats.crc_failures}: "
+                    f"got={received_crc.hex()} expected={expected_crc.hex()} "
+                    f"candidate_len={len(candidate)} "
+                    f"preview={stats.last_bad_candidate_hex}"
                 )
                 continue
 
@@ -297,10 +344,14 @@ class ActiveSendBoardTransport(BoardTransport):
 
         return frames
 
+    # @brief Read modbus response frames batch.
+    #
+    #  @param self Parameter description.
+    #  @return Result produced by this function.
     def _read_modbus_response_frames_batch(self) -> tuple[list[bytes], dict[str, Any]]:
         """Read bytes from serial, extract CRC-valid frames, return batch + diagnostics."""
         if self.ser is None:
-            raise RuntimeError('Transport not connected')
+            raise RuntimeError("Transport not connected")
 
         cfg = self.app_state.cfg.active_send
         dev_cfg = self.app_state.cfg.device
@@ -329,8 +380,10 @@ class ActiveSendBoardTransport(BoardTransport):
         # Consume already-buffered complete frames first
         if self.binary_buffer:
             buffered_frames = self._extract_modbus_response_frames(
-                header=header, expected_len=expected_len,
-                bad_hex_limit=bad_hex_limit, max_buffer_bytes=max_buffer_bytes,
+                header=header,
+                expected_len=expected_len,
+                bad_hex_limit=bad_hex_limit,
+                max_buffer_bytes=max_buffer_bytes,
                 max_frames=max_frames_per_delivery,
             )
             if buffered_frames:
@@ -349,7 +402,9 @@ class ActiveSendBoardTransport(BoardTransport):
             except Exception:
                 pending = 0
 
-            read_size = min(max_read_bytes, pending) if pending > 0 else min(chunk_size, expected_len)
+            read_size = (
+                min(max_read_bytes, pending) if pending > 0 else min(chunk_size, expected_len)
+            )
             read_size = max(1, int(read_size))
             chunk = self.ser.read(read_size)
             if not chunk:
@@ -365,8 +420,10 @@ class ActiveSendBoardTransport(BoardTransport):
             self.binary_buffer.extend(chunk)
             self._update_active_watermarks()
             frames = self._extract_modbus_response_frames(
-                header=header, expected_len=expected_len,
-                bad_hex_limit=bad_hex_limit, max_buffer_bytes=max_buffer_bytes,
+                header=header,
+                expected_len=expected_len,
+                bad_hex_limit=bad_hex_limit,
+                max_buffer_bytes=max_buffer_bytes,
                 max_frames=max_frames_per_delivery - len(frames_batch),
             )
             if frames:
@@ -377,57 +434,67 @@ class ActiveSendBoardTransport(BoardTransport):
         if not frames_batch:
             stats.timeouts += 1
             raise TimeoutError(
-                f'Timed out waiting for active-send batch '
-                f'(parsed_ok={stats.frames_ok}, batches={stats.frames_delivered}, '
-                f'crc_failures={stats.crc_failures}, resyncs={stats.header_resyncs}, '
-                f'discarded_bytes={stats.discarded_bytes}, '
-                f'buffer_len={len(self.binary_buffer)}, '
-                f'max_buffer={stats.max_buffer_len})'
+                f"Timed out waiting for active-send batch "
+                f"(parsed_ok={stats.frames_ok}, batches={stats.frames_delivered}, "
+                f"crc_failures={stats.crc_failures}, resyncs={stats.header_resyncs}, "
+                f"discarded_bytes={stats.discarded_bytes}, "
+                f"buffer_len={len(self.binary_buffer)}, "
+                f"max_buffer={stats.max_buffer_len})"
             )
 
         stats.frames_ok += len(frames_batch)
         stats.frames_delivered += 1
-        stats.last_good_frame_hex = frames_batch[-1].hex(' ')
+        stats.last_good_frame_hex = frames_batch[-1].hex(" ")
 
         if stats.frames_delivered <= log_first_n_good:
             LOGGER.info(
-                'Active-send delivered batch #%d: frames=%d first_len=%d '
-                'last_len=%d last_hex=%s',
-                stats.frames_delivered, len(frames_batch),
-                len(frames_batch[0]), len(frames_batch[-1]),
-                frames_batch[-1].hex(' '),
+                "Active-send delivered batch #%d: frames=%d first_len=%d last_len=%d last_hex=%s",
+                stats.frames_delivered,
+                len(frames_batch),
+                len(frames_batch[0]),
+                len(frames_batch[-1]),
+                frames_batch[-1].hex(" "),
             )
         elif log_summary_every_n > 0 and (stats.frames_delivered % log_summary_every_n) == 0:
             LOGGER.info(
-                'Active-send summary: parsed_ok=%d batches=%d bytes=%d crc_failures=%d '
-                'resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d '
-                'max_buffer=%d max_in_waiting=%d timestamp_reanchors=%d',
-                stats.frames_ok, stats.frames_delivered, stats.bytes_received,
-                stats.crc_failures, stats.header_resyncs,
-                stats.buffer_overflow_events, stats.buffer_overflow_bytes,
-                stats.discarded_bytes, stats.max_buffer_len, stats.max_in_waiting,
+                "Active-send summary: parsed_ok=%d batches=%d bytes=%d crc_failures=%d "
+                "resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d "
+                "max_buffer=%d max_in_waiting=%d timestamp_reanchors=%d",
+                stats.frames_ok,
+                stats.frames_delivered,
+                stats.bytes_received,
+                stats.crc_failures,
+                stats.header_resyncs,
+                stats.buffer_overflow_events,
+                stats.buffer_overflow_bytes,
+                stats.discarded_bytes,
+                stats.max_buffer_len,
+                stats.max_in_waiting,
                 stats.timestamp_reanchors,
             )
 
         diagnostics: dict[str, Any] = {
-            'decoder': 'modbus_rtu_response_push_batch',
-            'slave_id': slave_id, 'function_code': function_code,
-            'register_count': register_count,
-            'frames_ok': stats.frames_ok, 'batches_delivered': stats.frames_delivered,
-            'frames_in_batch': len(frames_batch),
-            'crc_failures': stats.crc_failures, 'header_resyncs': stats.header_resyncs,
-            'discarded_bytes': stats.discarded_bytes,
-            'bytes_received_total': stats.bytes_received,
-            'chunks_received_total': stats.chunks_received,
-            'buffer_len': len(self.binary_buffer),
-            'max_buffer_len': stats.max_buffer_len,
-            'max_in_waiting': stats.max_in_waiting,
-            'timestamp_reanchors': stats.timestamp_reanchors,
-            'timestamp_drift_reanchors': stats.timestamp_drift_reanchors,
-            'timestamp_parser_reanchors': stats.timestamp_parser_reanchors,
-            'recovery_events': stats.recovery_events,
-            'delivery_window_s': delivery_window_s,
-            'max_frames_per_delivery': max_frames_per_delivery,
+            "decoder": "modbus_rtu_response_push_batch",
+            "slave_id": slave_id,
+            "function_code": function_code,
+            "register_count": register_count,
+            "frames_ok": stats.frames_ok,
+            "batches_delivered": stats.frames_delivered,
+            "frames_in_batch": len(frames_batch),
+            "crc_failures": stats.crc_failures,
+            "header_resyncs": stats.header_resyncs,
+            "discarded_bytes": stats.discarded_bytes,
+            "bytes_received_total": stats.bytes_received,
+            "chunks_received_total": stats.chunks_received,
+            "buffer_len": len(self.binary_buffer),
+            "max_buffer_len": stats.max_buffer_len,
+            "max_in_waiting": stats.max_in_waiting,
+            "timestamp_reanchors": stats.timestamp_reanchors,
+            "timestamp_drift_reanchors": stats.timestamp_drift_reanchors,
+            "timestamp_parser_reanchors": stats.timestamp_parser_reanchors,
+            "recovery_events": stats.recovery_events,
+            "delivery_window_s": delivery_window_s,
+            "max_frames_per_delivery": max_frames_per_delivery,
         }
         return frames_batch, diagnostics
 
@@ -447,9 +514,7 @@ class ActiveSendBoardTransport(BoardTransport):
         slave_id = int(active_cfg.frame_slave_id) or int(dev_cfg.slave_address)
         function_code = int(active_cfg.frame_function_code)
         register_count = int(active_cfg.frame_register_count)
-        freq_hz = ACTIVE_SEND_FREQ_CODE_TO_VALUE.get(
-            int(dev_cfg.active_send_frequency_code), 0
-        )
+        freq_hz = ACTIVE_SEND_FREQ_CODE_TO_VALUE.get(int(dev_cfg.active_send_frequency_code), 0)
         batch_end_ts = time.time()
         batch_end_lsl_ts = lsl_local_clock()
         stats = self.app_state.active_send_stats
@@ -460,10 +525,10 @@ class ActiveSendBoardTransport(BoardTransport):
         if freq_hz > 0:
             dt = 1.0 / float(freq_hz)
 
-            if timestamp_policy in {'batch_end_anchored', 'batch_end', 'anchored'}:
+            if timestamp_policy in {"batch_end_anchored", "batch_end", "anchored"}:
                 batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
                 batch_start_lsl_ts = batch_end_lsl_ts - dt * (len(frame_bytes_batch) - 1)
-                timestamp_source = 'reconstructed_from_active_send_rate_batch_end_anchored'
+                timestamp_source = "reconstructed_from_active_send_rate_batch_end_anchored"
                 self._force_timestamp_reanchor = False
 
                 # Guard against non-monotonic timestamps from backlog drainage
@@ -473,9 +538,9 @@ class ActiveSendBoardTransport(BoardTransport):
                         adjust_s = min_next_lsl_ts - batch_start_lsl_ts
                         batch_start_lsl_ts += adjust_s
                         batch_start_ts += adjust_s
-                        timestamp_source += '_monotonic_adjusted'
+                        timestamp_source += "_monotonic_adjusted"
 
-            elif timestamp_policy in {'continuous_rate', 'continuous'}:
+            elif timestamp_policy in {"continuous_rate", "continuous"}:
                 # DEPRECATED: use only when the RS485 device is proven to emit
                 # at exactly configured_frequency_hz with no dropped samples.
                 # Retained for backward compatibility; scheduled for removal in a
@@ -485,61 +550,63 @@ class ActiveSendBoardTransport(BoardTransport):
                     self._last_assigned_sample_ts is None or self._force_timestamp_reanchor
                 )
                 if not should_reanchor and self._last_assigned_sample_lsl_ts is not None:
-                    continuous_last = (
-                        self._last_assigned_sample_lsl_ts + dt * len(frame_bytes_batch)
+                    continuous_last = self._last_assigned_sample_lsl_ts + dt * len(
+                        frame_bytes_batch
                     )
                     drift_s = batch_end_lsl_ts - continuous_last
                     if clock_reanchor_max_drift_s > 0 and abs(drift_s) > clock_reanchor_max_drift_s:
                         should_reanchor = True
                         stats.timestamp_drift_reanchors += 1
                         LOGGER.info(
-                            'Active-send timestamp re-anchor due to drift: '
-                            'drift=%.6fs threshold=%.6fs batch_size=%d',
-                            drift_s, clock_reanchor_max_drift_s, len(frame_bytes_batch),
+                            "Active-send timestamp re-anchor due to drift: "
+                            "drift=%.6fs threshold=%.6fs batch_size=%d",
+                            drift_s,
+                            clock_reanchor_max_drift_s,
+                            len(frame_bytes_batch),
                         )
                 if should_reanchor:
                     batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
                     batch_start_lsl_ts = batch_end_lsl_ts - dt * (len(frame_bytes_batch) - 1)
                     if self._last_assigned_sample_ts is None:
-                        timestamp_source = 'reconstructed_from_active_send_rate_batch_start'
+                        timestamp_source = "reconstructed_from_active_send_rate_batch_start"
                     elif self._force_timestamp_reanchor:
                         timestamp_source = (
-                            'reconstructed_from_active_send_rate_reanchored_after_parser_resync'
+                            "reconstructed_from_active_send_rate_reanchored_after_parser_resync"
                         )
                         stats.timestamp_parser_reanchors += 1
                     else:
                         timestamp_source = (
-                            'reconstructed_from_active_send_rate_reanchored_after_drift'
+                            "reconstructed_from_active_send_rate_reanchored_after_drift"
                         )
                     stats.timestamp_reanchors += 1
                     self._force_timestamp_reanchor = False
                 else:
                     batch_start_ts = self._last_assigned_sample_ts + dt  # type: ignore[operator]
                     batch_start_lsl_ts = (
-                        (self._last_assigned_sample_lsl_ts or batch_end_lsl_ts) + dt
-                    )
-                    timestamp_source = 'reconstructed_from_active_send_rate_continuous'
+                        self._last_assigned_sample_lsl_ts or batch_end_lsl_ts
+                    ) + dt
+                    timestamp_source = "reconstructed_from_active_send_rate_continuous"
 
-            elif timestamp_policy in {'host_receive', 'host'}:
+            elif timestamp_policy in {"host_receive", "host"}:
                 dt = 0.0
                 batch_start_ts = batch_end_ts
                 batch_start_lsl_ts = batch_end_lsl_ts
-                timestamp_source = 'active_send_host_receive_lsl_clock'
+                timestamp_source = "active_send_host_receive_lsl_clock"
 
             else:
                 LOGGER.warning(
-                    'Unsupported active_send.timestamp_policy=%r; using batch_end_anchored',
+                    "Unsupported active_send.timestamp_policy=%r; using batch_end_anchored",
                     timestamp_policy,
                 )
                 batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
                 batch_start_lsl_ts = batch_end_lsl_ts - dt * (len(frame_bytes_batch) - 1)
-                timestamp_source = 'reconstructed_from_active_send_rate_batch_end_anchored'
+                timestamp_source = "reconstructed_from_active_send_rate_batch_end_anchored"
                 self._force_timestamp_reanchor = False
         else:
             dt = 0.0
             batch_start_ts = batch_end_ts
             batch_start_lsl_ts = batch_end_lsl_ts
-            timestamp_source = 'host_batch_end_time'
+            timestamp_source = "host_batch_end_time"
 
         session_id = self.app_state.get_session_id()
         board_profile = self.app_state.build_board_profile_snapshot()
@@ -548,13 +615,15 @@ class ActiveSendBoardTransport(BoardTransport):
             host_ts = batch_start_ts + idx * dt if freq_hz > 0 else batch_end_ts
             host_lsl_ts = batch_start_lsl_ts + idx * dt if freq_hz > 0 else batch_end_lsl_ts
             frame_diag = dict(diagnostics)
-            frame_diag.update({
-                'batch_index': idx,
-                'batch_size': len(frame_bytes_batch),
-                'timestamp_source': timestamp_source,
-                'configured_frequency_hz': freq_hz,
-                'timestamp_reanchors': stats.timestamp_reanchors,
-            })
+            frame_diag.update(
+                {
+                    "batch_index": idx,
+                    "batch_size": len(frame_bytes_batch),
+                    "timestamp_source": timestamp_source,
+                    "configured_frequency_hz": freq_hz,
+                    "timestamp_reanchors": stats.timestamp_reanchors,
+                }
+            )
             decoded = decode_active_send_modbus_response(
                 frame=frame_bytes,
                 host_ts=host_ts,
@@ -564,13 +633,13 @@ class ActiveSendBoardTransport(BoardTransport):
                 register_count=register_count,
                 diagnostics=frame_diag,
             )
-            decoded.interpreted['timestamp_source'] = timestamp_source
-            decoded.interpreted['configured_frequency_hz'] = freq_hz
-            decoded.interpreted['reference_clock_s'] = decoded.interpreted.get('rs485_clock')
-            decoded.interpreted['reference_force_N'] = decoded.interpreted.get(
-                'net_value', decoded.interpreted.get('raw_value')
+            decoded.interpreted["timestamp_source"] = timestamp_source
+            decoded.interpreted["configured_frequency_hz"] = freq_hz
+            decoded.interpreted["reference_clock_s"] = decoded.interpreted.get("rs485_clock")
+            decoded.interpreted["reference_force_N"] = decoded.interpreted.get(
+                "net_value", decoded.interpreted.get("raw_value")
             )
-            decoded.interpreted['reference_status'] = decoded.interpreted.get('status_word', 0)
+            decoded.interpreted["reference_status"] = decoded.interpreted.get("status_word", 0)
             decoded.session_id = session_id
             decoded.board_profile = board_profile
             frames.append(decoded)
@@ -578,6 +647,6 @@ class ActiveSendBoardTransport(BoardTransport):
         if frames:
             self._last_assigned_sample_ts = frames[-1].host_ts
             self._last_assigned_sample_lsl_ts = float(
-                frames[-1].interpreted.get('host_lsl_ts', batch_end_lsl_ts)
+                frames[-1].interpreted.get("host_lsl_ts", batch_end_lsl_ts)
             )
         return frames

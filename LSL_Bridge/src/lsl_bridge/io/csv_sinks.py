@@ -1,4 +1,8 @@
-"""CSV sinks for persisting LSL-published samples to disk.
+# @package lsl_bridge.io.csv_sinks
+#  @brief CSV persistence sinks for target and reference published samples.
+##
+"""
+CSV sinks for persisting LSL-published samples to disk.
 
 Both sinks write the exact sample vectors that are pushed to LSL so that
 the CSV files serve as a faithful local record of what was streamed.
@@ -17,16 +21,18 @@ from __future__ import annotations
 
 import csv
 import logging
+import math
 from pathlib import Path
 
 from lsl_bridge.types import ParsedTargetSample, ReferenceSample
-import math
 
 _log = logging.getLogger(__name__)
 
 
+# @brief Persist published target samples into CSV rows.
 class TargetCsvSink:
-    """Writes the exact target samples published to LSL into a CSV file.
+    """
+    Writes the exact target samples published to LSL into a CSV file.
 
     Field order matches the LSL channel order for easy cross-referencing.
 
@@ -36,6 +42,7 @@ class TargetCsvSink:
         append:             If ``True`` append to an existing file;
                             if ``False`` truncate and write a fresh header.
         flush_every_n_rows: Flush the underlying file handle every N rows.
+
     """
 
     FIELDNAMES = [
@@ -50,6 +57,11 @@ class TargetCsvSink:
         "raw_line",
     ]
 
+    # @brief Create and initialize target CSV writer state.
+    #  @param path Output CSV file path.
+    #  @param append True to append to existing file, false to truncate.
+    #  @param flush_every_n_rows Flush interval in rows.
+    #  @return None.
     def __init__(self, path: Path, append: bool, flush_every_n_rows: int) -> None:
         self._path = path
         self._path.parent.mkdir(parents=True, exist_ok=True)
@@ -61,6 +73,10 @@ class TargetCsvSink:
         self._rows_since_flush = 0
         _log.debug("TargetCsvSink opened: %s (append=%s)", path, append)
 
+    # @brief Write one target sample row to disk buffer.
+    #  @param sample Parsed target sample object.
+    #  @param filtered_units Filtered target value published to LSL.
+    #  @return None.
     def write(self, sample: ParsedTargetSample, filtered_units: float) -> None:
         """Append one sample row to the CSV."""
         self._writer.writerow(
@@ -81,6 +97,8 @@ class TargetCsvSink:
             self._fh.flush()
             self._rows_since_flush = 0
 
+    # @brief Flush and close target CSV handle.
+    #  @return None.
     def close(self) -> None:
         """Flush and close the underlying file handle."""
         try:
@@ -90,13 +108,16 @@ class TargetCsvSink:
         _log.debug("TargetCsvSink closed: %s", self._path)
 
 
+# @brief Persist published reference samples into CSV rows.
 class ReferenceCsvSink:
-    """Writes canonical reference samples published to LSL into a CSV file.
+    """
+    Writes canonical reference samples published to LSL into a CSV file.
 
     Args:
         path:               Destination CSV file path.
         append:             Append vs. truncate behaviour.
         flush_every_n_rows: Flush interval in rows.
+
     """
 
     FIELDNAMES = [
@@ -116,6 +137,11 @@ class ReferenceCsvSink:
         "session_id",
     ]
 
+    # @brief Create and initialize reference CSV writer state.
+    #  @param path Output CSV file path.
+    #  @param append True to append to existing file, false to truncate.
+    #  @param flush_every_n_rows Flush interval in rows.
+    #  @return None.
     def __init__(self, path: Path, append: bool, flush_every_n_rows: int) -> None:
         self._path = path
         self._path.parent.mkdir(parents=True, exist_ok=True)
@@ -127,6 +153,10 @@ class ReferenceCsvSink:
         self._rows_since_flush = 0
         _log.debug("ReferenceCsvSink opened: %s (append=%s)", path, append)
 
+    # @brief Write one reference sample row to disk buffer.
+    #  @param sample Parsed reference sample object.
+    #  @param lsl_timestamp_s Publication timestamp used for this row.
+    #  @return None.
     def write(self, sample: ReferenceSample, lsl_timestamp_s: float) -> None:
         """Append one sample row to the CSV."""
         self._writer.writerow(
@@ -144,9 +174,7 @@ class ReferenceCsvSink:
                 "unit_label": sample.unit_label,
                 "timestamp_source": sample.timestamp_source,
                 "configured_frequency_hz": (
-                    ""
-                    if not math.isfinite(sample.configured_frequency_hz)
-                    else repr(sample.configured_frequency_hz)
+                    "" if not math.isfinite(sample.configured_frequency_hz) else repr(sample.configured_frequency_hz)
                 ),
                 "session_id": sample.session_id or "",
             }
@@ -156,6 +184,8 @@ class ReferenceCsvSink:
             self._fh.flush()
             self._rows_since_flush = 0
 
+    # @brief Flush and close reference CSV handle.
+    #  @return None.
     def close(self) -> None:
         """Flush and close the underlying file handle."""
         try:

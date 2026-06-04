@@ -1,4 +1,8 @@
-"""RS485 IPC reference stream publisher for the LSL Bridge.
+# @package lsl_bridge.publishers.reference
+#  @brief Background RS485 IPC consumer and LSL reference publisher.
+##
+"""
+RS485 IPC reference stream publisher for the LSL Bridge.
 
 ``RS485IpcReferencePublisher`` subscribes to the RS485_GUI ZMQ PUB socket,
 decodes ``rs485.measurement.v1`` JSON messages, and republishes the data as
@@ -43,8 +47,10 @@ except ImportError:  # optional runtime dependency
 _log = logging.getLogger(__name__)
 
 
+# @brief Publish canonical RS485 reference samples to LSL from IPC messages.
 class RS485IpcReferencePublisher:
-    """Subscribes to RS485_GUI IPC and republishes canonical reference LSL.
+    """
+    Subscribes to RS485_GUI IPC and republishes canonical reference LSL.
 
     Args:
         cfg:    Full Hydra ``DictConfig``.
@@ -52,6 +58,7 @@ class RS485IpcReferencePublisher:
                 ``None`` if the reference stream is disabled.
         sink:   Optional ``ReferenceCsvSink`` for local persistence.
         events: ``ComponentEventOutlet`` for structured operational events.
+
     """
 
     def __init__(
@@ -80,26 +87,25 @@ class RS485IpcReferencePublisher:
     # Public lifecycle
     # ------------------------------------------------------------------
 
+    # @brief Connect IPC transport and launch publisher thread.
+    #  @return None.
     def start(self) -> None:
-        """Connect the ZMQ socket and start the background publisher thread.
+        """
+        Connect the ZMQ socket and start the background publisher thread.
 
         Raises:
             RuntimeError: If the reference stream is enabled but no outlet was
                           provided, or if ``pyzmq`` is not installed.
+
         """
         if not self.enabled:
             _log.info("Reference RS485 IPC publisher disabled.")
             return
 
         if self._outlet is None:
-            raise RuntimeError(
-                "Reference stream is enabled but no StreamOutlet was provided."
-            )
+            raise RuntimeError("Reference stream is enabled but no StreamOutlet was provided.")
         if zmq is None:
-            raise RuntimeError(
-                "rs485_ipc.enabled=true requires pyzmq. "
-                "Install it with: pip install pyzmq"
-            )
+            raise RuntimeError("rs485_ipc.enabled=true requires pyzmq. Install it with: pip install pyzmq")
 
         self._context = zmq.Context.instance()
         self._socket = self._context.socket(zmq.SUB)
@@ -127,6 +133,8 @@ class RS485IpcReferencePublisher:
             self._cfg.rs485_ipc.topic,
         )
 
+    # @brief Stop publisher thread and release socket resources.
+    #  @return None.
     def stop(self) -> None:
         """Signal the background thread to stop and wait for it to exit."""
         self._stop_event.set()
@@ -169,10 +177,7 @@ class RS485IpcReferencePublisher:
                 sample = self._decode_record(record)
             except Exception as exc:
                 self._malformed_count += 1
-                if (
-                    self._malformed_count == 1
-                    or self._malformed_count % log_malformed_every_n == 0
-                ):
+                if self._malformed_count == 1 or self._malformed_count % log_malformed_every_n == 0:
                     self._events.emit(
                         "reference_ipc_malformed",
                         count=self._malformed_count,
@@ -202,11 +207,7 @@ class RS485IpcReferencePublisher:
                     )
                 self._last_seq = sample.sequence
 
-            timestamp = (
-                sample.host_lsl_ts
-                if math.isfinite(sample.host_lsl_ts)
-                else sample.received_lsl_ts
-            )
+            timestamp = sample.host_lsl_ts if math.isfinite(sample.host_lsl_ts) else sample.received_lsl_ts
             self._outlet.push_sample(
                 [
                     float(sample.sequence),
@@ -227,7 +228,8 @@ class RS485IpcReferencePublisher:
     # ------------------------------------------------------------------
 
     def _decode_record(self, record: dict[str, Any]) -> ReferenceSample:
-        """Decode one RS485 IPC JSON record into a ``ReferenceSample``.
+        """
+        Decode one RS485 IPC JSON record into a ``ReferenceSample``.
 
         Only the canonical ``rs485.measurement.v1`` field names are accepted.
         Legacy aliases (``rs485_raw``, ``rs485_clock``, ``status_word``) have
@@ -243,22 +245,19 @@ class RS485IpcReferencePublisher:
 
         Raises:
             ValueError: For schema mismatch or missing required fields.
+
         """
         expected = str(self._cfg.rs485_ipc.expected_schema)
         actual_schema = str(record.get("schema", ""))
         if actual_schema != expected:
-            raise ValueError(
-                f"Unsupported IPC schema: expected={expected!r} received={actual_schema!r}"
-            )
+            raise ValueError(f"Unsupported IPC schema: expected={expected!r} received={actual_schema!r}")
 
         force = record.get("reference_force_N")
         clock = record.get("reference_clock_s")
         host_lsl_ts = record.get("host_lsl_ts")
 
         if force is None or clock is None or host_lsl_ts is None:
-            raise ValueError(
-                "Missing required fields: reference_force_N, reference_clock_s, host_lsl_ts"
-            )
+            raise ValueError("Missing required fields: reference_force_N, reference_clock_s, host_lsl_ts")
 
         status_raw = record.get("reference_status", 0)
         if isinstance(status_raw, str):
@@ -286,9 +285,7 @@ class RS485IpcReferencePublisher:
             status=status,
             timestamp_source=str(record.get("timestamp_source", "host_lsl_ts")),
             configured_frequency_hz=(
-                float(configured_frequency_hz)
-                if configured_frequency_hz is not None
-                else math.nan
+                float(configured_frequency_hz) if configured_frequency_hz is not None else math.nan
             ),
             session_id=record.get("session_id"),
             board_profile=record.get("board_profile", {}) or {},

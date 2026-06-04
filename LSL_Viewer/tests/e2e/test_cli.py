@@ -12,6 +12,7 @@ replay/live UI tests are out of scope for this test file — they require a
 real LSL network or hardware.  These smoke tests validate the import chain,
 config resolution, and mode-dispatch guard rail.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -65,7 +66,4 @@ class TestMissingReplayFiles:
         assert result.returncode != 0
         combined = result.stdout + result.stderr
         # Should mention the missing file or an error condition
-        assert any(
-            kw in combined
-            for kw in ("nonexistent", "not found", "No such file", "Error", "error")
-        )
+        assert any(kw in combined for kw in ("nonexistent", "not found", "No such file", "Error", "error"))

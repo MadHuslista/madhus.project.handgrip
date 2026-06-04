@@ -1,4 +1,5 @@
 """Unit tests for handgrip_analysis.io."""
+
 from __future__ import annotations
 
 import math
@@ -18,12 +19,15 @@ def _make_csv(
     n: int = 200,
     fs: float = 100.0,
     with_filtered: bool = False,
+    with_current_units: bool = False,
     time_col: str = "device_clock_us",
 ) -> str:
     """Create a minimal in-memory CSV string."""
     t_us = (np.arange(n) / fs * 1e6).astype(int)
     y = np.random.default_rng(0).normal(size=n)
     data: dict = {time_col: t_us, "target_raw_count": y}
+    if with_current_units:
+        data["target_current_units"] = y * 1.1
     if with_filtered:
         data["target_filtered_units"] = y * 0.9
     return pd.DataFrame(data).to_csv(index=False)
@@ -32,6 +36,7 @@ def _make_csv(
 # ---------------------------------------------------------------------------
 # estimate_fs
 # ---------------------------------------------------------------------------
+
 
 def test_estimate_fs_exact():
     t = np.linspace(0, 1, 101)  # 0–1 s, 100 intervals → 100 Hz
@@ -46,6 +51,7 @@ def test_estimate_fs_too_short():
 # ---------------------------------------------------------------------------
 # sampling_summary
 # ---------------------------------------------------------------------------
+
 
 def test_sampling_summary_keys():
     t = np.linspace(0, 2, 201)
@@ -65,6 +71,7 @@ def test_sampling_summary_short():
 # ---------------------------------------------------------------------------
 # load_capture
 # ---------------------------------------------------------------------------
+
 
 def test_load_capture_device_clock(tmp_path):
     csv_content = _make_csv(n=300, fs=100.0, time_col="device_clock_us")
@@ -101,6 +108,24 @@ def test_load_capture_series_filtered(tmp_path):
     cap = load_capture(str(p))
     y_f = cap.series("filtered")
     assert y_f.shape == (100,)
+
+
+def test_load_capture_series_current_units(tmp_path):
+    csv_content = _make_csv(n=100, with_current_units=True)
+    p = tmp_path / "cap.csv"
+    p.write_text(csv_content)
+    cap = load_capture(str(p))
+    y_current = cap.series("current_units")
+    assert y_current.shape == (100,)
+
+
+def test_load_capture_no_current_units_column_raises(tmp_path):
+    csv_content = _make_csv(n=100, with_current_units=False)
+    p = tmp_path / "cap.csv"
+    p.write_text(csv_content)
+    cap = load_capture(str(p))
+    with pytest.raises(KeyError, match="target_current_units"):
+        cap.series("current_units")
 
 
 def test_load_capture_no_filtered_column_raises(tmp_path):

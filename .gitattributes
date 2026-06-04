@@ -1,2 +1,52 @@
 # Set the default behavior, in case people don't have core.autocrlf set.
-* text auto eol=lf
+* text=auto eol=lf
+
+# Explicit binary types — never apply text/EOL normalization to these,
+# regardless of Git's NUL-byte heuristic. Use `binary` (== `-text -diff`).
+# Images
+*.jpg   binary
+*.jpeg  binary
+*.png   binary
+*.gif   binary
+*.bmp   binary
+*.webp  binary
+*.tif   binary
+*.tiff  binary
+*.ico   binary
+*.heic  binary
+# Documents
+*.pdf   binary
+*.doc   binary
+*.docx  binary
+*.xls   binary
+*.xlsx  binary
+*.ppt   binary
+*.pptx  binary
+# Archives
+*.zip   binary
+*.tar   binary
+*.gz    binary
+*.tgz   binary
+*.bz2   binary
+*.7z    binary
+*.xz    binary
+# Firmware / compiled artifacts (PlatformIO, ESP32, etc.)
+*.bin   binary
+*.hex   binary
+*.elf   binary
+*.uf2   binary
+*.o     binary
+*.a     binary
+*.so    binary
+*.dll   binary
+*.exe   binary
+# Audio / video
+*.mp3   binary
+*.mp4   binary
+*.wav   binary
+*.ogg   binary
+# Fonts
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary

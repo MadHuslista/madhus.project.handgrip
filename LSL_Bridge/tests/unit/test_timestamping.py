@@ -1,4 +1,5 @@
-"""Unit tests for lsl_bridge.core.timestamping.
+"""
+Unit tests for lsl_bridge.core.timestamping.
 
 Both resolvers are pure state machines with no I/O, tested with synthetic
 ``ParsedTargetSample`` objects.
@@ -9,11 +10,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from omegaconf import OmegaConf
-
 from lsl_bridge.core.timestamping import SampleTimeResolver, TargetTimestampResolver
 from lsl_bridge.types import ParsedTargetSample
-
+from omegaconf import OmegaConf
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -82,7 +81,7 @@ class TestSampleTimeResolver:
     def test_device_clock_multiple_steps(self):
         r = SampleTimeResolver(_cfg_processing("device_clock_us"))
         r.resolve(_sample(device_clock_us=0))
-        r.resolve(_sample(device_clock_us=10_000))    # +10 ms
+        r.resolve(_sample(device_clock_us=10_000))  # +10 ms
         t = r.resolve(_sample(device_clock_us=20_000))  # +20 ms total
         assert abs(t - 0.02) < 1e-9
 

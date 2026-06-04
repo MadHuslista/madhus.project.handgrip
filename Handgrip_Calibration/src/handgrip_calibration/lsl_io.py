@@ -10,9 +10,10 @@ import csv
 import logging
 import threading
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .config_schema import StreamConfig
 from .export import ensure_dir
@@ -83,6 +84,9 @@ def _labels_from_info(info: Any) -> list[str]:
 
 
 def resolve_stream(config: StreamConfig) -> tuple[Any, ResolvedStream]:
+    # @brief Resolve a single LSL stream from configuration constraints.
+    #  @param config Stream resolution configuration.
+    #  @return Tuple of raw StreamInfo object and resolved metadata.
     """Resolve one LSL stream based on name/type/source constraints."""
 
     pylsl = _import_pylsl()
@@ -90,7 +94,9 @@ def resolve_stream(config: StreamConfig) -> tuple[Any, ResolvedStream]:
     if not streams and config.stream_type:
         streams = pylsl.resolve_byprop("type", config.stream_type, timeout=config.timeout_s)
     if not streams:
-        raise TimeoutError(f"Could not resolve LSL stream {config.name!r} within {config.timeout_s:.1f}s")
+        raise TimeoutError(
+            f"Could not resolve LSL stream {config.name!r} within {config.timeout_s:.1f}s"
+        )
     # Prefer exact source_id if configured; otherwise use the first matching stream.
     info = streams[0]
     if config.source_id:
@@ -110,6 +116,9 @@ def resolve_stream(config: StreamConfig) -> tuple[Any, ResolvedStream]:
 
 
 def preflight_streams(streams: dict[str, StreamConfig]) -> dict[str, ResolvedStream]:
+    # @brief Resolve all configured streams for readiness checks.
+    #  @param streams Mapping of stream keys to stream configurations.
+    #  @return Mapping of resolved stream metadata for successfully resolved streams.
     """Resolve all configured LSL streams and return their metadata."""
 
     resolved: dict[str, ResolvedStream] = {}
@@ -123,7 +132,13 @@ def preflight_streams(streams: dict[str, StreamConfig]) -> dict[str, ResolvedStr
     return resolved
 
 
-def resolve_channel_indices(labels: list[str], channel_map: dict[str, list[str | int]]) -> dict[str, int]:
+def resolve_channel_indices(
+    labels: list[str], channel_map: dict[str, list[str | int]]
+) -> dict[str, int]:
+    # @brief Resolve configured channel aliases into concrete indices.
+    #  @param labels Published LSL channel labels.
+    #  @param channel_map Canonical-to-candidate channel mapping.
+    #  @return Mapping from canonical channel names to channel indices.
     """Resolve canonical channel names to numeric LSL sample indices.
 
     Each channel map value may contain multiple candidates. String candidates are
@@ -173,6 +188,9 @@ class CsvStreamRecorder(threading.Thread):
         self._inlet = None
 
     def run(self) -> None:  # pragma: no cover - requires live LSL
+        # @brief Record resolved LSL samples into canonical CSV rows.
+        #  @param self Recorder thread instance.
+        #  @return None.
         try:
             info, meta = resolve_stream(self.config)
             pylsl = _import_pylsl()
@@ -181,7 +199,11 @@ class CsvStreamRecorder(threading.Thread):
             canonical_indices = resolve_channel_indices(labels, self.config.channel_map)
             self.stats.channel_labels = labels
             ensure_dir(self.output_csv.parent)
-            fieldnames = ["timestamp_lsl"] + sorted(canonical_indices.keys()) + [f"channel_{i}" for i in range(len(labels))]
+            fieldnames = (
+                ["timestamp_lsl"]
+                + sorted(canonical_indices.keys())
+                + [f"channel_{i}" for i in range(len(labels))]
+            )
             rate = RateMonitor(window_s=10.0)
             with self.output_csv.open("w", newline="", encoding="utf-8") as fh:
                 writer = csv.DictWriter(fh, fieldnames=fieldnames)
@@ -211,6 +233,9 @@ class CsvStreamRecorder(threading.Thread):
 
 
 def summarize_stats(stats: Iterable[CsvStreamRecorder]) -> dict[str, dict[str, Any]]:
+    # @brief Build JSON-friendly stats for active stream recorders.
+    #  @param stats Iterable of recorder instances.
+    #  @return Nested statistics dictionary keyed by recorder stream key.
     """Return JSON-friendly recording stats for a collection of recorders."""
 
     return {

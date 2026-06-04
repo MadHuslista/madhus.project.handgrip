@@ -1,3 +1,6 @@
+# @package handgrip_analysis.config.schema
+# @brief Root application configuration schema and Hydra registration hooks.
+
 """
 Root application configuration schema.
 
@@ -32,6 +35,9 @@ from .dsp_config import DSPConfig
 
 
 @dataclass
+# @brief Logging configuration.
+# @param level Root logger level string.
+# @param file Optional path for file logging output.
 class LoggingConfig:
     """
     Logging configuration.
@@ -49,6 +55,9 @@ class LoggingConfig:
     level: str = "INFO"
     file: str | None = None
 
+    # @brief Validate configured logging level.
+    # @param self Instance pointer.
+    # @return None.
     def __post_init__(self) -> None:
         valid = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         if self.level.upper() not in valid:
@@ -69,7 +78,11 @@ class LoggingConfig:
 # Stage 6 scoring weights
 # ---------------------------------------------------------------------------
 
+
 @dataclass
+# @brief Composite score weights for Stage 6 filter-family review.
+# @param review_weight Weight for review ranking component.
+# @param design_weight Weight for design assessment component.
 class Stage6ScoringConfig:
     """
     Composite score weights for the Stage 6 filter family review.
@@ -87,12 +100,13 @@ class Stage6ScoringConfig:
     review_weight: float = 0.7
     design_weight: float = 0.3
 
+    # @brief Validate Stage 6 scoring weights sum to one.
+    # @param self Instance pointer.
+    # @return None.
     def __post_init__(self) -> None:
         total = self.review_weight + self.design_weight
         if abs(total - 1.0) > 1e-9:
-            raise ValueError(
-                f"Stage6ScoringConfig weights must sum to 1.0, got {total:.6f}"
-            )
+            raise ValueError(f"Stage6ScoringConfig weights must sum to 1.0, got {total:.6f}")
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any] | None = None) -> "Stage6ScoringConfig":
@@ -109,7 +123,12 @@ class Stage6ScoringConfig:
 # Root application config
 # ---------------------------------------------------------------------------
 
+
 @dataclass
+# @brief Root application configuration aggregating all sub-configs.
+# @param dsp DSP algorithm configuration.
+# @param logging Logging configuration.
+# @param stage6_scoring Stage 6 composite scoring configuration.
 class AppConfig:
     """
     Root application configuration aggregating all sub-configs.
@@ -122,6 +141,10 @@ class AppConfig:
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     stage6_scoring: Stage6ScoringConfig = field(default_factory=Stage6ScoringConfig)
 
+    # @brief Build an AppConfig from a nested mapping.
+    # @param cls Class type.
+    # @param data Nested mapping (for example Hydra DictConfig).
+    # @return A validated AppConfig instance.
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any] | None = None) -> "AppConfig":
         """Build an ``AppConfig`` from a nested mapping (e.g. Hydra DictConfig)."""
@@ -136,6 +159,9 @@ class AppConfig:
 # Hydra ConfigStore registration (optional — only when hydra-core is in use)
 # ---------------------------------------------------------------------------
 
+
+# @brief Register AppConfig with Hydra ConfigStore when Hydra is available.
+# @return None.
 def register_configs() -> None:
     """
     Register ``AppConfig`` with Hydra's ``ConfigStore``.

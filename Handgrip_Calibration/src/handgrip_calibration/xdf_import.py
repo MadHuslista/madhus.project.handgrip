@@ -30,7 +30,9 @@ def _import_pyxdf() -> Any:
     try:
         import pyxdf
     except Exception as exc:  # pragma: no cover - optional dependency
-        raise XDFImportError("pyxdf is required for XDF import. Install with: python -m pip install -e '.[xdf]'") from exc
+        raise XDFImportError(
+            "pyxdf is required for XDF import. Install with: python -m pip install -e '.[xdf]'"
+        ) from exc
     return pyxdf
 
 
@@ -57,7 +59,9 @@ def _channel_labels(stream: dict[str, Any]) -> list[str]:
     return labels
 
 
-def _find_stream(streams: list[dict[str, Any]], *, name: str, stream_type: str | None = None) -> dict[str, Any] | None:
+def _find_stream(
+    streams: list[dict[str, Any]], *, name: str, stream_type: str | None = None
+) -> dict[str, Any] | None:
     for stream in streams:
         if _stream_name(stream) == name:
             return stream
@@ -68,7 +72,9 @@ def _find_stream(streams: list[dict[str, Any]], *, name: str, stream_type: str |
     return None
 
 
-def _write_numeric_stream(stream: dict[str, Any], output_csv: Path, channel_map: dict[str, list[str | int]]) -> None:
+def _write_numeric_stream(
+    stream: dict[str, Any], output_csv: Path, channel_map: dict[str, list[str | int]]
+) -> None:
     labels = _channel_labels(stream)
     indices = resolve_channel_indices(labels, channel_map)
     time_stamps = stream.get("time_stamps", [])
@@ -98,23 +104,55 @@ def _write_marker_stream(stream: dict[str, Any], output_events: Path, *, session
     append_ndjson(output_events, rows)
 
 
-def import_xdf(xdf_path: str | Path, session_dir: str | Path, config: AppConfig, *, session_id: str | None = None) -> Path:
+def import_xdf(
+    xdf_path: str | Path,
+    session_dir: str | Path,
+    config: AppConfig,
+    *,
+    session_id: str | None = None,
+) -> Path:
+    # @brief Import an XDF recording into canonical calibration session files.
+    #  @param xdf_path Input XDF file path.
+    #  @param session_dir Output session directory path.
+    #  @param config Application configuration containing stream mappings.
+    #  @param session_id Optional session id override for emitted markers.
+    #  @return Output session directory path.
     """Import an XDF file into canonical target/reference CSV + marker NDJSON files."""
 
     pyxdf = _import_pyxdf()
     xdf_path = Path(xdf_path)
     session_dir = ensure_dir(session_dir)
     streams, _header = pyxdf.load_xdf(str(xdf_path))
-    target_stream = _find_stream(streams, name=config.streams["target"].name, stream_type=config.streams["target"].stream_type)
-    reference_stream = _find_stream(streams, name=config.streams["reference"].name, stream_type=config.streams["reference"].stream_type)
-    marker_stream = _find_stream(streams, name=config.markers.stream_name, stream_type=config.markers.stream_type)
+    target_stream = _find_stream(
+        streams,
+        name=config.streams["target"].name,
+        stream_type=config.streams["target"].stream_type,
+    )
+    reference_stream = _find_stream(
+        streams,
+        name=config.streams["reference"].name,
+        stream_type=config.streams["reference"].stream_type,
+    )
+    marker_stream = _find_stream(
+        streams, name=config.markers.stream_name, stream_type=config.markers.stream_type
+    )
     if target_stream is None:
-        raise XDFImportError(f"Could not find target stream {config.streams['target'].name!r} in {xdf_path}")
+        raise XDFImportError(
+            f"Could not find target stream {config.streams['target'].name!r} in {xdf_path}"
+        )
     if reference_stream is None:
-        raise XDFImportError(f"Could not find reference stream {config.streams['reference'].name!r} in {xdf_path}")
-    _write_numeric_stream(target_stream, session_dir / "target.csv", config.streams["target"].channel_map)
-    _write_numeric_stream(reference_stream, session_dir / "reference.csv", config.streams["reference"].channel_map)
+        raise XDFImportError(
+            f"Could not find reference stream {config.streams['reference'].name!r} in {xdf_path}"
+        )
+    _write_numeric_stream(
+        target_stream, session_dir / "target.csv", config.streams["target"].channel_map
+    )
+    _write_numeric_stream(
+        reference_stream, session_dir / "reference.csv", config.streams["reference"].channel_map
+    )
     if marker_stream is not None:
-        _write_marker_stream(marker_stream, session_dir / "events.ndjson", session_id=session_id or session_dir.name)
+        _write_marker_stream(
+            marker_stream, session_dir / "events.ndjson", session_id=session_id or session_dir.name
+        )
     log.info("XDF import complete: %s", session_dir)
     return session_dir

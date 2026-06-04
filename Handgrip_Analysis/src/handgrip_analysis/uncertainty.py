@@ -1,4 +1,8 @@
+# @package handgrip_analysis.uncertainty
+# @brief Uncertainty and robust summary helper functions.
+
 """Uncertainty helpers for trial-level aggregation."""
+
 from __future__ import annotations
 
 from typing import Iterable, Literal
@@ -10,11 +14,19 @@ from scipy import stats
 StatisticName = Literal["mean", "median", "std", "p90", "p95"]
 
 
+# @brief Convert iterable values into a finite float numpy array.
+# @param values Input scalar sequence.
+# @return Numpy array containing only finite float values.
 def finite_array(values: Iterable[float]) -> np.ndarray:
     arr = np.asarray(list(values), dtype=float)
     return arr[np.isfinite(arr)]
 
 
+# @brief Compute one selected summary statistic over finite values.
+# @param values Input scalar sequence.
+# @param statistic Statistic name (`mean`, `median`, `std`, `p90`, `p95`).
+# @return Computed statistic or NaN when data is empty.
+# @throws ValueError Raised for unsupported statistic names.
 def statistic_value(values: Iterable[float], statistic: StatisticName = "median") -> float:
     arr = finite_array(values)
     if arr.size == 0:
@@ -32,6 +44,9 @@ def statistic_value(values: Iterable[float], statistic: StatisticName = "median"
     raise ValueError(f"Unsupported statistic: {statistic!r}")
 
 
+# @brief Compute robust descriptive statistics for repeated trial metrics.
+# @param values Input scalar sequence.
+# @return Dictionary of robust summary statistics.
 def robust_summary(values: Iterable[float]) -> dict[str, float | int]:
     """Return robust descriptive statistics for repeated trial metrics."""
     arr = finite_array(values)
@@ -57,6 +72,13 @@ def robust_summary(values: Iterable[float]) -> dict[str, float | int]:
     }
 
 
+# @brief Estimate bootstrap confidence interval for a scalar statistic.
+# @param values Input scalar sequence.
+# @param statistic Statistic to estimate (`mean`, `median`, `std`, `p90`, `p95`).
+# @param confidence_level Confidence level in (0, 1).
+# @param n_resamples Number of bootstrap resamples.
+# @param random_seed Random seed for deterministic results.
+# @return Lower and upper confidence interval bounds.
 def bootstrap_ci(
     values: Iterable[float],
     *,
@@ -112,6 +134,14 @@ def bootstrap_ci(
         # Degenerate data can make scipy's bootstrap emit errors/warnings.  A
         # collapsed interval is more useful than failing the whole analysis.
         return center, center
+
+    # @brief Summarize every numeric column by group using robust statistics.
+    # @param df Input DataFrame.
+    # @param group_cols Grouping columns.
+    # @param confidence_level Confidence level for median confidence intervals.
+    # @param n_resamples Number of bootstrap resamples.
+    # @param random_seed Random seed for bootstrap operations.
+    # @return Summary DataFrame with grouped robust metrics.
 
 
 def summarize_numeric_frame(

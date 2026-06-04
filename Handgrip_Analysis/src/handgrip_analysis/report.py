@@ -1,3 +1,6 @@
+# @package handgrip_analysis.report
+# @brief Report serialization helpers for JSON and CSV outputs.
+
 from __future__ import annotations
 
 import json
@@ -11,6 +14,9 @@ import pandas as pd
 log = logging.getLogger(__name__)
 
 
+# @brief Convert common Python/numpy/pandas values into JSON-serializable objects.
+# @param value Value to normalize for JSON encoding.
+# @return JSON-serializable value.
 def to_jsonable(value: Any) -> Any:
     """Convert numpy/pandas/path values into JSON-serializable objects."""
     if isinstance(value, Path):
@@ -30,6 +36,10 @@ def to_jsonable(value: Any) -> Any:
     return value
 
 
+# @brief Save a dictionary payload as formatted JSON.
+# @param path Destination path for the JSON file.
+# @param payload Mapping payload to serialize.
+# @return None.
 def save_json(path: str | Path, payload: dict[str, Any]) -> None:
     """Write *payload* as indented JSON to *path*."""
     path = Path(path)
@@ -38,6 +48,10 @@ def save_json(path: str | Path, payload: dict[str, Any]) -> None:
     log.info("save_json: wrote %s", path)
 
 
+# @brief Save a DataFrame to CSV without index.
+# @param path Destination path for the CSV file.
+# @param df DataFrame to persist.
+# @return None.
 def save_csv(path: str | Path, df: pd.DataFrame) -> None:
     """Write *df* as CSV (no index) to *path*."""
     path = Path(path)

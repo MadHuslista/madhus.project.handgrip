@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+# @package scripts.stage1_startup_warmup
+# @brief Stage 1 startup warm-up and zero stabilization analysis.
+
 """Stage 1 — Startup warm-up / zero stabilisation analysis."""
+
 from __future__ import annotations
 
 import logging
@@ -19,6 +23,11 @@ matplotlib.use("Agg")
 log = logging.getLogger(__name__)
 
 
+# @brief Read a required non-empty string value from Hydra config.
+# @param cfg Hydra configuration object.
+# @param key Config key to validate.
+# @return The required value converted to string.
+# @throws ValueError Raised when key is missing or empty.
 def _require_str(cfg: DictConfig, key: str) -> str:
     value = cfg.get(key)
     if value is None or not str(value).strip():
@@ -26,6 +35,9 @@ def _require_str(cfg: DictConfig, key: str) -> str:
     return str(value)
 
 
+# @brief Execute Stage 1 warm-up analysis and write summary/plots.
+# @param cfg Hydra configuration object.
+# @return None.
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(
@@ -41,9 +53,7 @@ def main(cfg: DictConfig) -> None:
     cap = load_capture(input_path, time_source=cfg.io.time_source)
     y = cap.series(cfg.analysis.channel)
 
-    means, stds, slopes = rolling_mean_std_slope(
-        y, cap.fs_estimate_hz, cfg.analysis.warmup_window_s
-    )
+    means, stds, slopes = rolling_mean_std_slope(y, cap.fs_estimate_hz, cfg.analysis.warmup_window_s)
     ready = suggest_ready_time(cap.time_s, stds, slopes)
 
     n_tail = max(10, len(means) // 10)

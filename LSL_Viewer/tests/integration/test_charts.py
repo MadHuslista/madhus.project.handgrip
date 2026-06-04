@@ -390,14 +390,20 @@ class TestEChartSinkBinding:
 # TestUpdateCharts
 # ---------------------------------------------------------------------------
 
+
 class TestUpdateCharts:
     def test_full_window_does_not_raise(self, cfg):
         ch = build_chart_handles(cfg)
         state = ViewerState()
         window = DualWindow(target=_make_target(), reference=_make_reference())
         update_charts(
-            ch, window, state, cfg,
-            mode="test", source_name="src", source_type="typ",
+            ch,
+            window,
+            state,
+            cfg,
+            mode="test",
+            source_name="src",
+            source_type="typ",
         )
 
     def test_empty_window_does_not_raise(self, cfg):
@@ -405,8 +411,13 @@ class TestUpdateCharts:
         state = ViewerState()
         window = DualWindow(target=None, reference=None)
         update_charts(
-            ch, window, state, cfg,
-            mode="test", source_name="src", source_type="typ",
+            ch,
+            window,
+            state,
+            cfg,
+            mode="test",
+            source_name="src",
+            source_type="typ",
         )
 
     def test_target_raw_series_populated(self, cfg):
@@ -415,8 +426,13 @@ class TestUpdateCharts:
         target = _make_target(n=20)
         window = DualWindow(target=target, reference=None)
         update_charts(
-            ch, window, state, cfg,
-            mode="test", source_name="src", source_type="typ",
+            ch,
+            window,
+            state,
+            cfg,
+            mode="test",
+            source_name="src",
+            source_type="typ",
         )
         data = _series_data(ch.opts_target_raw)
         assert len(data) == 20
@@ -428,8 +444,13 @@ class TestUpdateCharts:
         state = ViewerState()
         window = DualWindow(target=None, reference=_make_reference(n=30))
         update_charts(
-            ch, window, state, cfg,
-            mode="test", source_name="src", source_type="typ",
+            ch,
+            window,
+            state,
+            cfg,
+            mode="test",
+            source_name="src",
+            source_type="typ",
         )
         data = _series_data(ch.opts_reference_raw)
         assert len(data) == 30
@@ -439,8 +460,13 @@ class TestUpdateCharts:
         state = ViewerState()
         window = DualWindow(target=_make_target(n=20), reference=_make_reference(n=100))
         update_charts(
-            ch, window, state, cfg,
-            mode="test", source_name="src", source_type="typ",
+            ch,
+            window,
+            state,
+            cfg,
+            mode="test",
+            source_name="src",
+            source_type="typ",
         )
         assert len(_series_data(ch.opts_overlay, 0)) == 20
         assert len(_series_data(ch.opts_overlay, 1)) == 100
@@ -450,12 +476,15 @@ class TestUpdateCharts:
         state = ViewerState()
         window = DualWindow(target=_make_target(n=50), reference=_make_reference(n=250))
         update_charts(
-            ch, window, state, cfg,
-            mode="test", source_name="src", source_type="typ",
+            ch,
+            window,
+            state,
+            cfg,
+            mode="test",
+            source_name="src",
+            source_type="typ",
         )
-        any_data = any(
-            len(_series_data(ch.opts_xy, i)) > 0 for i in range(N_XY_BUCKETS)
-        )
+        any_data = any(len(_series_data(ch.opts_xy, i)) > 0 for i in range(N_XY_BUCKETS))
         assert any_data
 
     def test_xy_data_entries_are_pairs(self, cfg):
@@ -464,8 +493,13 @@ class TestUpdateCharts:
         state = ViewerState()
         window = DualWindow(target=_make_target(n=50), reference=_make_reference(n=250))
         update_charts(
-            ch, window, state, cfg,
-            mode="test", source_name="src", source_type="typ",
+            ch,
+            window,
+            state,
+            cfg,
+            mode="test",
+            source_name="src",
+            source_type="typ",
         )
         for i in range(N_XY_BUCKETS):
             for entry in _series_data(ch.opts_xy, i):
@@ -476,8 +510,13 @@ class TestUpdateCharts:
         state = ViewerState(xy_lock_max_span=True)
         window = DualWindow(target=_make_target(n=50), reference=_make_reference(n=250))
         update_charts(
-            ch, window, state, cfg,
-            mode="test", source_name="src", source_type="typ",
+            ch,
+            window,
+            state,
+            cfg,
+            mode="test",
+            source_name="src",
+            source_type="typ",
         )
         if state.xy_max_span:
             assert "xAxis" in state.xy_max_span
@@ -492,8 +531,13 @@ class TestUpdateCharts:
         state = ViewerState(xy_lock_max_span=True)
         window = DualWindow(target=_make_target(n=50), reference=_make_reference(n=250))
         update_charts(
-            ch, window, state, cfg,
-            mode="test", source_name="src", source_type="typ",
+            ch,
+            window,
+            state,
+            cfg,
+            mode="test",
+            source_name="src",
+            source_type="typ",
         )
         if state.xy_max_span:
             assert "min" in ch.opts_xy["xAxis"]
@@ -516,8 +560,13 @@ class TestUpdateCharts:
         state = ViewerState()
         window = DualWindow(target=_make_target(n=10), reference=None)
         update_charts(
-            ch, window, state, cfg,
-            mode="csv_replay", source_name="file", source_type="csv",
+            ch,
+            window,
+            state,
+            cfg,
+            mode="csv_replay",
+            source_name="file",
+            source_type="csv",
             replay_progress_text="time: 1.23/10.00 s",
         )
 
@@ -525,6 +574,7 @@ class TestUpdateCharts:
 # ---------------------------------------------------------------------------
 # TestClearChartData
 # ---------------------------------------------------------------------------
+
 
 class TestClearChartData:
     def test_clear_zeroes_all_series(self, cfg):
@@ -536,8 +586,11 @@ class TestClearChartData:
         clear_chart_data(ch)
 
         for opts in (
-            ch.opts_target_raw, ch.opts_reference_raw,
-            ch.opts_target_filtered, ch.opts_target_dt, ch.opts_reference_dt,
+            ch.opts_target_raw,
+            ch.opts_reference_raw,
+            ch.opts_target_filtered,
+            ch.opts_target_dt,
+            ch.opts_reference_dt,
         ):
             assert _series_data(opts) == []
         for series in ch.opts_overlay["series"]:
@@ -567,6 +620,7 @@ class TestClearChartData:
 # TestMarkerIntegration
 # ---------------------------------------------------------------------------
 
+
 class TestMarkerIntegration:
     def test_no_markers_when_disabled(self, cfg):
         """update_charts with markers disabled → markLine data empty."""
@@ -589,7 +643,7 @@ class TestMarkerIntegration:
 
         state = ViewerState()
         state.marker_events = [{"event": "hold_start", "lsl_ts": 1.0, "payload": {}}]
-        refresh_marker_cache(state, cfg)   # cfg has enabled=False
+        refresh_marker_cache(state, cfg)  # cfg has enabled=False
         assert state.marker_events == []
 
     def test_get_marker_x_positions_pure(self, cfg):

@@ -1,10 +1,10 @@
-"""Pure axis-limit helpers and ViewerState re-exports.
-
-The ``compute_axis_limits`` function is extracted from the original
-``viz/figure.py`` where it lived as a private helper.  Placing it here
-keeps it importable by ``viz/charts.py`` without carrying a Matplotlib
-dependency, and keeps it testable in isolation.
-"""
+# @file
+# @brief Pure axis-limit helpers and ViewerState re-exports.
+##
+# The compute_axis_limits function is extracted from the original viz/figure.py
+# where it lived as a private helper. Placing it here keeps it importable by
+# viz/charts.py without carrying a Matplotlib dependency, and keeps it
+# testable in isolation.
 from __future__ import annotations
 
 import math
@@ -13,13 +13,19 @@ import numpy as np
 
 
 def floorf(x: float, n: int = 0) -> float:
-    """Round down to a multiple of 10**(-n)."""
+    # @brief Round down to a multiple of 10**(-n).
+    # @param x Input value.
+    # @param n Decimal exponent controlling the multiple.
+    # @return Rounded value.
     factor = 10.0**n
     return math.floor(x * factor) / factor
 
 
 def ceilf(x: float, n: int = 0) -> float:
-    """Round up to a multiple of 10**(-n)."""
+    # @brief Round up to a multiple of 10**(-n).
+    # @param x Input value.
+    # @param n Decimal exponent controlling the multiple.
+    # @return Rounded value.
     factor = 10.0**n
     return math.ceil(x * factor) / factor
 
@@ -29,22 +35,11 @@ def compute_axis_limits(
     y: np.ndarray,
     margin_ratio: float = 0.05,
 ) -> tuple[float, float, float, float] | None:
-    """Compute (xmin, xmax, ymin, ymax) axis limits with a proportional margin.
-
-    Pure function — no side effects.  Returns ``None`` when the arrays contain
-    no finite values.
-
-    Parameters
-    ----------
-    x, y:
-        1-D float arrays.  Non-finite values are excluded.
-    margin_ratio:
-        Fraction of the data span added as padding on each side.
-
-    Returns
-    -------
-    (xmin, xmax, ymin, ymax) or None.
-    """
+    # @brief Compute axis limits with a proportional margin.
+    # @param x X-axis data.
+    # @param y Y-axis data.
+    # @param margin_ratio Fraction of the data span added as padding.
+    # @return Tuple of xmin, xmax, ymin, ymax, or None.
     x = np.asarray(x, dtype=np.float64)
     y = np.asarray(y, dtype=np.float64)
     mask = np.isfinite(x) & np.isfinite(y)
@@ -85,12 +80,13 @@ def update_xy_span(
     lock: bool,
     margin_ratio: float = 0.05,
 ) -> dict:
-    """Expand the stored XY axis span to include the current data.
-
-    Pure function: returns a new dict without mutating ``state_span``.
-    The caller is responsible for writing the result back to
-    :attr:`~lsl_viewer.types.ViewerState.xy_max_span`.
-    """
+    # @brief Expand the stored XY axis span to include the current data.
+    # @param state_span Existing axis-span state.
+    # @param x X-axis data.
+    # @param y Y-axis data.
+    # @param lock Whether to preserve the largest span seen so far.
+    # @param margin_ratio Padding fraction applied to the computed limits.
+    # @return Updated axis-span dict.
     limits = compute_axis_limits(x, y, margin_ratio=margin_ratio)
     if limits is None:
         return dict(state_span)

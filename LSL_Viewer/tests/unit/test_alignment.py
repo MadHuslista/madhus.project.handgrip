@@ -1,4 +1,5 @@
 """Unit tests for core.alignment — pure functions, zero mocking."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -49,9 +50,7 @@ class TestInterpolateReferenceToTarget:
     def test_aligned_streams_produce_paired_output(self):
         target = _make_target(n=50)
         reference = _make_reference(n=250)
-        x, y, t = interpolate_reference_to_target(
-            target, reference, max_reference_gap_s=0.005
-        )
+        x, y, t = interpolate_reference_to_target(target, reference, max_reference_gap_s=0.005)
         assert x.size > 0
         assert x.size == y.size == t.size
         # x values should be within reference.raw range
@@ -72,9 +71,7 @@ class TestInterpolateReferenceToTarget:
             rs485_clock=np.array([0.0, 10.0, 20.0]),
             raw=np.array([1.0, 2.0, 3.0]),
         )
-        x, y, t = interpolate_reference_to_target(
-            target, ref_sparse, max_reference_gap_s=0.005
-        )
+        x, y, t = interpolate_reference_to_target(target, ref_sparse, max_reference_gap_s=0.005)
         assert x.size == 0, "All target points should be rejected — reference gaps too large"
 
     def test_time_shift_offsets_reference(self):
@@ -94,9 +91,7 @@ class TestInterpolateReferenceToTarget:
     def test_filtered_signal_differs_from_raw(self):
         target = _make_target(n=50)
         reference = _make_reference(n=250)
-        _, y_raw, _ = interpolate_reference_to_target(
-            target, reference, max_reference_gap_s=0.005, target_signal="raw"
-        )
+        _, y_raw, _ = interpolate_reference_to_target(target, reference, max_reference_gap_s=0.005, target_signal="raw")
         _, y_filt, _ = interpolate_reference_to_target(
             target, reference, max_reference_gap_s=0.005, target_signal="filtered"
         )

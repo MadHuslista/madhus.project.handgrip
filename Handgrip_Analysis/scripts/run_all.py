@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# @package scripts.run_all
+# @brief Batch dispatcher routing manifest rows to stage scripts.
+
 """
 Batch dispatcher — routes manifest rows to the appropriate stage script.
 
@@ -7,6 +10,7 @@ Manifest CSV columns: stage, label, path [, channel]
 Supported stage values:
     stage1, stage2, stage3, stage4, stage5, stage6_design, stage6_review
 """
+
 from __future__ import annotations
 
 import logging
@@ -32,6 +36,9 @@ STAGE_TO_SCRIPT: dict[str, str] = {
 }
 
 
+# @brief Run all manifest rows by dispatching each stage to its script.
+# @param cfg Hydra configuration object.
+# @return None.
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)
@@ -76,14 +83,17 @@ def main(cfg: DictConfig) -> None:
         if result.returncode != 0:
             log.error(
                 "run_all: script %s failed for label %r (exit code %d)",
-                script_name, label, result.returncode,
+                script_name,
+                label,
+                result.returncode,
             )
         else:
             dispatched += 1
 
     log.info(
         "run_all: complete — %d dispatched, %d skipped",
-        dispatched, skipped,
+        dispatched,
+        skipped,
     )
 
 

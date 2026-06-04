@@ -1,4 +1,8 @@
-"""D2/M2 serial protocol parser for the Arduino/HX711 target device.
+# @package lsl_bridge.core.parser
+#  @brief Strict parser for D2 data frames and M2 metadata frames.
+##
+"""
+D2/M2 serial protocol parser for the Arduino/HX711 target device.
 
 The target firmware speaks a simple ASCII CSV protocol over UART:
 
@@ -31,14 +35,17 @@ from lsl_bridge.types import FirmwareMetadata, ParsedTargetSample
 _log = logging.getLogger(__name__)
 
 
+# @brief Parse target UART protocol lines into canonical sample objects.
 class D2LineParser:
-    """Strict parser for the target firmware D2/M2 serial protocol.
+    """
+    Strict parser for the target firmware D2/M2 serial protocol.
 
     Args:
         cfg:    Full Hydra ``DictConfig``.  Uses ``protocol`` and
                 ``logging`` sub-trees.
         events: ``ComponentEventOutlet`` used to emit structured events
                 for sequence gaps and metadata frames.
+
     """
 
     def __init__(self, cfg: DictConfig, events: object) -> None:
@@ -62,17 +69,25 @@ class D2LineParser:
         self._log_parse_errors_every_n = max(1, int(cfg.logging.log_parse_errors_every_n))
 
     @property
+    # @brief Get the most recent firmware metadata frame contents.
+    #  @return Cached firmware metadata object.
     def metadata(self) -> FirmwareMetadata:
         """Most-recently received firmware metadata (or default if none seen)."""
         return self._metadata
 
+    # @brief Parse one incoming UART line into a target sample.
+    #  @param raw_line Raw bytes returned by serial readline.
+    #  @param arrival_lsl_time LSL receive time in seconds.
+    #  @param arrival_unix_time_ns Host receive time from time_ns.
+    #  @return ParsedTargetSample when valid D2 frame, else None.
     def feed(
         self,
         raw_line: bytes,
         arrival_lsl_time: float,
         arrival_unix_time_ns: int,
     ) -> ParsedTargetSample | None:
-        """Parse one raw UART line.
+        """
+        Parse one raw UART line.
 
         Args:
             raw_line:           Raw bytes from ``Serial.readline()``.
@@ -82,6 +97,7 @@ class D2LineParser:
         Returns:
             A ``ParsedTargetSample`` if the line is a valid D2 frame,
             ``None`` for metadata frames, empty lines, or parse errors.
+
         """
         line = raw_line.decode("ascii", errors="replace").strip()
         if not line:
@@ -94,10 +110,7 @@ class D2LineParser:
         match = self._data_re.match(line)
         if not match:
             self._parse_errors += 1
-            if (
-                self._parse_errors == 1
-                or self._parse_errors % self._log_parse_errors_every_n == 0
-            ):
+            if self._parse_errors == 1 or self._parse_errors % self._log_parse_errors_every_n == 0:
                 _log.warning(
                     "Dropped non-D2 target line #%d: %r",
                     self._parse_errors,

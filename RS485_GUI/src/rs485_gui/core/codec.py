@@ -5,6 +5,7 @@ They can be unit-tested without any hardware or serial port.
 
 Dependency chain: models, constants  (no I/O, no UI)
 """
+
 from __future__ import annotations
 
 import logging
@@ -26,6 +27,7 @@ LOGGER = logging.getLogger(__name__)
 # CRC-16 Modbus
 # ---------------------------------------------------------------------------
 
+
 def crc16_modbus(data: bytes) -> int:
     """Compute the CRC-16/Modbus checksum for *data*.
 
@@ -46,6 +48,7 @@ def crc16_modbus(data: bytes) -> int:
 # Register-level decoding helpers
 # ---------------------------------------------------------------------------
 
+
 def combine_s32_from_words(low_word: int, high_word: int) -> int:
     """Combine two unsigned 16-bit Modbus register words into a signed 32-bit integer.
 
@@ -57,22 +60,32 @@ def combine_s32_from_words(low_word: int, high_word: int) -> int:
     return value
 
 
+# @brief Decode status word.
+#
+#  @param value Parameter description.
+#  @return Result produced by this function.
 def decode_status_word(value: int) -> list[str]:
     """Decode the board status bitfield into a list of active flag names."""
     return [label for bit, label in STATUS_FLAGS.items() if value & (1 << bit)]
 
 
+# @brief Apply decimal.
+#
+#  @param value Parameter description.
+#  @param decimal_code Parameter description.
+#  @return Result produced by this function.
 def apply_decimal(value: int | None, decimal_code: int) -> float | None:
     """Scale an integer register value by the board decimal-point code."""
     if value is None:
         return None
     digits = DECIMAL_CODE_TO_DIGITS.get(decimal_code, 0)
-    return value / (10 ** digits)
+    return value / (10**digits)
 
 
 # ---------------------------------------------------------------------------
 # LSL clock helper (stateless, no pylsl import required at module level)
 # ---------------------------------------------------------------------------
+
 
 def lsl_local_clock() -> float:
     """Return the host clock in the Lab Streaming Layer local-clock domain.
@@ -83,6 +96,7 @@ def lsl_local_clock() -> float:
     """
     try:
         from pylsl import local_clock as _pylsl_local_clock  # type: ignore[import]
+
         return float(_pylsl_local_clock())
     except Exception:
         return time.time()
@@ -92,12 +106,13 @@ def lsl_local_clock() -> float:
 # Full-frame decoders
 # ---------------------------------------------------------------------------
 
+
 def decode_modbus_measurement(
     registers: list[int],
     host_ts: float,
     host_lsl_ts: float | None = None,
     rs485_clock: float | None = None,
-    rs485_clock_source: str = 'host_lsl_clock',
+    rs485_clock_source: str = "host_lsl_clock",
 ) -> MeasurementFrame:
     """Decode 11 Modbus holding registers into a :class:`~rs485_gui.models.MeasurementFrame`.
 
@@ -120,46 +135,53 @@ def decode_modbus_measurement(
     internal_raw = combine_s32_from_words(registers[6], registers[7])
 
     interpreted: dict[str, Any] = {
-        'timestamp_host_iso': datetime.fromtimestamp(host_ts).isoformat(timespec='milliseconds'),
-        'timestamp_host_epoch_s': host_ts,
-        'host_lsl_ts': float(host_lsl_ts),
-        'rs485_clock': float(rs485_clock),
-        'rs485_clock_source': rs485_clock_source,
-        'decimal_code': decimal_code,
-        'decimal_digits': DECIMAL_CODE_TO_DIGITS.get(decimal_code, 0),
-        'unit_code': unit_code,
-        'unit_label': UNIT_CODE_TO_LABEL.get(unit_code, f'unknown({unit_code})'),
-        'status_word': status_word,
-        'status_flags': decode_status_word(status_word),
-        'gross_raw_value': gross_raw,
-        'net_raw_value': net_raw,
-        'peak_raw_value': peak_raw,
-        'internal_code_raw_value': internal_raw,
-        'gross_value': apply_decimal(gross_raw, decimal_code),
-        'net_value': apply_decimal(net_raw, decimal_code),
-        'peak_value': apply_decimal(peak_raw, decimal_code),
-        'raw_value': gross_raw,
+        "timestamp_host_iso": datetime.fromtimestamp(host_ts).isoformat(timespec="milliseconds"),
+        "timestamp_host_epoch_s": host_ts,
+        "host_lsl_ts": float(host_lsl_ts),
+        "rs485_clock": float(rs485_clock),
+        "rs485_clock_source": rs485_clock_source,
+        "decimal_code": decimal_code,
+        "decimal_digits": DECIMAL_CODE_TO_DIGITS.get(decimal_code, 0),
+        "unit_code": unit_code,
+        "unit_label": UNIT_CODE_TO_LABEL.get(unit_code, f"unknown({unit_code})"),
+        "status_word": status_word,
+        "status_flags": decode_status_word(status_word),
+        "gross_raw_value": gross_raw,
+        "net_raw_value": net_raw,
+        "peak_raw_value": peak_raw,
+        "internal_code_raw_value": internal_raw,
+        "gross_value": apply_decimal(gross_raw, decimal_code),
+        "net_value": apply_decimal(net_raw, decimal_code),
+        "peak_value": apply_decimal(peak_raw, decimal_code),
+        "raw_value": gross_raw,
         # Calibration v2 canonical aliases
-        'reference_clock_s': float(rs485_clock),
-        'reference_status': status_word,
+        "reference_clock_s": float(rs485_clock),
+        "reference_status": status_word,
     }
-    interpreted['reference_force_N'] = interpreted.get('net_value')
+    interpreted["reference_force_N"] = interpreted.get("net_value")
 
     raw_transport: dict[str, Any] = {
-        'registers': {f'400{idx + 1:02d}': reg for idx, reg in enumerate(registers)},
+        "registers": {f"400{idx + 1:02d}": reg for idx, reg in enumerate(registers)},
     }
 
     return MeasurementFrame(
         host_ts=host_ts,
-        host_ts_iso=datetime.fromtimestamp(host_ts).isoformat(timespec='milliseconds'),
-        mode='modbus_rtu',
+        host_ts_iso=datetime.fromtimestamp(host_ts).isoformat(timespec="milliseconds"),
+        mode="modbus_rtu",
         raw_transport=raw_transport,
         interpreted=interpreted,
-        session_id='',
+        session_id="",
         board_profile={},
     )
 
 
+# @brief Extract registers from modbus response.
+#
+#  @param frame Parameter description.
+#  @param slave_id Parameter description.
+#  @param function_code Parameter description.
+#  @param register_count Parameter description.
+#  @return Result produced by this function.
 def extract_registers_from_modbus_response(
     frame: bytes,
     slave_id: int,
@@ -173,35 +195,43 @@ def extract_registers_from_modbus_response(
     expected_byte_count = register_count * 2
     expected_len = 3 + expected_byte_count + 2
     if len(frame) != expected_len:
-        raise ValueError(
-            f'Unexpected frame length: got {len(frame)}, expected {expected_len}'
-        )
+        raise ValueError(f"Unexpected frame length: got {len(frame)}, expected {expected_len}")
     if frame[0] != slave_id:
         raise ValueError(
-            f'Unexpected slave id in active-send frame: got {frame[0]}, expected {slave_id}'
+            f"Unexpected slave id in active-send frame: got {frame[0]}, expected {slave_id}"
         )
     if frame[1] != function_code:
         raise ValueError(
-            f'Unexpected function code in active-send frame: '
-            f'got 0x{frame[1]:02X}, expected 0x{function_code:02X}'
+            f"Unexpected function code in active-send frame: "
+            f"got 0x{frame[1]:02X}, expected 0x{function_code:02X}"
         )
     if frame[2] != expected_byte_count:
         raise ValueError(
-            f'Unexpected byte count in active-send frame: '
-            f'got {frame[2]}, expected {expected_byte_count}'
+            f"Unexpected byte count in active-send frame: "
+            f"got {frame[2]}, expected {expected_byte_count}"
         )
     received_crc = frame[-2:]
-    expected_crc = crc16_modbus(frame[:-2]).to_bytes(2, byteorder='little')
+    expected_crc = crc16_modbus(frame[:-2]).to_bytes(2, byteorder="little")
     if received_crc != expected_crc:
         raise ValueError(
-            f'CRC mismatch in active-send frame: '
-            f'got {received_crc.hex()}, expected {expected_crc.hex()}, '
-            f'frame={frame.hex(" ")}'
+            f"CRC mismatch in active-send frame: "
+            f"got {received_crc.hex()}, expected {expected_crc.hex()}, "
+            f"frame={frame.hex(' ')}"
         )
     data = frame[3:-2]
     return [(data[i] << 8) | data[i + 1] for i in range(0, len(data), 2)]
 
 
+# @brief Decode active send modbus response.
+#
+#  @param frame Parameter description.
+#  @param host_ts Parameter description.
+#  @param host_lsl_ts Parameter description.
+#  @param slave_id Parameter description.
+#  @param function_code Parameter description.
+#  @param register_count Parameter description.
+#  @param diagnostics Parameter description.
+#  @return Result produced by this function.
 def decode_active_send_modbus_response(
     frame: bytes,
     host_ts: float,
@@ -220,21 +250,23 @@ def decode_active_send_modbus_response(
         host_ts=host_ts,
         host_lsl_ts=host_lsl_ts,
         rs485_clock=host_lsl_ts,
-        rs485_clock_source='active_send_reconstructed_lsl_clock',
+        rs485_clock_source="active_send_reconstructed_lsl_clock",
     )
-    decoded.mode = 'active_send'
+    decoded.mode = "active_send"
     decoded.raw_transport = {
-        'response_hex': frame.hex(' '),
-        'frame_length_bytes': len(frame),
-        'frame_type': 'modbus_rtu_response_push',
-        'registers': {f'400{idx + 1:02d}': reg for idx, reg in enumerate(registers)},
-        'diagnostics': diagnostics,
+        "response_hex": frame.hex(" "),
+        "frame_length_bytes": len(frame),
+        "frame_type": "modbus_rtu_response_push",
+        "registers": {f"400{idx + 1:02d}": reg for idx, reg in enumerate(registers)},
+        "diagnostics": diagnostics,
     }
-    decoded.interpreted.update({
-        'parser_profile': 'modbus_rtu_response_11regs',
-        'parsed_from': 'active_send_binary_modbus_response',
-        'timestamp_source': 'host_receive_time',
-    })
+    decoded.interpreted.update(
+        {
+            "parser_profile": "modbus_rtu_response_11regs",
+            "parsed_from": "active_send_binary_modbus_response",
+            "timestamp_source": "host_receive_time",
+        }
+    )
     return decoded
 
 
@@ -242,15 +274,22 @@ def decode_active_send_modbus_response(
 # Utility formatting used by multiple subsystems
 # ---------------------------------------------------------------------------
 
+
 def truncate_text(text: str, max_chars: int) -> str:
     """Truncate *text* to at most *max_chars*, appending an omission notice."""
     if max_chars <= 0 or len(text) <= max_chars:
         return text
     keep = max(16, max_chars - 24)
     omitted = len(text) - keep
-    return f'{text[:keep]} ... (+{omitted} chars)'
+    return f"{text[:keep]} ... (+{omitted} chars)"
 
 
+# @brief Build log text.
+#
+#  @param items Parameter description.
+#  @param separator Parameter description.
+#  @param max_total_chars Parameter description.
+#  @return Constructed object for this operation.
 def build_log_text(items: list[str], separator: str, max_total_chars: int) -> str:
     """Join *items* with *separator*, truncating once *max_total_chars* is exceeded."""
     if max_total_chars <= 0:
@@ -263,7 +302,7 @@ def build_log_text(items: list[str], separator: str, max_total_chars: int) -> st
         if used + extra > max_total_chars:
             remaining = total_items - idx
             selected.append(
-                f'... truncated, {remaining} older entr{"y" if remaining == 1 else "ies"} hidden ...'
+                f"... truncated, {remaining} older entr{'y' if remaining == 1 else 'ies'} hidden ..."
             )
             break
         selected.append(item)

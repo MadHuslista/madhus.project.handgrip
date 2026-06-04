@@ -1,4 +1,8 @@
+# @package handgrip_analysis.aggregation
+# @brief Condition-level aggregation utilities.
+
 """Condition-level aggregation utilities."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -22,11 +26,20 @@ IDENTITY_COLUMNS = {
 }
 
 
+# @brief Convert trial result objects into a flat DataFrame.
+# @param results Sequence of trial-level analysis results.
+# @return Flat DataFrame containing one row per trial.
 def trial_results_frame(results: Sequence[TrialResult]) -> pd.DataFrame:
     """Convert trial results to a flat DataFrame."""
     return pd.DataFrame([result.metrics_record() for result in results])
 
 
+# @brief Aggregate trial metrics into per-condition robust summaries.
+# @param results Sequence of trial-level analysis results.
+# @param confidence_level Confidence level used for bootstrap intervals.
+# @param n_resamples Number of bootstrap resamples.
+# @param random_seed Random seed for deterministic bootstrap output.
+# @return List of condition-level summary objects.
 def aggregate_condition_results(
     results: Sequence[TrialResult],
     *,
@@ -71,6 +84,9 @@ def aggregate_condition_results(
     return summaries
 
 
+# @brief Convert condition summaries into a flat reporting table.
+# @param summaries Sequence of condition summaries.
+# @return Flat DataFrame with one row per condition.
 def condition_summaries_frame(summaries: Sequence[ConditionSummary]) -> pd.DataFrame:
     """Convert condition summaries into one flat table."""
     return pd.DataFrame([summary.to_record() for summary in summaries])

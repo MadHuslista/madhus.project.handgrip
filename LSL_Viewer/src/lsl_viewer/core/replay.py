@@ -1,17 +1,13 @@
-"""Replay data loading for CSV and XDF modes.
-
-These functions load data from disk and return pure ``DualReplayData`` values.
-The I/O boundary is kept thin: all validation and transformation after loading
-is expressed as pure numpy/pandas operations.
-
-Dead code removed vs. original
--------------------------------
-* ``_candidate_columns()`` — was never exercised with actual fallbacks; every
-  call site passed a single-element list.  Replaced by direct
-  ``_pick_existing_column`` calls.
-* Legacy fused-CSV replay — already removed prior to this refactor (confirmed
-  by comment in original source).
-"""
+# @file
+# @brief Replay data loading for CSV and XDF modes.
+##
+# These functions load data from disk and return pure DualReplayData values.
+# The I/O boundary is kept thin: all validation and transformation after
+# loading is expressed as pure numpy/pandas operations.
+##
+# Dead code removed vs. original:
+# - _candidate_columns() was replaced by direct _pick_existing_column calls.
+# - Legacy fused-CSV replay was already removed before this refactor.
 from __future__ import annotations
 
 import logging
@@ -32,8 +28,11 @@ log = logging.getLogger(__name__)
 # Path helpers
 # ---------------------------------------------------------------------------
 
+
 def optional_path(value: str | None) -> Path | None:
-    """Resolve a config path string to an absolute Path, or return None."""
+    # @brief Resolve a config path string to an absolute Path, or return None.
+    # @param value Path string from configuration, or None.
+    # @return Absolute Path or None.
     if value is None:
         return None
     text = str(value).strip()
@@ -46,29 +45,33 @@ def optional_path(value: str | None) -> Path | None:
 # CSV helpers
 # ---------------------------------------------------------------------------
 
+
 def _pick_existing_column(columns: list[str], candidates: list[str], role: str) -> str:
-    """Return the first candidate column that exists, or raise."""
+    # @brief Return the first candidate column that exists, or raise.
+    # @param columns Available DataFrame columns.
+    # @param candidates Candidate column names in priority order.
+    # @param role Human-readable role used in errors.
+    # @return First matching column name.
     for candidate in candidates:
         if candidate in columns:
             return candidate
-    raise RuntimeError(
-        f"Could not find a column for {role}. "
-        f"Candidates={candidates}; available={columns}"
-    )
+    raise RuntimeError(f"Could not find a column for {role}. Candidates={candidates}; available={columns}")
 
 
 def _extract_numeric(df: pd.DataFrame, col: str) -> np.ndarray:
+    # @brief Extract a numeric column as float64 values.
+    # @param df Source DataFrame.
+    # @param col Column name.
+    # @return Numeric numpy array.
     return pd.to_numeric(df[col], errors="coerce").to_numpy(dtype=np.float64)
 
 
-def _time_from_df(
-    df: pd.DataFrame, preferred: list[str], expected_rate_hz: float
-) -> np.ndarray:
-    """Derive a timestamp array from a DataFrame.
-
-    Prefers columns in *preferred* order.  Handles ``_ns`` and ``_us`` suffixes
-    for unit conversion.  Falls back to a synthetic uniform grid.
-    """
+def _time_from_df(df: pd.DataFrame, preferred: list[str], expected_rate_hz: float) -> np.ndarray:
+    # @brief Derive a timestamp array from a DataFrame.
+    # @param df Source DataFrame.
+    # @param preferred Preferred timestamp column names.
+    # @param expected_rate_hz Synthetic sampling rate used as a fallback.
+    # @return Timestamp array in seconds.
     cols = list(df.columns)
     for col in preferred:
         if col in cols:
@@ -85,15 +88,20 @@ def _time_from_df(
 # XDF helpers
 # ---------------------------------------------------------------------------
 
+
 def _first_scalar(value: Any) -> Any:
-    """Recursively unwrap a nested list to its first scalar element."""
+    # @brief Recursively unwrap a nested list to its first scalar element.
+    # @param value Nested XDF metadata value.
+    # @return First scalar element or the original value.
     if isinstance(value, list) and value:
         return _first_scalar(value[0])
     return value
 
 
 def extract_xdf_labels(info: dict[str, Any]) -> list[str] | None:
-    """Extract channel labels from an XDF stream info dict."""
+    # @brief Extract channel labels from an XDF stream info dict.
+    # @param info XDF stream info dictionary.
+    # @return Channel labels or None.
     desc = info.get("desc", [{}])
     labels: list[str] = []
     if desc and isinstance(desc, list):
@@ -108,6 +116,9 @@ def extract_xdf_labels(info: dict[str, Any]) -> list[str] | None:
 
 
 def _extract_xdf_time_series(stream: dict[str, Any]) -> np.ndarray:
+    # @brief Extract and normalize an XDF time_series matrix.
+    # @param stream XDF stream dict.
+    # @return 2-D float64 time-series matrix.
     ts = np.asarray(stream.get("time_series"), dtype=np.float64)
     if ts.ndim == 1:
         ts = ts[:, np.newaxis]
@@ -117,6 +128,9 @@ def _extract_xdf_time_series(stream: dict[str, Any]) -> np.ndarray:
 
 
 def _extract_xdf_timestamps(stream: dict[str, Any]) -> np.ndarray:
+    # @brief Extract and validate XDF timestamps.
+    # @param stream XDF stream dict.
+    # @return 1-D float64 timestamp array.
     stamps = np.asarray(stream.get("time_stamps"), dtype=np.float64).reshape(-1)
     if stamps.size == 0:
         raise RuntimeError("XDF stream contains no timestamps")
@@ -126,12 +140,15 @@ def _extract_xdf_timestamps(stream: dict[str, Any]) -> np.ndarray:
 
 
 def _indices_from_labels(labels: list[str], required: list[str], role: str) -> list[int]:
+    # @brief Resolve required channel labels to positional indices.
+    # @param labels Available labels.
+    # @param required Required labels in order.
+    # @param role Human-readable role used in errors.
+    # @return Positional indices matching required labels.
     indices: list[int] = []
     for label in required:
         if label not in labels:
-            raise RuntimeError(
-                f"{role} XDF stream labels do not contain {label!r}. labels={labels}"
-            )
+            raise RuntimeError(f"{role} XDF stream labels do not contain {label!r}. labels={labels}")
         indices.append(labels.index(label))
     return indices
 
@@ -142,21 +159,23 @@ def _select_xdf_stream(
     stype: str,
     source_id: str | None,
 ) -> dict[str, Any]:
+    # @brief Select the XDF stream matching name, type, and optional source_id.
+    # @param streams Available XDF streams.
+    # @param name Required stream name.
+    # @param stype Required stream type.
+    # @param source_id Optional source_id filter.
+    # @return First matching stream dict.
     matches = [
-        s for s in streams
+        s
+        for s in streams
         if (
             _first_scalar(s.get("info", {}).get("name")) == name
             and _first_scalar(s.get("info", {}).get("type")) == stype
-            and (
-                source_id is None
-                or _first_scalar(s.get("info", {}).get("source_id")) == source_id
-            )
+            and (source_id is None or _first_scalar(s.get("info", {}).get("source_id")) == source_id)
         )
     ]
     if not matches:
-        raise RuntimeError(
-            f"No XDF stream matched name={name!r} stype={stype!r} source_id={source_id!r}"
-        )
+        raise RuntimeError(f"No XDF stream matched name={name!r} stype={stype!r} source_id={source_id!r}")
     if len(matches) > 1:
         log.warning("Multiple XDF streams matched for %s; using the first one.", name)
     return matches[0]
@@ -166,10 +185,12 @@ def _select_xdf_stream(
 # Common timebase normalisation
 # ---------------------------------------------------------------------------
 
-def normalize_common_timebases(
-    target_ts: np.ndarray, reference_ts: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
-    """Shift both timestamp arrays so the earlier start is t=0."""
+
+def normalize_common_timebases(target_ts: np.ndarray, reference_ts: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    # @brief Shift both timestamp arrays so the earlier start is t=0.
+    # @param target_ts Target timestamp array.
+    # @param reference_ts Reference timestamp array.
+    # @return Normalized target and reference arrays.
     starts: list[float] = []
     if target_ts.size:
         starts.append(float(target_ts[0]))
@@ -183,17 +204,16 @@ def normalize_common_timebases(
 # Window extraction from pre-loaded replay data
 # ---------------------------------------------------------------------------
 
-def window_from_replay(
-    data: DualReplayData, elapsed_s: float, window_seconds: float
-) -> DualWindow | None:
-    """Slice a DualWindow from replay data at the given playback position."""
+
+def window_from_replay(data: DualReplayData, elapsed_s: float, window_seconds: float) -> DualWindow | None:
+    # @brief Slice a DualWindow from replay data at the given playback position.
+    # @param data Pre-loaded replay dataset.
+    # @param elapsed_s Current playback time.
+    # @param window_seconds Window length to extract.
+    # @return DualWindow or None when no samples fall inside the window.
     start_s = max(0.0, float(elapsed_s) - float(window_seconds))
-    target_mask = (data.target_timestamps_s >= start_s) & (
-        data.target_timestamps_s <= elapsed_s
-    )
-    reference_mask = (data.reference_timestamps_s >= start_s) & (
-        data.reference_timestamps_s <= elapsed_s
-    )
+    target_mask = (data.target_timestamps_s >= start_s) & (data.target_timestamps_s <= elapsed_s)
+    reference_mask = (data.reference_timestamps_s >= start_s) & (data.reference_timestamps_s <= elapsed_s)
     target = None
     reference = None
     if np.any(target_mask):
@@ -218,22 +238,15 @@ def window_from_replay(
 # Public loaders
 # ---------------------------------------------------------------------------
 
+
 def load_csv_replay(cfg: DictConfig) -> DualReplayData:
-    """Load dual native CSV replay files produced by LSL_Bridge v2.
-
-    Expects two separate CSVs — one for the target (handgrip) stream and one
-    for the reference (RS485) stream — as set in ``reference.target_csv_path``
-    and ``reference.reference_csv_path``.
-
-    Legacy fused-CSV replay was removed in the calibration-schema upgrade.
-    """
+    # @brief Load dual native CSV replay files produced by LSL_Bridge v2.
+    # @param cfg Hydra configuration.
+    # @return Pre-loaded dual replay dataset.
     target_path = optional_path(cfg.reference.target_csv_path)
     reference_path = optional_path(cfg.reference.reference_csv_path)
     if target_path is None or reference_path is None:
-        raise RuntimeError(
-            "mode=csv_replay requires reference.target_csv_path "
-            "and reference.reference_csv_path"
-        )
+        raise RuntimeError("mode=csv_replay requires reference.target_csv_path and reference.reference_csv_path")
 
     target_df = pd.read_csv(target_path)
     reference_df = pd.read_csv(reference_path)
@@ -243,28 +256,14 @@ def load_csv_replay(cfg: DictConfig) -> DualReplayData:
     target_cols = list(target_df.columns)
     reference_cols = list(reference_df.columns)
 
-    target_clock = _pick_existing_column(
-        target_cols, [str(cfg.channels.target.clock_label)], "target clock"
-    )
-    target_raw = _pick_existing_column(
-        target_cols, [str(cfg.channels.target.raw_label)], "target raw"
-    )
-    target_filtered = _pick_existing_column(
-        target_cols, [str(cfg.channels.target.filtered_label)], "target filtered"
-    )
-    ref_clock = _pick_existing_column(
-        reference_cols, [str(cfg.channels.reference.clock_label)], "reference clock"
-    )
-    ref_raw = _pick_existing_column(
-        reference_cols, [str(cfg.channels.reference.raw_label)], "reference force"
-    )
+    target_clock = _pick_existing_column(target_cols, [str(cfg.channels.target.clock_label)], "target clock")
+    target_raw = _pick_existing_column(target_cols, [str(cfg.channels.target.raw_label)], "target raw")
+    target_filtered = _pick_existing_column(target_cols, [str(cfg.channels.target.filtered_label)], "target filtered")
+    ref_clock = _pick_existing_column(reference_cols, [str(cfg.channels.reference.clock_label)], "reference clock")
+    ref_raw = _pick_existing_column(reference_cols, [str(cfg.channels.reference.raw_label)], "reference force")
 
-    target_ts = _time_from_df(
-        target_df, ["lsl_timestamp_s"], cfg.viewer.expected_target_rate_hz
-    )
-    reference_ts = _time_from_df(
-        reference_df, ["lsl_timestamp_s"], cfg.streams.reference.expected_rate_hz
-    )
+    target_ts = _time_from_df(target_df, ["lsl_timestamp_s"], cfg.viewer.expected_target_rate_hz)
+    reference_ts = _time_from_df(reference_df, ["lsl_timestamp_s"], cfg.streams.reference.expected_rate_hz)
     target_ts, reference_ts = normalize_common_timebases(target_ts, reference_ts)
 
     log.info(
@@ -291,7 +290,9 @@ def load_csv_replay(cfg: DictConfig) -> DualReplayData:
 
 
 def load_xdf_replay(cfg: DictConfig) -> DualReplayData:
-    """Load a dual-stream XDF file for replay."""
+    # @brief Load a dual-stream XDF file for replay.
+    # @param cfg Hydra configuration.
+    # @return Pre-loaded dual replay dataset.
     xdf_path = optional_path(cfg.reference.xdf_path)
     if xdf_path is None:
         raise RuntimeError("mode=xdf_replay requires reference.xdf_path")
@@ -299,10 +300,7 @@ def load_xdf_replay(cfg: DictConfig) -> DualReplayData:
     try:
         import pyxdf  # type: ignore[import]
     except ImportError as exc:
-        raise RuntimeError(
-            "mode=xdf_replay requires pyxdf. "
-            "Install it with: pip install lsl-viewer[xdf]"
-        ) from exc
+        raise RuntimeError("mode=xdf_replay requires pyxdf. Install it with: pip install lsl-viewer[xdf]") from exc
 
     streams, header = pyxdf.load_xdf(str(xdf_path), dejitter_timestamps=False)
     log.info(
@@ -322,9 +320,7 @@ def load_xdf_replay(cfg: DictConfig) -> DualReplayData:
         streams,
         str(cfg.streams.reference.name),
         str(cfg.streams.reference.stype),
-        None
-        if cfg.streams.reference.source_id is None
-        else str(cfg.streams.reference.source_id),
+        None if cfg.streams.reference.source_id is None else str(cfg.streams.reference.source_id),
     )
 
     target_labels = extract_xdf_labels(target_stream.get("info", {})) or [

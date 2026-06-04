@@ -6,7 +6,7 @@
 time_source: auto
 
 # Default signal channel to load when a single channel is needed.
-# Choices: raw | filtered
+# Choices: raw | current_units | filtered
 channel: raw
 
 # Columns that MUST be present in every capture CSV.

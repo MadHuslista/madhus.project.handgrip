@@ -1,4 +1,8 @@
+# @package handgrip_analysis.manifest
+# @brief Manifest loading and validation for multi-trial analysis.
+
 """Manifest loading and validation for multi-trial handgrip analysis."""
+
 from __future__ import annotations
 
 import logging
@@ -22,6 +26,10 @@ _SESSION_RE = re.compile(r"(?P<session>20\d{6})")
 
 
 @dataclass(frozen=True, slots=True)
+# @brief Validation issue detected while checking a manifest frame.
+# @param severity Issue severity (`error` or warning-like marker).
+# @param row_index Zero-based row index when issue is row-specific.
+# @param message Human-readable issue description.
 class ManifestIssue:
     """A validation issue that can be reported before execution."""
 
@@ -29,16 +37,28 @@ class ManifestIssue:
     row_index: int | None
     message: str
 
+    # @brief Convert this issue into a serializable dictionary.
+    # @param self Instance pointer.
+    # @return Dictionary representation of the issue.
     def to_record(self) -> dict[str, object]:
         return {"severity": self.severity, "row_index": self.row_index, "message": self.message}
 
 
+# @brief Normalize a potentially null manifest cell into a trimmed string.
+# @param value Input cell value.
+# @param default Fallback text when value is empty.
+# @return Cleaned string value.
 def _clean(value: object, default: str = "") -> str:
     if value is None or pd.isna(value):
         return default
     return str(value).strip()
 
 
+# @brief Parse a manifest include/exclude flag into boolean form.
+# @param value Input manifest value.
+# @param default Default value for empty cells.
+# @return Parsed boolean include flag.
+# @throws ManifestError Raised for invalid textual boolean values.
 def _parse_bool(value: object, default: bool = True) -> bool:
     if value is None or pd.isna(value):
         return default
@@ -52,12 +72,18 @@ def _parse_bool(value: object, default: bool = True) -> bool:
     raise ManifestError(f"Invalid boolean value for include: {value!r}")
 
 
+# @brief Parse an optional numeric manifest field.
+# @param value Input manifest value.
+# @return Float value or None when empty.
 def _parse_float(value: object) -> float | None:
     if value is None or pd.isna(value) or str(value).strip() == "":
         return None
     return float(value)
 
 
+# @brief Infer missing trial metadata from capture path naming patterns.
+# @param path Capture file path.
+# @return Dictionary with inferred stage/session/trial/condition keys.
 def _infer_from_path(path: Path) -> dict[str, str]:
     stem = path.stem
     parts = stem.split("_")
@@ -81,6 +107,10 @@ def _infer_from_path(path: Path) -> dict[str, str]:
     return inferred
 
 
+# @brief Normalize current or legacy manifest schemas to Phase 1 schema.
+# @param df Input manifest DataFrame.
+# @param base_dir Base directory used to resolve relative capture paths.
+# @return Normalized manifest DataFrame.
 def normalize_manifest_frame(df: pd.DataFrame, base_dir: str | Path | None = None) -> pd.DataFrame:
     """
     Normalize current or legacy manifest schemas into the Phase 1 schema.
@@ -97,10 +127,7 @@ def normalize_manifest_frame(df: pd.DataFrame, base_dir: str | Path | None = Non
         warning is emitted at runtime when the legacy path is taken.
     """
     base = Path(base_dir).resolve() if base_dir is not None else Path.cwd().resolve()
-    _legacy_detected = (
-        "label" in df.columns
-        and not {"stage", "trial_id", "session_id"}.issubset(df.columns)
-    )
+    _legacy_detected = "label" in df.columns and not {"stage", "trial_id", "session_id"}.issubset(df.columns)
     if _legacy_detected:
         log.warning(
             "normalize_manifest_frame: legacy manifest schema detected "
@@ -117,7 +144,9 @@ def normalize_manifest_frame(df: pd.DataFrame, base_dir: str | Path | None = Non
         inferred = _infer_from_path(raw_path)
         label = _clean(row.get("label"))
         stage = _clean(row.get("stage"), inferred.get("stage", ""))
-        condition = _clean(row.get("condition"), _clean(row.get("trial_type"), inferred.get("condition", label or raw_path.stem)))
+        condition = _clean(
+            row.get("condition"), _clean(row.get("trial_type"), inferred.get("condition", label or raw_path.stem))
+        )
         trial_type = _clean(row.get("trial_type"), inferred.get("trial_type", condition))
         trial_id = _clean(row.get("trial_id"), inferred.get("trial_id", f"trial{idx + 1:02d}"))
         session_id = _clean(row.get("session_id"), inferred.get("session_id", "session_unknown"))
@@ -138,6 +167,9 @@ def normalize_manifest_frame(df: pd.DataFrame, base_dir: str | Path | None = Non
     return pd.DataFrame(rows)
 
 
+# @brief Validate a normalized manifest frame and collect issues.
+# @param df Normalized manifest DataFrame.
+# @return List of validation issues.
 def validate_manifest_frame(df: pd.DataFrame) -> list[ManifestIssue]:
     """Return all manifest validation issues without raising immediately."""
     issues: list[ManifestIssue] = []
@@ -170,6 +202,10 @@ def validate_manifest_frame(df: pd.DataFrame) -> list[ManifestIssue]:
     return issues
 
 
+# @brief Convert a normalized manifest frame into TrialSpec objects.
+# @param df Normalized manifest DataFrame.
+# @param include_only Whether to skip rows marked as excluded.
+# @return List of TrialSpec records.
 def frame_to_trial_specs(df: pd.DataFrame, include_only: bool = True) -> list[TrialSpec]:
     """Convert a normalized manifest frame into ``TrialSpec`` objects."""
     specs: list[TrialSpec] = []
@@ -194,6 +230,11 @@ def frame_to_trial_specs(df: pd.DataFrame, include_only: bool = True) -> list[Tr
     return specs
 
 
+# @brief Read, normalize, validate, and convert a manifest file.
+# @param path Manifest CSV path.
+# @param include_only Whether to skip rows marked as excluded.
+# @return List of included TrialSpec records.
+# @throws ManifestError Raised when manifest validation fails.
 def load_manifest(path: str | Path, include_only: bool = True) -> list[TrialSpec]:
     """Read, normalize, validate, and convert a trial manifest."""
     path = Path(path)
@@ -211,6 +252,12 @@ def load_manifest(path: str | Path, include_only: bool = True) -> list[TrialSpec
     return specs
 
 
+# @brief Filter trials by optional stage, condition, and trial_type selectors.
+# @param trials Input trial sequence.
+# @param stage Optional stage filter.
+# @param condition Optional condition filter.
+# @param trial_type Optional trial-type filter.
+# @return Filtered list of TrialSpec entries.
 def filter_trials(
     trials: Sequence[TrialSpec],
     *,
@@ -229,6 +276,9 @@ def filter_trials(
     return selected
 
 
+# @brief Group trials by `(stage, condition)`.
+# @param trials Input trial iterable.
+# @return Dictionary keyed by `(stage, condition)` with grouped trials.
 def group_by_condition(trials: Iterable[TrialSpec]) -> dict[tuple[str, str], list[TrialSpec]]:
     """Group trials by ``(stage, condition)``."""
     groups: dict[tuple[str, str], list[TrialSpec]] = {}

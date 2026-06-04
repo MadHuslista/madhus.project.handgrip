@@ -1,3 +1,6 @@
+# @package handgrip_analysis.config.dsp_config
+# @brief Structured configuration dataclasses for DSP algorithm parameters.
+
 """
 Structured configuration for DSP algorithm parameters.
 
@@ -20,6 +23,10 @@ from typing import Any, Mapping
 
 
 @dataclass
+# @brief Parameters for scipy.signal.welch PSD estimation.
+# @param max_nperseg Upper bound on FFT segment length (samples).
+# @param min_nperseg Lower bound on FFT segment length (samples).
+# @param window Window function name used by scipy.signal.welch.
 class WelchConfig:
     """
     Parameters for scipy.signal.welch PSD estimation.
@@ -39,6 +46,9 @@ class WelchConfig:
     min_nperseg: int = 256
     window: str = "hann"
 
+    # @brief Validate Welch configuration bounds.
+    # @param self Instance pointer.
+    # @return None.
     def __post_init__(self) -> None:
         if self.min_nperseg < 2:
             raise ValueError("WelchConfig.min_nperseg must be >= 2")
@@ -57,6 +67,13 @@ class WelchConfig:
 
 
 @dataclass
+# @brief Parameters for grip-event detection in dynamic trials.
+# @param baseline_s Baseline window duration in seconds.
+# @param threshold_sigma Event-onset threshold in robust standard deviations.
+# @param min_duration_s Minimum event duration in seconds.
+# @param merge_gap_s Maximum gap to merge nearby events in seconds.
+# @param pad_s Symmetric padding around detected event boundaries in seconds.
+# @param tail_fraction Tail fraction used for readiness estimation.
 class EventDetectionConfig:
     """
     Parameters for grip-event detection in dynamic trials.
@@ -87,6 +104,9 @@ class EventDetectionConfig:
     pad_s: float = 0.25
     tail_fraction: float = 0.80
 
+    # @brief Validate event-detection configuration ranges.
+    # @param self Instance pointer.
+    # @return None.
     def __post_init__(self) -> None:
         if not 0.0 < self.tail_fraction < 1.0:
             raise ValueError("EventDetectionConfig.tail_fraction must be in (0, 1)")
@@ -105,6 +125,9 @@ class EventDetectionConfig:
 
 
 @dataclass
+# @brief Parameters for selecting dominant peaks from PSD spectra.
+# @param prominence_db Minimum prominence in dB for reportable peaks.
+# @param max_peaks Maximum number of peaks to return.
 class PsdPeaksConfig:
     """
     Parameters for the dominant-peak finder applied to Welch PSD spectra.
@@ -122,6 +145,9 @@ class PsdPeaksConfig:
     prominence_db: float = 3.0
     max_peaks: int = 8
 
+    # @brief Validate PSD-peak finder configuration.
+    # @param self Instance pointer.
+    # @return None.
     def __post_init__(self) -> None:
         if self.prominence_db < 0:
             raise ValueError("PsdPeaksConfig.prominence_db must be >= 0")
@@ -140,6 +166,10 @@ class PsdPeaksConfig:
 
 
 @dataclass
+# @brief Figure rendering configuration for analysis plots.
+# @param dpi Dots per inch used when saving figures.
+# @param figsize_wide Figure size tuple for wide time-series plots.
+# @param figsize_square Figure size tuple for square comparison plots.
 class PlotConfig:
     """
     Parameters controlling figure output quality and dimensions.
@@ -159,6 +189,9 @@ class PlotConfig:
     figsize_wide: tuple[float, float] = (12.0, 5.0)
     figsize_square: tuple[float, float] = (10.0, 5.0)
 
+    # @brief Validate plotting configuration.
+    # @param self Instance pointer.
+    # @return None.
     def __post_init__(self) -> None:
         if self.dpi < 1:
             raise ValueError("PlotConfig.dpi must be >= 1")
@@ -182,6 +215,11 @@ class PlotConfig:
 
 
 @dataclass
+# @brief Top-level DSP configuration composed of all DSP sub-configs.
+# @param welch Welch PSD configuration.
+# @param event_detection Event detection configuration.
+# @param psd_peaks PSD peak extraction configuration.
+# @param plot Plot rendering configuration.
 class DSPConfig:
     """
     Top-level DSP configuration, combining all DSP sub-configs.
@@ -203,6 +241,10 @@ class DSPConfig:
     psd_peaks: PsdPeaksConfig = field(default_factory=PsdPeaksConfig)
     plot: PlotConfig = field(default_factory=PlotConfig)
 
+    # @brief Build a DSPConfig from a nested mapping.
+    # @param cls Class type.
+    # @param data Nested mapping (for example OmegaConf-converted dict).
+    # @return A validated DSPConfig instance.
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any] | None = None) -> "DSPConfig":
         """

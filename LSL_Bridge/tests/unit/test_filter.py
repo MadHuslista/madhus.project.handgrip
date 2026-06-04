@@ -1,4 +1,5 @@
-"""Unit tests for lsl_bridge.core.filter.
+"""
+Unit tests for lsl_bridge.core.filter.
 
 All tests are pure — no I/O, no mocking required.  The filter classes
 operate entirely on float inputs and outputs, making them trivial to test
@@ -10,7 +11,6 @@ from __future__ import annotations
 import math
 
 import pytest
-
 from lsl_bridge.core.filter import (
     DriftCorrector,
     FilterPipeline,
@@ -19,7 +19,6 @@ from lsl_bridge.core.filter import (
     SecondOrderBiquadLowPass,
     _build_filter_node,
 )
-
 
 # ---------------------------------------------------------------------------
 # SecondOrderBiquadLowPass
@@ -164,7 +163,8 @@ class TestFilterPipeline:
         assert pipe.process(5.0, 0.0) == 5.0
 
     def test_chained_filters_apply_in_order(self):
-        """Verify pipeline applies filters left-to-right.
+        """
+        Verify pipeline applies filters left-to-right.
 
         Use a 1-pole filter initialised with 0 so the first call returns 0,
         then chain an identity to verify order is preserved.
@@ -191,6 +191,7 @@ class TestFilterPipeline:
 class TestBuildFilterNode:
     def _cfg(self, d: dict):
         from omegaconf import OmegaConf
+
         return OmegaConf.create(d)
 
     def test_builds_butterworth(self):
@@ -203,8 +204,23 @@ class TestBuildFilterNode:
         node = _build_filter_node(cfg)
         assert isinstance(node, SecondOrderBiquadLowPass)
 
+    def test_builds_butter_lowpass_legacy_alias(self):
+        cfg = self._cfg({"type": "butter_lowpass", "order": 2, "cutoff_hz": 10.0, "sample_rate_hz": 100.0})
+        node = _build_filter_node(cfg)
+        assert isinstance(node, SecondOrderBiquadLowPass)
+
+    def test_rejects_butter_lowpass_alias_with_nonsecond_order(self):
+        cfg = self._cfg({"type": "butter_lowpass", "order": 4, "cutoff_hz": 10.0, "sample_rate_hz": 100.0})
+        with pytest.raises(ValueError, match="order=2"):
+            _build_filter_node(cfg)
+
     def test_builds_lowpass_1pole(self):
         cfg = self._cfg({"type": "lowpass_1pole", "cutoff_hz": 5.0})
+        node = _build_filter_node(cfg)
+        assert isinstance(node, FirstOrderLowPass)
+
+    def test_builds_one_pole_legacy_alias(self):
+        cfg = self._cfg({"type": "one_pole_lowpass", "cutoff_hz": 5.0})
         node = _build_filter_node(cfg)
         assert isinstance(node, FirstOrderLowPass)
 

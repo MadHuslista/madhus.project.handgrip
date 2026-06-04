@@ -55,7 +55,7 @@
 
 
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PRIVATE_TUNABLES                                              */
+/** @ingroup PRIVATE_TUNABLES                                                  */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
@@ -69,19 +69,19 @@
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PRIVATE_Definitions                                           */
+/** @ingroup PRIVATE_Definitions                                               */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PRIVATE_Macros                                                */
+/** @ingroup PRIVATE_Macros                                                    */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PRIVATE_Types                                                 */
+/** @ingroup PRIVATE_Types                                                     */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
@@ -99,21 +99,17 @@ typedef struct
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PRIVATE_Functions                                             */
-/**@{                                                                         */
-/*----------------------------------------------------------------------------*/
-
-/** Prototype for the interrupt handler */
+/** @cond DOXYGEN_SKIP_PROTOTYPES */
+/* Prototype for the interrupt handler */
 void sample_scale(void);
 
-/** Prototypes for utility functions */
+/* Prototypes for utility functions */
 static float _raw_to_units(int32_t raw_count);
 static void _emit_metadata(void);
 static void _emit_sample(const SensorSample &sample);
-
-/** @} */
+/** @endcond */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PRIVATE_Data                                                  */
+/** @ingroup PRIVATE_Data                                                      */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
@@ -127,7 +123,7 @@ volatile uint16_t _sticky_status = HANDGRIP_STATUS_OK;
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_API                                                    */
+/** @ingroup PUBLIC_API                                                        */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
@@ -175,17 +171,7 @@ void loop()
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_WEAK                                                   */
-/**@{                                                                         */
-/*----------------------------------------------------------------------------*/
-
-/** @} */
-/*----------------------------------------------------------------------------*/
-/** @addtogroup PRIVATE_Functions                                             */
-/**@{                                                                         */
-/*----------------------------------------------------------------------------*/
-
-/** ====================== Interrupt Service Routine ======================== */
+/* ====================== Interrupt Service Routine ======================== */
 
 /**
  * @brief Timer ISR: non-blocking HX711 sample capture.
@@ -225,11 +211,9 @@ void sample_scale(void)
     }
 }
 
-/** ====================== Utility Functions ================================ */
+/* ====================== Utility Functions ================================ */
 
-/** 
- * @brief Emit boot/build metadata consumed by LSL_Bridge. 
- */
+/* Emit boot/build metadata consumed by LSL_Bridge. */
 static void _emit_metadata(void)
 {
     Serial.print("M2,");
@@ -249,10 +233,7 @@ static void _emit_metadata(void)
     Serial.print("\n");
 }
 
-/** 
- * @brief Emit one strict D2 data record. 
- * @param sample Sample to emit.
- */
+/* Emit one strict D2 data record. */
 static void _emit_sample(const SensorSample &sample)
 {
     Serial.print("D2,");
@@ -275,11 +256,7 @@ static void _emit_sample(const SensorSample &sample)
     Serial.print("\n");
 }
 
-/** 
- * @brief Convert raw HX711 counts to current engineering units for sanity display. 
- * @param raw_count Raw HX711 count.
- * @return Calibrated units.
-*/
+/* Convert raw HX711 counts to current engineering units for sanity display. */
 static float _raw_to_units(int32_t raw_count)
 {
     if (SCALE_FACTOR == 0.0F)
@@ -288,12 +265,7 @@ static float _raw_to_units(int32_t raw_count)
     }
     return ((float)raw_count - SCALE_OFFSET) / SCALE_FACTOR;
 }
-
-
-
-/** @} */
-/*----------------------------------------------------------------------------*/
-/** @addtogroup PRIVATE_Weak                                                  */
+/** @ingroup PRIVATE_Weak                                                      */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 

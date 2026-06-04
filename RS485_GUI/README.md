@@ -1,66 +1,103 @@
 # RS485 GUI
 
-High-speed RS485 acquisition board GUI with real-time Plotly visualization,
-ZeroMQ IPC publishing, and Lab Streaming Layer (LSL) integration.
+## Summary
 
-## Features
+`RS485_GUI` is the reference-chain acquisition application. It connects to the high-speed acquisition board over RS485, displays reference measurements in a browser UI, logs acquisition data, and publishes normalized reference measurements over ZeroMQ IPC for `LSL_Bridge`.
 
-- **Modbus RTU** polling mode and **Active-Send** (500 Hz push-frame) binary mode
-- Real-time Plotly signal plot with configurable downsampling
-- ZeroMQ PUB socket for downstream consumers (LSL Bridge, recorders)
-- Structured NDJSON and CSV file logging
-- Hierarchical per-module logging configurable via Hydra
+It owns the PM58/acquisition-board host-side acquisition path. Downstream components should consume its IPC output through `LSL_Bridge`, not reimplement board parsing independently.
 
-## Quickstart
+## First command
+
+From `RS485_GUI/`:
+> This should be enough to start the application with default settings ready to connect to the acquisition board if it's on a standard port. 
+> Adjustments could be done directly on the UI or by providing config overrides as needed.
 
 ```bash
-# Install with uv
-uv sync
-
-# Run
-uv run python -m rs485_gui
-
-# Or via entry point
 uv run rs485-gui
-
-# With config overrides
-uv run rs485-gui ui.port=8090 serial.default_port=/dev/ttyUSB1
-
-# With numpy acceleration
-uv sync --extra fast
 ```
+
+With an explicit serial port:
+
+```bash
+uv run rs485-gui serial.default_port=/dev/ttyUSB_RS485
+```
+
+With a custom UI port:
+
+```bash
+uv run rs485-gui ui.port=8090 serial.default_port=/dev/ttyUSB_RS485
+```
+
+## Expected result
+
+Expected successful behavior:
+
+- the NiceGUI browser interface opens,
+- the acquisition board value updates when force changes,
+- logs show valid board measurements,
+- the IPC publisher is active on the configured endpoint/topic,
+- `LSL_Bridge` can consume the `rs485.measurement.v1` IPC stream and publish `HandgripReference`.
+
+Stop if the acquisition-board front display changes but the GUI receives no valid measurements.
 
 ## Configuration
 
-All settings live in `config/config.yaml`. Override any key on the CLI with
-`key.subkey=value` (OmegaConf dotlist syntax).
+Primary config:
 
-## Architecture
+```text
+RS485_GUI/config/config.yaml
+```
 
+Main configuration areas:
+
+| Area                          | Purpose                                                     |
+| ----------------------------- | ----------------------------------------------------------- |
+| `serial` / transport settings | Port, baud, mode, Modbus/Active-Send profile.               |
+| `ui`                          | Browser UI host/port, refresh cadence, plot behavior.       |
+| `logger`                      | CSV/NDJSON/event logging behavior and output paths.         |
+| `ipc`                         | ZeroMQ publisher endpoint and topic configuration.          |
+| `parser` / signal settings    | Board payload interpretation and selected displayed signal. |
+
+Full configuration reference: [RS485_GUI/docs/configuration.md](docs/configuration.md).
+
+## Library layout
+
+```text
+RS485_GUI/
+├── README.md
+├── config/
+│   └── config.yaml
+├── docs/
+│   └── index.md
+├── src/
+│   └── rs485_gui/
+│       ├── app.py
+│       ├── worker.py
+│       ├── core/
+│       ├── transport/
+│       ├── io/
+│       ├── ui/
+│       └── config/
+└── tests/
 ```
-src/rs485_gui/
-├── constants.py        # Protocol lookup tables (pure data)
-├── models.py           # Data transfer objects (frozen dataclasses)
-├── state.py            # Mutable runtime state (AppState)
-├── worker.py           # Acquisition loop thread
-├── app.py              # Application entry point
-├── core/               # Pure functional core (zero I/O dependencies)
-│   ├── codec.py        # Modbus CRC, register decode
-│   ├── signals.py      # Signal key helpers
-│   ├── sampling.py     # Sampling rate statistics
-│   └── ports.py        # Serial port discovery
-├── transport/          # Hardware I/O layer
-│   ├── base.py         # Abstract transport interface
-│   ├── modbus.py       # Modbus RTU transport
-│   └── active_send.py  # Active-send binary push transport
-├── io/                 # Side-effect I/O layer
-│   ├── logger.py       # File logger (NDJSON/CSV/event)
-│   └── publisher.py    # ZeroMQ IPC publisher
-├── ui/                 # NiceGUI presentation layer
-│   ├── layout.py       # Page construction
-│   ├── plots.py        # Plotly figure builder
-│   └── refresh.py      # UI timer callback
-└── config/             # Configuration layer
-    ├── schema.py       # Hydra structured config dataclasses
-    └── loader.py       # Config loading and logging setup
+
+## Tests
+
+Run from `RS485_GUI/` after dependencies are installed:
+
+```bash
+uv run pytest
 ```
+
+Use targeted tests when changing one layer:
+
+```bash
+uv run pytest tests/unit
+uv run pytest tests/integration
+```
+
+If hardware is unavailable, prioritize parser/config/unit tests and validate live acquisition later with the reference-only quickstart.
+
+## Documentation
+
+Full reading guide, per-document map, and related cross-component docs: [RS485_GUI/docs/index.md](docs/index.md).

@@ -9,8 +9,8 @@ from pathlib import Path
 
 from .config_schema import ConfigError, load_config
 from .fitting import fit_session
-from .lsl_io import preflight_streams
 from .logging_setup import configure_logging
+from .lsl_io import preflight_streams
 from .recorder import CalibrationRecorder
 from .report import generate_report
 from .segmentation import segment_accepted_holds
@@ -89,8 +89,12 @@ def _cmd_fit(args: argparse.Namespace) -> int:
         log.info("[DRY-RUN] Would fit models for session in %s", args.session_dir)
         return 0
     dataset, result = fit_session(args.session_dir, cfg)
-    log.info("Fit complete — %d points, model=%s", result.metrics.n_points, result.selected_model_id)
-    log.info("  family=%s, likelihood=%.3f", result.selected_model_family, result.selection_likelihood)
+    log.info(
+        "Fit complete — %d points, model=%s", result.metrics.n_points, result.selected_model_id
+    )
+    log.info(
+        "  family=%s, likelihood=%.3f", result.selected_model_family, result.selection_likelihood
+    )
     if result.force_N_a is not None and result.force_N_b is not None:
         log.info(
             "  affine-compatible: force_N = %.12g * raw + %.12g",
@@ -153,7 +157,9 @@ def _cmd_demo_data(args: argparse.Namespace) -> int:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def _add_common_flags(parser: argparse.ArgumentParser, *, dry_run: bool = False, yes: bool = False) -> None:
+def _add_common_flags(
+    parser: argparse.ArgumentParser, *, dry_run: bool = False, yes: bool = False
+) -> None:
     """Add shared operational flags to a subcommand parser."""
     parser.add_argument(
         "--log-level",
@@ -180,6 +186,8 @@ def _add_common_flags(parser: argparse.ArgumentParser, *, dry_run: bool = False,
 
 
 def build_parser() -> argparse.ArgumentParser:
+    # @brief Build the top-level command-line parser and subcommands.
+    #  @return Configured argparse parser instance.
     parser = argparse.ArgumentParser(
         prog="handgrip-cal",
         description=(
@@ -195,10 +203,10 @@ Examples:
   handgrip-cal preflight --config conf/default.yaml
 
   # Record a live session (with automation bypass)
-  handgrip-cal record --config conf/protocol_static_staircase.yaml --yes
+  handgrip-cal record --config conf/protocol_static_reversible_staircase_v3.yaml --yes
 
   # Preview recording without touching hardware
-  handgrip-cal record --config conf/protocol_static_staircase.yaml --dry-run
+  handgrip-cal record --config conf/protocol_static_reversible_staircase_v3.yaml --dry-run
 
   # Segment and fit a recorded session
   handgrip-cal segment ./session_dir
@@ -241,7 +249,7 @@ Exit codes:
         "record",
         help="Run the configured live recording protocol.",
     )
-    p.add_argument("--config", default="conf/protocol_static_staircase.yaml")
+    p.add_argument("--config", default="conf/protocol_static_reversible_staircase_v3.yaml")
     p.add_argument("--session-id", default=None)
     _add_common_flags(p, dry_run=True, yes=True)
     p.set_defaults(func=_cmd_record)
@@ -297,8 +305,7 @@ Exit codes:
     p = sub.add_parser(
         "import-xdf",
         help=(
-            "Convert an XDF recording into canonical target/reference CSV "
-            "and events.ndjson files."
+            "Convert an XDF recording into canonical target/reference CSV and events.ndjson files."
         ),
     )
     p.add_argument("xdf_path")
@@ -327,6 +334,9 @@ Exit codes:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # @brief CLI entry point for command dispatch.
+    #  @param argv Optional argument vector; when None uses process argv.
+    #  @return Process exit code.
     parser = build_parser()
     args = parser.parse_args(argv)
 

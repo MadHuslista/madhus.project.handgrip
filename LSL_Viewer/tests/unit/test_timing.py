@@ -1,4 +1,5 @@
 """Unit tests for core.timing — pure functions, zero mocking."""
+
 from __future__ import annotations
 
 import math
@@ -79,8 +80,8 @@ class TestClockValidationMetrics:
         assert all(math.isnan(v) for v in m.values())
 
     def test_microsecond_clock_scale(self):
-        ts = np.arange(100, dtype=np.float64) / 500.0   # 500 Hz
-        clock_us = ts * 1e6                               # same timestamps in µs
+        ts = np.arange(100, dtype=np.float64) / 500.0  # 500 Hz
+        clock_us = ts * 1e6  # same timestamps in µs
         m = clock_validation_metrics(ts, clock_us, clock_scale_to_s=1e-6)
         assert math.isclose(m["lsl_rate_hz"], 500.0, rel_tol=1e-4)
         assert abs(m["median_dt_error_ms"]) < 1e-6

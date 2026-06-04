@@ -121,6 +121,7 @@ def test_phase3_pipeline_writes_standard_directories(tmp_path):
 def test_normalize_manifest_emits_warning_for_legacy_schema(tmp_path, caplog):
     """Legacy manifests (label column, no stage/trial_id/session_id) should emit a WARNING."""
     import logging
+
     capture = tmp_path / "20260512_stage2_rest_after_warmup_trial02.csv"
     _write_capture(capture)
     # Legacy format: only 'path' and 'label', no Phase 1 columns

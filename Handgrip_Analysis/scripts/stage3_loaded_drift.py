@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+# @package scripts.stage3_loaded_drift
+# @brief Stage 3 loaded drift and creep analysis.
+
 """Stage 3 — Loaded drift / creep analysis."""
+
 from __future__ import annotations
 
 import logging
@@ -19,6 +23,11 @@ matplotlib.use("Agg")
 log = logging.getLogger(__name__)
 
 
+# @brief Read a required non-empty string value from Hydra config.
+# @param cfg Hydra configuration object.
+# @param key Config key to validate.
+# @return The required value converted to string.
+# @throws ValueError Raised when key is missing or empty.
 def _require_str(cfg: DictConfig, key: str) -> str:
     value = cfg.get(key)
     if value is None or not str(value).strip():
@@ -26,6 +35,9 @@ def _require_str(cfg: DictConfig, key: str) -> str:
     return str(value)
 
 
+# @brief Execute Stage 3 drift analysis and save summary and plots.
+# @param cfg Hydra configuration object.
+# @return None.
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)

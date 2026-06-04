@@ -1,3 +1,6 @@
+# @package lsl_bridge.logging_setup
+#  @brief Logging bootstrap utilities for LSL Bridge runtime.
+##
 """
 Logging configuration for the LSL Bridge.
 
@@ -31,6 +34,9 @@ _log = logging.getLogger(__name__)
 REPO_ROOT = Path(sp.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()).absolute() / "LSL_Bridge"
 
 
+# @brief Configure root logging handlers from Hydra configuration.
+#  @param cfg Full Hydra configuration containing logging settings.
+#  @return None.
 def configure_logging(cfg: DictConfig) -> None:
     """
     Attach console and optional file handlers to the root logger.

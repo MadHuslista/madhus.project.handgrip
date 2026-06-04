@@ -1,3 +1,6 @@
+# @package handgrip_analysis.domain
+# @brief Domain models for trial-aware handgrip analysis.
+
 """
 Domain models for trial-aware handgrip analysis.
 
@@ -20,6 +23,17 @@ Metrics = dict[str, MetricValue]
 
 
 @dataclass(frozen=True, slots=True)
+# @brief Validated manifest row describing one capture trial.
+# @param stage Logical stage name.
+# @param condition Condition label for aggregation.
+# @param trial_type Semantic trial type inside a stage.
+# @param trial_id Human-readable trial identifier.
+# @param session_id Acquisition session identifier.
+# @param path Capture CSV path.
+# @param channel Analyzer signal channel.
+# @param include Include flag for analysis selection.
+# @param load_nominal_n Optional known nominal load.
+# @param notes Free-form operator notes.
 class TrialSpec:
     """
     Validated manifest row describing one capture trial.
@@ -45,7 +59,7 @@ class TrialSpec:
         loader.
     channel:
         Signal channel consumed by the analyzer.  The current capture loader
-        supports ``raw`` and ``filtered``.
+        supports ``raw``, ``current_units``, and ``filtered``.
     include:
         False rows are kept in the manifest table but excluded from analysis.
     load_nominal_n:
@@ -67,11 +81,17 @@ class TrialSpec:
     notes: str = ""
 
     @property
+    # @brief Return a stable compact identifier for filenames and tables.
+    # @param self Instance pointer.
+    # @return Compact trial identity string.
     def identity(self) -> str:
         """Stable compact identifier used in filenames and tables."""
         return f"{self.stage}__{self.condition}__{self.session_id}__{self.trial_id}"
 
     def to_record(self) -> dict[str, Any]:
+        # @brief Return a JSON/CSV-friendly representation of this trial.
+        # @param self Instance pointer.
+        # @return Dictionary representation.
         """Return a JSON/CSV friendly representation."""
         return {
             "stage": self.stage,
@@ -88,6 +108,31 @@ class TrialSpec:
 
 
 @dataclass(frozen=True, slots=True)
+# @brief Typed configuration consumed by stage analyzers.
+# @param stage Stage key.
+# @param time_source Time-source selection policy.
+# @param channel Default analysis channel.
+# @param channels Multi-channel analysis tuple.
+# @param warmup_window_s Warmup rolling window in seconds.
+# @param pre_window_s Pre-window duration in seconds.
+# @param post_window_s Post-window duration in seconds.
+# @param baseline_s Event baseline duration in seconds.
+# @param threshold_sigma Event threshold in sigma units.
+# @param min_duration_s Minimum event duration in seconds.
+# @param merge_gap_s Event merge gap in seconds.
+# @param pad_s Event padding in seconds.
+# @param bandpower_bands Bandpower frequency bands.
+# @param filter_config Optional candidate filter config path.
+# @param lsl_bridge_root Optional LSL bridge root path.
+# @param lsl_bridge_config Optional LSL bridge config path.
+# @param stage_context_manifest Optional Stage 1-5 context manifest path.
+# @param hf_noise_band_hz High-frequency noise band.
+# @param filter_weights Composite scoring weights.
+# @param min_trials_allowed Minimum allowed trials.
+# @param min_trials_recommended Minimum recommended trials.
+# @param confidence_level Confidence interval level.
+# @param bootstrap_resamples Number of bootstrap resamples.
+# @param random_seed Random seed.
 class StageConfig:
     """
     Typed configuration used by stage analyzers.
@@ -137,6 +182,11 @@ class StageConfig:
     bootstrap_resamples: int = 5000
     random_seed: int = 42
 
+    # @brief Build a StageConfig from a loose mapping.
+    # @param cls Class type.
+    # @param stage Stage key.
+    # @param data Mapping payload, such as Hydra/OmegaConf container.
+    # @return StageConfig instance.
     @classmethod
     def from_mapping(cls, stage: str, data: Mapping[str, Any] | None = None) -> "StageConfig":
         """Build a config from a loose mapping such as a Hydra/OmegaConf dict."""
@@ -162,6 +212,11 @@ class StageConfig:
 
 
 @dataclass(frozen=True, slots=True)
+# @brief Result produced by one stage analyzer for one trial.
+# @param spec Source trial specification.
+# @param metrics Scalar metrics dictionary.
+# @param tables Optional named tabular artifacts.
+# @param artifacts Optional named file artifacts.
 class TrialResult:
     """Result produced by one stage analyzer for one trial."""
 
@@ -170,12 +225,22 @@ class TrialResult:
     tables: Mapping[str, pd.DataFrame] = field(default_factory=dict, repr=False, compare=False)
     artifacts: Mapping[str, Path] = field(default_factory=dict)
 
+    # @brief Flatten trial identity and scalar metrics into one row.
+    # @param self Instance pointer.
+    # @return Flattened dictionary row.
     def metrics_record(self) -> dict[str, Any]:
         """Flatten trial identity and scalar metrics into one table row."""
         return {**self.spec.to_record(), **self.metrics}
 
 
 @dataclass(frozen=True, slots=True)
+# @brief Aggregated metrics for one condition within one stage.
+# @param stage Stage key.
+# @param condition Condition label.
+# @param n_trials Number of trials.
+# @param metrics Condition-level metrics table.
+# @param aggregate Aggregate scalar metrics.
+# @param uncertainty Uncertainty metrics.
 class ConditionSummary:
     """Aggregated metrics for one condition within one stage."""
 
@@ -186,6 +251,9 @@ class ConditionSummary:
     aggregate: Metrics
     uncertainty: Metrics
 
+    # @brief Convert summary to a flat dictionary row.
+    # @param self Instance pointer.
+    # @return Flat dictionary representation.
     def to_record(self) -> dict[str, Any]:
         return {
             "stage": self.stage,
@@ -197,6 +265,10 @@ class ConditionSummary:
 
 
 @dataclass(frozen=True, slots=True)
+# @brief Inspectable analysis plan built before write side effects.
+# @param stage Stage key.
+# @param trials Selected trial tuple.
+# @param outdir Output directory.
 class AnalysisPlan:
     """Inspectable plan of trials to execute before any write side effects."""
 
@@ -204,6 +276,9 @@ class AnalysisPlan:
     trials: tuple[TrialSpec, ...]
     outdir: Path
 
+    # @brief Convert analysis plan to a serializable dictionary.
+    # @param self Instance pointer.
+    # @return Plan dictionary.
     def to_record(self) -> dict[str, Any]:
         return {
             "stage": self.stage,
@@ -213,13 +288,16 @@ class AnalysisPlan:
         }
 
 
+# @brief Base class for user-facing analysis errors.
 class HandgripAnalysisError(Exception):
     """Base class for user-facing analysis errors."""
 
 
+# @brief Error raised when a manifest cannot be normalized or validated.
 class ManifestError(HandgripAnalysisError):
     """Raised when a manifest cannot be normalized or validated."""
 
 
+# @brief Error raised when a requested stage cannot be executed.
 class StageExecutionError(HandgripAnalysisError):
     """Raised when a requested stage cannot be executed."""

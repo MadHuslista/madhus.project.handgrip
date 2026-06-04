@@ -1,4 +1,8 @@
+# @package handgrip_analysis.stages.stage1_warmup
+# @brief Stage 1 startup warm-up and stabilization analyzer.
+
 """Stage 1 — startup warm-up / zero stabilisation."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -9,11 +13,18 @@ from ..io import load_capture, sampling_summary
 from .common import base_metrics, flatten_sampling, summarize_default
 
 
+# @brief Compute mean over finite values only.
+# @param values Input numeric array.
+# @return Finite mean or NaN.
 def _finite_mean(values: np.ndarray) -> float:
     finite = values[np.isfinite(values)]
     return float(np.mean(finite)) if finite.size else float("nan")
 
 
+# @brief Analyze one Stage 1 warm-up trial.
+# @param spec Trial specification.
+# @param cfg Stage configuration.
+# @return TrialResult with warm-up metrics.
 def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     cap = load_capture(spec.path, time_source=cfg.time_source)
     channel = spec.channel or cfg.channel
@@ -37,5 +48,9 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     return TrialResult(spec=spec, metrics=metrics)
 
 
+# @brief Summarize Stage 1 trial results by condition.
+# @param results Trial result list.
+# @param cfg Stage configuration.
+# @return Condition summary list.
 def summarize_trials(results: list[TrialResult], cfg: StageConfig) -> list[ConditionSummary]:
     return summarize_default(results, cfg)

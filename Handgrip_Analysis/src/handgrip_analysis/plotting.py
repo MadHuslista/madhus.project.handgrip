@@ -1,3 +1,6 @@
+# @package handgrip_analysis.plotting
+# @brief Plot generation for the manifest-driven analysis pipeline.
+
 """
 Plot generation for the manifest-driven analysis pipeline.
 
@@ -6,6 +9,7 @@ stage analyzers.  It reloads captures from the already-validated
 :class:`TrialSpec` objects and writes PNG artifacts into the standard Phase 3
 figure directories without changing scalar metrics or tables.
 """
+
 from __future__ import annotations
 
 import logging
@@ -56,6 +60,10 @@ PLOT_DPI: int = 150
 MAX_POINTS = 8_000
 
 
+##
+# @brief Resolve effective plotting configuration for a stage run.
+# @param cfg Stage configuration.
+# @return Plot configuration used for figure generation.
 def _resolve_plot_cfg(cfg: StageConfig) -> PlotConfig:
     """Extract PlotConfig from StageConfig if available, else return defaults."""
     if hasattr(cfg, "dsp") and isinstance(cfg.dsp, DSPConfig):
@@ -63,16 +71,30 @@ def _resolve_plot_cfg(cfg: StageConfig) -> PlotConfig:
     return PlotConfig()
 
 
+##
+# @brief Convert text into a filesystem-safe compact slug.
+# @param text Input text.
+# @return Slug-safe string token.
 def _slug(text: str) -> str:
     """Return a filesystem-safe, compact slug."""
     out = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(text).strip())
     return out.strip("-") or "item"
 
 
+##
+# @brief Build a deterministic slug for one trial spec.
+# @param spec Trial metadata.
+# @return Trial identifier slug used in output filenames.
 def _trial_slug(spec: TrialSpec) -> str:
     return _slug(f"{spec.session_id}_{spec.stage}_{spec.condition}_{spec.trial_id}")
 
 
+##
+# @brief Downsample paired arrays for plotting performance.
+# @param x X-axis samples.
+# @param y Y-axis samples.
+# @param max_points Maximum retained points.
+# @return Downsampled x/y arrays.
 def _downsample_xy(x: np.ndarray, y: np.ndarray, max_points: int = MAX_POINTS) -> tuple[np.ndarray, np.ndarray]:
     """Return a deterministic plotting subset without modifying analysis data."""
     if x.size <= max_points:
@@ -81,12 +103,24 @@ def _downsample_xy(x: np.ndarray, y: np.ndarray, max_points: int = MAX_POINTS) -
     return x[idx], y[idx]
 
 
+##
+# @brief Resolve and fetch one signal channel from capture data.
+# @param cap Loaded capture data.
+# @param channel Requested channel name.
+# @return Signal vector for plotting.
 def _series(cap: CaptureData, channel: str) -> np.ndarray:
     if channel == "filtered" and FILTERED_COLUMN not in cap.df.columns:
         channel = "raw"
     return cap.series(channel)  # type: ignore[arg-type]
 
 
+##
+# @brief Save a matplotlib figure and register its artifact path.
+# @param fig Figure instance.
+# @param path Destination image path.
+# @param paths Artifact map to update.
+# @param key_prefix Artifact key name.
+# @param dpi Output DPI.
 def _save(fig: plt.Figure, path: Path, paths: dict[str, Path], key_prefix: str, dpi: int = PLOT_DPI) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
@@ -96,6 +130,12 @@ def _save(fig: plt.Figure, path: Path, paths: dict[str, Path], key_prefix: str, 
     log.info("plotting: wrote %s", path)
 
 
+##
+# @brief Render per-trial Stage 1 warmup diagnostic figures.
+# @param result Trial analysis result.
+# @param cfg Stage configuration.
+# @param outdir Output directory.
+# @param paths Artifact map to update.
 def _plot_stage1_trial(result: TrialResult, cfg: StageConfig, outdir: Path, paths: dict[str, Path]) -> None:
     spec = result.spec
     cap = load_capture(spec.path, time_source=cfg.time_source)
@@ -131,6 +171,11 @@ def _plot_stage1_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
     _save(fig, outdir / f"{_trial_slug(spec)}_warmup.png", paths, f"figure_{_trial_slug(spec)}_warmup")
 
 
+##
+# @brief Render aggregate Stage 1 ready-time and noise summary figures.
+# @param results Trial results for the stage.
+# @param outdir Aggregate-figure output directory.
+# @param paths Artifact map to update.
 def _plot_stage1_aggregate(results: Sequence[TrialResult], outdir: Path, paths: dict[str, Path]) -> None:
     rows = []
     for r in results:
@@ -164,6 +209,10 @@ def _plot_stage1_aggregate(results: Sequence[TrialResult], outdir: Path, paths: 
     _save(fig2, outdir / "stage1_final_std_by_trial.png", paths, "figure_stage1_final_std_by_trial")
 
 
+##
+# @brief Extract PSD-like tables from a trial result.
+# @param result Trial result containing tabular artifacts.
+# @return List of (table_name, dataframe) tuples for PSD plots.
 def _psd_tables(result: TrialResult) -> list[tuple[str, pd.DataFrame]]:
     return [
         (name, table)
@@ -172,6 +221,10 @@ def _psd_tables(result: TrialResult) -> list[tuple[str, pd.DataFrame]]:
     ]
 
 
+##
+# @brief Extract Allan-deviation tables from a trial result.
+# @param result Trial result containing tabular artifacts.
+# @return List of (table_name, dataframe) tuples for Allan plots.
 def _allan_tables(result: TrialResult) -> list[tuple[str, pd.DataFrame]]:
     return [
         (name, table)
@@ -180,7 +233,16 @@ def _allan_tables(result: TrialResult) -> list[tuple[str, pd.DataFrame]]:
     ]
 
 
-def _plot_time_hist_trial(result: TrialResult, cfg: StageConfig, outdir: Path, paths: dict[str, Path], stage_title: str) -> None:
+##
+# @brief Render per-trial time-series and histogram figures.
+# @param result Trial analysis result.
+# @param cfg Stage configuration.
+# @param outdir Output directory.
+# @param paths Artifact map to update.
+# @param stage_title Stage title for figure labels.
+def _plot_time_hist_trial(
+    result: TrialResult, cfg: StageConfig, outdir: Path, paths: dict[str, Path], stage_title: str
+) -> None:
     spec = result.spec
     cap = load_capture(spec.path, time_source=cfg.time_source)
     channels = cfg.channels or (spec.channel or cfg.channel,)
@@ -216,6 +278,12 @@ def _plot_time_hist_trial(result: TrialResult, cfg: StageConfig, outdir: Path, p
     _save(fig_hist, outdir / f"{_trial_slug(spec)}_histogram.png", paths, f"figure_{_trial_slug(spec)}_histogram")
 
 
+##
+# @brief Render per-trial PSD and Allan deviation figures.
+# @param result Trial analysis result.
+# @param outdir Output directory.
+# @param paths Artifact map to update.
+# @param stage_title Stage title for figure labels.
 def _plot_psd_allan_trial(result: TrialResult, outdir: Path, paths: dict[str, Path], stage_title: str) -> None:
     spec = result.spec
     psd_items = _psd_tables(result)
@@ -234,7 +302,9 @@ def _plot_psd_allan_trial(result: TrialResult, outdir: Path, paths: dict[str, Pa
     if allan_items:
         fig, ax = plt.subplots(figsize=FIGSIZE_COMPACT)
         for name, df in allan_items:
-            ax.loglog(df["tau_s"].to_numpy(float), df["allan_deviation"].to_numpy(float), label=name.replace("_allan", ""))
+            ax.loglog(
+                df["tau_s"].to_numpy(float), df["allan_deviation"].to_numpy(float), label=name.replace("_allan", "")
+            )
         ax.set_title(f"{stage_title} — Allan deviation — {spec.session_id} {spec.trial_id}")
         ax.set_xlabel("Tau [s]")
         ax.set_ylabel("Allan deviation")
@@ -243,6 +313,12 @@ def _plot_psd_allan_trial(result: TrialResult, outdir: Path, paths: dict[str, Pa
         _save(fig, outdir / f"{_trial_slug(spec)}_allan_deviation.png", paths, f"figure_{_trial_slug(spec)}_allan")
 
 
+##
+# @brief Render aggregate median-PSD overlays grouped by condition/table.
+# @param results Stage trial results.
+# @param outdir Aggregate-figure output directory.
+# @param paths Artifact map to update.
+# @param stage_title Stage title for figure labels.
 def _plot_psd_aggregate(results: Sequence[TrialResult], outdir: Path, paths: dict[str, Path], stage_title: str) -> None:
     by_key: dict[tuple[str, str], list[pd.DataFrame]] = {}
     for result in results:
@@ -270,9 +346,20 @@ def _plot_psd_aggregate(results: Sequence[TrialResult], outdir: Path, paths: dic
         ax.set_ylabel("PSD [signal²/Hz]")
         ax.grid(True, which="both")
         ax.legend()
-        _save(fig, outdir / f"{_slug(condition)}_{_slug(table_name)}_median_psd.png", paths, f"figure_{_slug(condition)}_{_slug(table_name)}_median_psd")
+        _save(
+            fig,
+            outdir / f"{_slug(condition)}_{_slug(table_name)}_median_psd.png",
+            paths,
+            f"figure_{_slug(condition)}_{_slug(table_name)}_median_psd",
+        )
 
 
+##
+# @brief Render per-trial Stage 3 drift and detrended plots.
+# @param result Trial analysis result.
+# @param cfg Stage configuration.
+# @param outdir Output directory.
+# @param paths Artifact map to update.
 def _plot_stage3_trial(result: TrialResult, cfg: StageConfig, outdir: Path, paths: dict[str, Path]) -> None:
     spec = result.spec
     cap = load_capture(spec.path, time_source=cfg.time_source)
@@ -302,9 +389,23 @@ def _plot_stage3_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
     _save(fig, outdir / f"{_trial_slug(spec)}_loaded_drift.png", paths, f"figure_{_trial_slug(spec)}_loaded_drift")
 
 
-def _plot_metric_scatter(results: Sequence[TrialResult], outdir: Path, paths: dict[str, Path], metric: str, title: str, ylabel: str) -> None:
+##
+# @brief Render a generic per-trial scatter chart for one metric.
+# @param results Stage trial results.
+# @param outdir Output directory.
+# @param paths Artifact map to update.
+# @param metric Metric key from TrialResult.metrics.
+# @param title Plot title.
+# @param ylabel Y-axis label.
+def _plot_metric_scatter(
+    results: Sequence[TrialResult], outdir: Path, paths: dict[str, Path], metric: str, title: str, ylabel: str
+) -> None:
     rows = [
-        {"trial": f"{r.spec.session_id}/{r.spec.trial_id}", "condition": r.spec.condition, "value": r.metrics.get(metric, np.nan)}
+        {
+            "trial": f"{r.spec.session_id}/{r.spec.trial_id}",
+            "condition": r.spec.condition,
+            "value": r.metrics.get(metric, np.nan),
+        }
         for r in results
     ]
     df = pd.DataFrame(rows)
@@ -320,6 +421,12 @@ def _plot_metric_scatter(results: Sequence[TrialResult], outdir: Path, paths: di
     _save(fig, outdir / f"{_slug(metric)}_by_trial.png", paths, f"figure_{_slug(metric)}_by_trial")
 
 
+##
+# @brief Render per-trial Stage 4 event overlay figure.
+# @param result Trial analysis result.
+# @param cfg Stage configuration.
+# @param outdir Output directory.
+# @param paths Artifact map to update.
 def _plot_stage4_trial(result: TrialResult, cfg: StageConfig, outdir: Path, paths: dict[str, Path]) -> None:
     spec = result.spec
     cap = load_capture(spec.path, time_source=cfg.time_source)
@@ -347,7 +454,15 @@ def _plot_stage4_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
     _save(fig, outdir / f"{_trial_slug(spec)}_events.png", paths, f"figure_{_trial_slug(spec)}_events")
 
 
-def _plot_stage4_aggregate(results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path]) -> None:
+##
+# @brief Render aggregate Stage 4 event-aligned and metric summary figures.
+# @param results Stage trial results.
+# @param cfg Stage configuration.
+# @param outdir Aggregate-figure output directory.
+# @param paths Artifact map to update.
+def _plot_stage4_aggregate(
+    results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path]
+) -> None:
     # Event-aligned overlay for the first event of each dynamic trial.
     fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
     plotted = False
@@ -378,9 +493,15 @@ def _plot_stage4_aggregate(results: Sequence[TrialResult], cfg: StageConfig, out
         plt.close(fig)
 
     _plot_metric_scatter(results, outdir, paths, "peak_value_max", "Stage 4 — peak value by trial", "Peak value")
-    _plot_metric_scatter(results, outdir, paths, "rise_10_90_s_median", "Stage 4 — rise time by trial", "Rise 10–90 [s]")
+    _plot_metric_scatter(
+        results, outdir, paths, "rise_10_90_s_median", "Stage 4 — rise time by trial", "Rise 10–90 [s]"
+    )
 
 
+##
+# @brief Concatenate available Stage 6 filter-metrics tables.
+# @param results Stage trial results.
+# @return Combined filter metrics table.
 def _stage6_filter_tables(results: Sequence[TrialResult]) -> pd.DataFrame:
     frames = []
     for result in results:
@@ -390,13 +511,24 @@ def _stage6_filter_tables(results: Sequence[TrialResult]) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
 
+##
+# @brief Compute composite ranking scores for Stage 6 filter candidates.
+# @param filter_df Long-form filter metrics table.
+# @param cfg Stage configuration containing filter weights.
+# @return Ranked score table sorted by ascending composite score.
 def _score_from_filter_table(filter_df: pd.DataFrame, cfg: StageConfig) -> pd.DataFrame:
     if filter_df.empty:
         return pd.DataFrame()
     rows = []
     for filter_name, group in filter_df.groupby("filter", dropna=False):
         row: dict[str, object] = {"filter": filter_name}
-        for col in ["rest_std_norm", "peak_relative_error", "rise_relative_error", "peak_time_shift_s", "dfdt_deviation"]:
+        for col in [
+            "rest_std_norm",
+            "peak_relative_error",
+            "rise_relative_error",
+            "peak_time_shift_s",
+            "dfdt_deviation",
+        ]:
             if col in group.columns:
                 values = pd.to_numeric(group[col], errors="coerce").dropna()
                 row[f"{col}__median"] = float(values.median()) if not values.empty else np.nan
@@ -422,6 +554,12 @@ def _score_from_filter_table(filter_df: pd.DataFrame, cfg: StageConfig) -> pd.Da
     return out
 
 
+##
+# @brief Render per-trial Stage 6 input-signal figure.
+# @param result Trial analysis result.
+# @param cfg Stage configuration.
+# @param outdir Output directory.
+# @param paths Artifact map to update.
 def _plot_stage6_trial(result: TrialResult, cfg: StageConfig, outdir: Path, paths: dict[str, Path]) -> None:
     spec = result.spec
     cap = load_capture(spec.path, time_source=cfg.time_source)
@@ -437,6 +575,13 @@ def _plot_stage6_trial(result: TrialResult, cfg: StageConfig, outdir: Path, path
     _save(fig, outdir / f"{_trial_slug(spec)}_input_signal.png", paths, f"figure_{_trial_slug(spec)}_input_signal")
 
 
+##
+# @brief Render representative Stage 6 raw-vs-top-filter design overlay.
+# @param results Stage trial results.
+# @param cfg Stage configuration.
+# @param outdir Output directory.
+# @param paths Artifact map to update.
+# @param ranking Ranked filter score table.
 def _plot_stage6_design_overlay(
     results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path], ranking: pd.DataFrame
 ) -> None:
@@ -457,7 +602,7 @@ def _plot_stage6_design_overlay(
         spec = spec_map.get(name)
         if spec is None:
             continue
-        y_f = apply_filter_spec(y, cap.fs_estimate_hz, spec)
+        y_f = apply_filter_spec(y, cap.fs_estimate_hz, spec, time_s=cap.time_s)
         xf, yf = _downsample_xy(cap.time_s, y_f)
         ax.plot(xf, yf, label=name, alpha=0.9)
     ax.set_title(
@@ -472,7 +617,15 @@ def _plot_stage6_design_overlay(
     )
 
 
-def _plot_stage6_aggregate(results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path]) -> None:
+##
+# @brief Render aggregate Stage 6 ranking and PSD comparison figures.
+# @param results Stage trial results.
+# @param cfg Stage configuration.
+# @param outdir Aggregate-figure output directory.
+# @param paths Artifact map to update.
+def _plot_stage6_aggregate(
+    results: Sequence[TrialResult], cfg: StageConfig, outdir: Path, paths: dict[str, Path]
+) -> None:
     filter_df = _stage6_filter_tables(results)
     ranking = _score_from_filter_table(filter_df, cfg)
     if not ranking.empty:
@@ -507,7 +660,7 @@ def _plot_stage6_aggregate(results: Sequence[TrialResult], cfg: StageConfig, out
     for name in ranking["filter"].astype(str).head(min(4, len(ranking))):
         if name not in spec_map:
             continue
-        y_f = apply_filter_spec(y, cap.fs_estimate_hz, spec_map[name])
+        y_f = apply_filter_spec(y, cap.fs_estimate_hz, spec_map[name], time_s=cap.time_s)
         f_f, p_f = welch_psd(y_f, cap.fs_estimate_hz)
         ax.semilogy(f_f, p_f, label=name)
     ax.set_title("Stage 6 — rest PSD raw vs top candidates")
@@ -518,12 +671,28 @@ def _plot_stage6_aggregate(results: Sequence[TrialResult], cfg: StageConfig, out
     _save(fig, outdir / "stage6_rest_psd_top_candidates.png", paths, "figure_stage6_rest_psd_top_candidates")
 
 
+##
+# @brief Render aggregate Stage 5 interference summary figures.
+# @param results Stage trial results.
+# @param outdir Aggregate-figure output directory.
+# @param paths Artifact map to update.
 def _plot_stage5_aggregate(results: Sequence[TrialResult], outdir: Path, paths: dict[str, Path]) -> None:
     _plot_psd_aggregate(results, outdir, paths, "Stage 5")
-    _plot_metric_scatter(results, outdir, paths, "top_peak_hz", "Stage 5 — top spectral peak by trial", "Frequency [Hz]")
+    _plot_metric_scatter(
+        results, outdir, paths, "top_peak_hz", "Stage 5 — top spectral peak by trial", "Frequency [Hz]"
+    )
     _plot_metric_scatter(results, outdir, paths, "robust_std", "Stage 5 — robust std by trial", "Robust std")
 
 
+##
+# @brief Generate per-trial and aggregate figures for one analysis stage.
+# @param plan Analysis plan metadata.
+# @param cfg Stage configuration.
+# @param results Per-trial analysis results.
+# @param summaries Per-condition summaries.
+# @param directories Output directory mapping.
+# @param plot_cfg Optional plotting configuration override.
+# @return Mapping of artifact keys to generated figure paths.
 def generate_stage_figures(
     plan: AnalysisPlan,
     cfg: StageConfig,
@@ -578,10 +747,21 @@ def generate_stage_figures(
         elif plan.stage == "stage2":
             _plot_psd_aggregate(results, aggregate, paths, "Stage 2")
             _plot_metric_scatter(results, aggregate, paths, "raw_std", "Stage 2 — raw std by trial", "Std")
-            _plot_metric_scatter(results, aggregate, paths, "raw_top_peak_hz", "Stage 2 — top spectral peak by trial", "Frequency [Hz]")
+            _plot_metric_scatter(
+                results, aggregate, paths, "raw_top_peak_hz", "Stage 2 — top spectral peak by trial", "Frequency [Hz]"
+            )
         elif plan.stage == "stage3":
-            _plot_metric_scatter(results, aggregate, paths, "drift_slope_per_min", "Stage 3 — drift slope by trial", "Slope [signal/min]")
-            _plot_metric_scatter(results, aggregate, paths, "return_to_zero_error", "Stage 3 — return-to-zero error by trial", "Post-pre mean")
+            _plot_metric_scatter(
+                results, aggregate, paths, "drift_slope_per_min", "Stage 3 — drift slope by trial", "Slope [signal/min]"
+            )
+            _plot_metric_scatter(
+                results,
+                aggregate,
+                paths,
+                "return_to_zero_error",
+                "Stage 3 — return-to-zero error by trial",
+                "Post-pre mean",
+            )
         elif plan.stage == "stage4":
             _plot_stage4_aggregate(results, cfg, aggregate, paths)
         elif plan.stage == "stage5":

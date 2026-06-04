@@ -6,7 +6,7 @@ import json
 import logging
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +40,9 @@ class MarkerEvent:
     lsl_time: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        # @brief Convert marker event to JSON-ready dictionary.
+        #  @param self Marker event instance.
+        #  @return Dictionary without empty optional fields.
         """Return a JSON-compatible dictionary without empty optional fields."""
 
         data = asdict(self)
@@ -111,7 +114,12 @@ class MarkerLogger:
         """Create, emit, and persist a marker event."""
 
         marker = MarkerEvent(event=event, session_id=self.session_id, **kwargs)
-        log.debug("Marker: %s (trial=%s, force=%.4g N)", event, kwargs.get("trial_id"), kwargs.get("target_force_N") or 0.0)
+        log.debug(
+            "Marker: %s (trial=%s, force=%.4g N)",
+            event,
+            kwargs.get("trial_id"),
+            kwargs.get("target_force_N") or 0.0,
+        )
         if self.outlet is not None:
             marker = self.outlet.push(marker)
         if self.config.write_ndjson:

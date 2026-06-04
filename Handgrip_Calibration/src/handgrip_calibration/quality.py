@@ -2,22 +2,31 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 import numpy as np
 import pandas as pd
 
 
 class RateMonitor:
+    # @brief Rolling sample-rate estimator using recent timestamps.
     """Rolling rate estimator based on sample timestamps."""
 
     def __init__(self, window_s: float = 10.0) -> None:
+        # @brief Initialize the rolling-rate monitor.
+        #  @param self RateMonitor instance.
+        #  @param window_s Time window in seconds for rate estimation.
+        #  @return None.
         self.window_s = float(window_s)
         self._timestamps: list[float] = []
         self.rate_hz: float = 0.0
 
     def add(self, timestamp_s: float) -> None:
+        # @brief Add a sample timestamp and update the estimated rate.
+        #  @param self RateMonitor instance.
+        #  @param timestamp_s Sample timestamp in seconds.
+        #  @return None.
         self._timestamps.append(float(timestamp_s))
         cutoff = timestamp_s - self.window_s
         while self._timestamps and self._timestamps[0] < cutoff:
@@ -48,6 +57,11 @@ def _as_float_array(values: Iterable[float]) -> np.ndarray:
 
 
 def compute_window_quality(df: pd.DataFrame, *, time_col: str, value_col: str) -> WindowQuality:
+    # @brief Compute timing and value stability metrics for a window.
+    #  @param df DataFrame slice representing a hold window.
+    #  @param time_col Timestamp column name.
+    #  @param value_col Signal value column name.
+    #  @return Structured quality metrics for the window.
     """Compute timing/stability metrics for a dataframe window."""
 
     if df.empty:
@@ -85,6 +99,9 @@ def compute_window_quality(df: pd.DataFrame, *, time_col: str, value_col: str) -
 
 
 def detect_sequence_gaps(seq: Iterable[float | int]) -> list[tuple[int, int, int]]:
+    # @brief Detect discontinuities in an integer-like sequence.
+    #  @param seq Sequence of sample indices.
+    #  @return Tuples of row index, previous value, and current value for each gap.
     """Detect gaps in a monotonically increasing integer sequence.
 
     Returns `(row_index, previous, current)` tuples for each discontinuity.
@@ -106,6 +123,11 @@ def interpolate_reference_to_target(
     reference_times: np.ndarray,
     reference_values: np.ndarray,
 ) -> np.ndarray:
+    # @brief Interpolate reference values at target timestamps without extrapolation.
+    #  @param target_times Target stream timestamps.
+    #  @param reference_times Reference stream timestamps.
+    #  @param reference_values Reference signal values.
+    #  @return Interpolated reference values aligned to target times.
     """Interpolate reference force values at target timestamps.
 
     Extrapolation is intentionally not allowed. Samples outside the reference

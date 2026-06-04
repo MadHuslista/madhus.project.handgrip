@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+# @package scripts.stage6_filter_design
+# @brief Stage 6a filter design benchmark for a single signal.
+
 """Stage 6a — Filter design: single-signal candidate benchmark."""
+
 from __future__ import annotations
 
 import logging
@@ -24,6 +28,11 @@ matplotlib.use("Agg")
 log = logging.getLogger(__name__)
 
 
+# @brief Read a required non-empty string value from Hydra config.
+# @param cfg Hydra configuration object.
+# @param key Config key to validate.
+# @return The required value converted to string.
+# @throws ValueError Raised when key is missing or empty.
 def _require_str(cfg: DictConfig, key: str) -> str:
     value = cfg.get(key)
     if value is None or not str(value).strip():
@@ -31,6 +40,9 @@ def _require_str(cfg: DictConfig, key: str) -> str:
     return str(value)
 
 
+# @brief Execute Stage 6a filter design benchmark and save outputs.
+# @param cfg Hydra configuration object.
+# @return None.
 @hydra.main(config_path="../conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
     setup_logging(level=cfg.logging.level, log_file=cfg.logging.file)
@@ -45,7 +57,9 @@ def main(cfg: DictConfig) -> None:
 
     ev_cfg = cfg.dsp.event_detection
     raw_metrics = best_event_metrics(
-        y, t, fs,
+        y,
+        t,
+        fs,
         baseline_s=ev_cfg.baseline_s,
         threshold_sigma=cfg.analysis.get("threshold_sigma", ev_cfg.threshold_sigma),
         min_duration_s=ev_cfg.min_duration_s,
@@ -73,9 +87,11 @@ def main(cfg: DictConfig) -> None:
     for spec in specs:
         name = spec["name"]
         log.info("Benchmarking filter: %s", name)
-        y_f = apply_filter_spec(y, fs, spec)
+        y_f = apply_filter_spec(y, fs, spec, time_s=t)
         m = best_event_metrics(
-            y_f, t, fs,
+            y_f,
+            t,
+            fs,
             baseline_s=ev_cfg.baseline_s,
             threshold_sigma=cfg.analysis.get("threshold_sigma", ev_cfg.threshold_sigma),
             min_duration_s=ev_cfg.min_duration_s,
@@ -90,15 +106,13 @@ def main(cfg: DictConfig) -> None:
             "peak_time_shift_s": m["peak_time_s"] - raw_metrics["peak_time_s"],
             "rise_10_90_shift_s": m["rise_10_90_s"] - raw_metrics["rise_10_90_s"],
             "max_dfdt_ratio_vs_raw": (
-                m["max_dfdt"] / raw_metrics["max_dfdt"]
-                if raw_metrics["max_dfdt"]
-                else float("nan")
+                m["max_dfdt"] / raw_metrics["max_dfdt"] if raw_metrics["max_dfdt"] else float("nan")
             ),
             "plateau_std_last20pct": m["plateau_std_last20pct"],
         }
         if rest is not None:
             _, y_rest, fs_rest = rest
-            y_rest_f = apply_filter_spec(y_rest, fs_rest, spec)
+            y_rest_f = apply_filter_spec(y_rest, fs_rest, spec, time_s=rest[0])
             row["rest_std"] = float(pd.Series(y_rest_f).std())
             f_rest, p_rest = welch_psd(y_rest_f, fs_rest)
             mask = (f_rest >= hf_lo) & (f_rest <= hf_hi)
@@ -110,18 +124,19 @@ def main(cfg: DictConfig) -> None:
         if f_f.size:
             ax_psd.semilogy(f_f, p_f, label=name, alpha=0.8)
 
-    df = pd.DataFrame(rows).reindex(
-        pd.Series(rows).apply(lambda r: abs(r["peak_error_vs_raw"])).sort_values().index
-    )
+    df = pd.DataFrame(rows).reindex(pd.Series(rows).apply(lambda r: abs(r["peak_error_vs_raw"])).sort_values().index)
     df.to_csv(outdir / "filter_comparison.csv", index=False)
 
-    save_json(outdir / "summary.json", {
-        "input": str(Path(input_path).resolve()),
-        "rest_input": str(Path(cfg.rest_input).resolve()) if cfg.get("rest_input") else None,
-        "fs_hz": fs,
-        "selected_event_raw_metrics": raw_metrics,
-        "n_candidates": len(specs),
-    })
+    save_json(
+        outdir / "summary.json",
+        {
+            "input": str(Path(input_path).resolve()),
+            "rest_input": str(Path(cfg.rest_input).resolve()) if cfg.get("rest_input") else None,
+            "fs_hz": fs,
+            "selected_event_raw_metrics": raw_metrics,
+            "n_candidates": len(specs),
+        },
+    )
 
     ax_time.set_title("Stage 6a — dynamic overlay (calibration signal)")
     ax_time.set_xlabel("Time [s]")

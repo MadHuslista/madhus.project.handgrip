@@ -1,3 +1,6 @@
+# @package handgrip_analysis.config
+# @brief Structured configuration dataclasses for handgrip-analysis.
+
 """
 Structured configuration dataclasses for handgrip-analysis.
 
@@ -13,6 +16,7 @@ or instantiate the individual sub-configs directly in tests and library code::
     from handgrip_analysis.config import DSPConfig, PlotConfig
 
 """
+
 from .dsp_config import DSPConfig, EventDetectionConfig, PlotConfig, PsdPeaksConfig, WelchConfig
 from .schema import AppConfig, LoggingConfig, register_configs
 

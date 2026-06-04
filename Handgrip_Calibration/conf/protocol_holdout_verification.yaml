@@ -2,12 +2,12 @@ session:
   root_dir: data/calibration
   operator: unknown
   purpose: independent_holdout_verification
-  notes: 'Reference PM58/acquisition-board sensor and Arduino/HX711 target sensor
-    in series. Component schemas: D2 + LSL v2.'
+  notes: 'Reference PM58/acquisition-board sensor and Arduino/HX711 target sensor in series. Component
+    schemas: D2 + LSL v2.'
   copy_component_configs:
   - ../LSL_Bridge/conf/config.yaml
   - ../LSL_Viewer/conf/config.yaml
-  - ../RS485_GUI/config.yaml
+  - ../RS485_GUI/config/config.yaml
 streams:
   target:
     name: HandgripTarget
@@ -15,22 +15,42 @@ streams:
     timeout_s: 5.0
     nominal_srate_hz: null
     channel_map:
-      seq: seq
-      clock: device_clock_us
-      raw: target_raw_count
-      filtered: target_filtered_units
-      current_units: target_current_units
-      status: target_status
+      seq:
+      - seq
+      - 0
+      clock:
+      - device_clock_us
+      - 1
+      raw:
+      - target_raw_count
+      - 2
+      filtered:
+      - target_filtered_units
+      - 4
+      current_units:
+      - target_current_units
+      - 3
+      status:
+      - target_status
+      - 5
   reference:
     name: HandgripReference
     type: Force
     timeout_s: 5.0
     nominal_srate_hz: 500
     channel_map:
-      seq: seq
-      clock: reference_clock_s
-      raw: reference_force_N
-      status: reference_status
+      seq:
+      - seq
+      - 0
+      clock:
+      - reference_clock_s
+      - 1
+      raw:
+      - reference_force_N
+      - 2
+      status:
+      - reference_status
+      - 3
 markers:
   stream_name: HandgripCalibrationMarkers
   stream_type: Markers
@@ -146,26 +166,40 @@ validation:
     max_rmse_N: 1.0
     max_abs_error_N: 2.0
     max_bias_N: 0.5
-
-# ── New top-level validated sub-configs ──────────────────────────────────────
 creep:
-  force_levels_N: [0.0, 80.0, 0.0]
-  durations_s: [120.0, 300.0, 300.0]
-  read_times_s: [30.0, 300.0]
-
+  force_levels_N:
+  - 0.0
+  - 80.0
+  - 0.0
+  durations_s:
+  - 120.0
+  - 300.0
+  - 300.0
+  read_times_s:
+  - 30.0
+  - 300.0
 dynamic:
   ramps:
-    - label: slow
-      count: 0
-      peak_force_N: 100.0
-      speed_N_per_s: 5.0
+  - label: slow
+    count: 0
+    peak_force_N: 100.0
+    speed_N_per_s: 5.0
   squeezes:
-    - label: fast_squeeze
-      count: 0
-      peak_force_N: 100.0
-      rest_s: 3.0
-
+  - label: fast_squeeze
+    count: 0
+    peak_force_N: 100.0
+    rest_s: 3.0
 holdout_thresholds:
   max_rmse_N: null
   max_abs_error_N: null
   max_bias_N: null
+calibration_artifact:
+  enabled: false
+  mode: direction_balanced_tail_median
+  window:
+    source: stable_window
+    tail_s: 2.0
+  grouping:
+    require_both_directions: true
+    outlier_method: mad
+    max_mad_z: 3.5

@@ -1,9 +1,9 @@
-"""Timing and clock-validation utilities.
-
-All functions here are **pure**: they accept numpy arrays and return arrays
-or dicts.  No side effects, no I/O, no logging.  This makes them trivially
-unit-testable without mocking.
-"""
+# @file
+# @brief Timing and clock-validation utilities.
+##
+# All functions here are pure: they accept numpy arrays and return arrays or
+# dicts. No side effects, no I/O, no logging. This makes them trivially
+# unit-testable without mocking.
 from __future__ import annotations
 
 import numpy as np
@@ -12,24 +12,9 @@ import numpy as np
 def lsl_interval_ms(
     timestamps_s: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, float, float]:
-    """Compute per-sample LSL inter-arrival intervals in milliseconds.
-
-    Parameters
-    ----------
-    timestamps_s:
-        1-D array of LSL timestamps in seconds.
-
-    Returns
-    -------
-    indices:
-        Integer indices into ``timestamps_s`` at which each interval ends.
-    dt_ms:
-        Interval values in milliseconds, parallel to ``indices``.
-    rate_hz:
-        Estimated sample rate from median inter-arrival interval (nan if < 2 samples).
-    mean_dt_ms:
-        Mean of ``dt_ms`` (nan if < 2 samples).
-    """
+    # @brief Compute per-sample LSL inter-arrival intervals in milliseconds.
+    # @param timestamps_s 1-D array of LSL timestamps in seconds.
+    # @return Indices, interval values, estimated rate, and mean interval.
     ts = np.asarray(timestamps_s, dtype=np.float64)
     finite = np.isfinite(ts)
     if np.count_nonzero(finite) < 2:
@@ -60,20 +45,10 @@ def clock_interval_ms(
     clock_values: np.ndarray,
     scale_to_ms: float,
 ) -> tuple[np.ndarray, np.ndarray, float, float]:
-    """Compute per-sample intervals from a device clock channel.
-
-    Parameters
-    ----------
-    clock_values:
-        1-D array of device clock values in arbitrary units.
-    scale_to_ms:
-        Multiplication factor to convert ``clock_values`` units to milliseconds.
-        For microseconds: ``scale_to_ms = 1e-3``.
-
-    Returns
-    -------
-    Same four-tuple as :func:`lsl_interval_ms`.
-    """
+    # @brief Compute per-sample intervals from a device clock channel.
+    # @param clock_values 1-D array of device clock values.
+    # @param scale_to_ms Multiplication factor to convert to milliseconds.
+    # @return Same four-tuple as lsl_interval_ms().
     values = np.asarray(clock_values, dtype=np.float64)
     finite = np.isfinite(values)
     if np.count_nonzero(finite) < 2:
@@ -106,30 +81,11 @@ def clock_validation_metrics(
     *,
     clock_scale_to_s: float,
 ) -> dict[str, float]:
-    """Compare LSL sample timestamps against a diagnostic clock channel.
-
-    The diagnostic clock is not the LSL authority.  For the reference stream
-    ``rs485_clock`` is in LSL seconds so absolute offset is meaningful; for
-    the target stream ``device_clock_us`` is device-local so only
-    interval/rate agreement is meaningful.
-
-    Parameters
-    ----------
-    lsl_timestamps_s:
-        LSL wall-clock timestamps in seconds.
-    clock_values:
-        Device/board clock channel values.
-    clock_scale_to_s:
-        Multiply by this factor to convert ``clock_values`` to seconds.
-        Typical values: ``1.0`` (already seconds), ``1e-6`` (microseconds).
-
-    Returns
-    -------
-    dict with keys:
-        ``lsl_rate_hz``, ``clock_rate_hz``, ``median_dt_error_ms``,
-        ``clock_vs_lsl_span_error_ms``, ``median_clock_minus_lsl_s``.
-        All values are ``float("nan")`` when there is insufficient data.
-    """
+    # @brief Compare LSL sample timestamps against a diagnostic clock channel.
+    # @param lsl_timestamps_s LSL wall-clock timestamps in seconds.
+    # @param clock_values Device or board clock channel values.
+    # @param clock_scale_to_s Scale factor converting clock_values to seconds.
+    # @return Metrics dict with rate and drift comparisons.
     _nan_result: dict[str, float] = {
         "lsl_rate_hz": float("nan"),
         "clock_rate_hz": float("nan"),

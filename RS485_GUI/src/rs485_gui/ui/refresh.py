@@ -8,6 +8,7 @@ All NiceGUI element handles are captured via closure — no globals.
 
 Dependency chain: state, ui/plots, core/signals, core/sampling, constants
 """
+
 from __future__ import annotations
 
 import logging
@@ -29,6 +30,30 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
+# @brief Build refresh callback.
+#
+#  @param app_state Parameter description.
+#  @param status_label Parameter description.
+#  @param connection_badge Parameter description.
+#  @param raw_log_area Parameter description.
+#  @param interpreted_log_area Parameter description.
+#  @param event_log_area Parameter description.
+#  @param plot Parameter description.
+#  @param sampling_rate_label Parameter description.
+#  @param signal_metadata_label Parameter description.
+#  @param board_cfg_preview Parameter description.
+#  @param signal_select Parameter description.
+#  @param mode_select Parameter description.
+#  @param baud_select Parameter description.
+#  @param address_input Parameter description.
+#  @param parity_select Parameter description.
+#  @param stopbits_select Parameter description.
+#  @param active_freq_select Parameter description.
+#  @param advanced_actions_expansion Parameter description.
+#  @param advanced_action_buttons Parameter description.
+#  @param plot_cache Parameter description.
+#  @param refresh_counter Parameter description.
+#  @return Constructed object for this operation.
 def build_refresh_callback(
     app_state: AppState,
     *,
@@ -57,12 +82,14 @@ def build_refresh_callback(
 
     cfg = app_state.cfg
 
+    # @brief Refresh ui.
+    #
     def refresh_ui() -> None:
-        refresh_counter['count'] += 1
-        count = refresh_counter['count']
+        refresh_counter["count"] += 1
+        count = refresh_counter["count"]
 
         # ---- Status / connection badge ----
-        status_text = f'Status: {app_state.status_text}'
+        status_text = f"Status: {app_state.status_text}"
         if status_label.text != status_text:
             status_label.text = status_text
             status_label.update()
@@ -78,13 +105,25 @@ def build_refresh_callback(
         # ---- Log text areas ----
         log_stride = max(1, int(cfg.ui.log_update_every_n_refreshes))
         if (count % log_stride) == 0:
-            raw_items = list(app_state.raw_log)[:visible_log] if visible_log > 0 else list(app_state.raw_log)
-            interp_items = list(app_state.interpreted_log)[:visible_log] if visible_log > 0 else list(app_state.interpreted_log)
-            event_items = list(app_state.event_log)[:visible_event] if visible_event > 0 else list(app_state.event_log)
+            raw_items = (
+                list(app_state.raw_log)[:visible_log]
+                if visible_log > 0
+                else list(app_state.raw_log)
+            )
+            interp_items = (
+                list(app_state.interpreted_log)[:visible_log]
+                if visible_log > 0
+                else list(app_state.interpreted_log)
+            )
+            event_items = (
+                list(app_state.event_log)[:visible_event]
+                if visible_event > 0
+                else list(app_state.event_log)
+            )
 
-            raw_text = build_log_text(raw_items, '\n', max_log_chars)
-            interp_text = build_log_text(interp_items, '\n', max_log_chars)
-            event_text = build_log_text(event_items, '\n', max_event_chars)
+            raw_text = build_log_text(raw_items, "\n", max_log_chars)
+            interp_text = build_log_text(interp_items, "\n", max_log_chars)
+            event_text = build_log_text(event_items, "\n", max_event_chars)
 
             if raw_log_area.value != raw_text:
                 raw_log_area.value = raw_text
@@ -109,15 +148,15 @@ def build_refresh_callback(
             skip_unchanged = bool(cfg.ui.plot_skip_if_unchanged)
             if (
                 not skip_unchanged
-                or current_version != plot_cache['version']
-                or current_signal_key != plot_cache['signal_key']
-                or current_mode != plot_cache['mode']
+                or current_version != plot_cache["version"]
+                or current_signal_key != plot_cache["signal_key"]
+                or current_mode != plot_cache["mode"]
             ):
                 plot.figure = build_plot_figure(app_state)
                 plot.update()
-                plot_cache['version'] = current_version
-                plot_cache['signal_key'] = current_signal_key
-                plot_cache['mode'] = current_mode
+                plot_cache["version"] = current_version
+                plot_cache["signal_key"] = current_signal_key
+                plot_cache["mode"] = current_mode
 
         # ---- Sampling rate ----
         sampling_stride = max(1, int(cfg.ui.sampling_update_every_n_refreshes))
@@ -140,18 +179,18 @@ def build_refresh_callback(
                 )
             )
             sampling_text = (
-                f'Target acquisition rate: {format_rate(target_hz)}\n'
-                f'Measured acquisition mean: {format_rate(mean_hz)}\n'
-                f'Measured acquisition std-dev: {format_rate(std_hz)}\n'
-                f'Acquisition window: last {window_count} intervals / '
-                f'configured {int(cfg.ui.sampling_rate_window_samples)}\n'
-                f'Frames received from transport: {received_count}\n'
-                f'Frames dropped by acquisition max-rate limiter: {dropped_count}\n'
-                f'Configured max processed acquisition rate: {format_rate(max_hz)}\n'
-                f'Display/render mean: {format_rate(display_mean_hz)}\n'
-                f'Display/render std-dev: {format_rate(display_std_hz)}\n'
-                f'Display window: last {display_window_count} intervals; '
-                f'display limiter: {format_rate(display_max_hz)}'
+                f"Target acquisition rate: {format_rate(target_hz)}\n"
+                f"Measured acquisition mean: {format_rate(mean_hz)}\n"
+                f"Measured acquisition std-dev: {format_rate(std_hz)}\n"
+                f"Acquisition window: last {window_count} intervals / "
+                f"configured {int(cfg.ui.sampling_rate_window_samples)}\n"
+                f"Frames received from transport: {received_count}\n"
+                f"Frames dropped by acquisition max-rate limiter: {dropped_count}\n"
+                f"Configured max processed acquisition rate: {format_rate(max_hz)}\n"
+                f"Display/render mean: {format_rate(display_mean_hz)}\n"
+                f"Display/render std-dev: {format_rate(display_std_hz)}\n"
+                f"Display window: last {display_window_count} intervals; "
+                f"display limiter: {format_rate(display_max_hz)}"
             )
             if sampling_rate_label.text != sampling_text:
                 sampling_rate_label.text = sampling_text
@@ -163,9 +202,7 @@ def build_refresh_callback(
             with app_state.frame_lock:
                 latest_frame = app_state.latest_frame
                 frame_history = list(app_state.frame_history)
-            signal_metadata_text = build_signal_metadata_text(
-                latest_frame, frame_history, cfg
-            )
+            signal_metadata_text = build_signal_metadata_text(latest_frame, frame_history, cfg)
             if signal_metadata_label.text != signal_metadata_text:
                 signal_metadata_label.text = signal_metadata_text
                 signal_metadata_label.update()
@@ -176,16 +213,16 @@ def build_refresh_callback(
             baud_code = next(
                 (k for k, v in BAUD_CODE_TO_VALUE.items() if v == int(baud_select.value)), None
             )
-            parity_code = {'N': 0, 'E': 1, 'O': 2}.get(str(parity_select.value), '?')
+            parity_code = {"N": 0, "E": 1, "O": 2}.get(str(parity_select.value), "?")
             stop_code = int(stopbits_select.value)
             active_code = int(active_freq_select.value)
             board_cfg_text = (
-                f'500.Ar = {int(address_input.value)}\n'
-                f'501.br = {baud_code}  # {int(baud_select.value)} bps\n'
-                f'502.Vb = {parity_code}  # {parity_select.value}\n'
-                f'503.so = {stop_code}\n'
-                f'504.AS = {0 if str(mode_select.value) == "modbus_rtu" else 1}\n'
-                f'505.AF = {active_code}  # {ACTIVE_SEND_FREQ_CODE_TO_VALUE[active_code]} Hz\n'
+                f"500.Ar = {int(address_input.value)}\n"
+                f"501.br = {baud_code}  # {int(baud_select.value)} bps\n"
+                f"502.Vb = {parity_code}  # {parity_select.value}\n"
+                f"503.so = {stop_code}\n"
+                f"504.AS = {0 if str(mode_select.value) == 'modbus_rtu' else 1}\n"
+                f"505.AF = {active_code}  # {ACTIVE_SEND_FREQ_CODE_TO_VALUE[active_code]} Hz\n"
             )
             if board_cfg_preview.value != board_cfg_text:
                 board_cfg_preview.value = board_cfg_text
@@ -194,7 +231,7 @@ def build_refresh_callback(
         # ---- Controls enable/disable ----
         controls_stride = max(1, int(cfg.ui.controls_update_every_n_refreshes))
         if (count % controls_stride) == 0:
-            advanced_enabled = str(mode_select.value) == 'modbus_rtu'
+            advanced_enabled = str(mode_select.value) == "modbus_rtu"
             try:
                 if advanced_enabled:
                     advanced_actions_expansion.enable()

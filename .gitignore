@@ -87,3 +87,11 @@ LabRecorder/Data/
 **/.coverage
 !Handgrip_Analysis/data/calibration_signals/
 !Handgrip_Analysis/data/manifests/
+.doxygen
+*.zip
+*.claude
+*.agents
+*.codex
+graphify-out/
+.augment
+*.github

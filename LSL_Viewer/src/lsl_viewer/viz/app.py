@@ -1,17 +1,14 @@
-"""
-NiceGUI application factory and event-loop runners.
-
-This module replaces ``runners/live.py`` and ``runners/replay.py``.
-The ``while/plt.pause()`` event loops are replaced by NiceGUI ``ui.timer()``
-callbacks, which run in the asyncio event loop without stealing OS focus.
-
-Root cause fix
---------------
-``plt.pause()`` called ``QWidget.raise_()`` + ``QWidget.activateWindow()``
-on every frame via the Qt5Agg backend, stealing keyboard focus at 20 Hz.
-NiceGUI renders in a browser tab served over localhost; no native OS window
-is created, so focus stealing is architecturally impossible.
-"""
+# @file
+# @brief NiceGUI application factory and event-loop runners.
+##
+# This module replaces runners/live.py and runners/replay.py. The while/
+# plt.pause() event loops are replaced by NiceGUI ui.timer() callbacks, which
+# run in the asyncio event loop without stealing OS focus.
+##
+# Root cause fix: plt.pause() called QWidget.raise_() and QWidget.activateWindow()
+# on every frame via the Qt5Agg backend, stealing keyboard focus at 20 Hz.
+# NiceGUI renders in a browser tab served over localhost; no native OS window
+# is created, so focus stealing is architecturally impossible.
 
 from __future__ import annotations
 
@@ -47,12 +44,10 @@ def _slice_dual_after_cutoffs(
     window: DualWindow,
     state: ViewerState,
 ) -> DualWindow | None:
-    """
-    Remove samples that predate the live-reset cutoff timestamps.
-
-    After the user presses the clear key, only samples newer than the cutoff
-    are rendered so previously buffered data does not reappear.
-    """
+    # @brief Remove samples that predate the live-reset cutoff timestamps.
+    # @param window Current dual window.
+    # @param state Viewer state.
+    # @return Window trimmed to the active cutoffs, or None.
     target = window.target
     reference = window.reference
 
@@ -93,12 +88,13 @@ def _establish_live_cutoff(
     reference_layout: object,
     state: ViewerState,
 ) -> None:
-    """
-    Record the latest buffered timestamps as post-clear cutoffs.
-
-    After a manual clear or pause-resume, only samples arriving after these
-    cutoffs are rendered so the display starts fresh.
-    """
+    # @brief Record the latest buffered timestamps as post-clear cutoffs.
+    # @param target_stream Connected target stream.
+    # @param reference_stream Connected reference stream.
+    # @param cfg Hydra configuration.
+    # @param target_layout Target layout.
+    # @param reference_layout Reference layout.
+    # @param state Viewer state.
     latest = fetch_live_window(target_stream, reference_stream, cfg, target_layout, reference_layout)
     if latest is not None and latest.target is not None and latest.target.timestamps_s.size:
         state.target_cutoff_s = float(np.nanmax(latest.target.timestamps_s))
@@ -133,7 +129,15 @@ def _live_tick(
     ch: ChartHandles,
     validate_reference: bool,
 ) -> None:
-    """Called by ``ui.timer`` every ``refresh_s`` seconds in live mode."""
+    # @brief Live-mode timer callback.
+    # @param cfg Hydra configuration.
+    # @param target_stream Connected target stream.
+    # @param reference_stream Connected reference stream.
+    # @param target_layout Target layout.
+    # @param reference_layout Reference layout.
+    # @param state Viewer state.
+    # @param ch Chart handle bundle.
+    # @param validate_reference Whether reference validation is enabled.
     if state.live_paused:
         return
 
@@ -175,7 +179,13 @@ def _replay_tick(
     ch: ChartHandles,
     mode: str,
 ) -> None:
-    """Called by ``ui.timer`` every ``refresh_s`` seconds in replay mode."""
+    # @brief Replay-mode timer callback.
+    # @param cfg Hydra configuration.
+    # @param replay_data Pre-loaded replay data.
+    # @param replay_start_wall Mutable container holding the wall-clock start.
+    # @param state Viewer state.
+    # @param ch Chart handle bundle.
+    # @param mode Replay mode string.
     if state.replay_finished:
         return
 
@@ -219,25 +229,10 @@ def _replay_tick(
 
 
 def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
-    """
-    Run the viewer in live LSL streaming mode via NiceGUI.
-
-    Replaces ``runners/live.py:run_live_mode()``.  The ``while/plt.pause()``
-    event loop is replaced by a ``ui.timer()`` callback so the process never
-    steals OS focus.
-
-    Parameters
-    ----------
-    cfg:
-        Hydra configuration (fully resolved).
-    validate_reference:
-        When ``True`` the mode label is ``"live_with_reference_validation"``.
-
-    Returns
-    -------
-    Exit code (0 on clean exit).
-
-    """
+    # @brief Run the viewer in live LSL streaming mode via NiceGUI.
+    # @param cfg Fully resolved Hydra configuration.
+    # @param validate_reference Whether reference validation is enabled.
+    # @return Exit code.
     target_stream, reference_stream, target_layout, reference_layout = build_streams(cfg)
     state = ViewerState()
     ch = build_chart_handles(cfg)
@@ -254,6 +249,7 @@ def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
     )
 
     @ui.page("/")
+    # @brief Live-mode page route.
     def index() -> None:
         build_page_layout(cfg, ch, state, mode=mode_label, is_replay=False)
         ui.timer(
@@ -271,6 +267,7 @@ def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
         )
 
     @ng_app.on_shutdown
+    # @brief Shutdown hook that disconnects both LSL streams.
     def _cleanup() -> None:
         log.info("Viewer shutting down — disconnecting LSL streams")
         try:
@@ -294,25 +291,11 @@ def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
 
 
 def run_replay_mode_nicegui(cfg: DictConfig, replay_data: DualReplayData, mode: str) -> int:
-    """
-    Animate a pre-loaded replay dataset via NiceGUI.
-
-    Replaces ``runners/replay.py:run_replay_mode()``.
-
-    Parameters
-    ----------
-    cfg:
-        Hydra configuration (fully resolved).
-    replay_data:
-        Pre-loaded dataset returned by the core replay loaders.
-    mode:
-        Mode string shown in the info panel (``"csv_replay"`` or ``"xdf_replay"``).
-
-    Returns
-    -------
-    Exit code (0 on clean exit).
-
-    """
+    # @brief Animate a pre-loaded replay dataset via NiceGUI.
+    # @param cfg Fully resolved Hydra configuration.
+    # @param replay_data Pre-loaded replay dataset.
+    # @param mode Mode string shown in the info panel.
+    # @return Exit code.
     duration_s = replay_data.duration_s
     if duration_s <= 0:
         raise RuntimeError(f"Replay dataset is empty for mode={mode}")
@@ -324,8 +307,7 @@ def run_replay_mode_nicegui(cfg: DictConfig, replay_data: DualReplayData, mode: 
     replay_start_wall: list[float] = [time.monotonic()]
 
     log.info(
-        "Replay viewer starting: mode=%s source=%s type=%s "
-        "duration=%.3fs refresh_s=%.3f speed=%.3f loop=%s",
+        "Replay viewer starting: mode=%s source=%s type=%s duration=%.3fs refresh_s=%.3f speed=%.3f loop=%s",
         mode,
         replay_data.source_name,
         replay_data.source_type,
@@ -336,6 +318,7 @@ def run_replay_mode_nicegui(cfg: DictConfig, replay_data: DualReplayData, mode: 
     )
 
     @ui.page("/")
+    # @brief Replay-mode page route.
     def index() -> None:
         build_page_layout(cfg, ch, state, mode=mode, is_replay=True)
         ui.timer(

@@ -1,3 +1,6 @@
+# @package lsl_bridge.types
+#  @brief Shared type contracts for bridge modules.
+##
 """
 Shared data contracts for the LSL Bridge.
 
@@ -17,6 +20,7 @@ from typing import Any, Protocol
 # ---------------------------------------------------------------------------
 
 
+# @brief Processing interface contract for runtime-loaded processors.
 class Processor(Protocol):
     """
     Minimal interface implemented by filter-module processors.
@@ -25,8 +29,11 @@ class Processor(Protocol):
     checks that the returned object satisfies this protocol.
     """
 
-    def process(self, value: float, sample_time_s: float) -> float:
-        ...
+    # @brief Process one target value at a given processing time.
+    #  @param value Input signal sample.
+    #  @param sample_time_s Processing-domain sample time in seconds.
+    #  @return Processed signal value.
+    def process(self, value: float, sample_time_s: float) -> float: ...
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +42,7 @@ class Processor(Protocol):
 
 
 @dataclass(slots=True)
+# @brief Firmware metadata emitted by M2 boot frames.
 class FirmwareMetadata:
     """Metadata reported by the target firmware M2 boot frame."""
 
@@ -49,6 +57,7 @@ class FirmwareMetadata:
 
 
 @dataclass(slots=True)
+# @brief Parsed target stream sample from a D2 line.
 class ParsedTargetSample:
     """Canonical target sample parsed from a strict D2 UART line."""
 
@@ -68,6 +77,7 @@ class ParsedTargetSample:
 
 
 @dataclass(slots=True)
+# @brief Parsed reference stream sample from RS485 IPC payloads.
 class ReferenceSample:
     """Canonical reference sample decoded from RS485_GUI IPC."""
 

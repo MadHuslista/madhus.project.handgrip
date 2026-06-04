@@ -11,6 +11,7 @@ fallback.  The os.environ guard used in the original monolith has been replaced 
 ``root.handlers``).  The config is loaded fresh on each execution but
 ``configure_logging`` is a no-op after the first call.
 """
+
 from __future__ import annotations
 
 import logging
@@ -43,6 +44,7 @@ LOGGER = logging.getLogger(__name__)
 # Session lifecycle helpers
 # ---------------------------------------------------------------------------
 
+
 def _cfg_to_serial_settings(cfg: DictConfig) -> SerialSettings:
     return SerialSettings(
         port=str(cfg.serial.default_port),
@@ -54,45 +56,47 @@ def _cfg_to_serial_settings(cfg: DictConfig) -> SerialSettings:
     )
 
 
+# @brief Disconnect state.
+#
+#  @param app_state Parameter description.
 def disconnect_state(app_state: AppState) -> None:
     """Tear down the active acquisition session cleanly."""
     if app_state.ipc_publisher is not None:
         app_state.ipc_publisher.publish_event(
-            'serial_disconnect_requested',
+            "serial_disconnect_requested",
             port=app_state.serial_cfg.port,
             mode=app_state.mode,
         )
     app_state.stop_event.set()
     if app_state.worker_thread and app_state.worker_thread.is_alive():
-        app_state.worker_thread.join(
-            timeout=float(app_state.cfg.app.worker_join_timeout_s)
-        )
+        app_state.worker_thread.join(timeout=float(app_state.cfg.app.worker_join_timeout_s))
     if app_state.transport is not None:
         try:
             app_state.transport.disconnect()
         except Exception:
-            LOGGER.warning('Transport disconnect cleanup warning', exc_info=True)
+            LOGGER.warning("Transport disconnect cleanup warning", exc_info=True)
     app_state.transport = None
     app_state.worker_thread = None
-    if app_state.ipc_publisher is not None and bool(
-        app_state.cfg.ipc.stop_on_disconnect
-    ):
+    if app_state.ipc_publisher is not None and bool(app_state.cfg.ipc.stop_on_disconnect):
         app_state.ipc_publisher.stop()
     app_state.connected = False
-    app_state.connection_label = 'DISCONNECTED'
-    app_state.status_text = 'Idle'
+    app_state.connection_label = "DISCONNECTED"
+    app_state.status_text = "Idle"
     if app_state.signal_logger is not None:
         app_state.signal_logger.close()
 
 
+# @brief Connect state.
+#
+#  @param app_state Parameter description.
 def connect_state(app_state: AppState) -> None:
     """Start a new acquisition session."""
-    selected_port = str(app_state.serial_cfg.port or '')
+    selected_port = str(app_state.serial_cfg.port or "")
     if is_serial_port_excluded(app_state.cfg, selected_port):
-        excluded = ', '.join(get_excluded_serial_ports(app_state.cfg))
+        excluded = ", ".join(get_excluded_serial_ports(app_state.cfg))
         raise RuntimeError(
-            f'Serial port {selected_port} is reserved/excluded for another process. '
-            f'Configured excluded_ports=[{excluded}]. Select the RS485 board port instead.'
+            f"Serial port {selected_port} is reserved/excluded for another process. "
+            f"Configured excluded_ports=[{excluded}]. Select the RS485 board port instead."
         )
 
     disconnect_state(app_state)
@@ -104,14 +108,14 @@ def connect_state(app_state: AppState) -> None:
     app_state._last_max_rate_frame_ts = None
 
     if bool(app_state.cfg.ui.clear_plot_on_connect):
-        app_state.clear_signal_trace(reason='new connection', reset_session_counters=True)
+        app_state.clear_signal_trace(reason="new connection", reset_session_counters=True)
     else:
         app_state.sampling_stats.reset_all(window_size)
         app_state.display_sampling_stats.reset_all(window_size)
         app_state._last_max_rate_frame_ts = None
 
     mode = app_state.mode
-    if mode == 'modbus_rtu':
+    if mode == "modbus_rtu":
         app_state.transport = ModbusBoardTransport(app_state)
     else:
         app_state.transport = ActiveSendBoardTransport(app_state)
@@ -133,20 +137,18 @@ def connect_state(app_state: AppState) -> None:
             _start_ipc_publisher(app_state)
             if app_state.ipc_publisher is not None:
                 app_state.ipc_publisher.publish_event(
-                    'serial_connected',
+                    "serial_connected",
                     port=app_state.serial_cfg.port,
                     mode=app_state.mode,
                 )
     except Exception:
-        if app_state.ipc_publisher is not None and bool(
-            app_state.cfg.ipc.stop_on_disconnect
-        ):
+        if app_state.ipc_publisher is not None and bool(app_state.cfg.ipc.stop_on_disconnect):
             app_state.ipc_publisher.stop()
         if app_state.transport is not None:
             try:
                 app_state.transport.disconnect()
             except Exception:
-                LOGGER.warning('Connect cleanup error', exc_info=True)
+                LOGGER.warning("Connect cleanup error", exc_info=True)
         if app_state.signal_logger is not None:
             app_state.signal_logger.close()
         app_state.transport = None
@@ -156,32 +158,32 @@ def connect_state(app_state: AppState) -> None:
         target=acquisition_worker,
         args=(app_state,),
         daemon=True,
-        name='acquisition-worker',
+        name="acquisition-worker",
     )
     app_state.worker_thread.start()
     app_state.connected = True
-    app_state.connection_label = 'CONNECTED'
-    app_state.status_text = f'Connected on {app_state.serial_cfg.port}'
+    app_state.connection_label = "CONNECTED"
+    app_state.status_text = f"Connected on {app_state.serial_cfg.port}"
     app_state.push_event(
-        f'Connected to {app_state.serial_cfg.port} '
-        f'baud={app_state.serial_cfg.baudrate} '
-        f'parity={app_state.serial_cfg.parity} '
-        f'stopbits={app_state.serial_cfg.stopbits} '
-        f'mode={mode}'
+        f"Connected to {app_state.serial_cfg.port} "
+        f"baud={app_state.serial_cfg.baudrate} "
+        f"parity={app_state.serial_cfg.parity} "
+        f"stopbits={app_state.serial_cfg.stopbits} "
+        f"mode={mode}"
     )
-    if mode == 'active_send':
+    if mode == "active_send":
         cfg = app_state.cfg
         app_state.push_event(
-            'Active-send decoder config: '
-            f'parser={app_state.parse_profile} '
-            f'chunk_bytes={int(cfg.active_send.read_chunk_bytes)} '
-            f'max_read_bytes_per_cycle={int(cfg.active_send.max_read_bytes_per_cycle)} '
-            f'delivery_window_s={float(cfg.active_send.delivery_window_s)} '
-            f'max_frames_per_delivery={int(cfg.active_send.max_frames_per_delivery)} '
-            f'timeout_s={float(cfg.active_send.read_timeout_s)} '
-            f'frame_slave_id={int(cfg.active_send.frame_slave_id) or int(cfg.device.slave_address)} '
-            f'function=0x{int(cfg.active_send.frame_function_code):02X} '
-            f'registers={int(cfg.active_send.frame_register_count)}'
+            "Active-send decoder config: "
+            f"parser={app_state.parse_profile} "
+            f"chunk_bytes={int(cfg.active_send.read_chunk_bytes)} "
+            f"max_read_bytes_per_cycle={int(cfg.active_send.max_read_bytes_per_cycle)} "
+            f"delivery_window_s={float(cfg.active_send.delivery_window_s)} "
+            f"max_frames_per_delivery={int(cfg.active_send.max_frames_per_delivery)} "
+            f"timeout_s={float(cfg.active_send.read_timeout_s)} "
+            f"frame_slave_id={int(cfg.active_send.frame_slave_id) or int(cfg.device.slave_address)} "
+            f"function=0x{int(cfg.active_send.frame_function_code):02X} "
+            f"registers={int(cfg.active_send.frame_register_count)}"
         )
     if app_state.signal_logger is not None and app_state.signal_logger.enabled:
         cfg = app_state.cfg
@@ -191,15 +193,18 @@ def connect_state(app_state: AppState) -> None:
                 (app_state.signal_logger.directory / str(cfg.logger.debug_log_filename)).resolve()
             )
         app_state.push_event(
-            'Logger paths: '
-            f'raw={app_state.signal_logger.raw_path.resolve()} | '
-            f'interpreted={app_state.signal_logger.interpreted_path.resolve()} | '
-            f'gui={app_state.signal_logger.gui_path.resolve()} | '
-            f'events={app_state.signal_logger.event_path.resolve()}'
-            + (f' | debug={debug_log_path}' if debug_log_path else '')
+            "Logger paths: "
+            f"raw={app_state.signal_logger.raw_path.resolve()} | "
+            f"interpreted={app_state.signal_logger.interpreted_path.resolve()} | "
+            f"gui={app_state.signal_logger.gui_path.resolve()} | "
+            f"events={app_state.signal_logger.event_path.resolve()}"
+            + (f" | debug={debug_log_path}" if debug_log_path else "")
         )
 
 
+# @brief Start ipc publisher.
+#
+#  @param app_state Parameter description.
 def _start_ipc_publisher(app_state: AppState) -> None:
     """Bind the IPC ZMQ endpoint; create the publisher object if needed."""
     if not bool(app_state.cfg.ipc.enabled):
@@ -214,9 +219,9 @@ def _start_ipc_publisher(app_state: AppState) -> None:
         app_state.ipc_publisher.board_profile = app_state.build_board_profile_snapshot()
     app_state.ipc_publisher.start()
     app_state.push_event(
-        f'RS485 IPC publisher active: bind={app_state.cfg.ipc.bind} '
-        f'topic={app_state.cfg.ipc.topic} '
-        f'signal_key={app_state.cfg.ipc.signal_key}'
+        f"RS485 IPC publisher active: bind={app_state.cfg.ipc.bind} "
+        f"topic={app_state.cfg.ipc.topic} "
+        f"signal_key={app_state.cfg.ipc.signal_key}"
     )
 
 
@@ -224,13 +229,14 @@ def _start_ipc_publisher(app_state: AppState) -> None:
 # Main application runner
 # ---------------------------------------------------------------------------
 
+
 def run_app(cfg: DictConfig) -> None:
     """Wire all subsystems and start the NiceGUI server."""
     # Log config once per process (env-var guard replaced by idempotent
     # configure_logging() handler check in loader.py)
-    if os.environ.get('_RS485_GUI_CONFIG_LOGGED') != '1':
-        LOGGER.info('Loaded config:\n%s', __import__('omegaconf').OmegaConf.to_yaml(cfg))
-        os.environ['_RS485_GUI_CONFIG_LOGGED'] = '1'
+    if os.environ.get("_RS485_GUI_CONFIG_LOGGED") != "1":
+        LOGGER.info("Loaded config:\n%s", __import__("omegaconf").OmegaConf.to_yaml(cfg))
+        os.environ["_RS485_GUI_CONFIG_LOGGED"] = "1"
 
     signal_logger = SignalFileLogger(cfg)
 
@@ -262,20 +268,22 @@ def run_app(cfg: DictConfig) -> None:
             try:
                 pub.start()
                 app_state.push_event(
-                    f'RS485 IPC publisher enabled at app launch: '
-                    f'bind={cfg.ipc.bind} topic={cfg.ipc.topic} '
-                    f'signal_key={cfg.ipc.signal_key}'
+                    f"RS485 IPC publisher enabled at app launch: "
+                    f"bind={cfg.ipc.bind} topic={cfg.ipc.topic} "
+                    f"signal_key={cfg.ipc.signal_key}"
                 )
             except Exception as exc:
-                LOGGER.warning('RS485 IPC publisher did not start at app launch: %s', exc)
-                app_state.push_event(f'RS485 IPC publisher start warning: {exc}')
+                LOGGER.warning("RS485 IPC publisher did not start at app launch: %s", exc)
+                app_state.push_event(f"RS485 IPC publisher start warning: {exc}")
         else:
             app_state.push_event(
-                f'RS485 IPC publisher configured; it will bind on Connect: '
-                f'bind={cfg.ipc.bind} topic={cfg.ipc.topic} '
-                f'signal_key={cfg.ipc.signal_key}'
+                f"RS485 IPC publisher configured; it will bind on Connect: "
+                f"bind={cfg.ipc.bind} topic={cfg.ipc.topic} "
+                f"signal_key={cfg.ipc.signal_key}"
             )
 
+    # @brief Cleanup.
+    #
     def cleanup() -> None:
         disconnect_state(app_state)
         if app_state.ipc_publisher is not None:
@@ -297,11 +305,13 @@ def run_app(cfg: DictConfig) -> None:
             title=str(cfg.ui.page_title),
         )
     except KeyboardInterrupt:
-        LOGGER.info('Stopping on user request (KeyboardInterrupt)')
+        LOGGER.info("Stopping on user request (KeyboardInterrupt)")
     finally:
         cleanup()
 
 
+# @brief Main.
+#
 def main() -> None:
     """CLI entry point registered in ``pyproject.toml``."""
     cfg = load_app_config()

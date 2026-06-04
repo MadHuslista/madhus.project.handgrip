@@ -23,17 +23,20 @@
 #include <Arduino.h>
 
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_Definitions                                            */
+/** @ingroup PUBLIC_Definitions                                                */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_Types                                                  */
+/** @ingroup PUBLIC_Types                                                      */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
-
+/**
+ * @brief Fixed-size circular FIFO buffer.
+ * @tparam T Element type stored in the FIFO.
+ */
 template <typename T>
 class FIFObuf {
 private:
@@ -43,6 +46,10 @@ private:
     T* _buffer;
 
 public:
+    /**
+     * @brief Construct a FIFO with the requested usable capacity.
+     * @param[in] bufferSize Maximum number of elements to hold.
+     */
     FIFObuf(size_t bufferSize)
     {
         _head = 0;
@@ -51,6 +58,9 @@ public:
         _buffer = new T[_bufferSize];
     }
 
+    /**
+     * @brief Destroy the FIFO and release owned storage.
+     */
     ~FIFObuf()
     {
         if (_buffer != nullptr) {
@@ -58,6 +68,11 @@ public:
         }
     }
 
+    /**
+     * @brief Push one element into the FIFO.
+     * @param[in] data Element to enqueue.
+     * @return true if the element was enqueued; false when the buffer is full.
+     */
     bool push(T data)
     {
         size_t newHead = (_head + 1) % _bufferSize;
@@ -70,6 +85,10 @@ public:
         }
     }
 
+    /**
+     * @brief Pop one element from the FIFO.
+     * @return Front element when available; default-constructed value when empty.
+     */
     T pop()
     {
         if (_head == _tail) {
@@ -81,11 +100,20 @@ public:
         }
     }
 
+    /**
+     * @brief Check whether the FIFO has no elements.
+     * @return true when empty; false otherwise.
+     */
     bool is_empty()
     {
         return _head == _tail;
     }
 
+    /**
+     * @brief Read an element by logical FIFO index without removing it.
+     * @param[in] index Zero-based index from the current FIFO tail.
+     * @return Element at the requested index; default-constructed value if out of range.
+     */
     T at(unsigned int index)
     {
         if (index >= size()) {
@@ -95,11 +123,18 @@ public:
         return _buffer[currentInd];
     }
 
+    /**
+     * @brief Get the number of currently stored elements.
+     * @return Element count currently in the FIFO.
+     */
     size_t size()
     {
         return (_bufferSize + _head - _tail) % _bufferSize;
     }
 
+    /**
+     * @brief Remove all elements from the FIFO.
+     */
     void clear()
     {
         _head = 0;
@@ -111,19 +146,19 @@ public:
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_Data                                                  */
+/** @ingroup PUBLIC_Data                                                       */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_API                                                    */
+/** @ingroup PUBLIC_API                                                        */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
 /** @} */
 /*----------------------------------------------------------------------------*/
-/** @addtogroup PUBLIC_WEAK                                                   */
+/** @ingroup PUBLIC_WEAK                                                       */
 /**@{                                                                         */
 /*----------------------------------------------------------------------------*/
 
