@@ -230,3 +230,53 @@ Recommended categories:
 | model         | synthetic fit, metrics, selection, serialization.                |
 | report        | generated sections, plots, JSON/Markdown outputs.                |
 | holdout       | independent validation metrics and pass/fail behavior.           |
+
+---
+
+## Diagnostic scripts
+
+### scripts/analyze_step_relaxation.py
+
+Standalone offline analysis of static-hold relaxation behavior. Useful for diagnosing fixture creep, load-path asymmetry, and verifying direction-balanced artifact correction assumptions.
+
+**Purpose**
+
+Analyzes target and reference force relaxation within each accepted hold (especially ascending vs. descending), computes relaxation metrics, generates diagnostic plots, and writes a summary report.
+
+**Usage**
+
+```bash
+cd Handgrip_Calibration
+
+python scripts/analyze_step_relaxation.py \
+  data/calibration/<session_id> \
+  --out-dir data/calibration/<session_id>/relaxation_analysis \
+  --target-raw-col channel_2 \
+  --target-filtered-col channel_4 \
+  --reference-force-col channel_2
+```
+
+**Key CLI arguments**
+
+| Argument | Default | Meaning |
+|---|---|---|
+| `session_dir` | required | Path to calibration session folder. |
+| `--out-dir` | `<session_dir>/relaxation_analysis` | Output directory for CSVs and plots. |
+| `--target-raw-col` | `channel_2` | Column name or numeric fallback for target raw signal. |
+| `--target-filtered-col` | `channel_4` | Column name or numeric fallback for target filtered signal. |
+| `--reference-force-col` | `channel_2` | Column name or numeric fallback for reference force. |
+
+**Outputs**
+
+- `step_relaxation_metrics.csv` — Per-hold relaxation statistics (start/end medians, slope, tau, monotonicity).
+- `step_shape_correlations.csv` — Per-hold shape correlation between target and reference.
+- `actual_hold_dataset.csv` — Tabular per-hold summary for manual review.
+- `relaxation_summary.md` — Markdown report with findings and recommendations.
+- `plots/` — PNG diagnostic plots (time series, relaxation curves, shape overlays).
+
+**Interpretation**
+
+Use this script when:
+- You suspect the fixture exhibits time-dependent relaxation during static holds.
+- You want to validate direction-balanced artifact correction assumptions before enabling it.
+- You need to diagnose why ascending and descending holds at the same force level produce different reference values.

@@ -33,6 +33,7 @@ CLI command
 | recorder               | Pull LSL target/reference samples and write session artifacts.        |
 | protocol/event layer   | Emit/record baseline, holds, validation markers, operator prompts.    |
 | segmentation/reduction | Convert recorded holds into accepted calibration dataset rows.        |
+| `relaxation.py`        | Hold relaxation metrics and direction-balanced fixture-artifact compensation. |
 | fitting                | Evaluate candidate models, metrics, thresholds, and selected model.   |
 | validation             | Evaluate accepted model on holdout sessions.                          |
 | report                 | Render Markdown/HTML, plots, tables, and deployment recommendations.  |

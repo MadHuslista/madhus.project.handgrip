@@ -82,15 +82,15 @@ streams:
   target:
     name: HandgripTarget
     channel_map:
-      raw: target_raw_count
-      current_units: target_current_units
-      filtered: target_filtered_units
+      raw: [target_raw_count, 2]
+      current_units: [target_current_units, 3]
+      filtered: [target_filtered_units, 4]
 
   reference:
     name: HandgripReference
     nominal_srate_hz: 500
     channel_map:
-      raw: reference_force_N
+      raw: [reference_force_N, 2]
 
 fit:
   target_signal: raw
@@ -283,7 +283,11 @@ fit_result.json
 fit_candidates.json
 model_selection_report.json
 events.ndjson  # appended fit events
+calibration_hold_dataset_raw.csv   # if calibration_artifact.enabled
+calibration_artifact_summary.csv   # if calibration_artifact.enabled
 ```
+
+(The two conditional artifact files are written when `calibration_artifact.enabled: true`, which is the default in `protocol_static_reversible_staircase_v3.yaml`.)
 
 The CLI logs something like:
 
@@ -829,6 +833,8 @@ data/calibration/<primary_session_id>/
   reference.csv
   events.ndjson
   calibration_dataset.csv
+  calibration_hold_dataset_raw.csv
+  calibration_artifact_summary.csv
   fit_result.json
   fit_candidates.json
   model_selection_report.json
