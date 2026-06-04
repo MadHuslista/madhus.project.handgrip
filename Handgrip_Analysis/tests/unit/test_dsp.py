@@ -9,6 +9,9 @@ from handgrip_analysis.dsp import (
     PeakInfo,
     allan_deviation,
     apply_filter_spec,
+    is_production_realtime_filter_spec,
+    lsl_bridge_filter_config_from_spec,
+    load_filter_specs,
     bandpower,
     best_event_metrics,
     detect_events,
@@ -275,7 +278,7 @@ def test_dominant_psd_peaks_max_count():
 
 
 # ---------------------------------------------------------------------------
-# apply_filter_spec — all filter types
+# apply_filter_spec — production real-time filter types only
 # ---------------------------------------------------------------------------
 
 
@@ -290,95 +293,80 @@ def test_apply_filter_identity():
     np.testing.assert_array_equal(out, y)
 
 
-def test_apply_filter_butter_lowpass():
+def test_apply_filter_butterworth_lowpass_2nd():
     y = _signal()
-    out = apply_filter_spec(y, FS, {"type": "butter_lowpass", "order": 2, "cutoff_hz": 10.0})
+    out = apply_filter_spec(
+        y,
+        FS,
+        {"type": "butterworth_lowpass_2nd", "cutoff_hz": 10.0, "sample_rate_hz": FS},
+    )
     assert out.shape == y.shape
+    assert out[0] == pytest.approx(y[0])
 
 
-def test_apply_filter_butter_highpass():
+def test_apply_filter_butter_lowpass_legacy_alias_is_causal():
     y = _signal()
-    out = apply_filter_spec(y, FS, {"type": "butter_highpass", "order": 2, "cutoff_hz": 5.0})
-    assert out.shape == y.shape
+    canonical = apply_filter_spec(
+        y,
+        FS,
+        {"type": "butterworth_lowpass_2nd", "cutoff_hz": 10.0, "sample_rate_hz": FS},
+    )
+    alias = apply_filter_spec(y, FS, {"type": "butter_lowpass", "order": 2, "cutoff_hz": 10.0, "sample_rate_hz": FS})
+    np.testing.assert_allclose(alias, canonical, rtol=0, atol=1e-12)
 
 
-def test_apply_filter_butter_bandpass():
+def test_apply_filter_one_pole_canonical_and_alias():
     y = _signal()
-    out = apply_filter_spec(y, FS, {"type": "butter_bandpass", "order": 2, "low_hz": 2.0, "high_hz": 20.0})
-    assert out.shape == y.shape
+    t = np.arange(len(y), dtype=float) / FS
+    canonical = apply_filter_spec(y, FS, {"type": "lowpass_1pole", "cutoff_hz": 10.0}, time_s=t)
+    alias = apply_filter_spec(y, FS, {"type": "one_pole_lowpass", "cutoff_hz": 10.0}, time_s=t)
+    assert canonical.shape == y.shape
+    np.testing.assert_allclose(alias, canonical, rtol=0, atol=1e-12)
 
 
-def test_apply_filter_notch():
-    y = _signal()
-    out = apply_filter_spec(y, FS, {"type": "notch", "freq_hz": 10.0, "q": 20.0})
-    assert out.shape == y.shape
+def test_apply_filter_uses_timestamps_for_one_pole():
+    y = np.array([0.0, 10.0, 10.0, 10.0])
+    regular = np.array([0.0, 0.01, 0.02, 0.03])
+    irregular = np.array([0.0, 0.01, 0.50, 0.51])
+    spec = {"type": "lowpass_1pole", "cutoff_hz": 2.0, "reset_on_gap_s": 1.0}
+    out_regular = apply_filter_spec(y, FS, spec, time_s=regular)
+    out_irregular = apply_filter_spec(y, FS, spec, time_s=irregular)
+    assert out_irregular[2] > out_regular[2]
 
 
-def test_apply_filter_chain():
-    y = _signal()
-    spec = {
-        "type": "chain",
-        "steps": [
-            {"type": "butter_highpass", "order": 2, "cutoff_hz": 0.5},
-            {"type": "butter_lowpass", "order": 2, "cutoff_hz": 20.0},
-        ],
-    }
-    out = apply_filter_spec(y, FS, spec)
-    assert out.shape == y.shape
-
-
-def test_apply_filter_moving_average():
-    y = np.ones(200)
-    out = apply_filter_spec(y, FS, {"type": "moving_average", "window_samples": 5})
-    assert out.shape == y.shape
-    # moving average of a constant should be constant (except boundary effects)
-    np.testing.assert_allclose(out[5:-5], 1.0, atol=1e-10)
-
-
-def test_apply_filter_median():
-    y = _signal()
-    out = apply_filter_spec(y, FS, {"type": "median", "kernel_size": 5})
-    assert out.shape == y.shape
-
-
-def test_apply_filter_one_pole():
-    y = _signal()
-    out = apply_filter_spec(y, FS, {"type": "one_pole_lowpass", "cutoff_hz": 10.0})
-    assert out.shape == y.shape
+def test_apply_filter_rejects_offline_only_filters():
+    with pytest.raises(ValueError, match="unsupported production type|Unsupported production"):
+        apply_filter_spec(np.ones(100), FS, {"type": "notch", "freq_hz": 10.0, "q": 20.0})
+    with pytest.raises(ValueError, match="unsupported production type|Unsupported production"):
+        apply_filter_spec(np.ones(100), FS, {"type": "butter_highpass", "cutoff_hz": 1.0})
 
 
 def test_apply_filter_unsupported_raises():
-    with pytest.raises(ValueError, match="Unsupported filter type"):
+    with pytest.raises(ValueError, match="unsupported production type|Unsupported production"):
         apply_filter_spec(np.ones(100), FS, {"type": "unknown_filter_xyz"})
 
 
-# ---------------------------------------------------------------------------
-# Filter highpass/bandpass attenuate the right frequency range
-# ---------------------------------------------------------------------------
-
-
-def test_butter_lowpass_attenuates_high_freq():
-    """A 10 Hz lowpass should reduce high-frequency (45 Hz) power."""
+def test_butterworth_lowpass_2nd_attenuates_high_freq():
+    """A 10 Hz production lowpass should reduce high-frequency (45 Hz) power."""
     t = np.arange(4096) / FS
     hf = np.sin(2 * np.pi * 45.0 * t)
-    out = apply_filter_spec(hf, FS, {"type": "butter_lowpass", "cutoff_hz": 10.0})
-    assert float(np.std(out)) < 0.05  # signal strongly attenuated
+    out = apply_filter_spec(hf, FS, {"type": "butterworth_lowpass_2nd", "cutoff_hz": 10.0, "sample_rate_hz": FS}, time_s=t)
+    assert float(np.std(out[-1024:])) < 0.10
 
 
-def test_butter_highpass_passes_high_freq():
-    """A 5 Hz highpass should preserve a 40 Hz component."""
-    t = np.arange(4096) / FS
-    hf = np.sin(2 * np.pi * 40.0 * t)
-    out = apply_filter_spec(hf, FS, {"type": "butter_highpass", "cutoff_hz": 5.0})
-    assert float(np.std(out)) > 0.5  # ~unity gain at 40 Hz
+def test_lsl_bridge_config_from_spec_maps_active_types():
+    butter = lsl_bridge_filter_config_from_spec(
+        {"name": "butter_lowpass_8hz", "type": "butterworth_lowpass_2nd", "cutoff_hz": 8.0, "sample_rate_hz": FS},
+        sample_rate_hz=FS,
+    )
+    assert butter["type"] == "butterworth_lowpass_2nd"
+    assert butter["name"] == "butter_lowpass_8hz"
+    pole = lsl_bridge_filter_config_from_spec({"name": "one_pole", "type": "lowpass_1pole", "cutoff_hz": 8.0}, sample_rate_hz=FS)
+    assert pole["type"] == "lowpass_1pole"
 
 
-def test_butter_bandpass_blocks_dc_and_hf():
-    """A 2–20 Hz bandpass should heavily attenuate DC and very high frequencies."""
-    t = np.arange(4096) / FS
-    dc = np.ones(len(t)) * 10.0
-    hf = np.sin(2 * np.pi * 48.0 * t)
-    mixed = dc + hf
-    out = apply_filter_spec(mixed, FS, {"type": "butter_bandpass", "low_hz": 2.0, "high_hz": 20.0})
-    assert float(np.abs(np.mean(out))) < 0.1  # DC suppressed
-    assert float(np.std(out)) < 0.1  # 48 Hz attenuated
+def test_active_candidate_file_is_fully_production_realtime():
+    specs = load_filter_specs("conf/filters/candidates.yaml")
+    assert specs
+    assert all(is_production_realtime_filter_spec(spec) for spec in specs)
+    assert {spec["type"] for spec in specs} <= {"identity", "butterworth_lowpass_2nd", "lowpass_1pole"}

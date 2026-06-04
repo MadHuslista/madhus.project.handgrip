@@ -74,14 +74,12 @@ def test_filter_chain_on_real_load(tmp_path):
     y = cap.series("raw")
 
     specs = [
-        {"type": "butter_lowpass", "order": 2, "cutoff_hz": 12.0},
-        {"type": "butter_highpass", "order": 2, "cutoff_hz": 0.05},
-        {"type": "butter_bandpass", "order": 2, "low_hz": 0.05, "high_hz": 12.0},
-        {"type": "notch", "freq_hz": 45.9473, "q": 20.0},
+        {"type": "butterworth_lowpass_2nd", "cutoff_hz": 12.0, "sample_rate_hz": cap.fs_estimate_hz},
+        {"type": "lowpass_1pole", "cutoff_hz": 12.0},
         {"type": "identity"},
     ]
     for spec in specs:
-        out = apply_filter_spec(y, cap.fs_estimate_hz, spec)
+        out = apply_filter_spec(y, cap.fs_estimate_hz, spec, time_s=cap.time_s)
         assert out.shape == y.shape, f"Shape mismatch for {spec['type']}"
         assert np.all(np.isfinite(out)), f"Non-finite output for {spec['type']}"
 
@@ -97,31 +95,36 @@ def test_best_event_metrics_pipeline(tmp_path):
     assert np.isfinite(m["rise_10_90_s"])
 
 
-def test_filter_spec_loading_with_all_types(tmp_path):
-    """All 11 filter types from the YAML config must apply without error."""
+def test_filter_spec_loading_with_production_types_only(tmp_path):
+    """Active YAML filters must be directly deployable in LSL_Bridge."""
     candidates_yaml = tmp_path / "candidates.yaml"
     candidates_yaml.write_text(
         """
 filters:
   - {name: identity, type: identity}
-  - {name: lp8, type: butter_lowpass, order: 2, cutoff_hz: 8.0}
-  - {name: lp10, type: butter_lowpass, order: 2, cutoff_hz: 10.0}
-  - {name: hp5, type: butter_highpass, order: 2, cutoff_hz: 0.05}
-  - {name: bp, type: butter_bandpass, order: 2, low_hz: 0.05, high_hz: 12.0}
-  - {name: notch, type: notch, freq_hz: 45.9473, q: 20.0}
-  - name: chain
-    type: chain
-    steps:
-      - {type: notch, freq_hz: 45.9473, q: 20.0}
-      - {type: butter_lowpass, order: 2, cutoff_hz: 12.0}
+  - {name: lp8, type: butterworth_lowpass_2nd, cutoff_hz: 8.0, sample_rate_hz: 100.0}
+  - {name: lp10, type: lowpass_1pole, cutoff_hz: 10.0}
 """
     )
     specs = load_filter_specs(str(candidates_yaml))
-    assert len(specs) == 7
+    assert len(specs) == 3
 
     rng = np.random.default_rng(7)
     y = rng.normal(size=1024)
+    t = np.arange(len(y)) / FS
     for spec in specs:
-        out = apply_filter_spec(y, FS, spec)
+        out = apply_filter_spec(y, FS, spec, time_s=t)
         assert out.shape == y.shape, f"Shape mismatch: {spec['name']}"
         assert np.all(np.isfinite(out)), f"Non-finite: {spec['name']}"
+
+
+def test_filter_spec_loading_rejects_offline_active_candidates(tmp_path):
+    candidates_yaml = tmp_path / "bad_candidates.yaml"
+    candidates_yaml.write_text(
+        """
+filters:
+  - {name: hp5, type: butter_highpass, cutoff_hz: 0.05}
+"""
+    )
+    with pytest.raises(ValueError, match="not directly deployable"):
+        load_filter_specs(str(candidates_yaml))

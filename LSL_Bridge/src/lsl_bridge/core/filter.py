@@ -15,6 +15,10 @@ test without any mocking.
 Supported filter types (``processing.filters[*].type`` in config):
   * ``butterworth_lowpass_2nd`` / ``biquad_lowpass`` — 2nd-order Butterworth IIR
   * ``lowpass_1pole`` — 1st-order RC IIR (simpler, lower CPU cost)
+
+Backward-compatible aliases accepted by the factory:
+  * ``butter_lowpass`` — accepted only as an order-2 low-pass
+  * ``one_pole_lowpass`` — alias for ``lowpass_1pole``
   * ``drift_corrector`` — adaptive baseline subtraction
   * ``identity`` — pass-through (useful for testing pipeline wiring)
 
@@ -34,6 +38,18 @@ from typing import Protocol
 from omegaconf import DictConfig
 
 _log = logging.getLogger(__name__)
+
+SUPPORTED_PRODUCTION_FILTER_TYPES: frozenset[str] = frozenset(
+    {
+        "identity",
+        "butterworth_lowpass_2nd",
+        "biquad_lowpass",
+        "butter_lowpass",
+        "lowpass_1pole",
+        "one_pole_lowpass",
+        "drift_corrector",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
@@ -354,6 +370,15 @@ class ProcessorAdapter:
 def _build_filter_node(filter_cfg: DictConfig) -> FilterNode:
     """Instantiate a single filter node from its config stanza."""
     filter_type = str(filter_cfg.type)
+
+    if filter_type == "one_pole_lowpass":
+        filter_type = "lowpass_1pole"
+
+    if filter_type == "butter_lowpass":
+        order = int(filter_cfg.get("order", 2))
+        if order != 2:
+            raise ValueError("butter_lowpass compatibility alias only supports order=2")
+        filter_type = "butterworth_lowpass_2nd"
 
     if filter_type == "lowpass_1pole":
         return FirstOrderLowPass(

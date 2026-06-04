@@ -38,9 +38,9 @@ They serve as fallback defaults when callers do not supply a
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import numpy as np
 import pandas as pd
@@ -654,96 +654,311 @@ def best_event_metrics(
 
 
 # ---------------------------------------------------------------------------
-# Filter application
+# Production real-time filter application
 # ---------------------------------------------------------------------------
+
+PRODUCTION_REALTIME_FILTER_TYPES: frozenset[str] = frozenset(
+    {
+        "identity",
+        "butterworth_lowpass_2nd",
+        "biquad_lowpass",
+        "lowpass_1pole",
+        # Backward-compatible aliases.  These now execute with the same causal
+        # per-sample semantics as LSL_Bridge, not with offline zero-phase
+        # filtering.  New candidate files should prefer the canonical names
+        # above so Stage 6 output can be dropped into LSL_Bridge config directly.
+        "butter_lowpass",
+        "one_pole_lowpass",
+    }
+)
+
+
+class _ProductionFilterNode:
+    def process(self, value: float, sample_time_s: float) -> float:  # pragma: no cover - protocol-like base
+        raise NotImplementedError
+
+
+@dataclass(slots=True)
+class IdentityProcessor(_ProductionFilterNode):
+    """Pass-through processor matching ``LSL_Bridge`` identity behavior."""
+
+    def process(self, value: float, sample_time_s: float) -> float:
+        _ = sample_time_s
+        return value
+
+
+@dataclass(slots=True)
+class FirstOrderLowPass(_ProductionFilterNode):
+    """1-pole RC IIR low-pass filter matching ``LSL_Bridge`` implementation."""
+
+    cutoff_hz: float
+    reset_on_gap_s: float = 1.0
+    min_dt_s: float = 1e-6
+
+    _tau: float = field(init=False)
+    _last_time_s: float | None = field(init=False, default=None)
+    _y: float | None = field(init=False, default=None)
+
+    def __post_init__(self) -> None:
+        if self.cutoff_hz <= 0.0:
+            raise ValueError(f"cutoff_hz must be > 0. Received {self.cutoff_hz}")
+        self._tau = 1.0 / (2.0 * np.pi * self.cutoff_hz)
+
+    def process(self, value: float, sample_time_s: float) -> float:
+        if self._y is None or self._last_time_s is None:
+            self._y = value
+            self._last_time_s = sample_time_s
+            return value
+
+        dt = max(self.min_dt_s, sample_time_s - self._last_time_s)
+        if dt > self.reset_on_gap_s:
+            log.warning(
+                "Low-pass filter state reset after large gap: dt=%.6fs > %.6fs",
+                dt,
+                self.reset_on_gap_s,
+            )
+            self._y = value
+            self._last_time_s = sample_time_s
+            return value
+
+        alpha = dt / (self._tau + dt)
+        self._y = self._y + alpha * (value - self._y)
+        self._last_time_s = sample_time_s
+        return self._y
+
+
+@dataclass(slots=True)
+class SecondOrderBiquadLowPass(_ProductionFilterNode):
+    """Second-order low-pass biquad matching ``LSL_Bridge`` implementation."""
+
+    cutoff_hz: float
+    sample_rate_hz: float
+    q: float = 1.0 / np.sqrt(2.0)
+    reset_on_gap_s: float = 1.0
+    min_dt_s: float = 1e-6
+
+    _b0: float = field(init=False)
+    _b1: float = field(init=False)
+    _b2: float = field(init=False)
+    _a1: float = field(init=False)
+    _a2: float = field(init=False)
+    _last_time_s: float | None = field(init=False, default=None)
+    _x1: float = field(init=False, default=0.0)
+    _x2: float = field(init=False, default=0.0)
+    _y1: float = field(init=False, default=0.0)
+    _y2: float = field(init=False, default=0.0)
+    _initialized: bool = field(init=False, default=False)
+
+    def __post_init__(self) -> None:
+        if self.cutoff_hz <= 0.0:
+            raise ValueError(f"cutoff_hz must be > 0. Received {self.cutoff_hz}")
+        if self.sample_rate_hz <= 0.0:
+            raise ValueError(f"sample_rate_hz must be > 0. Received {self.sample_rate_hz}")
+        nyquist_hz = 0.5 * self.sample_rate_hz
+        if self.cutoff_hz >= nyquist_hz:
+            raise ValueError(
+                "cutoff_hz must be strictly below Nyquist. "
+                f"Received cutoff_hz={self.cutoff_hz} sample_rate_hz={self.sample_rate_hz}"
+            )
+        if self.q <= 0.0:
+            raise ValueError(f"q must be > 0. Received {self.q}")
+
+        omega = 2.0 * np.pi * self.cutoff_hz / self.sample_rate_hz
+        cos_omega = np.cos(omega)
+        sin_omega = np.sin(omega)
+        alpha = sin_omega / (2.0 * self.q)
+
+        b0 = (1.0 - cos_omega) / 2.0
+        b1 = 1.0 - cos_omega
+        b2 = (1.0 - cos_omega) / 2.0
+        a0 = 1.0 + alpha
+        a1 = -2.0 * cos_omega
+        a2 = 1.0 - alpha
+
+        self._b0 = float(b0 / a0)
+        self._b1 = float(b1 / a0)
+        self._b2 = float(b2 / a0)
+        self._a1 = float(a1 / a0)
+        self._a2 = float(a2 / a0)
+
+    def _reset_state(self, value: float, sample_time_s: float) -> float:
+        self._last_time_s = sample_time_s
+        self._x1 = value
+        self._x2 = value
+        self._y1 = value
+        self._y2 = value
+        self._initialized = True
+        return value
+
+    def process(self, value: float, sample_time_s: float) -> float:
+        if not self._initialized or self._last_time_s is None:
+            return self._reset_state(value, sample_time_s)
+
+        dt = max(self.min_dt_s, sample_time_s - self._last_time_s)
+        if dt > self.reset_on_gap_s:
+            log.warning(
+                "Second-order low-pass state reset after large gap: dt=%.6fs > %.6fs",
+                dt,
+                self.reset_on_gap_s,
+            )
+            return self._reset_state(value, sample_time_s)
+
+        y = self._b0 * value + self._b1 * self._x1 + self._b2 * self._x2 - self._a1 * self._y1 - self._a2 * self._y2
+
+        self._x2 = self._x1
+        self._x1 = value
+        self._y2 = self._y1
+        self._y1 = y
+        self._last_time_s = sample_time_s
+        return y
+
+
+def _canonical_filter_type(spec: Mapping[str, Any]) -> str:
+    filter_type = str(spec.get("type", ""))
+    if filter_type == "butter_lowpass":
+        order = int(spec.get("order", 2))
+        if order != 2:
+            raise ValueError("Production-equivalent butter_lowpass alias only supports order=2")
+        return "butterworth_lowpass_2nd"
+    if filter_type == "one_pole_lowpass":
+        return "lowpass_1pole"
+    return filter_type
+
+
+def is_production_realtime_filter_spec(spec: Mapping[str, Any]) -> bool:
+    """Return ``True`` when *spec* maps to an LSL_Bridge real-time filter."""
+    try:
+        return _canonical_filter_type(spec) in {"identity", "butterworth_lowpass_2nd", "biquad_lowpass", "lowpass_1pole"}
+    except Exception:  # noqa: BLE001 - validation helper should be defensive
+        return False
+
+
+def lsl_bridge_filter_config_from_spec(spec: Mapping[str, Any], sample_rate_hz: float) -> dict[str, Any]:
+    """
+    Convert one Handgrip_Analysis candidate into one LSL_Bridge filter stanza.
+
+    This function is the source-code contract between Stage 6 and LSL_Bridge:
+    any active Stage 6 candidate must be convertible here.  The returned mapping
+    can be used directly under ``processing.filters`` in ``LSL_Bridge`` config.
+    """
+    name = str(spec.get("name", ""))
+    canonical_type = _canonical_filter_type(spec)
+
+    if canonical_type == "identity":
+        out: dict[str, Any] = {"type": "identity"}
+        if name:
+            out["name"] = name
+        return out
+
+    if canonical_type in {"butterworth_lowpass_2nd", "biquad_lowpass"}:
+        out = {
+            "type": "butterworth_lowpass_2nd",
+            "cutoff_hz": float(spec["cutoff_hz"]),
+            "sample_rate_hz": float(spec.get("sample_rate_hz", sample_rate_hz)),
+            "q": float(spec.get("q", 1.0 / np.sqrt(2.0))),
+            "reset_on_gap_s": float(spec.get("reset_on_gap_s", 1.0)),
+            "min_dt_s": float(spec.get("min_dt_s", 1e-6)),
+        }
+        if name:
+            out["name"] = name
+        return out
+
+    if canonical_type == "lowpass_1pole":
+        out = {
+            "type": "lowpass_1pole",
+            "cutoff_hz": float(spec["cutoff_hz"]),
+            "reset_on_gap_s": float(spec.get("reset_on_gap_s", 1.0)),
+            "min_dt_s": float(spec.get("min_dt_s", 1e-6)),
+        }
+        if name:
+            out["name"] = name
+        return out
+
+    raise ValueError(
+        f"Filter candidate {name or '<unnamed>'!r} has unsupported production type {spec.get('type')!r}. "
+        "Stage 6 active candidates must map directly to LSL_Bridge real-time filters."
+    )
+
+
+def _build_production_filter_node(spec: Mapping[str, Any], fs: float) -> _ProductionFilterNode:
+    cfg = lsl_bridge_filter_config_from_spec(spec, sample_rate_hz=fs)
+    filter_type = str(cfg["type"])
+
+    if filter_type == "identity":
+        return IdentityProcessor()
+    if filter_type == "butterworth_lowpass_2nd":
+        return SecondOrderBiquadLowPass(
+            cutoff_hz=float(cfg["cutoff_hz"]),
+            sample_rate_hz=float(cfg["sample_rate_hz"]),
+            q=float(cfg.get("q", 1.0 / np.sqrt(2.0))),
+            reset_on_gap_s=float(cfg.get("reset_on_gap_s", 1.0)),
+            min_dt_s=float(cfg.get("min_dt_s", 1e-6)),
+        )
+    if filter_type == "lowpass_1pole":
+        return FirstOrderLowPass(
+            cutoff_hz=float(cfg["cutoff_hz"]),
+            reset_on_gap_s=float(cfg.get("reset_on_gap_s", 1.0)),
+            min_dt_s=float(cfg.get("min_dt_s", 1e-6)),
+        )
+    raise ValueError(f"Unsupported production filter type: {filter_type!r}")
+
+
+def _uniform_time_vector(n_samples: int, fs: float) -> np.ndarray:
+    if fs <= 0.0:
+        raise ValueError(f"fs must be > 0. Received {fs}")
+    return np.arange(n_samples, dtype=float) / float(fs)
 
 
 ##
-# @brief Apply one declarative filter specification to a signal.
+# @brief Apply one production-real-time filter specification to a signal.
 # @param y Input signal samples.
 # @param fs Sampling rate in Hz.
 # @param spec Filter specification mapping.
+# @param time_s Optional per-sample timestamps used to mirror LSL_Bridge runtime.
 # @return Filtered signal samples.
-def apply_filter_spec(y: np.ndarray, fs: float, spec: dict[str, Any]) -> np.ndarray:
+def apply_filter_spec(
+    y: np.ndarray,
+    fs: float,
+    spec: dict[str, Any],
+    *,
+    time_s: np.ndarray | None = None,
+) -> np.ndarray:
     """
-    Apply a filter specified as a dict to signal *y*.
+    Apply a production-real-time filter specification to signal *y*.
 
-    Supported types
-    ---------------
-    identity          — pass-through (no-op copy)
-    moving_average    — causal FIR box filter; requires ``window_samples``
-    median            — median filter; requires ``kernel_size``
-    butter_lowpass    — zero-phase Butterworth low-pass; requires ``cutoff_hz``
-    butter_highpass   — zero-phase Butterworth high-pass; requires ``cutoff_hz``
-    butter_bandpass   — zero-phase Butterworth band-pass; requires ``low_hz``, ``high_hz``
-    one_pole_lowpass  — causal single-pole IIR; requires ``cutoff_hz``
-    notch             — zero-phase IIR notch; requires ``freq_hz``
-    chain             — sequential composition; requires ``steps`` list of specs
+    Stage 6 intentionally uses the same causal per-sample filter semantics as
+    ``LSL_Bridge``.  Offline zero-phase filters such as ``sosfiltfilt`` are not
+    allowed in this path because they cannot run on the live production stream.
+
+    Supported production-equivalent types
+    -------------------------------------
+    identity                    — pass-through
+    butterworth_lowpass_2nd     — LSL_Bridge 2nd-order biquad low-pass
+    biquad_lowpass              — alias for ``butterworth_lowpass_2nd``
+    lowpass_1pole               — LSL_Bridge first-order low-pass
+
+    Backward-compatible aliases
+    ---------------------------
+    butter_lowpass              — accepted only with ``order: 2``; executed as
+                                  ``butterworth_lowpass_2nd``
+    one_pole_lowpass            — executed as ``lowpass_1pole``
     """
     y = np.asarray(y, dtype=float)
-    filter_type = spec.get("type", "")
-    log.debug("apply_filter_spec: type=%r", filter_type)
-
-    if filter_type == "identity":
+    if y.size == 0:
         return y.copy()
 
-    if filter_type == "moving_average":
-        w = int(spec["window_samples"])
-        if w <= 1:
-            return y.copy()
-        kernel = np.ones(w, dtype=float) / w
-        return np.convolve(y, kernel, mode="same")
+    if time_s is None:
+        time = _uniform_time_vector(len(y), fs)
+    else:
+        time = np.asarray(time_s, dtype=float)
+        if len(time) != len(y):
+            raise ValueError(f"time_s length ({len(time)}) must match signal length ({len(y)})")
 
-    if filter_type == "median":
-        k = int(spec["kernel_size"])
-        if k % 2 == 0:
-            k += 1
-        return signal.medfilt(y, kernel_size=k)
-
-    if filter_type == "butter_lowpass":
-        order = int(spec.get("order", 2))
-        cutoff_hz = float(spec["cutoff_hz"])
-        sos = signal.butter(order, cutoff_hz, btype="low", fs=fs, output="sos")
-        return signal.sosfiltfilt(sos, y)
-
-    if filter_type == "butter_highpass":
-        order = int(spec.get("order", 2))
-        cutoff_hz = float(spec["cutoff_hz"])
-        sos = signal.butter(order, cutoff_hz, btype="high", fs=fs, output="sos")
-        return signal.sosfiltfilt(sos, y)
-
-    if filter_type == "butter_bandpass":
-        order = int(spec.get("order", 2))
-        low_hz = float(spec["low_hz"])
-        high_hz = float(spec["high_hz"])
-        sos = signal.butter(order, [low_hz, high_hz], btype="bandpass", fs=fs, output="sos")
-        return signal.sosfiltfilt(sos, y)
-
-    if filter_type == "one_pole_lowpass":
-        cutoff_hz = float(spec["cutoff_hz"])
-        tau = 1.0 / (2.0 * np.pi * cutoff_hz)
-        dt = 1.0 / fs
-        alpha = dt / (tau + dt)
-        out = np.empty_like(y)
-        out[0] = y[0]
-        for i in range(1, len(y)):
-            out[i] = out[i - 1] + alpha * (y[i] - out[i - 1])
-        return out
-
-    if filter_type == "notch":
-        freq_hz = float(spec["freq_hz"])
-        q = float(spec.get("q", 20.0))
-        b, a = signal.iirnotch(freq_hz, q, fs=fs)
-        return signal.filtfilt(b, a, y)
-
-    if filter_type == "chain":
-        out = y.copy()
-        for step in spec.get("steps", []):
-            out = apply_filter_spec(out, fs, step)
-        return out
-
-    log.error("apply_filter_spec: unsupported filter type %r", filter_type)
-    raise ValueError(f"Unsupported filter type: {filter_type!r}")
+    node = _build_production_filter_node(spec, fs)
+    out = np.empty_like(y, dtype=float)
+    for idx, (value, sample_time_s) in enumerate(zip(y, time, strict=True)):
+        out[idx] = node.process(float(value), float(sample_time_s))
+    return out
 
 
 ##
@@ -751,9 +966,22 @@ def apply_filter_spec(y: np.ndarray, fs: float, spec: dict[str, Any]) -> np.ndar
 # @param path Path to YAML file containing a `filters` list.
 # @return List of filter specification mappings.
 def load_filter_specs(path: str | Path) -> list[dict[str, Any]]:
-    """Load a YAML filter candidate file and return the list of filter dicts."""
+    """
+    Load production-real-time YAML filter candidates.
+
+    The active ``filters`` list is treated as a deployable contract: every
+    candidate must map directly to one LSL_Bridge real-time filter stanza.  This
+    fails fast before Stage 6 can rank an offline-only or manually-translated
+    filter as the final recommendation.
+    """
     with Path(path).open("r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
     specs = list(cfg.get("filters", []))
-    log.info("load_filter_specs: loaded %d filter specs from %s", len(specs), path)
+    invalid = [str(spec.get("name", "<unnamed>")) for spec in specs if not is_production_realtime_filter_spec(spec)]
+    if invalid:
+        raise ValueError(
+            "Filter candidate file contains active filters that are not directly deployable in LSL_Bridge: "
+            + ", ".join(invalid)
+        )
+    log.info("load_filter_specs: loaded %d production-real-time filter specs from %s", len(specs), path)
     return specs

@@ -20,6 +20,7 @@ from ..dsp import (
     PSD_FLOOR_LINEAR,
     apply_filter_spec,
     bandpower,
+    lsl_bridge_filter_config_from_spec,
     best_event_metrics,
     load_filter_specs,
     welch_psd,
@@ -155,7 +156,7 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     rows: list[dict[str, object]] = []
     for filter_spec in specs:
         name = str(filter_spec["name"])
-        y_f = apply_filter_spec(y, fs, filter_spec)
+        y_f = apply_filter_spec(y, fs, filter_spec, time_s=cap.time_s)
         row: dict[str, object] = {
             "filter": name,
             "stage": spec.stage,
@@ -482,52 +483,20 @@ def select_final_filter(decision_table: pd.DataFrame, cfg: StageConfig) -> dict[
 # @return Processing snippet dictionary.
 def lsl_bridge_processing_snippet(selected: Mapping[str, Any], sample_rate_hz: float = 100.0) -> dict[str, Any]:
     """
-    Translate the chosen Handgrip_Analysis filter into an LSL_Bridge config snippet.
+    Translate the chosen Stage 6 filter into an LSL_Bridge config snippet.
 
-    Only a subset of candidate types map directly to the current LSL_Bridge
-    implementation. Unsupported selections still produce a structured payload
-    indicating that manual implementation is required.
+    Stage 6 active filters are now required to map directly to LSL_Bridge
+    production real-time filters.  Unsupported candidates raise instead of
+    producing a manual-implementation note, because allowing an unsupported
+    winner would break the semantic contract this stage is meant to validate.
     """
-    filter_name = str(selected.get("filter", ""))
     spec = dict(selected.get("filter_spec", {}))
     snippet: dict[str, Any] = {"processing": {"filters": []}}
     if not spec:
         snippet["note"] = "No selected filter spec available."
         return snippet
 
-    filter_type = str(spec.get("type", ""))
-    if filter_type == "identity":
-        snippet["processing"]["filters"] = [{"type": "identity", "name": filter_name}]
-        return snippet
-    if filter_type == "butter_lowpass" and int(spec.get("order", 2)) == 2:
-        snippet["processing"]["filters"] = [
-            {
-                "type": "butterworth_lowpass_2nd",
-                "name": filter_name,
-                "sample_rate_hz": float(spec.get("sample_rate_hz", sample_rate_hz)),
-                "cutoff_hz": float(spec["cutoff_hz"]),
-                "q": float(spec.get("q", 1.0 / math.sqrt(2.0))),
-                "reset_on_gap_s": float(spec.get("reset_on_gap_s", 1.0)),
-                "min_dt_s": float(spec.get("min_dt_s", 1e-6)),
-            }
-        ]
-        return snippet
-    if filter_type == "one_pole_lowpass":
-        snippet["processing"]["filters"] = [
-            {
-                "type": "lowpass_1pole",
-                "name": filter_name,
-                "cutoff_hz": float(spec["cutoff_hz"]),
-                "reset_on_gap_s": float(spec.get("reset_on_gap_s", 1.0)),
-                "min_dt_s": float(spec.get("min_dt_s", 1e-6)),
-            }
-        ]
-        return snippet
-
-    snippet["note"] = (
-        f"Selected filter '{filter_name}' of type '{filter_type}' does not map directly to the current "
-        "LSL_Bridge processing module. Manual implementation or filter substitution is required."
-    )
+    snippet["processing"]["filters"] = [lsl_bridge_filter_config_from_spec(spec, sample_rate_hz=sample_rate_hz)]
     return snippet
 
 

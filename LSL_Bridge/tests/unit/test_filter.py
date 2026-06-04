@@ -204,8 +204,23 @@ class TestBuildFilterNode:
         node = _build_filter_node(cfg)
         assert isinstance(node, SecondOrderBiquadLowPass)
 
+    def test_builds_butter_lowpass_legacy_alias(self):
+        cfg = self._cfg({"type": "butter_lowpass", "order": 2, "cutoff_hz": 10.0, "sample_rate_hz": 100.0})
+        node = _build_filter_node(cfg)
+        assert isinstance(node, SecondOrderBiquadLowPass)
+
+    def test_rejects_butter_lowpass_alias_with_nonsecond_order(self):
+        cfg = self._cfg({"type": "butter_lowpass", "order": 4, "cutoff_hz": 10.0, "sample_rate_hz": 100.0})
+        with pytest.raises(ValueError, match="order=2"):
+            _build_filter_node(cfg)
+
     def test_builds_lowpass_1pole(self):
         cfg = self._cfg({"type": "lowpass_1pole", "cutoff_hz": 5.0})
+        node = _build_filter_node(cfg)
+        assert isinstance(node, FirstOrderLowPass)
+
+    def test_builds_one_pole_legacy_alias(self):
+        cfg = self._cfg({"type": "one_pole_lowpass", "cutoff_hz": 5.0})
         node = _build_filter_node(cfg)
         assert isinstance(node, FirstOrderLowPass)
 

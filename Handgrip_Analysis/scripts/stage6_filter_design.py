@@ -87,7 +87,7 @@ def main(cfg: DictConfig) -> None:
     for spec in specs:
         name = spec["name"]
         log.info("Benchmarking filter: %s", name)
-        y_f = apply_filter_spec(y, fs, spec)
+        y_f = apply_filter_spec(y, fs, spec, time_s=t)
         m = best_event_metrics(
             y_f,
             t,
@@ -112,7 +112,7 @@ def main(cfg: DictConfig) -> None:
         }
         if rest is not None:
             _, y_rest, fs_rest = rest
-            y_rest_f = apply_filter_spec(y_rest, fs_rest, spec)
+            y_rest_f = apply_filter_spec(y_rest, fs_rest, spec, time_s=rest[0])
             row["rest_std"] = float(pd.Series(y_rest_f).std())
             f_rest, p_rest = welch_psd(y_rest_f, fs_rest)
             mask = (f_rest >= hf_lo) & (f_rest <= hf_hi)

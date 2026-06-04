@@ -602,7 +602,7 @@ def _plot_stage6_design_overlay(
         spec = spec_map.get(name)
         if spec is None:
             continue
-        y_f = apply_filter_spec(y, cap.fs_estimate_hz, spec)
+        y_f = apply_filter_spec(y, cap.fs_estimate_hz, spec, time_s=cap.time_s)
         xf, yf = _downsample_xy(cap.time_s, y_f)
         ax.plot(xf, yf, label=name, alpha=0.9)
     ax.set_title(
@@ -660,7 +660,7 @@ def _plot_stage6_aggregate(
     for name in ranking["filter"].astype(str).head(min(4, len(ranking))):
         if name not in spec_map:
             continue
-        y_f = apply_filter_spec(y, cap.fs_estimate_hz, spec_map[name])
+        y_f = apply_filter_spec(y, cap.fs_estimate_hz, spec_map[name], time_s=cap.time_s)
         f_f, p_f = welch_psd(y_f, cap.fs_estimate_hz)
         ax.semilogy(f_f, p_f, label=name)
     ax.set_title("Stage 6 — rest PSD raw vs top candidates")
