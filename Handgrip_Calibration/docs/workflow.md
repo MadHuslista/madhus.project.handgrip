@@ -788,7 +788,10 @@ target_current_units ≈ reference_force_N
 
 on accepted holds.
 
-There is no dedicated `validate-firmware-output` command; do a manual/post-hoc check from `target.csv`, `reference.csv`, and `events.ndjson`.
+Current CLI does not provide a dedicated `validate-firmware-output` command. So either:
+
+1. add that command, or
+2. do a manual/post-hoc check from `target.csv`, `reference.csv`, and `events.ndjson`.
 
 The correct metric is no longer:
 
@@ -870,7 +873,7 @@ data/calibration/<post_fw_verify_session_id>/
   reference.csv
   events.ndjson
   holdout_validation.json        # model/raw validation
-  firmware-output verification   # manual post-hoc check
+  firmware-output verification   # currently manual or new command needed
 ```
 
 ## Runtime result

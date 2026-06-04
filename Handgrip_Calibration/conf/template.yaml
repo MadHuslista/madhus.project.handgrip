@@ -2,8 +2,7 @@ session:
   root_dir: data/calibration
   operator: unknown
   purpose: model_selection_handgrip_calibration
-  notes: Reference PM58/acquisition-board sensor and Arduino/HX711 target sensor in
-    series.
+  notes: Reference PM58/acquisition-board sensor and Arduino/HX711 target sensor in series.
   copy_component_configs:
   - ../LSL_Bridge/conf/config.yaml
   - ../LSL_Viewer/conf/config.yaml
@@ -15,22 +14,42 @@ streams:
     timeout_s: 5.0
     nominal_srate_hz: null
     channel_map:
-      seq: [seq, 0]
-      clock: [device_clock_us, 1]
-      raw: [target_raw_count, 2]
-      current_units: [target_current_units, 3]
-      filtered: [target_filtered_units, 4]
-      status: [target_status, 5]
+      seq:
+      - seq
+      - 0
+      clock:
+      - device_clock_us
+      - 1
+      raw:
+      - target_raw_count
+      - 2
+      filtered:
+      - target_filtered_units
+      - 4
+      current_units:
+      - target_current_units
+      - 3
+      status:
+      - target_status
+      - 5
   reference:
     name: HandgripReference
     type: Force
     timeout_s: 5.0
     nominal_srate_hz: 500
     channel_map:
-      seq: [seq, 0]
-      clock: [reference_clock_s, 1]
-      raw: [reference_force_N, 2]
-      status: [reference_status, 3]
+      seq:
+      - seq
+      - 0
+      clock:
+      - reference_clock_s
+      - 1
+      raw:
+      - reference_force_N
+      - 2
+      status:
+      - reference_status
+      - 3
 markers:
   stream_name: HandgripCalibrationMarkers
   stream_type: Markers
@@ -136,3 +155,13 @@ fit:
     enable_drift: true
     hysteresis_direction_column: direction
     drift_time_column: t_mid_lsl
+calibration_artifact:
+  enabled: false
+  mode: direction_balanced_tail_median
+  window:
+    source: stable_window
+    tail_s: 2.0
+  grouping:
+    require_both_directions: true
+    outlier_method: mad
+    max_mad_z: 3.5

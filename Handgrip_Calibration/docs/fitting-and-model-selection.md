@@ -64,6 +64,52 @@ Recommended policy:
 6. Prefer the simpler model when performance is similar.
 7. Treat diagnostic models as explanatory unless deliberately promoted.
 
+
+
+## Fixture-relaxation compensation
+
+Some static staircase sessions can show a fixture-induced relaxation pattern: after an ascending step the force trace decays, and after a descending step it rebounds. When the PM58 reference and the handgrip target show the same shape, treat it as a shared load-path artifact of the calibration fixture, not as a firmware behavior to encode in production.
+
+The optional compensation is controlled by `calibration_artifact.enabled` and currently implements:
+
+```yaml
+calibration_artifact:
+  enabled: true
+  mode: direction_balanced_tail_median
+  window:
+    source: stable_window
+    tail_s: 2.0
+  grouping:
+    require_both_directions: true
+    outlier_method: mad
+    max_mad_z: 3.5
+```
+
+When enabled, segmentation first writes the original per-hold rows to:
+
+```text
+calibration_hold_dataset_raw.csv
+```
+
+Then it creates the fit dataset by:
+
+1. taking the last `tail_s` seconds of each stable hold window;
+2. computing target/raw and reference/force tail medians;
+3. grouping holds by nominal force;
+4. computing ascending and descending medians separately;
+5. averaging the two directional medians into one balanced fit point per force level.
+
+The final `calibration_dataset.csv` is therefore a corrected, auditable fit dataset. The raw evidence remains available in `calibration_hold_dataset_raw.csv`, and the grouping decisions are written to `calibration_artifact_summary.csv`.
+
+This method is intentionally offline and removable. Disable it with:
+
+```yaml
+calibration_artifact:
+  enabled: false
+```
+
+Use it only for fixture-contaminated static calibration sessions. Do not copy this behavior into firmware.
+
 ## Deployment criterion
 
 If the operating range is 100 N and the residual threshold is 0.5% of range:

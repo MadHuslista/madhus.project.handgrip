@@ -35,3 +35,28 @@
 | `selection.primary_metric`                   | Main ranking metric, often cross-validated RMSE.     | Prefer robust cross-validated metric.                                                     |
 | `require_monotonic`                          | Reject non-monotone deployable mappings.             | Keep enabled for force calibration.                                                       |
 | `allow_diagnostics_as_primary`               | Allow diagnostic-only models to be selected.         | Keep false unless deliberately changed.                                                   |
+
+
+## `calibration_artifact` configuration
+
+`calibration_artifact` is an optional offline compensation layer for the temporary press/fixture behavior observed during static staircases. It is disabled in the generic default config and enabled in `protocol_static_reversible_staircase_v3.yaml` for the current fixture workflow.
+
+| Key | Meaning |
+| --- | --- |
+| `enabled` | Enables/disables the compensation without changing the rest of the pipeline. |
+| `mode` | Currently only `direction_balanced_tail_median`. |
+| `window.source` | Currently `stable_window`; the tail is taken from the accepted stable window. |
+| `window.tail_s` | Number of seconds at the end of the stable window used for medians. |
+| `grouping.require_both_directions` | Requires ascending and descending holds for each nonzero force level. |
+| `grouping.outlier_method` | Robust outlier method; currently `mad`. |
+| `grouping.max_mad_z` | Robust z-score threshold for outlier rejection when enough repeats exist. |
+
+Generated audit files when enabled:
+
+```text
+calibration_hold_dataset_raw.csv
+calibration_artifact_summary.csv
+calibration_dataset.csv
+```
+
+Logs include the resolved signal columns, the artifact mode, the number of raw holds, corrected fit points, excluded levels, and summary relaxation diagnostics.

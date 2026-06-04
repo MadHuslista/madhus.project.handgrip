@@ -707,6 +707,93 @@ class FitConfig:
             raise ConfigError("fit noise floors must be > 0")
 
 
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Calibration artifact compensation
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class CalibrationArtifactWindowConfig:
+    """Window selection for optional fixture-artifact compensation."""
+
+    source: str = "stable_window"
+    tail_s: float = 2.0
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> CalibrationArtifactWindowConfig:
+        data = data or {}
+        cfg = cls(source=str(data.get("source", "stable_window")), tail_s=float(data.get("tail_s", 2.0)))
+        cfg.validate()
+        return cfg
+
+    def validate(self) -> None:
+        if self.source != "stable_window":
+            raise ConfigError("calibration_artifact.window.source must be 'stable_window'")
+        if self.tail_s <= 0:
+            raise ConfigError("calibration_artifact.window.tail_s must be > 0")
+
+
+@dataclass(frozen=True)
+class CalibrationArtifactGroupingConfig:
+    """Grouping/outlier policy for optional artifact compensation."""
+
+    require_both_directions: bool = True
+    outlier_method: str = "mad"
+    max_mad_z: float = 3.5
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> CalibrationArtifactGroupingConfig:
+        data = data or {}
+        cfg = cls(
+            require_both_directions=bool(data.get("require_both_directions", True)),
+            outlier_method=str(data.get("outlier_method", "mad")),
+            max_mad_z=float(data.get("max_mad_z", 3.5)),
+        )
+        cfg.validate()
+        return cfg
+
+    def validate(self) -> None:
+        if self.outlier_method != "mad":
+            raise ConfigError("calibration_artifact.grouping.outlier_method must be 'mad'")
+        if self.max_mad_z <= 0:
+            raise ConfigError("calibration_artifact.grouping.max_mad_z must be > 0")
+
+
+@dataclass(frozen=True)
+class CalibrationArtifactConfig:
+    """Optional, removable compensation for fixture-induced hold relaxation.
+
+    This is intended for calibration sessions where the PM58 reference and
+    handgrip target share a mechanically contaminated load path during static
+    staircases.  It never changes firmware behavior; it only changes the offline
+    fit dataset when explicitly enabled.
+    """
+
+    enabled: bool = False
+    mode: str = "direction_balanced_tail_median"
+    window: CalibrationArtifactWindowConfig = field(default_factory=CalibrationArtifactWindowConfig)
+    grouping: CalibrationArtifactGroupingConfig = field(default_factory=CalibrationArtifactGroupingConfig)
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> CalibrationArtifactConfig:
+        data = data or {}
+        cfg = cls(
+            enabled=bool(data.get("enabled", False)),
+            mode=str(data.get("mode", "direction_balanced_tail_median")),
+            window=CalibrationArtifactWindowConfig.from_mapping(data.get("window")),
+            grouping=CalibrationArtifactGroupingConfig.from_mapping(data.get("grouping")),
+        )
+        cfg.validate()
+        return cfg
+
+    def validate(self) -> None:
+        if self.mode != "direction_balanced_tail_median":
+            raise ConfigError(
+                "calibration_artifact.mode must be 'direction_balanced_tail_median'"
+            )
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Session config
 # ──────────────────────────────────────────────────────────────────────────────
@@ -756,6 +843,7 @@ class AppConfig:
     protocol: ProtocolConfig
     quality: QualityConfig
     fit: FitConfig
+    calibration_artifact: CalibrationArtifactConfig
     creep: CreepZeroReturnConfig
     dynamic: DynamicValidationConfig
     holdout_thresholds: HoldoutValidationThresholds
@@ -778,6 +866,9 @@ class AppConfig:
             protocol=ProtocolConfig.from_mapping(data.get("protocol")),
             quality=QualityConfig.from_mapping(data.get("quality")),
             fit=FitConfig.from_mapping(data.get("fit")),
+            calibration_artifact=CalibrationArtifactConfig.from_mapping(
+                data.get("calibration_artifact")
+            ),
             creep=CreepZeroReturnConfig.from_mapping(data.get("creep")),
             dynamic=DynamicValidationConfig.from_mapping(data.get("dynamic")),
             holdout_thresholds=HoldoutValidationThresholds.from_mapping(
