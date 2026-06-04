@@ -24,19 +24,7 @@
 
 ## Canonical sequence
 
-```bash
-cd Handgrip_Calibration
-uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase_v3.yaml
-uv run handgrip-cal record --config conf/protocol_reference_verification.yaml
-uv run handgrip-cal record --config conf/protocol_static_reversible_staircase_v3.yaml
-uv run handgrip-cal fit data/calibration/<fit_session_id> --config conf/protocol_static_reversible_staircase_v3.yaml
-uv run handgrip-cal report data/calibration/<fit_session_id> --config conf/protocol_static_reversible_staircase_v3.yaml
-uv run handgrip-cal record --config conf/protocol_holdout_verification.yaml
-uv run handgrip-cal validate-holdout data/calibration/<holdout_session_id> \
-  --model data/calibration/<fit_session_id>/fit_result.json \
-  --config conf/protocol_holdout_verification.yaml
-uv run handgrip-cal report data/calibration/<holdout_session_id> --config conf/protocol_holdout_verification.yaml
-```
+The end-to-end command sequence that uses these protocols (preflight → record → fit → report → holdout → firmware deployment) lives in [Handgrip_Calibration/docs/workflow.md](workflow.md).
 
 ## What the Canonical primary protocol contains
 

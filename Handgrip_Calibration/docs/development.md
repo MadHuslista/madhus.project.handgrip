@@ -97,7 +97,7 @@ If the protocol creates new event/segment names, update tests that validate:
 | `Handgrip_Calibration/conf/*.yaml`                                                            | Candidate enable/disable flags and model-specific parameters. |
 | [Handgrip_Calibration/docs/fitting-and-model-selection.md](fitting-and-model-selection.md)    | Model rationale, metrics, residual interpretation.            |
 | [Handgrip_Calibration/docs/reports-and-outputs.md](reports-and-outputs.md)                    | New fit/report artifacts if any.                              |
-| [Handgrip_Calibration/docs/applying-calibration-results.md](applying-calibration-results.md)  | Deployment guidance if model is deployable.                   |
+| [Handgrip_Calibration/docs/workflow.md](workflow.md)                                          | Deployment guidance if model is deployable (Step 8 onward).   |
 | [Handgrip_Calibration/docs/configuration.md](configuration.md)                                | Config reference if config keys are user-facing.              |
 | tests under `Handgrip_Calibration/tests/`                                                     | Synthetic, noisy, outlier, and report behavior tests.         |
 

@@ -61,7 +61,6 @@ CANONICAL_PREFIXES = (
 
 ARCHIVE_PREFIXES = (
     "docs/archive/",
-    "Documentation/",
 )
 
 KNOWN_CONFIG_PATHS = [
@@ -79,14 +78,11 @@ KNOWN_CONFIG_PATHS = [
 REQUIRED_MARKDOWN = [
     "README.md",
     "docs/index.md",
-    "docs/start-here.md",
     "docs/system-overview.md",
     "docs/architecture/index.md",
     "docs/architecture/stream-contracts.md",
     "docs/hardware/index.md",
     "docs/troubleshooting/index.md",
-    "docs/maintenance/documentation-validation.md",
-    "docs/maintenance/handoff-workflow-validation.md",
     "Handgrip_Firmware/docs/serial-protocol.md",
     "LSL_Bridge/docs/stream-contracts.md",
     "Handgrip_Calibration/docs/protocols.md",

@@ -27,13 +27,12 @@ Before running calibration:
 
 | I want to…                                                             | Read                                                                                         |
 | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Run calibration (preflight → record → fit → report → holdout)          | [Handgrip_Calibration/docs/workflow.md](workflow.md)                                         |
+| Run calibration end to end (preflight → record → fit → report → holdout → apply to firmware/bridge) | [Handgrip_Calibration/docs/workflow.md](workflow.md)                              |
 | Choose a protocol (canonical v3, holdout, legacy labels)               | [Handgrip_Calibration/docs/protocols.md](protocols.md)                                       |
 | Edit protocol YAML safely                                              | [Handgrip_Calibration/docs/configuration.md](configuration.md)                               |
 | Understand session output files (events, quality, provenance)          | [Handgrip_Calibration/docs/recording.md](recording.md)                                       |
 | Interpret model selection (metrics, residuals, ranking)                | [Handgrip_Calibration/docs/fitting-and-model-selection.md](fitting-and-model-selection.md)   |
 | Read reports, plots, and JSON artifacts                                | [Handgrip_Calibration/docs/reports-and-outputs.md](reports-and-outputs.md)                   |
-| Apply results to firmware or bridge                                    | [Handgrip_Calibration/docs/applying-calibration-results.md](applying-calibration-results.md) |
 | Understand CLI-to-module internals                                     | [Handgrip_Calibration/docs/architecture.md](architecture.md)                                 |
 | Add protocols, models, or report sections                              | [Handgrip_Calibration/docs/development.md](development.md)                                   |
 

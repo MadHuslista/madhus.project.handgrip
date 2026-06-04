@@ -8,10 +8,7 @@
 
 ## Report command
 
-```bash
-cd Handgrip_Calibration
-uv run handgrip-cal report data/calibration/<session_id> --config conf/protocol_static_reversible_staircase_v3.yaml
-```
+The `report` command and its place in the full sequence are documented in [Handgrip_Calibration/docs/workflow.md](workflow.md). This document covers how to read the outputs it produces.
 
 ## Expected output classes
 

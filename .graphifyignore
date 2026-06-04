@@ -95,3 +95,10 @@ LabRecorder/Data/
 graphify-out/
 .augment
 *.github
+*.zip 
+Documentation
+Doxyfile
+*.zip 
+AGENTS.md
+CLAUDE.md
+pending_docs

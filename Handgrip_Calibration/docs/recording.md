@@ -7,28 +7,9 @@
 - The session folder is expected to contain enough raw data, events, and config snapshots to reproduce fitting and reporting.
 
 
-## Preflight before recording
+## Workflow
 
-```bash
-cd Handgrip_Calibration
-uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase_v3.yaml
-```
-
-Preflight verify:
-
-- required LSL streams are visible,
-- required channel labels are present or mappable,
-- reference stream is live,
-- target stream is live,
-- protocol config parses,
-- output root is writable,
-- component config snapshot paths exist.
-
-## Recording command
-
-```bash
-uv run handgrip-cal record --config conf/protocol_static_reversible_staircase_v3.yaml
-```
+The preflight, recording, fitting, and validation commands live in [Handgrip_Calibration/docs/workflow.md](workflow.md). This document owns what those steps depend on: session folder structure, preflight acceptance gates, and acquisition-board configuration.
 
 During recording, follow operator prompts exactly. Do not skip baseline/preload/hold steps unless the protocol explicitly allows it.
 

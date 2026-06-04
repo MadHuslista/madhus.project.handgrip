@@ -80,33 +80,9 @@ A selected model should not be deployed unless:
 - the accepted holds cover the intended operating range,
 - the physical fixture was validated.
 
-## Firmware constants from affine fit
+## Deploying the selected model
 
-If the accepted affine model is:
-
-```text
-force_N = a * raw_count + b
-```
-
-and firmware computes:
-
-```text
-current_units = (raw_count - SCALE_OFFSET) / SCALE_FACTOR
-```
-
-then equivalent firmware constants are:
-
-```text
-SCALE_FACTOR = 1 / a
-SCALE_OFFSET = -b / a
-```
-
-Only apply this if:
-
-- `a != 0`,
-- the firmware formula has not changed,
-- the report explicitly recommends firmware deployment,
-- post-deployment validation is run.
+Converting the accepted fit to firmware constants (`SCALE_FACTOR` / `SCALE_OFFSET`), to nonlinear firmware, or to bridge-side / report-only deployment — and the post-deployment verification gate — is covered in [Handgrip_Calibration/docs/workflow.md](workflow.md) (Step 8 onward).
 
 ## Drift tracking across sessions
 
