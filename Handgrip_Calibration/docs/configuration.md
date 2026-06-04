@@ -23,6 +23,24 @@
 | `report`              | Plots/tables/sections to emit.                                |
 | `validation`          | Holdout model path, thresholds, pass/fail criteria.           |
 
+### Stream configuration — channel_map format
+
+Within `streams.target` and `streams.reference`, the `channel_map` section maps semantic signal names to CSV columns. Each entry uses a two-element list format:
+
+```yaml
+channel_map:
+  <signal_name>: [<column_name_candidate>, <fallback_index>]
+```
+
+Example:
+```yaml
+channel_map:
+  raw: [target_raw_count, 2]        # try "target_raw_count" column; fallback to column 2
+  filtered: [target_filtered_units, 4]  # try "target_filtered_units" column; fallback to column 4
+```
+
+The resolver tries the column name first. If that column does not exist (e.g., in legacy CSVs with only `channel_0`, `channel_1`, `channel_2`... columns), it falls back to the zero-based positional index. This dual resolution enables compatibility across different upstream configurations.
+
 
 ## Fit configuration reference
 
