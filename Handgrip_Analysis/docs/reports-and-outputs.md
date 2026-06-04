@@ -6,6 +6,7 @@
 - Every output folder should be traceable to input data, config, command, and run/stage ID.
 - Reports and figures should explain interpretation; metrics files should support reproducibility and automated comparison.
 - Stage 6 outputs are decision artifacts and should include both human-readable rationale and machine-readable recommendations when possible.
+- For the exact files each stage writes in a production run, see the per-step "Expected outputs" in [Handgrip_Analysis/docs/workflow.md](workflow.md); the tables here describe artifact *types*, not a fixed filename list.
 
 ## Output tree
 

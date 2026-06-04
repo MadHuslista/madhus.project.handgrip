@@ -5,8 +5,7 @@
 - Filter design is a decision workflow, not just a smoothing operation.
 - Stage 6 is **production-contract-first**: active candidates are restricted to filters that map 1:1 to an `LSL_Bridge` `processing.filters` entry and are evaluated with the same causal, timestamp-aware per-sample implementation used for live streaming. Offline-only filters can no longer win a Stage 6 ranking.
 - Active candidate types: `identity`, `butterworth_lowpass_2nd` (alias `biquad_lowpass`), and `lowpass_1pole`. The deployable vocabulary is owned by [LSL_Bridge/docs/configuration.md](../../LSL_Bridge/docs/configuration.md#supported-filter-types).
-- Current documented recommendation: primary characterization channel should use a **2nd-order Butterworth low-pass at 15 Hz, fs = 100 Hz** when the active data profile matches the refreshed artifact-fixed captures.
-- A **2nd-order Butterworth low-pass at 10 Hz** can be used as an optional stable-display channel, not necessarily as the primary scientific characterization channel.
+- Current committed selection: **2nd-order Butterworth low-pass at 9 Hz, fs = 100 Hz** (`butter_lowpass_9hz`), per `data/analysis_results/stage6/selected_filter_recommendation.json` and deployed in [LSL_Bridge/conf/config.yaml](../../LSL_Bridge/conf/config.yaml).
 - High-pass, band-pass, notch, moving-average, median, and chain filters are offline-only diagnostics: they may exist as **inactive** metadata in `conf/filters/candidates.yaml`, but they are rejected at config load if placed in the active `filters:` list.
 
 ## Candidate review workflow
@@ -56,6 +55,12 @@ they cannot run as a causal real-time `LSL_Bridge` filter. They may stay in `can
 **inactive diagnostic** metadata for investigation, but never in the active `filters:` list. To promote
 one to production, follow the process in [Handgrip_Analysis/docs/development.md](development.md#add-a-filter-family).
 
+Why low-pass-only suits handgrip force: the signal of interest is the DC/near-DC force level plus a slow
+ramp, hold, and release. High-pass and band-pass remove exactly that low-frequency content, distorting
+peaks, fragmenting event detection, and reshaping the waveform into an artificial oscillation. A small
+high-frequency line component is already strongly attenuated by a modest low-pass, so a notch adds
+complexity with no meaningful benefit in the main force path.
+
 `LSL_Bridge` also supports a `drift_corrector`, but it is intentionally **not** a Stage 6 candidate:
 drift correction is semantically dangerous for calibrated absolute-force baselines and must not be ranked
 without explicit validation criteria.
@@ -92,27 +97,16 @@ middle state. An unconvertible filter fails before it can be recommended.
 
 For the current documented recommendation baseline, see [Handgrip_Analysis/docs/stages.md](stages.md#stage-6--filter-design-candidate-benchmark).
 
-## Deployment targets
+## Deployment target
 
-| Target                    | When appropriate                                                     | Validation required                                                           |
-| ------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `LSL_Bridge` processing   | Filtered stream should be available to viewer/calibration consumers. | Live stream comparison, timestamp/latency review, calibration residual check. |
-| `LSL_Viewer` display only | Smoothing is purely visual/operator-facing.                          | Confirm raw data and saved outputs are unchanged.                             |
-| Firmware                  | Filter must exist on-device.                                         | Rebuild/upload, D2 validation, repeat calibration/holdout checks.             |
-| Analysis only             | Filter supports reports/plots but not live deployment.               | Ensure reports label filtered vs raw outputs clearly.                         |
+The only runtime filter-deploy target is **`LSL_Bridge` processing**. Stage 6 emits exactly one LSL_Bridge stanza (`lsl_bridge_processing_recommendation.yaml`) through `lsl_bridge_filter_config_from_spec()`; an unconvertible filter fails before it can be recommended.
+
+`LSL_Viewer` and the firmware are **not** filter targets: the viewer only displays the column `LSL_Bridge` already filtered (`target_filtered_units`) and applies no force DSP of its own, and the firmware applies calibration scaling only. "Analysis-only" means the filter stays in the report and is not put on the live path — it is not a separate deployment.
 
 ## What to do after selecting a filter
 
 1. Save the Stage 6 report and metrics.
-2. Save the recommendation YAML or equivalent machine-readable output.
-3. Decide deployment target.
-4. Apply config/code change in the target component.
-5. Run validation subset:
-   - raw vs filtered plot,
-   - latency/phase check,
-   - peak/rise/release check,
-   - calibration residual comparison if calibration uses filtered output.
-6. Update docs/config references to reflect the deployed filter.
+2. Apply `lsl_bridge_processing_recommendation.yaml` under `processing.filters` in `LSL_Bridge/conf/config.yaml`, restart, and validate the live stream (raw vs filtered, latency/phase, peak/rise/release, no NaN/inf). Full procedure: [Handgrip_Analysis/docs/workflow.md](workflow.md) Steps 13–15.
 
 ## Stop conditions
 

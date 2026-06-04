@@ -90,8 +90,8 @@ Example active candidate:
 ```yaml
 filters:
   - type: butterworth_lowpass_2nd
-    name: butter_lowpass_15hz
-    cutoff_hz: 15.0
+    name: butter_lowpass_9hz
+    cutoff_hz: 9.0
     sample_rate_hz: 100.0
     q: 0.7071067811865476
     reset_on_gap_s: 1.0

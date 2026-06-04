@@ -7,6 +7,15 @@
 - Stage 6 uses the earlier characterization to review/design digital filter candidates and produce recommendations.
 - Each stage must clearly state input files, required columns, output artifacts, interpretation rules, and stop conditions.
 
+## Input sources
+
+Every stage consumes saved target CSVs in the `LSL_Bridge` target stream layout. Two recording paths produce compatible files:
+
+- **Direct `LSL_Bridge` capture** — the production path; record unfiltered/identity, then copy and rename one file per trial. Full step-by-step procedure (capture, save, manifest, run): [Handgrip_Analysis/docs/workflow.md](workflow.md).
+- **`Handgrip_Calibration` session** — reuse a session's `Handgrip_Calibration/data/calibration/<session_id>/target.csv` (the `TargetCsvSink` output) as analysis input. The manifest `channel` field selects the signal (`raw` → `target_raw_count`, `current_units` → `target_current_units`, `filtered` → `target_filtered_units`); `target_raw_count` must be present.
+
+The capture protocols below give per-stage conditions; [Handgrip_Analysis/docs/workflow.md](workflow.md) is the authoritative end-to-end procedure.
+
 ## Stage overview
 
 | Stage   | Name                                | Purpose                                                        | Typical input                                              | Typical output                                                            |
@@ -26,11 +35,7 @@ Determine whether the signal needs an initial warm-up/discard period before reli
 
 ### Capture protocol
 
-- Start from power-off or cold start.
-- No hand contact, no load on the sensor.
-- Begin recording immediately after power-on.
-- Record continuously for 15–30 minutes.
-- Repeat at least 5 times if possible.
+Cold start, no hand contact, no load; record from power-on for 15–30 min, repeat if practical. Full procedure: [Handgrip_Analysis/docs/workflow.md](workflow.md) Step 3.
 
 ### Inputs
 
@@ -58,9 +63,7 @@ Measure the noise floor and spectral content when no force is applied.
 
 ### Capture protocol
 
-- Wait until the sensor is thermally stable (after Stage 1 warm-up period).
-- No load, no hand contact.
-- Record 10–20 minutes.
+After Stage 1 warm-up, no load and no hand contact; record 10–20 min, repeat 2–5×. Full procedure: [Handgrip_Analysis/docs/workflow.md](workflow.md) Step 4.
 
 ### Inputs
 
@@ -88,9 +91,7 @@ Measure whether the signal changes under constant load.
 
 ### Capture protocol
 
-- After warm-up, apply a stable known load.
-- Hold for 10–20 minutes.
-- Optionally include pre-load and post-unload windows in the same file for zero-return assessment.
+After warm-up, apply a stable known load and hold 10–20 min; optionally include pre-load and post-unload windows for zero-return assessment. Full procedure: [Handgrip_Analysis/docs/workflow.md](workflow.md) Step 5.
 
 ### Inputs
 
@@ -107,7 +108,7 @@ Measure whether the signal changes under constant load.
 
 ### Interpretation
 
-Use Stage 3 to separate sensor/fixture drift from random noise. Do not solve mechanical creep with an always-on high-pass filter unless the downstream scientific interpretation explicitly allows it.
+Use Stage 3 to separate sensor/fixture drift from random noise. Do not solve mechanical creep with an always-on high-pass filter unless the downstream scientific interpretation explicitly allows it. Prefer managing baseline outside the force waveform: gate the tare process, track baseline only when the device is confidently unloaded, and freeze the baseline estimate during grip events.
 
 ## Stage 4 — Real handgrip dynamics
 
@@ -117,9 +118,7 @@ Characterize realistic grip events such as ramp, hold, squeeze, release, and fat
 
 ### Capture protocol
 
-- Record one file per trial.
-- Include a few seconds of quiet baseline before each grip event.
-- Repeat each trial type several times.
+One file per trial type, with a few seconds of quiet baseline before each grip event; repeat each type several times. Full procedure: [Handgrip_Analysis/docs/workflow.md](workflow.md) Step 6.
 
 Recommended trial types:
 
@@ -156,8 +155,7 @@ Compare signal behavior across conditions: cabling, power, board mode, fixture s
 
 ### Capture protocol
 
-- Record one rest capture per condition.
-- Change only one condition at a time.
+One rest capture per condition, changing only one condition at a time. Full procedure: [Handgrip_Analysis/docs/workflow.md](workflow.md) Step 7.
 
 Suggested conditions to compare:
 
@@ -192,7 +190,7 @@ Evaluate digital filter candidates against the signal goal: preserve realistic f
 
 ### Capture protocol
 
-No new capture needed. Stage 6 reuses outputs from Stage 2 (noise evidence) and Stage 4 (dynamic evidence). Ensure both are present in the manifest before running Stage 6.
+No new capture needed. Stage 6 reuses outputs from Stage 2 (noise evidence) and Stage 4 (dynamic evidence). Ensure both are present in the manifest before running Stage 6. Manifest setup and run: [Handgrip_Analysis/docs/workflow.md](workflow.md) Steps 10–11.
 
 ### Inputs
 
@@ -211,7 +209,7 @@ No new capture needed. Stage 6 reuses outputs from Stage 2 (noise evidence) and 
 
 ### Interpretation
 
-Prefer the simplest candidate that preserves dynamics and improves noise enough to justify deployment. For the current documented reassessment, the leading recommendation is a **2nd-order Butterworth low-pass at 15 Hz, fs = 100 Hz** for the primary characterization channel, with a 10 Hz low-pass as an optional stable-display channel.
+Prefer the simplest candidate that preserves dynamics and improves noise enough to justify deployment. The current committed Stage 6 selection (`data/analysis_results/stage6/selected_filter_recommendation.json`, deployed in [LSL_Bridge/conf/config.yaml](../../LSL_Bridge/conf/config.yaml)) is a **2nd-order Butterworth low-pass at 9 Hz, fs = 100 Hz** (`butter_lowpass_9hz`).
 
 ## Cross-stage validation
 
