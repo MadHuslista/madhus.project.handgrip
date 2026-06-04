@@ -128,3 +128,51 @@ filters:
     )
     with pytest.raises(ValueError, match="not directly deployable"):
         load_filter_specs(str(candidates_yaml))
+
+
+
+def test_stage6_accepts_current_units_channel(tmp_path):
+    from handgrip_analysis.domain import StageConfig, TrialSpec
+    from handgrip_analysis.stages.stage6_filters import analyze_trial
+
+    rng = np.random.default_rng(123)
+    t_us = (np.arange(N) / FS * 1e6).astype(int)
+    force_n = rng.normal(scale=0.2, size=N)
+    force_n[500:1000] += np.linspace(0.0, 40.0, 500)
+    force_n[1000:1500] += 40.0
+    csv_path = tmp_path / "dynamic_current_units.csv"
+    pd.DataFrame(
+        {
+            "device_clock_us": t_us,
+            "target_raw_count": force_n * 1000.0 + 800000.0,
+            "target_current_units": force_n,
+            "target_filtered_units": force_n * 0.5,
+        }
+    ).to_csv(csv_path, index=False)
+
+    candidates_yaml = tmp_path / "candidates.yaml"
+    candidates_yaml.write_text(
+        """
+filters:
+  - {name: identity, type: identity}
+  - {name: lp10, type: lowpass_1pole, cutoff_hz: 10.0}
+""",
+        encoding="utf-8",
+    )
+    spec = TrialSpec(
+        stage="stage6",
+        condition="fast_max",
+        trial_type="dynamic",
+        trial_id="trial01",
+        session_id="s1",
+        path=csv_path,
+        channel="current_units",
+    )
+    cfg = StageConfig(stage="stage6", channel="current_units", filter_config=candidates_yaml)
+
+    result = analyze_trial(spec, cfg)
+
+    assert result.spec.channel == "current_units"
+    filter_metrics = result.tables["filter_metrics"]
+    assert set(filter_metrics["filter"]) == {"identity", "lp10"}
+    assert np.isfinite(filter_metrics["peak_relative_error"]).any()

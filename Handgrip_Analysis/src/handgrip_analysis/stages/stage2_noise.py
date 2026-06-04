@@ -11,7 +11,7 @@ import pandas as pd
 from ..config import DSPConfig
 from ..domain import ConditionSummary, StageConfig, TrialResult, TrialSpec
 from ..dsp import allan_deviation, bandpower, dominant_psd_peaks, robust_std, welch_psd
-from ..io import FILTERED_COLUMN, load_capture, sampling_summary
+from ..io import load_capture, sampling_summary
 from .common import base_metrics, flatten_sampling, summarize_default
 
 
@@ -109,9 +109,10 @@ def analyze_trial(spec: TrialSpec, cfg: StageConfig) -> TrialResult:
     }
     tables: dict[str, pd.DataFrame] = {}
     for channel in channels:
-        if channel == "filtered" and FILTERED_COLUMN not in cap.df.columns:
+        try:
+            y = cap.series(channel)  # type: ignore[arg-type]
+        except KeyError:
             continue
-        y = cap.series(channel)  # type: ignore[arg-type]
         ch_metrics, ch_tables = _channel_metrics(y, cap.fs_estimate_hz, cfg, channel)
         metrics.update(ch_metrics)
         tables.update(ch_tables)

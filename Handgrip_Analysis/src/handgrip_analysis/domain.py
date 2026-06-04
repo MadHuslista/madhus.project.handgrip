@@ -59,7 +59,7 @@ class TrialSpec:
         loader.
     channel:
         Signal channel consumed by the analyzer.  The current capture loader
-        supports ``raw`` and ``filtered``.
+        supports ``raw``, ``current_units``, and ``filtered``.
     include:
         False rows are kept in the manifest table but excluded from analysis.
     load_nominal_n:

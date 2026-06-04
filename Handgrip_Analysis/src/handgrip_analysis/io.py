@@ -14,10 +14,16 @@ import pandas as pd
 log = logging.getLogger(__name__)
 
 TimeSource = Literal["auto", "device", "lsl", "host"]
-ChannelName = Literal["raw", "filtered"]
+ChannelName = Literal["raw", "current_units", "filtered"]
 
 RAW_COLUMN = "target_raw_count"
+CURRENT_UNITS_COLUMN = "target_current_units"
 FILTERED_COLUMN = "target_filtered_units"
+CHANNEL_COLUMN_MAP: dict[str, str] = {
+    "raw": RAW_COLUMN,
+    "current_units": CURRENT_UNITS_COLUMN,
+    "filtered": FILTERED_COLUMN,
+}
 
 
 @dataclass(slots=True)
@@ -36,17 +42,16 @@ class CaptureData:
 
     # @brief Return one signal channel from the capture.
     # @param self Instance pointer.
-    # @param channel Channel selector (`raw` or `filtered`).
+    # @param channel Channel selector (`raw`, `current_units`, or `filtered`).
     # @return Requested channel as a float numpy array.
     # @throws KeyError Raised when requested channel is unavailable.
     def series(self, channel: ChannelName) -> np.ndarray:
-        if channel == "raw":
-            return self.df[RAW_COLUMN].to_numpy(dtype=float)
-        if channel == "filtered":
-            if FILTERED_COLUMN not in self.df.columns:
-                raise KeyError(f"CSV has no {FILTERED_COLUMN} column")
-            return self.df[FILTERED_COLUMN].to_numpy(dtype=float)
-        raise KeyError(f"Unsupported channel: {channel}")
+        column = CHANNEL_COLUMN_MAP.get(channel)
+        if column is None:
+            raise KeyError(f"Unsupported channel: {channel}")
+        if column not in self.df.columns:
+            raise KeyError(f"CSV has no {column} column")
+        return self.df[column].to_numpy(dtype=float)
 
 
 REQUIRED_COLUMNS = {RAW_COLUMN}
@@ -110,7 +115,7 @@ def load_capture(path: str | Path, time_source: TimeSource = "auto") -> CaptureD
 
     Expected signal columns follow the current TargetCsvSink naming standard.
     Required: target_raw_count
-    Optional: target_filtered_units
+    Optional: target_current_units, target_filtered_units
 
     The *time_source* parameter controls which column(s) are tried:
     - ``"auto"``   — try device_clock_us → lsl_timestamp_s → host_unix_time_ns

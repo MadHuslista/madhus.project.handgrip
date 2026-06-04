@@ -204,7 +204,7 @@ def build_stage_parser() -> argparse.ArgumentParser:
     parser.add_argument("--condition", default=None, help="Optional condition filter")
     parser.add_argument("--trial-type", dest="trial_type", default=None, help="Optional trial_type filter")
     parser.add_argument("--time-source", dest="time_source", default=None, choices=["auto", "device", "lsl", "host"])
-    parser.add_argument("--channel", default=None)
+    parser.add_argument("--channel", default=None, choices=["raw", "current_units", "filtered"])
     parser.add_argument(
         "--channels", default=None, help="Comma-separated channel list for stages that support multiple channels"
     )
@@ -275,7 +275,7 @@ def build_run_all_parser() -> argparse.ArgumentParser:
         "--stages", default=None, help="Comma-separated stages to run; default: all stages present in manifest"
     )
     parser.add_argument("--time-source", dest="time_source", default=None, choices=["auto", "device", "lsl", "host"])
-    parser.add_argument("--channel", default=None)
+    parser.add_argument("--channel", default=None, choices=["raw", "current_units", "filtered"])
     parser.add_argument("--channels", default=None)
     parser.add_argument("--filter-config", dest="filter_config", default=None)
     parser.add_argument("--lsl-bridge-root", dest="lsl_bridge_root", default=None)
