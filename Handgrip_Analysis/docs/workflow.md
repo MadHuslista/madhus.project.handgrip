@@ -37,7 +37,7 @@ Before recording any stage, confirm these settings in `LSL_Bridge/conf/config.ya
 
 - Prefer 80 SPS on the HX711 during characterization.
 - Log the least-processed signal available.
-- Keep both `target_raw_count` and `target_filtered_units` in the output CSV (`csv.target.enabled: true`).
+- Keep the full target column layout in the output CSV (`csv.target.enabled: true`); `TargetCsvSink` writes `target_raw_count`, `target_current_units`, and `target_filtered_units`, so every `channel` selector resolves.
 - Do not change mechanics, cabling, or mounting between trials unless that change is the test condition.
 - Record condition metadata externally (ambient temperature, protocol, power source).
 
@@ -93,7 +93,7 @@ Example:
 20260402_stage4_fast_max_trial01.csv
 ```
 
-Keep the `target.csv` column layout when exporting. The manifest `channel` field is a logical selector, not a literal column name: `raw` maps to the `target_raw_count` column (the raw HX711 ADC count, and the calibration-authoritative signal) and `filtered` maps to `target_filtered_units` (see `Handgrip_Analysis/src/handgrip_analysis/io.py`). Analysis fails fast if `target_raw_count` is absent, so do not rename or drop that column.
+Keep the `target.csv` column layout when exporting. The manifest `channel` field is a logical selector, not a literal column name: `raw` maps to the `target_raw_count` column (the raw HX711 ADC count, and the calibration-authoritative signal), `current_units` maps to `target_current_units` (the firmware-scaled force/sanity value), and `filtered` maps to `target_filtered_units` (see `Handgrip_Analysis/src/handgrip_analysis/io.py`). Analysis fails fast if `target_raw_count` is absent, so do not rename or drop that column.
 
 ### 1.3 Create or update the manifest
 
@@ -123,7 +123,7 @@ Manifest columns:
 | `trial_id`       | yes      | Trial identifier, e.g. `trial01`                         |
 | `session_id`     | yes      | Session identifier for provenance                        |
 | `path`           | yes      | Relative path to the CSV file from the manifest location |
-| `channel`        | no       | Signal selector, defaults to `raw`: `raw` (→ `target_raw_count`) or `filtered` (→ `target_filtered_units`) |
+| `channel`        | no       | Signal selector, defaults to `raw`: `raw` (→ `target_raw_count`), `current_units` (→ `target_current_units`), or `filtered` (→ `target_filtered_units`) |
 | `load_nominal_n` | optional | Nominal force in Newtons, for loaded stages              |
 | `include`        | yes      | `True` to include, `False` to exclude                    |
 | `notes`          | optional | Any notes about the trial                                |
