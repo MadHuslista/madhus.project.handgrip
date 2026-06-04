@@ -65,32 +65,41 @@ Handgrip_Analysis/conf/
 | `psd.nperseg`      | integer     | Controls spectral resolution vs variance.                  | Use enough samples; document changes.                                                               |
 | `filter.order`     | integer     | Controls steepness and phase/latency behavior.             | Prefer low order unless justified.                                                                  |
 | `filter.cutoff_hz` | number/list | Defines pass/stop behavior.                                | Must be below Nyquist and validated against dynamics.                                               |
-| `zero_phase`       | boolean     | Controls offline zero-phase vs causal deployment behavior. | Do not compare zero-phase offline filters to causal real-time deployment without noting difference. |
 
 ## Filter candidate settings
 
-Candidate config should record:
+`conf/filters/candidates.yaml` is `schema_version: 2`. The active `filters:` list is a **deployment
+contract**: every active candidate must map 1:1 to an `LSL_Bridge` `processing.filters` entry, and
+`load_filter_specs()` raises a `ValueError` if any active candidate is not a production-real-time type.
 
-- candidate ID,
-- filter family,
-- order,
-- cutoff/band/notch frequency,
-- sampling rate assumption,
-- whether it is causal or zero-phase,
-- target deployment path.
+Active types are restricted to `identity`, `butterworth_lowpass_2nd` (alias `biquad_lowpass`), and
+`lowpass_1pole`; see the deployable vocabulary in
+[LSL_Bridge/docs/configuration.md](../../LSL_Bridge/docs/configuration.md#supported-filter-types).
+Each active candidate records:
 
-Example candidate concept:
+- `type` — production-real-time filter type,
+- `name` — candidate identifier,
+- `cutoff_hz` — low-pass cutoff,
+- `sample_rate_hz` — assumed target cadence (Butterworth only),
+- `q` — Butterworth Q factor (Butterworth only; `1/sqrt(2)` ≈ `0.7071`),
+- `reset_on_gap_s` — reset filter state after a target gap,
+- `min_dt_s` — minimum dt guard.
+
+Example active candidate:
 
 ```yaml
 filters:
-  candidates:
-    - id: butter_lowpass_15hz
-      family: butter_lowpass
-      order: 2
-      cutoff_hz: 15.0
-      sampling_rate_hz: 100.0
-      deployment_target: lsl_bridge_processing
+  - type: butterworth_lowpass_2nd
+    name: butter_lowpass_15hz
+    cutoff_hz: 15.0
+    sample_rate_hz: 100.0
+    q: 0.7071067811865476
+    reset_on_gap_s: 1.0
+    min_dt_s: 1.0e-06
 ```
+
+Offline-only diagnostics (`notch`, `butter_highpass`, `butter_bandpass`, `moving_average`, `median`,
+`chain`) may be kept below the active list as inactive metadata, but must not appear under `filters:`.
 
 ## Output settings
 

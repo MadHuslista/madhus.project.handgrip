@@ -78,7 +78,7 @@ Measure the noise floor and spectral content when no force is applied.
 
 ### Interpretation
 
-Use Stage 2 to decide whether low-pass or notch candidates are justified. A frequency peak visible at rest does not automatically mean a notch is required; compare it against useful handgrip bandwidth and dynamic distortion.
+Use Stage 2 to quantify how much low-pass smoothing is justified. A frequency peak visible at rest does not automatically warrant aggressive filtering; compare it against useful handgrip bandwidth and dynamic distortion. Narrowband (notch) removal is an offline-only diagnostic and is not a deployable Stage 6 candidate — see [Handgrip_Analysis/docs/filter-design.md](filter-design.md).
 
 ## Stage 3 — Loaded drift / creep
 
@@ -188,7 +188,7 @@ Use Stage 5 to identify environmental or setup conditions that should be fixed b
 
 ### Purpose
 
-Evaluate digital filter candidates against the signal goal: preserve realistic force behavior while reducing non-essential noise/contamination.
+Evaluate digital filter candidates against the signal goal: preserve realistic force behavior while reducing non-essential noise/contamination. Candidates are restricted to **production-real-time** filters that map 1:1 to an `LSL_Bridge` `processing.filters` entry; each is evaluated causally and per-sample (using the recorded capture timestamps) so the ranking reflects live deployment behavior rather than offline zero-phase filtering. See [Handgrip_Analysis/docs/filter-design.md](filter-design.md).
 
 ### Capture protocol
 
@@ -207,7 +207,7 @@ No new capture needed. Stage 6 reuses outputs from Stage 2 (noise evidence) and 
 - plots showing raw vs candidates,
 - metrics such as peak error, peak-time shift, rise-time shift, derivative ratio, plateau noise,
 - recommendation YAML/report,
-- deployment guidance.
+- deployment guidance, including an `LSL_Bridge` processing snippet generated through the strict `lsl_bridge_filter_config_from_spec()` contract (the selected filter is guaranteed deployable).
 
 ### Interpretation
 

@@ -48,24 +48,28 @@ A stage must document:
 
 ## Add a filter family
 
-### Files to edit
+Stage 6 only ranks production-real-time filters that are deployable in `LSL_Bridge`. A new active
+filter is therefore a **cross-component** change: it must exist as a causal real-time node in
+`LSL_Bridge` before `Handgrip_Analysis` can rank it. Offline-only filters (notch, high/band-pass,
+moving-average, median, chain) stay as inactive diagnostic metadata only.
 
-| Area                    | Purpose                                             |
-| ----------------------- | --------------------------------------------------- |
-| DSP/filter module       | Apply candidate filter.                             |
-| filter candidate config | Add family/order/cutoff parameters.                 |
-| Stage 6 runner          | Include candidate in benchmark loop.                |
-| Stage 6 report          | Show metrics and interpretation.                    |
-| tests                   | Validate frequency constraints and output behavior. |
+### Process
+
+1. Implement the filter as a causal real-time node in `LSL_Bridge` (`src/lsl_bridge/core/filter.py`) and add it to `SUPPORTED_PRODUCTION_FILTER_TYPES`.
+2. Mirror the same causal, per-sample implementation in `Handgrip_Analysis` (`src/handgrip_analysis/dsp.py`) and register it in `PRODUCTION_REALTIME_FILTER_TYPES`; extend `lsl_bridge_filter_config_from_spec()` so the type converts to an `LSL_Bridge` stanza.
+3. Add the candidate to the active `filters:` list in `conf/filters/candidates.yaml` with production params (`cutoff_hz`, `sample_rate_hz`, `q`, `reset_on_gap_s`, `min_dt_s` as applicable).
+4. Add equivalence tests proving the Analysis output matches the `LSL_Bridge` output sample-for-sample, plus the bridge-side filter test (`LSL_Bridge/tests/unit/test_filter.py`).
+5. Re-run Stage 6 and update the Stage 6 report/recommendation.
 
 ### Required validation
 
 - cutoff below Nyquist,
 - stable coefficients,
+- causal per-sample behavior equivalent to the `LSL_Bridge` node,
 - identity/raw baseline included,
 - peak/rise/release distortion measured,
 - latency/phase behavior documented,
-- deployment target stated.
+- converts cleanly through `lsl_bridge_filter_config_from_spec()` (active candidates that do not are rejected at config load).
 
 ## Add a report section
 

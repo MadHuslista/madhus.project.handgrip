@@ -180,6 +180,30 @@ See [LSL_Bridge/docs/timestamping.md](timestamping.md).
 
 Important: the processing output `target_filtered_units` is for display/QA unless explicitly promoted by a validated workflow. Calibration should preserve and fit `target_raw_count`.
 
+### Supported filter types
+
+`processing.filters[*].type` is the deployable filter vocabulary. It is owned here because
+`LSL_Bridge` is the production target; `Handgrip_Analysis` Stage 6 may only select filters that
+map 1:1 to an entry in this table (see [Handgrip_Analysis/docs/filter-design.md](../../Handgrip_Analysis/docs/filter-design.md)).
+The set is enforced in `lsl_bridge.core.filter` (`SUPPORTED_PRODUCTION_FILTER_TYPES`, `_build_filter_node`).
+
+| `type`                   | Implementation             | Parameters                                                | Notes                                            |
+| ------------------------ | -------------------------- | --------------------------------------------------------- | ------------------------------------------------ |
+| `identity`               | pass-through               | none                                                      | No filtering; useful for pipeline wiring/tests.  |
+| `butterworth_lowpass_2nd`| `SecondOrderBiquadLowPass` | `cutoff_hz`, `sample_rate_hz`, `q`, `reset_on_gap_s`, `min_dt_s` | 2nd-order Butterworth IIR low-pass.        |
+| `biquad_lowpass`         | `SecondOrderBiquadLowPass` | same as `butterworth_lowpass_2nd`                         | Alias for `butterworth_lowpass_2nd`.             |
+| `lowpass_1pole`          | `FirstOrderLowPass`        | `cutoff_hz`, `reset_on_gap_s`, `min_dt_s`                 | 1st-order RC IIR; lower CPU cost.                |
+| `drift_corrector`        | `DriftCorrector`           | adaptive baseline params                                  | Adaptive baseline subtraction.                   |
+
+Backward-compatible aliases accepted by the factory (emitted by older/transitional Analysis configs):
+
+| Alias              | Maps to                  | Constraint                                                                          |
+| ------------------ | ------------------------ | ----------------------------------------------------------------------------------- |
+| `butter_lowpass`   | `butterworth_lowpass_2nd`| Accepted **only** with `order: 2`. `order: 4` raises `butter_lowpass compatibility alias only supports order=2`. |
+| `one_pole_lowpass` | `lowpass_1pole`          | None.                                                                               |
+
+Any `type` outside this set raises at build time. Add a new type with `tests/unit/test_filter.py` coverage.
+
 ## `csv`
 
 | Key                                | Default                                          | Impact                                 |

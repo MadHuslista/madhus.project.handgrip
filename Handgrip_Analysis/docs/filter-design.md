@@ -3,10 +3,11 @@
 ## Summary
 
 - Filter design is a decision workflow, not just a smoothing operation.
-- Stage 6 compares candidate filters against dynamic fidelity, noise reduction, distortion, and deployment complexity.
+- Stage 6 is **production-contract-first**: active candidates are restricted to filters that map 1:1 to an `LSL_Bridge` `processing.filters` entry and are evaluated with the same causal, timestamp-aware per-sample implementation used for live streaming. Offline-only filters can no longer win a Stage 6 ranking.
+- Active candidate types: `identity`, `butterworth_lowpass_2nd` (alias `biquad_lowpass`), and `lowpass_1pole`. The deployable vocabulary is owned by [LSL_Bridge/docs/configuration.md](../../LSL_Bridge/docs/configuration.md#supported-filter-types).
 - Current documented recommendation: primary characterization channel should use a **2nd-order Butterworth low-pass at 15 Hz, fs = 100 Hz** when the active data profile matches the refreshed artifact-fixed captures.
 - A **2nd-order Butterworth low-pass at 10 Hz** can be used as an optional stable-display channel, not necessarily as the primary scientific characterization channel.
-- High-pass, band-pass, and notch filters should not be deployed simply because they are available; they must be justified by metrics and waveform behavior.
+- High-pass, band-pass, notch, moving-average, median, and chain filters are offline-only diagnostics: they may exist as **inactive** metadata in `conf/filters/candidates.yaml`, but they are rejected at config load if placed in the active `filters:` list.
 
 ## Candidate review workflow
 
@@ -31,7 +32,7 @@ Use Stage 2 outputs:
 - narrowband contamination,
 - baseline drift.
 
-Do not jump to a notch/high-pass filter just because one frequency peak exists. Compare against useful handgrip bandwidth and dynamic distortion.
+A single frequency peak at rest does not by itself justify aggressive filtering; compare it against useful handgrip bandwidth and dynamic distortion. Note that notch and high-pass removal are offline-only diagnostics, not deployable Stage 6 candidates (see Step 4).
 
 ### Step 3 — Select representative dynamic capture
 
@@ -39,15 +40,25 @@ Use a capture with baseline, rise, hold, and release. The current filter reasses
 
 ### Step 4 — Build candidate bank
 
-Candidate families to include when relevant:
+The **active** candidate bank is restricted to production-real-time types. Every active candidate must
+map 1:1 to an `LSL_Bridge` filter stanza and is run causally per-sample; `load_filter_specs()` raises a
+`ValueError` if an active candidate is not deployable.
 
-| Family            | When to test                                                                        | Main risk                                               |
-| ----------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| identity/raw      | Always include baseline.                                                            | None; provides comparison reference.                    |
-| low-pass          | High-frequency contamination without needing baseline removal.                      | Over-smoothing, peak error, delayed/flattened dynamics. |
-| notch/band-reject | Confirmed narrowband contamination that survives low-pass or is in useful band.     | Ringing, unnecessary complexity.                        |
-| high-pass         | Baseline drift must be removed and force DC/slow components are not meaningful.     | Destroys static force interpretation.                   |
-| band-pass         | Signal is known to occupy a bounded dynamic band and DC/static force is not needed. | Usually wrong for force magnitude channels.             |
+| Active type               | When to use                                                    | Main risk                                               |
+| ------------------------- | -------------------------------------------------------------- | ------------------------------------------------------- |
+| `identity`                | Always include as baseline.                                    | None; provides comparison reference.                    |
+| `butterworth_lowpass_2nd` | High-frequency contamination without needing baseline removal. | Over-smoothing, peak error, delayed/flattened dynamics. |
+| `lowpass_1pole`           | Lighter, lower-cost smoothing where a 2nd-order roll-off is unnecessary. | Gentler roll-off; less stopband attenuation.  |
+
+Offline-only families — `notch`/band-reject, `butter_highpass`, `butter_bandpass`, `moving_average`,
+`median`, and `chain` — address narrowband contamination, baseline drift, or bounded-band signals, but
+they cannot run as a causal real-time `LSL_Bridge` filter. They may stay in `candidates.yaml` as
+**inactive diagnostic** metadata for investigation, but never in the active `filters:` list. To promote
+one to production, follow the process in [Handgrip_Analysis/docs/development.md](development.md#add-a-filter-family).
+
+`LSL_Bridge` also supports a `drift_corrector`, but it is intentionally **not** a Stage 6 candidate:
+drift correction is semantically dangerous for calibrated absolute-force baselines and must not be ranked
+without explicit validation criteria.
 
 ### Step 5 — Evaluate metrics
 
@@ -71,6 +82,11 @@ Prefer the simplest candidate that:
 - preserves rise/release dynamics,
 - does not hide mechanical or sensor problems,
 - can be deployed in the intended target component.
+
+Because the active bank is already restricted to deployable types, the Stage 6 winner is guaranteed
+deployable. The selection is exported as an `LSL_Bridge` processing snippet through the strict
+`lsl_bridge_filter_config_from_spec()` contract — there is no "winner requires manual implementation"
+middle state. An unconvertible filter fails before it can be recommended.
 
 ## Current recommendation
 
@@ -106,5 +122,5 @@ Do not deploy the selected filter if:
 - candidate metrics cannot be traced to source data,
 - filter improves visual smoothness but distorts rise/peak/release behavior,
 - cutoff frequency is invalid for the actual sampling rate,
-- report does not distinguish offline zero-phase vs real-time causal behavior,
+- the candidate is not a production-real-time type (Stage 6 evaluates every candidate causally and per-sample, matching `LSL_Bridge`; offline zero-phase filtering is not used),
 - recommendation is based on a single unrepresentative capture.
