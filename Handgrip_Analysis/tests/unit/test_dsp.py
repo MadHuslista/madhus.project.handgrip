@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 from handgrip_analysis.dsp import (
@@ -366,7 +368,8 @@ def test_lsl_bridge_config_from_spec_maps_active_types():
 
 
 def test_active_candidate_file_is_fully_production_realtime():
-    specs = load_filter_specs("conf/filters/candidates.yaml")
+    candidates = Path(__file__).resolve().parents[2] / "conf" / "filters" / "candidates.yaml"
+    specs = load_filter_specs(candidates)
     assert specs
     assert all(is_production_realtime_filter_spec(spec) for spec in specs)
     assert {spec["type"] for spec in specs} <= {"identity", "butterworth_lowpass_2nd", "lowpass_1pole"}
