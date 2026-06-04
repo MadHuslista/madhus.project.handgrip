@@ -11,45 +11,22 @@ streams:
     timeout_s: 5.0
     nominal_srate_hz: null
     channel_map:
-      raw:
-      - target_raw_count
-      - grip_force_raw
-      - raw
-      - 0
-      filtered:
-      - target_filtered_units
-      - grip_force_filtered
-      - filtered
-      - 1
-      clock:
-      - device_clock_us
-      - target_clock_us
-      - clock
-      - 2
-      seq:
-      - seq
-      - sequence
-      - sample_index
+      seq: [seq, 0]
+      clock: [device_clock_us, 1]
+      raw: [target_raw_count, 2]
+      current_units: [target_current_units, 3]
+      filtered: [target_filtered_units, 4]
+      status: [target_status, 5]
   reference:
     name: HandgripReference
     type: Force
     timeout_s: 5.0
     nominal_srate_hz: 500
     channel_map:
-      raw:
-      - reference_force_N
-      - rs485_raw
-      - raw
-      - 0
-      clock:
-      - rs485_clock
-      - reference_clock_us
-      - clock
-      - 1
-      seq:
-      - seq
-      - sequence
-      - sample_index
+      seq: [seq, 0]
+      clock: [reference_clock_s, 1]
+      raw: [reference_force_N, 2]
+      status: [reference_status, 3]
 markers:
   emit_lsl: true
   write_ndjson: true

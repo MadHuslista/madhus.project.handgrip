@@ -15,22 +15,22 @@ streams:
     timeout_s: 5.0
     nominal_srate_hz: null
     channel_map:
-      seq: seq
-      clock: device_clock_us
-      raw: target_raw_count
-      filtered: target_filtered_units
-      current_units: target_current_units
-      status: target_status
+      seq: [seq, 0]
+      clock: [device_clock_us, 1]
+      raw: [target_raw_count, 2]
+      current_units: [target_current_units, 3]
+      filtered: [target_filtered_units, 4]
+      status: [target_status, 5]
   reference:
     name: HandgripReference
     type: Force
     timeout_s: 5.0
     nominal_srate_hz: 500
     channel_map:
-      seq: seq
-      clock: reference_clock_s
-      raw: reference_force_N
-      status: reference_status
+      seq: [seq, 0]
+      clock: [reference_clock_s, 1]
+      raw: [reference_force_N, 2]
+      status: [reference_status, 3]
 markers:
   stream_name: HandgripCalibrationMarkers
   stream_type: Markers

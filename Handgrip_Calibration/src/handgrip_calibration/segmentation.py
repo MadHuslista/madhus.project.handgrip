@@ -68,14 +68,79 @@ def _accepted_trial_ids(events: list[dict[str, Any]]) -> set[str]:
     return accepted - rejected
 
 
+def _candidate_to_csv_column(candidate: str | int) -> str:
+    """Translate a configured channel-map candidate into a CSV column name.
+
+    Live/XDF importers write canonical columns when LSL labels resolve, and they
+    always preserve positional channels as ``channel_<index>``.  Therefore an
+    integer channel-map fallback must resolve to the matching numbered CSV
+    column during offline segmentation.
+    """
+
+    if isinstance(candidate, int):
+        return f"channel_{candidate}"
+    return str(candidate)
+
+
+def _resolve_signal_column(
+    df: pd.DataFrame,
+    *,
+    stream_key: str,
+    signal: str,
+    config: AppConfig | None,
+    required: bool = True,
+) -> str | None:
+    """Resolve a calibration signal column without unsafe channel_0 fallback.
+
+    Resolution order:
+    1. the requested signal itself, e.g. ``raw``;
+    2. candidates from ``streams.<stream>.channel_map.<signal>``;
+    3. fail loudly for required calibration-critical signals.
+
+    This intentionally does **not** fall back to the first ``channel_*`` column.
+    In captured D2/PM58 streams, ``channel_0`` is commonly the sequence counter,
+    so using it as a force/raw signal silently corrupts calibration datasets.
+    """
+
+    candidates: list[str] = [signal]
+    if config is not None and stream_key in config.streams:
+        stream_cfg = config.streams[stream_key]
+        mapped = stream_cfg.channel_map.get(signal, [])
+        candidates.extend(_candidate_to_csv_column(candidate) for candidate in mapped)
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        if candidate in df.columns:
+            return candidate
+
+    if not required:
+        return None
+
+    available = ", ".join(map(str, df.columns))
+    searched = ", ".join(repr(candidate) for candidate in candidates)
+    raise SegmentationError(
+        f"Could not resolve required calibration signal {stream_key}.{signal!r}. "
+        f"Searched: {searched}. Available CSV columns: {available}. "
+        "Configure streams.<stream>.channel_map with the real label or a numeric "
+        "fallback index. Refusing to use an arbitrary channel_* column because "
+        "channel_0 is often a sequence counter, not a measurement signal."
+    )
+
+
 def _canonical_value(df: pd.DataFrame, preferred: str, fallback: str = "raw") -> str:
-    if preferred in df.columns:
-        return preferred
-    if fallback in df.columns:
-        return fallback
-    candidates = [c for c in df.columns if c.startswith("channel_")]
-    if candidates:
-        return candidates[0]
+    """Backward-compatible strict resolver for callers without AppConfig.
+
+    This helper intentionally keeps only named-column fallback behavior.  It no
+    longer falls back to the first ``channel_*`` column because that behavior can
+    silently substitute a sequence counter for the force/raw signal.
+    """
+
+    for candidate in (preferred, fallback):
+        if candidate in df.columns:
+            return candidate
     raise SegmentationError(f"Could not find signal column {preferred!r} or fallback {fallback!r}")
 
 
@@ -123,8 +188,14 @@ def segment_accepted_holds(
     reference_scale = fit_cfg.reference_scale if fit_cfg else 1.0
     reference_offset = fit_cfg.reference_offset if fit_cfg else 0.0
 
-    target_col = _canonical_value(target, target_signal)
-    ref_col = _canonical_value(reference, reference_signal)
+    target_col = _resolve_signal_column(
+        target, stream_key="target", signal=target_signal, config=config, required=True
+    )
+    ref_col = _resolve_signal_column(
+        reference, stream_key="reference", signal=reference_signal, config=config, required=True
+    )
+    if target_col is None or ref_col is None:  # Defensive; required=True raises first.
+        raise SegmentationError("Could not resolve required calibration signal columns")
     reference = reference.copy()
     reference["reference_force_N"] = (
         reference[ref_col].astype(float) * reference_scale + reference_offset
@@ -162,7 +233,10 @@ def segment_accepted_holds(
             reference_values=reference["reference_force_N"].to_numpy(dtype=float),
         )
         valid_interp = interp[np.isfinite(interp)]
-        seq_gaps = detect_sequence_gaps(tw["seq"]) if "seq" in tw.columns else []
+        target_seq_col = _resolve_signal_column(
+            target, stream_key="target", signal="seq", config=config, required=False
+        )
+        seq_gaps = detect_sequence_gaps(tw[target_seq_col]) if target_seq_col else []
         rejection_reasons: list[str] = []
         if quality_cfg is not None:
             if tq.n_samples < quality_cfg.min_hold_target_samples:
