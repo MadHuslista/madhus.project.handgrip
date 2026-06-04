@@ -26,6 +26,23 @@ last-reviewed: 2026-05-15
 
 ---
 
+## Visual and PDF reference set
+
+| Reference | Preview / link | Use it for |
+| --- | --- | --- |
+| Rear terminal map | <img src="assets/acquisition-board-rear-terminal-map-full-feature.jpg" alt="Rear terminal map of the full-feature acquisition board" width="240"><br>[Open image](assets/acquisition-board-rear-terminal-map-full-feature.jpg) | Terminal numbering and board-option confirmation. |
+| AC input label | <img src="assets/acquisition-board-ac-input-label-100-240vac.jpg" alt="AC input label showing AC100-240V, L, and N" width="240"><br>[Open image](assets/acquisition-board-ac-input-label-100-240vac.jpg) | Confirms this observed unit is the AC-powered variant. |
+| Front panel | <img src="assets/acquisition-board-front-panel-buttons-indicators.jpg" alt="Acquisition board front panel with buttons and indicators" width="240"><br>[Open image](assets/acquisition-board-front-panel-buttons-indicators.jpg) | Menu navigation and status indicator mapping. |
+| Translated rear label | <img src="assets/acquisition-board-rear-label-google-lens-translation.jpg" alt="Google Lens translated rear label" width="240"><br>[Open image](assets/acquisition-board-rear-label-google-lens-translation.jpg) | Quick human-readable cross-check of the rear label. |
+
+### Local PDF references
+
+| PDF | Use it for |
+| --- | --- |
+| [Original acquisition-board manual](references/acquisition-board/acquisition-board-instruction-manual-original-v3.pdf) | Source-level terminal/menu reference. |
+| [Machine-translated English acquisition-board manual](references/acquisition-board/acquisition-board-instruction-manual-machine-translated-en-v3.pdf) | English fallback when checking menu names or fault messages. |
+| [Provider offer / product-page capture](references/acquisition-board/acquisition-board-provider-offer-screencapture-2026-04-08.pdf) | Product-variant/provenance context. |
+
 ## 1. Product identity and scope
 
 This instrument is a **panel-mount load-cell indicator / transmitter / controller** with:

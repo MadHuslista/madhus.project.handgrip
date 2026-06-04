@@ -49,6 +49,23 @@ The best calibration setup is the one that:
 
 That is why the recommended reference output is **500 Hz** (with **460800, 8N1**), not 100 or 1000 Hz: it is fast enough to preserve timing detail while avoiding unnecessary top-end complexity.
 
+### Visual configuration quick reference
+
+| Configuration area | Visual reference | Why it matters for this profile |
+| --- | --- | --- |
+| Shared force path | <img src="assets/force-fixture-full-bench-screw-press-acquisition-board.jpg" alt="Full calibration bench with screw press, PM58, handgrip, and acquisition board" width="240"><br>[Open image](assets/force-fixture-full-bench-screw-press-acquisition-board.jpg) | Confirms the reference PM58 and target handgrip are exercised in the same bench setup before trusting calibration data. |
+| PM58 identity and wire colors | <img src="assets/pm58-load-cell-certificate-wire-colors.jpg" alt="PM58 certificate with wire-color mapping" width="240"><br>[Open image](assets/pm58-load-cell-certificate-wire-colors.jpg) | Grounds the recommended PM58 sensitivity/range assumptions and wiring color map. |
+| Acquisition-board terminal map | <img src="assets/acquisition-board-rear-terminal-map-full-feature.jpg" alt="Rear terminal map of the full-feature acquisition board" width="240"><br>[Open image](assets/acquisition-board-rear-terminal-map-full-feature.jpg) | Grounds the reference-board RS485 and PM58 sensor-terminal assumptions. |
+| Target ADC and MCU wiring | <img src="assets/hx711-adc-module-to-arduino-wiring.jpg" alt="HX711 ADC module wiring to Arduino Nano" width="240"><br>[Open image](assets/hx711-adc-module-to-arduino-wiring.jpg) | Documents the target-side electronics path that produces the HX711/Arduino stream. |
+
+### Local PDF references
+
+| PDF | Use it for |
+| --- | --- |
+| [Acquisition-board original manual](references/acquisition-board/acquisition-board-instruction-manual-original-v3.pdf) | Source-level board menu, terminal, and communication checks. |
+| [Acquisition-board machine-translated English manual](references/acquisition-board/acquisition-board-instruction-manual-machine-translated-en-v3.pdf) | English fallback for menu names and parameter meanings. |
+| [HX711 datasheet](references/hx711/hx711-datasheet-english.pdf) | Target ADC sampling-rate and settling-time checks. |
+
 ### Epistemic status
 
 **[Known]**
@@ -983,7 +1000,7 @@ That is the cleanest high-confidence fallback.
 
 ### Web / primary references
 - **[W1] HX711 datasheet** — selectable **10 SPS / 80 SPS**, settling-time behavior, bridge-oriented ADC design, 50/60 Hz rejection.  
-  https://cdn.sparkfun.com/datasheets/Sensors/ForceFlex/hx711_english.pdf
+  https://cdn.sparkfun.com/datasheets/Sensors/ForceFlex/hx711-datasheet-english.pdf
 - **[W2] LSL time synchronization docs** — timestamps, clock-offset estimation, dejitter, regular-vs-irregular timing considerations.  
   https://labstreaminglayer.readthedocs.io/info/time_synchronization.html
 - **[W3] LSL FAQ** — local-machine latency typically under 0.1 ms.  

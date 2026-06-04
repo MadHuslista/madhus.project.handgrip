@@ -111,15 +111,29 @@ This guide explains how to:
 
 ## Image reference key
 
-Use these image references while following the steps.
+Use these figures while following the steps. The images are intentionally grouped here once, then referenced by figure number in the wiring procedure to avoid repeating the same large photos throughout the document.
 
-- **Fig. 1 — Rear terminal map / full-feature selection**: [docs/hardware/assets/rear-terminal-map_full-feature-selection.jpg](assets/rear-terminal-map_full-feature-selection.jpg)
-- **Fig. 2 — AC input sticker close-up**: [docs/hardware/assets/ac-input-sticker_close-up.jpg](assets/ac-input-sticker_close-up.jpg)
-- **Fig. 3 — Front panel / buttons / indicators**: [docs/hardware/assets/front-panel_buttons_indicators.jpg](assets/front-panel_buttons_indicators.jpg)
-- **Fig. 4 — PM58 load cell label**: [docs/hardware/assets/pm58-load-cell_label.jpg](assets/pm58-load-cell_label.jpg)
-- **Fig. 5 — PM58 certificate + wire colors**: [docs/hardware/assets/pm58-certificate_wire-colors.jpg](assets/pm58-certificate_wire-colors.jpg)
-- **Fig. 6 — Google Lens translated rear label**: [docs/hardware/assets/rear-label_google-lens-translation.jpg](assets/rear-label_google-lens-translation.jpg)
-- **Fig. 7 — Original certificate photo**: [docs/hardware/assets/pm58-certificate_wire-colors.jpg](assets/pm58-certificate_wire-colors.jpg)
+| Fig. | Image | Use it for |
+| --- | --- | --- |
+| **Fig. 1** | <img src="assets/acquisition-board-rear-terminal-map-full-feature.jpg" alt="Rear terminal map of the full-feature acquisition board" width="240"><br>[Open image](assets/acquisition-board-rear-terminal-map-full-feature.jpg) | Identify `1=A+`, `2=B-`, `5=E+`, `6=E-`, `7=S-`, `8=S+`, `19=L`, `20=N`. |
+| **Fig. 2** | <img src="assets/acquisition-board-ac-input-label-100-240vac.jpg" alt="AC input label showing AC100-240V, L, and N" width="240"><br>[Open image](assets/acquisition-board-ac-input-label-100-240vac.jpg) | Confirm the unit is the AC-powered version before wiring mains. |
+| **Fig. 3** | <img src="assets/acquisition-board-front-panel-buttons-indicators.jpg" alt="Acquisition-board front panel with buttons and indicators" width="240"><br>[Open image](assets/acquisition-board-front-panel-buttons-indicators.jpg) | Navigate menus, zero/calibrate, and verify display startup. |
+| **Fig. 4** | <img src="assets/pm58-load-cell-model-label.jpg" alt="PM58 load-cell model label" width="240"><br>[Open image](assets/pm58-load-cell-model-label.jpg) | Confirm PM58 model identity and nominal range. |
+| **Fig. 5** | <img src="assets/pm58-load-cell-certificate-wire-colors.jpg" alt="PM58 certificate showing wire-color mapping" width="240"><br>[Open image](assets/pm58-load-cell-certificate-wire-colors.jpg) | Confirm red/black/green/white bridge wiring and shield/drain context. |
+| **Fig. 6** | <img src="assets/acquisition-board-rear-label-google-lens-translation.jpg" alt="Google Lens translated rear label of the acquisition board" width="240"><br>[Open image](assets/acquisition-board-rear-label-google-lens-translation.jpg) | Cross-check translated rear-label functions when reading the printed label is difficult. |
+| **Fig. 7** | <img src="assets/pm58-load-cell-certificate-overview.jpg" alt="PM58 product certificate overview" width="240"><br>[Open image](assets/pm58-load-cell-certificate-overview.jpg) | Cross-check PM58 certificate, range, and sensitivity context. |
+
+### Target-device electronics visual references
+
+These images are not required to wire the PM58 reference board, but they document the target handgrip electronics that appear in the same calibration bench.
+
+| Fig. | Image | Use it for |
+| --- | --- | --- |
+| **Fig. 8** | <img src="assets/hx711-sensor-to-adc-module-wiring.jpg" alt="Sensor wiring to HX711 ADC module" width="220"><br>[Open image](assets/hx711-sensor-to-adc-module-wiring.jpg) | Inspect load-cell lead routing into the HX711 module. |
+| **Fig. 9** | <img src="assets/hx711-adc-module-to-arduino-wiring.jpg" alt="HX711 ADC module wiring to Arduino Nano" width="220"><br>[Open image](assets/hx711-adc-module-to-arduino-wiring.jpg) | Inspect HX711-to-Arduino wiring and cable strain. |
+| **Fig. 10** | <img src="assets/hx711-adc-chip-closeup.jpg" alt="HX711 chip close-up" width="220"><br>[Open image](assets/hx711-adc-chip-closeup.jpg) | Confirm the ADC module uses an HX711 chip. |
+| **Fig. 11** | <img src="assets/arduino-nano-pinout-closeup.jpg" alt="Arduino Nano pinout close-up" width="220"><br>[Open image](assets/arduino-nano-pinout-closeup.jpg) | Identify the Arduino Nano board and visible pin labels. |
+| **Fig. 12** | <img src="assets/arduino-nano-mounted-wiring-view.jpg" alt="Arduino Nano mounted wiring view" width="220"><br>[Open image](assets/arduino-nano-mounted-wiring-view.jpg) | Inspect the installed Arduino wiring inside the handgrip cavity. |
 
 ---
 
@@ -143,7 +157,6 @@ From **Fig. 1** and **Fig. 2**:
 
 Reference: **Fig. 2**
 
-![Fig. 2](assets/ac-input-sticker_close-up.jpg)
 
 - Inspect the yellow sticker on the side of the unit.
 - Confirm it explicitly says:
@@ -158,8 +171,6 @@ Reference: **Fig. 2**
 
 Reference: **Fig. 1** and **Fig. 6**
 
-![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
-![Fig. 6](assets/rear-label_google-lens-translation.jpg)
 
 - On the terminal map, identify the two red-marked terminals at the lower side of the diagram.
 - Confirm:
@@ -170,7 +181,6 @@ Reference: **Fig. 1** and **Fig. 6**
 
 Reference: **Fig. 2**
 
-![Fig. 2](assets/ac-input-sticker_close-up.jpg)
 
 - Use a **2-conductor AC mains cable** rated for local mains voltage.
 - Strip only the minimum needed insulation.
@@ -181,8 +191,6 @@ Reference: **Fig. 2**
 
 Reference: **Fig. 1** and **Fig. 2**
 
-![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
-![Fig. 2](assets/ac-input-sticker_close-up.jpg)
 
 - Connect the **Live / Line** conductor to **terminal 19 (L)**.
 - Connect the **Neutral** conductor to **terminal 20 (N)**.
@@ -193,7 +201,6 @@ Reference: **Fig. 1** and **Fig. 2**
 
 Reference: **Fig. 1**
 
-![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
 
 - After installing the mains cable, **do not energize the board yet**.
 - Complete the **sensor wiring** first.
@@ -204,7 +211,6 @@ Reference: **Fig. 1**
 
 Reference: **Fig. 3**
 
-![Fig. 3](assets/front-panel_buttons_indicators.jpg)
 
 - After all other wiring is complete, energize the board.
 - Watch the front display.
@@ -215,8 +221,6 @@ Reference: **Fig. 3**
 
 Reference: **Fig. 2** and **Fig. 3**
 
-![Fig. 2](assets/ac-input-sticker_close-up.jpg)
-![Fig. 3](assets/front-panel_buttons_indicators.jpg)
 
 Check the following in order:
 
@@ -280,8 +284,6 @@ From **Fig. 4**, **Fig. 5**, and **Fig. 7**:
 
 Reference: **Fig. 5** and **Fig. 4**
 
-![Fig. 5](assets/pm58-certificate_wire-colors.jpg)
-![Fig. 4](assets/pm58-load-cell_label.jpg)
 
 - Lay out the PM58 wires so the colors are clearly visible.
 - Identify the four core bridge connections:
@@ -295,7 +297,6 @@ Reference: **Fig. 5** and **Fig. 4**
 
 Reference: **Fig. 5**
 
-![Fig. 5](assets/pm58-certificate_wire-colors.jpg)
 
 - The certificate describes the fifth lead as **shielding / bare wire**.
 - In your photo, that fifth lead looks **yellow-insulated** instead of bare.
@@ -309,8 +310,6 @@ If later you observe noise issues, you can evaluate a **single-point shield term
 
 Reference: **Fig. 1** and **Fig. 6**
 
-![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
-![Fig. 6](assets/rear-label_google-lens-translation.jpg)
 
 - On the rear label, find the sensor block identified as:
   - **8 = S+**
@@ -323,9 +322,6 @@ Reference: **Fig. 1** and **Fig. 6**
 
 Reference: **Fig. 1**, **Fig. 4**, **Fig. 5**
 
-![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
-![Fig. 4](assets/pm58-load-cell_label.jpg)
-![Fig. 5](assets/pm58-certificate_wire-colors.jpg)
 
 - Connect **red** to **terminal 5 (E+)**.
 - Connect **black** to **terminal 6 (E-)**.
@@ -336,9 +332,6 @@ These two wires power the bridge from the board's excitation source.
 
 Reference: **Fig. 1**, **Fig. 4**, **Fig. 5**
 
-![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
-![Fig. 4](assets/pm58-load-cell_label.jpg)
-![Fig. 5](assets/pm58-certificate_wire-colors.jpg)
 
 - Connect **white** to **terminal 7 (S-)**.
 - Connect **green** to **terminal 8 (S+)**.
@@ -349,8 +342,6 @@ These two wires carry the differential measurement signal from the load cell int
 
 Reference: **Fig. 1** and **Fig. 5**
 
-![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
-![Fig. 5](assets/pm58-certificate_wire-colors.jpg)
 
 Check all of the following:
 
@@ -365,7 +356,6 @@ Check all of the following:
 
 Reference: **Fig. 3**
 
-![Fig. 3](assets/front-panel_buttons_indicators.jpg)
 
 - Apply power to the board.
 - Observe the front display.
@@ -379,7 +369,6 @@ If the sign is reversed, you usually do **not** need to swap E+ / E-. In practic
 
 Reference: **Fig. 3** and translated manual menu descriptions
 
-![Fig. 3](assets/front-panel_buttons_indicators.jpg)
 
 After confirming the wiring is alive:
 
@@ -470,7 +459,6 @@ That implies the safest first PC-side assumption is:
 
 Reference: **Fig. 1**
 
-![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
 
 Use an adapter that exposes at least:
 
@@ -481,8 +469,6 @@ Use an adapter that exposes at least:
 
 Reference: **Fig. 1** and **Fig. 6**
 
-![Fig. 1](assets/rear-terminal-map_full-feature-selection.jpg)
-![Fig. 6](assets/rear-label_google-lens-translation.jpg)
 
 Connect:
 
@@ -502,7 +488,6 @@ Keep this cable short for first bring-up.
 
 Reference: **Fig. 3** and translated manual `C5.CoM`
 
-![Fig. 3](assets/front-panel_buttons_indicators.jpg)
 
 If you are not sure the settings are still at default, use the front panel to inspect:
 

@@ -2,29 +2,43 @@
 
 ## Summary
 
-This directory is the canonical image location for hardware documentation. Hardware Markdown files under `docs/hardware/` should reference images through relative paths such as `assets/rear-terminal-map_full-feature-selection.jpg`.
+This directory is the canonical image location for hardware documentation. Hardware Markdown files under `docs/hardware/` should reference images through relative paths such as `assets/acquisition-board-rear-terminal-map-full-feature.jpg`.
 
-## Asset map
+Images are named by **hardware role + visible content**, not by capture timestamp. Filenames use lowercase kebab-case so links are stable and readable in GitHub.
 
-| File                                           | Shows                                                    | Used in                                                                                                                                                          |
-| ---------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rear-terminal-map_full-feature-selection.jpg` | Rear terminal map of the full-feature acquisition board. | [docs/hardware/acquisition-board-reference.md](../acquisition-board-reference.md), [docs/hardware/pm58-wiring-and-bringup.md](../pm58-wiring-and-bringup.md) |
-| `ac-input-sticker_close-up.jpg`                | AC input sticker showing AC100-240V, L, and N.           | [docs/hardware/pm58-wiring-and-bringup.md](../pm58-wiring-and-bringup.md), [docs/hardware/acquisition-board-reference.md](../acquisition-board-reference.md) |
-| `front-panel_buttons_indicators.jpg`           | Front panel, buttons, indicators, and display.           | [docs/hardware/acquisition-board-reference.md](../acquisition-board-reference.md), [docs/hardware/pm58-wiring-and-bringup.md](../pm58-wiring-and-bringup.md) |
-| `pm58-load-cell_label.jpg`                     | PM58 load-cell label.                                    | [docs/hardware/pm58-wiring-and-bringup.md](../pm58-wiring-and-bringup.md), [docs/hardware/force-fixture.md](../force-fixture.md)                             |
-| `pm58-certificate_wire-colors.jpg`             | PM58 certificate and wire-color mapping.                 | [docs/hardware/pm58-wiring-and-bringup.md](../pm58-wiring-and-bringup.md)                                                                                      |
-| `rear-label_google-lens-translation.jpg`       | Translated rear label of the acquisition board.          | [docs/hardware/acquisition-board-reference.md](../acquisition-board-reference.md), [docs/hardware/pm58-wiring-and-bringup.md](../pm58-wiring-and-bringup.md) |
-| `pm58_n_handgrip_setup.jpg`                    | PM58 + handgrip mechanical setup.                        | [docs/hardware/force-fixture.md](../force-fixture.md)                                                                                                          |
-| `acq_board_n_pm58_n_handgrip_setup.jpg`        | PM58 + handgrip + acquisition board.                     | [docs/hardware/force-fixture.md](../force-fixture.md)                                                                                                          |
-| `force_application_setup.jpg`                  | Screw-press force application setup.                     | [docs/hardware/force-fixture.md](../force-fixture.md)                                                                                                          |
-| `adc_module_to_arduino.jpeg`                   | ADC module wiring to Arduino Nano.                       | Hardware bring-up reference.                                                                                                                                     |
-| `adc_part-number.jpeg`                         | ADC module part number label.                            | Hardware identification reference.                                                                                                                               |
-| `mcu_1.jpeg`                                   | MCU board photo (view 1).                                | Hardware identification reference.                                                                                                                               |
-| `mcu_2.jpeg`                                   | MCU board photo (view 2).                                | Hardware identification reference.                                                                                                                               |
-| `sensor_to_adc_module.jpeg`                    | Sensor wiring to ADC module.                             | Hardware bring-up reference.                                                                                                                                     |
-| `20260408_044544.jpg`                          | Acquisition board bench photo (2026-04-08).              | Hardware bring-up reference.                                                                                                                                     |
-| `20260421_105315.jpg`                          | Acquisition board bench photo (2026-04-21).              | Hardware bring-up reference.                                                                                                                                     |
+## Operator image set
 
-## Naming convention
+| File | Shows | Primary use |
+| --- | --- | --- |
+| `acquisition-board-rear-terminal-map-full-feature.jpg` | Rear terminal map for the full-feature acquisition board. | Terminal identification for power, RS485, analog output, DI, and PM58 sensor wiring. |
+| `acquisition-board-ac-input-label-100-240vac.jpg` | AC input label showing `AC100-240V`, `L`, and `N`. | Confirms the exact board variant before applying mains power. |
+| `acquisition-board-front-panel-buttons-indicators.jpg` | Front display, four keys, status LEDs, and indicators. | Menu navigation, zero/calibration actions, display validation. |
+| `acquisition-board-front-panel-startup-force-reading.jpg` | Front panel powered with a live reading during bench use. | First power-on / live-response visual reference. |
+| `acquisition-board-rear-label-google-lens-translation.jpg` | Phone-captured translated rear label. | Human-readable cross-check when the printed rear label is hard to interpret. |
+| `pm58-load-cell-model-label.jpg` | PM58 load-cell model and range label. | Confirms model identity and nominal 100 kg range. |
+| `pm58-load-cell-certificate-overview.jpg` | PM58 product certificate overview. | Certificate-level identification and range/sensitivity context. |
+| `pm58-load-cell-certificate-wire-colors.jpg` | PM58 certificate with visible wire-color mapping. | Confirms `EXC+ red`, `EXC- black`, `SIG+ green`, `SIG- white`, shield/drain. |
+| `force-fixture-pm58-handgrip-series-overhead.jpg` | PM58 and handgrip target mechanically arranged in series. | Fixture stage 1: shared mechanical force path. |
+| `force-fixture-pm58-handgrip-acquisition-board-overview.jpg` | PM58 + handgrip fixture with acquisition board present. | Fixture stage 2: mechanical path plus reference electronics. |
+| `force-fixture-screw-press-pm58-handgrip-closeup.jpg` | Screw press applying controlled force through PM58 + handgrip. | Fixture stage 3: controlled-force contact and alignment. |
+| `force-fixture-full-bench-screw-press-acquisition-board.jpg` | Full bench view with screw press, PM58, handgrip, and acquisition board. | Overall calibration bench layout and cable routing. |
+| `handgrip-internal-load-cell-distal-side.jpg` | Internal handgrip load cell and wire routing on the distal side. | Target-device mechanical/electrical inspection. |
+| `handgrip-internal-load-cell-proximal-side.jpg` | Internal handgrip load cell and wire routing on the proximal side. | Target-device mechanical/electrical inspection. |
+| `hx711-sensor-to-adc-module-wiring.jpg` | Sensor wiring landing on the HX711 ADC module. | Target analog front-end wiring reference. |
+| `hx711-adc-module-to-arduino-wiring.jpg` | HX711 ADC module wiring routed toward Arduino Nano. | Target ADC-to-MCU wiring reference. |
+| `hx711-adc-chip-closeup.jpg` | HX711 chip / ADC module part-number close-up. | ADC module identification. |
+| `arduino-nano-pinout-closeup.jpg` | Arduino Nano close-up showing board and pin labels. | MCU board identification and pinout reference. |
+| `arduino-nano-mounted-wiring-view.jpg` | Arduino Nano mounted inside the handgrip wiring cavity. | Target firmware hardware context and installed wiring reference. |
 
-Use descriptive lowercase names with underscores or hyphens. Prefer names that explain the hardware relation rather than capture metadata.
+## Duplicate / retained reference asset
+
+| File | Shows | Note |
+| --- | --- | --- |
+| [`force-fixture-pm58-handgrip-series-overhead-duplicate.jpg`](force-fixture-pm58-handgrip-series-overhead-duplicate.jpg) | Same PM58 + handgrip series view as [`force-fixture-pm58-handgrip-series-overhead.jpg`](force-fixture-pm58-handgrip-series-overhead.jpg). | Exact duplicate retained only so the original asset count is preserved; operator docs use the canonical non-duplicate filename. |
+
+## Rendering guidance
+
+- In operator-facing Markdown, prefer compact image tables with clear captions instead of repeating the same large photo in every step.
+- Use images near the top of the workflow as a visual reference set, then refer to them by figure number in the step-by-step sections.
+- For GitHub rendering, use relative paths (`assets/<file>.jpg`) and avoid absolute repository URLs.
+- For plain Markdown rendering, keep the caption text outside the image `alt` field so the caption remains visible even when image sizing HTML is ignored.

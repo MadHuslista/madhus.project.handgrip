@@ -35,11 +35,18 @@ The PM58 and handgrip must experience the same axial force with minimal off-axis
 
 ## Fixture stages
 
+The fixture photos are organized as an operator checklist. Use the visible hardware relationships first, then use the text checks below each stage.
+
 ### Stage 1 — PM58 in series with handgrip
 
-![PM58 in series with handgrip](assets/pm58_n_handgrip_setup.jpg)
+| Primary view | PM58 identity cross-check |
+| --- | --- |
+| <img src="assets/force-fixture-pm58-handgrip-series-overhead.jpg" alt="PM58 and handgrip mechanically arranged in series" width="300"><br><sub>PM58 reference cell and handgrip target arranged in the same mechanical force path.</sub><br>[Open image](assets/force-fixture-pm58-handgrip-series-overhead.jpg) | <img src="assets/pm58-load-cell-model-label.jpg" alt="PM58 load-cell model label" width="300"><br><sub>PM58 model/range label used to confirm the reference sensor identity.</sub><br>[Open image](assets/pm58-load-cell-model-label.jpg) |
 
-**Image file:** `docs/hardware/assets/pm58_n_handgrip_setup.jpg`
+**Image files:**
+
+- `docs/hardware/assets/force-fixture-pm58-handgrip-series-overhead.jpg`
+- `docs/hardware/assets/pm58-load-cell-model-label.jpg`
 
 **Purpose:** Show that the PM58 reference sensor and the handgrip target are mechanically arranged in series.
 
@@ -50,13 +57,16 @@ The PM58 and handgrip must experience the same axial force with minimal off-axis
 - The contact surfaces are aligned enough that force is primarily axial.
 - The handgrip target is not loose, tilted, or under asymmetric preload.
 
-**TODO if image is missing:** Add the photo named exactly `pm58_n_handgrip_setup.jpg` under `docs/hardware/assets/`.
-
 ### Stage 2 — PM58 + handgrip connected to acquisition board
 
-![PM58 and handgrip connected to acquisition board](assets/acq_board_n_pm58_n_handgrip_setup.jpg)
+| Fixture + board overview | Rear terminal cross-check |
+| --- | --- |
+| <img src="assets/force-fixture-pm58-handgrip-acquisition-board-overview.jpg" alt="PM58 and handgrip fixture connected to the acquisition board" width="300"><br><sub>Mechanical series chain with the PM58 reference path electrically connected to the acquisition board.</sub><br>[Open image](assets/force-fixture-pm58-handgrip-acquisition-board-overview.jpg) | <img src="assets/acquisition-board-rear-terminal-map-full-feature.jpg" alt="Rear terminal map of the full-feature acquisition board" width="300"><br><sub>Use terminals `5-8` for PM58 sensor wiring and terminals `19/20` for AC power on this board variant.</sub><br>[Open image](assets/acquisition-board-rear-terminal-map-full-feature.jpg) |
 
-**Image file:** `docs/hardware/assets/acq_board_n_pm58_n_handgrip_setup.jpg`
+**Image files:**
+
+- `docs/hardware/assets/force-fixture-pm58-handgrip-acquisition-board-overview.jpg`
+- `docs/hardware/assets/acquisition-board-rear-terminal-map-full-feature.jpg`
 
 **Purpose:** Show the same mechanical series chain with the PM58 electrically connected to the acquisition board.
 
@@ -67,13 +77,16 @@ The PM58 and handgrip must experience the same axial force with minimal off-axis
 - AC power and sensor wiring are physically separated as much as practical.
 - RS485 wiring has enough slack and does not mechanically pull the board or sensor.
 
-**TODO if image is missing:** Add the photo named exactly `acq_board_n_pm58_n_handgrip_setup.jpg` under `docs/hardware/assets/`.
-
 ### Stage 3 — Screw press controlled-force setup
 
-![Screw press controlled-force setup](assets/force_application_setup.jpg)
+| Controlled-force contact | Full bench context |
+| --- | --- |
+| <img src="assets/force-fixture-screw-press-pm58-handgrip-closeup.jpg" alt="Screw press applying controlled force through PM58 and handgrip" width="300"><br><sub>Screw press contact point and local alignment against the PM58 + handgrip chain.</sub><br>[Open image](assets/force-fixture-screw-press-pm58-handgrip-closeup.jpg) | <img src="assets/force-fixture-full-bench-screw-press-acquisition-board.jpg" alt="Full bench view with screw press, PM58, handgrip, and acquisition board" width="300"><br><sub>Complete bench layout used to inspect cable routing, operator access, and acquisition-board placement.</sub><br>[Open image](assets/force-fixture-full-bench-screw-press-acquisition-board.jpg) |
 
-**Image file:** `docs/hardware/assets/force_application_setup.jpg`
+**Image files:**
+
+- `docs/hardware/assets/force-fixture-screw-press-pm58-handgrip-closeup.jpg`
+- `docs/hardware/assets/force-fixture-full-bench-screw-press-acquisition-board.jpg`
 
 **Purpose:** Show the controlled-force fixture used to apply repeatable loads through the PM58 + handgrip chain.
 
@@ -84,15 +97,37 @@ The PM58 and handgrip must experience the same axial force with minimal off-axis
 - The fixture base is rigid enough that applied displacement mostly becomes sensor force, not frame deformation.
 - There is enough clearance to operate the setup without touching live wiring or moving contact points.
 
-**TODO if image is missing:** Add the photo named exactly `force_application_setup.jpg` under `docs/hardware/assets/`.
+### Stage 4 — Target handgrip internals and electronics context
+
+| Distal internal load cell | Proximal internal load cell |
+| --- | --- |
+| <img src="assets/handgrip-internal-load-cell-distal-side.jpg" alt="Distal-side internal load-cell wiring inside the handgrip" width="300"><br><sub>Distal-side load-cell and wire routing inside the handgrip.</sub><br>[Open image](assets/handgrip-internal-load-cell-distal-side.jpg) | <img src="assets/handgrip-internal-load-cell-proximal-side.jpg" alt="Proximal-side internal load-cell wiring inside the handgrip" width="300"><br><sub>Proximal-side load-cell and wire routing inside the handgrip.</sub><br>[Open image](assets/handgrip-internal-load-cell-proximal-side.jpg) |
+| Sensor to HX711 | HX711 to Arduino |
+| <img src="assets/hx711-sensor-to-adc-module-wiring.jpg" alt="Sensor wiring to HX711 ADC module" width="300"><br><sub>Load-cell lead routing into the HX711 module.</sub><br>[Open image](assets/hx711-sensor-to-adc-module-wiring.jpg) | <img src="assets/hx711-adc-module-to-arduino-wiring.jpg" alt="HX711 ADC module wiring to Arduino Nano" width="300"><br><sub>HX711 module wiring toward the Arduino Nano.</sub><br>[Open image](assets/hx711-adc-module-to-arduino-wiring.jpg) |
+| ADC identity | MCU identity |
+| <img src="assets/hx711-adc-chip-closeup.jpg" alt="HX711 ADC chip close-up" width="300"><br><sub>HX711 chip/ADC module identification.</sub><br>[Open image](assets/hx711-adc-chip-closeup.jpg) | <img src="assets/arduino-nano-pinout-closeup.jpg" alt="Arduino Nano board close-up" width="300"><br><sub>Arduino Nano board/pin-label identification.</sub><br>[Open image](assets/arduino-nano-pinout-closeup.jpg) |
+| Installed MCU view | Live acquisition-board display |
+| <img src="assets/arduino-nano-mounted-wiring-view.jpg" alt="Arduino Nano mounted wiring view inside the handgrip" width="300"><br><sub>Installed Arduino Nano wiring context.</sub><br>[Open image](assets/arduino-nano-mounted-wiring-view.jpg) | <img src="assets/acquisition-board-front-panel-startup-force-reading.jpg" alt="Acquisition board front panel with live startup force reading" width="300"><br><sub>Live acquisition-board display during bench bring-up.</sub><br>[Open image](assets/acquisition-board-front-panel-startup-force-reading.jpg) |
+
+**Purpose:** Document target-side mechanical and electronics context so fixture anomalies are not mistaken for calibration-software issues.
+
+**What to verify from the images:**
+
+- Internal handgrip wires are not pinched, tensioned, or mechanically coupled to the screw-press contact.
+- HX711 wiring is seated and not visibly shorted or under strain.
+- The Arduino Nano and HX711 are identifiable for future firmware/hardware cross-checks.
+- Target electronics remain mechanically isolated from the applied force path.
 
 ## What each image proves
 
-| Image                                   | Proves                                                                                      | Does not prove                                                                   |
-| --------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `pm58_n_handgrip_setup.jpg`             | PM58 and handgrip target can be placed in a common mechanical chain.                        | That the force path is perfectly axial, backlash-free, or calibrated.            |
-| `acq_board_n_pm58_n_handgrip_setup.jpg` | The reference sensor can be electrically connected while installed in the mechanical setup. | That RS485 communication, scaling, or acquisition-board settings are correct.    |
-| `force_application_setup.jpg`           | The fixture can apply controlled force through the sensor chain.                            | That the force is traceable, linear, or free from friction/compliance artifacts. |
+| Image | Proves | Does not prove |
+| --- | --- | --- |
+| `force-fixture-pm58-handgrip-series-overhead.jpg` | PM58 and handgrip target can be placed in a common mechanical chain. | That the force path is perfectly axial, backlash-free, or calibrated. |
+| `force-fixture-pm58-handgrip-acquisition-board-overview.jpg` | The reference sensor can be electrically connected while installed in the mechanical setup. | That RS485 communication, scaling, or acquisition-board settings are correct. |
+| `force-fixture-screw-press-pm58-handgrip-closeup.jpg` | The fixture can apply controlled force through the sensor chain. | That the force is traceable, linear, or free from friction/compliance artifacts. |
+| `force-fixture-full-bench-screw-press-acquisition-board.jpg` | The complete bench layout can be inspected for cable routing and operator access. | That the calibration profile is configured correctly. |
+| `handgrip-internal-load-cell-distal-side.jpg` / `handgrip-internal-load-cell-proximal-side.jpg` | The target handgrip contains internal load-cell wiring that should be mechanically protected. | That target calibration, firmware parsing, or HX711 timing is correct. |
+| `hx711-sensor-to-adc-module-wiring.jpg` / `hx711-adc-module-to-arduino-wiring.jpg` | The target electronics wiring path can be inspected. | That the target stream is free of timing jitter or firmware-side scaling issues. |
 
 ## How to validate force path before calibration
 
