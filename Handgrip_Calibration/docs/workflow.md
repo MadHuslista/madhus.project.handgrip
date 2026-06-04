@@ -328,7 +328,7 @@ or if the report shows structured residuals, poor low-force behavior, hysteresis
 
 ## Step 5 — Generate the primary calibration report
 
-Current CLI source truth: `report` accepts only the session path. The docs that show `--config` for `report` are stale.
+The `report` command takes only the session path; unlike `fit`, it does not accept `--config`.
 
 Use:
 

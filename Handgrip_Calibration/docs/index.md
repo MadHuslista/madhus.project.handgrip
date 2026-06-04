@@ -50,6 +50,5 @@ uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase
 uv run handgrip-cal record    --config conf/protocol_static_reversible_staircase_v3.yaml
 uv run handgrip-cal fit       data/calibration/<session_id> \
   --config conf/protocol_static_reversible_staircase_v3.yaml
-uv run handgrip-cal report    data/calibration/<session_id> \
-  --config conf/protocol_static_reversible_staircase_v3.yaml
+uv run handgrip-cal report    data/calibration/<session_id>
 ```
