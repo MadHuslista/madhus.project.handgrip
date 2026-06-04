@@ -1,0 +1,5 @@
+# @package analysis
+# Stage 2: Static rest noise characterisation
+channels:
+  - raw
+  - filtered

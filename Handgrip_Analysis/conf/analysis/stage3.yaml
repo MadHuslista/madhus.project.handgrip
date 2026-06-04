@@ -1,0 +1,5 @@
+# @package analysis
+# Stage 3: Loaded drift / creep
+channel: raw
+pre_window_s: 10.0
+post_window_s: 10.0

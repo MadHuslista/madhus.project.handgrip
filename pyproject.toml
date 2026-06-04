@@ -1,0 +1,46 @@
+[project]
+name = "handgrip-suite"
+version = "0.1.0"
+description = "Arduino serial to LSL irregular stream bridge with CSV logging"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "hydra-core>=1.3",
+  "pyserial>=3.5",
+  "pylsl>=1.17",
+  "matplotlib>=3.10.8",
+  "mne>=1.11.0",
+  "mne-lsl>=1.13.1",
+  "pandas>=3.0.2",
+  "pyqt5>=5.15.11",
+  "pyxdf>=1.17.4",
+  "numpy>=2.4.3",
+  "pyzmq",
+  "rs485-gui",
+  "lsl-bridge",
+  "lsl-viewer",
+  "handgrip-analysis",
+  "handgrip-calibration",
+  "pytest>=9.0.3",
+  "pytest-cov>=7.1.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+"handgrip-analysis"     = {path = "Handgrip_Analysis",    editable = true }
+"rs485-gui"             = {path = "RS485_GUI",            editable = true }
+"handgrip_calibration"  = {path = "Handgrip_Calibration", editable = true }
+"lsl-bridge"            = {path = "LSL_Bridge",           editable = true }
+"lsl-viewer"            = {path = "LSL_Viewer",           editable = true }
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+
+addopts = [
+  "-ra",
+  "--strict-config",
+  "--strict-markers",
+  "--import-mode=importlib",
+]

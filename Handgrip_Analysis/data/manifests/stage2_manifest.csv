@@ -1,0 +1,4 @@
+stage,condition,trial_type,trial_id,session_id,path,channel,load_nominal_n,include,notes
+stage2,rest_after_warmup,rest_after_warmup,trial01,20260402,../calibration_signals/20260402_stage2_rest_after_warmup_trial01.csv,raw,,True,existing capture trial
+stage2,rest_after_warmup,rest_after_warmup,trial02,20260512,../calibration_signals/20260512_stage2_rest_after_warmup_trial02.csv,raw,,True,existing capture trial
+stage2,rest_after_warmup,rest_after_warmup,trial03,20260512,../calibration_signals/20260512_stage2_rest_after_warmup_trial03.csv,raw,,True,existing capture trial

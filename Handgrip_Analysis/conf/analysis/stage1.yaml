@@ -1,0 +1,4 @@
+# @package analysis
+# Stage 1: Startup warm-up / zero stabilisation
+warmup_window_s: 10.0
+channel: raw

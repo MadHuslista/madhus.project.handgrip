@@ -1,0 +1,13 @@
+- Already Review:
+  - docs/workflow
+  - docs/architecture
+  - docs/configuration
+  - docs/contributing
+  - repo_roots  .md
+  - HFW, LSL_* & RS485 GUI / docs
+  - HCalib
+
+- Pending:
+  - docs/{development, hw, example, troubleshooting}
+  - HAnals
+

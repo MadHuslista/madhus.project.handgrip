@@ -1,0 +1,144 @@
+mode: live
+
+# Two-native-stream viewer. Subscribes independently to the target and
+# reference streams and aligns them only by their LSL sample timestamps.
+streams:
+  target:
+    name: HandgripTarget
+    stype: Force
+    source_id: null
+    buffer_samples: 1600
+    acquisition_delay: 0.01
+    timeout: 5.0
+  reference:
+    name: HandgripReference
+    stype: Force
+    source_id: rs485-acquisition-board-1
+    buffer_seconds: 12.0
+    acquisition_delay: 0.01
+    timeout: 5.0
+    expected_rate_hz: 500.0
+
+channels:
+  target:
+    clock_label: device_clock_us
+    raw_label: target_raw_count
+    filtered_label: target_filtered_units
+  reference:
+    clock_label: reference_clock_s
+    raw_label: reference_force_N
+
+viewer:
+  window_seconds: 10.0
+  target_window_samples: 1600
+  reference_window_extra_s: 1.0
+  expected_target_rate_hz: 100.0
+  refresh_s: 0.05
+  force_unit_label: N
+  target_raw_unit_label: count
+  dt_unit_label: ms
+
+  # Visual style (replaces module-level color globals in the original code)
+  style:
+    raw_color: "red"
+    filtered_color: "green"
+    reference_color: "purple"
+    timing_color: "blue"
+    grid_alpha: 0.3
+    xy_color: "red"
+    xy_alpha_old: 0.12
+    xy_alpha_new: 0.92
+    xy_line_width: 1.6
+
+  xy_correlation:
+    # false = adaptive autoscale on every refresh.
+    # true  = only zoom out: preserve the largest observed XY axis span.
+    lock_max_span: false
+    toggle_key: x
+
+    # XY uses connected ECharts line-path buckets instead of point-only scatter.
+    # Alpha is computed from sample age across viewer.window_seconds, so the
+    # oldest line segments fade out while the newest remain prominent.
+
+    # raw is recommended for calibration visualisation; filtered remains
+    # available for display-only experiments.
+    target_signal: raw
+
+    # Display-only alignment for the XY graph. The native stream buffers,
+    # LSL/XDF timestamps, and calibration data are not modified.
+    #
+    # raw_lsl is the default because the upstream RS485 timestamp policy was
+    # fixed to avoid synthetic clock drift. If ref_shift grows in raw_lsl mode,
+    # that is a real timestamping/backlog diagnostic and should not be hidden by
+    # viewer-side correction. Use tail_aligned_lsl only as a temporary display aid.
+    time_alignment:
+      mode: raw_lsl                 # raw_lsl | tail_aligned_lsl | manual
+      manual_reference_shift_s: 0.0
+      # null means "use viewer.window_seconds" as the max allowed shift.
+      max_auto_shift_s: null
+      min_auto_shift_s: 0.0
+      # Large changes snap immediately; small residual jitter can be smoothed.
+      snap_threshold_s: 0.250
+      smoothing_alpha: 1.0
+
+  controls:
+    clear_key: c
+    pause_key: p
+
+  # Browser-rendering controls only. Acquisition buffers and replay data are
+  # kept intact. Disable downsample_enabled to send the full current window to
+  # ECharts, or keep it enabled and tune the per-refresh payload budgets.
+  render:
+    downsample_enabled: true
+    max_points_time_series: 1200
+    max_points_xy: 1500
+
+  # NiceGUI server configuration
+  server:
+    host: "127.0.0.1"
+    port: 8765
+    reload: false
+    show: true    # auto-open browser on start
+    dark: false
+    title: "LSL Viewer"
+
+calibration_markers:
+  # Optional marker overlay from Handgrip_Calibration events.ndjson for replay/analysis.
+  # Live calibration markers remain owned by the Handgrip_Calibration recorder.
+  enabled: false
+  events_ndjson_path: null
+  draw_events: [hold_start, stable_window_start, hold_end, trial_accept, trial_reject]
+
+# Alignment policy used only for visualisation/calibration views. The raw LSL
+# streams remain native-rate; reference samples are interpolated to target sample
+# timestamps only inside the viewer.
+alignment:
+  interpolation: linear
+  # For a 500 Hz reference, nominal spacing is 2 ms. This gate rejects real
+  # reference dropouts after tail alignment; it does not assume 1:1 samples.
+  max_reference_gap_s: 0.020
+  allow_extrapolation: false
+
+reference:
+  # Preferred replay inputs after bridge refactor.
+  target_csv_path: ./data/target_handgrip_samples_v2.csv
+  reference_csv_path: ./data/reference_rs485_samples_v2.csv
+  xdf_path: null
+
+replay:
+  speed: 1.0
+  loop: false
+  start_offset_s: 0.0
+
+logging:
+  level: INFO
+  log_file: handgrip_realtime_viewer.log  # Explicit path; previously absent (caused empty log)
+  max_bytes: 10485760                      # 10 MB per file
+  backup_count: 3
+
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+  job:
+    chdir: false

@@ -1,0 +1,238 @@
+# Handgrip_Analysis Stage 6 production-real-time filter candidates
+# Active filters are intentionally restricted to filters that map directly to
+# LSL_Bridge processing.filters and are evaluated with the same causal per-sample
+# implementation used for production streaming.
+
+metadata:
+  schema_version: 2
+  intended_stage: stage6
+  generated_for: Handgrip_Analysis existing 20260402 and 20260512 trials
+  target_sampling_rate_hz_observed: 100.0
+  primary_search_region_hz:
+  - 4.0
+  - 12.0
+  fidelity_biased_region_hz:
+  - 15.0
+  - 25.0
+  lsl_bridge_primary_deployable_family: butterworth_lowpass_2nd
+  notes:
+  - 'This file is production-biased: active candidates avoid diagnostic high-pass/band-pass filters that could corrupt absolute
+    force baselines.'
+  - Notch filters are kept in metadata below as diagnostic candidates, but not included in the active filters list because
+    current Stage 2 evidence does not show a stable replicated line component.
+  - If future Stage 5 interference trials prove a stable narrowband line, move the relevant notch or notch+lowpass diagnostic
+    candidate into `filters:` and re-run Stage 6.
+  - Active filters use LSL_Bridge production-real-time type names and causal per-sample semantics.
+  production_realtime_contract: active filters must map 1:1 to LSL_Bridge processing.filters entries
+filters:
+- name: identity
+  type: identity
+  rationale: Baseline reference; required to quantify whether filtering improves enough to justify deployment.
+- name: butter_lowpass_3hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 3.0
+  family: primary_lowpass_sweep
+  deployment_priority: aggressive_smoothing
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_4hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 4.0
+  family: primary_lowpass_sweep
+  deployment_priority: aggressive_smoothing
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_5hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 5.0
+  family: primary_lowpass_sweep
+  deployment_priority: balanced_noise_reduction
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_6hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 6.0
+  family: primary_lowpass_sweep
+  deployment_priority: balanced_noise_reduction
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_7hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 7.0
+  family: primary_lowpass_sweep
+  deployment_priority: balanced_noise_reduction
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_8hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 8.0
+  family: primary_lowpass_sweep
+  deployment_priority: balanced_default_region
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_9hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 9.0
+  family: primary_lowpass_sweep
+  deployment_priority: balanced_default_region
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_10hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 10.0
+  family: primary_lowpass_sweep
+  deployment_priority: balanced_default_region
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_12hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 12.0
+  family: primary_lowpass_sweep
+  deployment_priority: fidelity_biased
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_15hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 15.0
+  family: fidelity_biased_lowpass_sweep
+  deployment_priority: fidelity_biased
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_18hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 18.0
+  family: fidelity_biased_lowpass_sweep
+  deployment_priority: fidelity_biased
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_20hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 20.0
+  family: fidelity_biased_lowpass_sweep
+  deployment_priority: fidelity_biased
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: butter_lowpass_25hz
+  type: butterworth_lowpass_2nd
+  cutoff_hz: 25.0
+  family: fidelity_biased_lowpass_sweep
+  deployment_priority: weak_smoothing_control
+  sample_rate_hz: 100.0
+  q: 0.7071067811865476
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: one_pole_lowpass_4hz
+  type: lowpass_1pole
+  cutoff_hz: 4.0
+  family: causal_live_lowpass
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: one_pole_lowpass_6hz
+  type: lowpass_1pole
+  cutoff_hz: 6.0
+  family: causal_live_lowpass
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: one_pole_lowpass_8hz
+  type: lowpass_1pole
+  cutoff_hz: 8.0
+  family: causal_live_lowpass
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: one_pole_lowpass_10hz
+  type: lowpass_1pole
+  cutoff_hz: 10.0
+  family: causal_live_lowpass
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: one_pole_lowpass_12hz
+  type: lowpass_1pole
+  cutoff_hz: 12.0
+  family: causal_live_lowpass
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: one_pole_lowpass_15hz
+  type: lowpass_1pole
+  cutoff_hz: 15.0
+  family: causal_live_lowpass
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+- name: one_pole_lowpass_20hz
+  type: lowpass_1pole
+  cutoff_hz: 20.0
+  family: causal_live_lowpass
+  reset_on_gap_s: 1.0
+  min_dt_s: 1.0e-06
+diagnostic_candidates_not_active:
+  reason: Diagnostic/offline filters remain inactive because Stage 6 active candidates must be directly deployable as LSL_Bridge
+    production real-time filters.
+  candidates:
+  - name: moving_average_3samples
+    type: moving_average
+    window_samples: 3
+    reason_not_active: Useful embedded baseline, but not directly mapped by the current LSL_Bridge recommendation path.
+  - name: moving_average_5samples
+    type: moving_average
+    window_samples: 5
+    reason_not_active: Useful embedded baseline, but not directly mapped by the current LSL_Bridge recommendation path.
+  - name: median_3samples
+    type: median
+    kernel_size: 3
+    reason_not_active: Useful for impulse rejection, but can win the current combined score while not being the intended LSL_Bridge
+      deployable family.
+  - name: median_5samples
+    type: median
+    kernel_size: 5
+    reason_not_active: Useful for impulse rejection, but can win the current combined score while not being the intended LSL_Bridge
+      deployable family.
+  - name: notch_45p85hz_q20
+    type: notch
+    freq_hz: 45.85
+    q: 20.0
+    reason_not_active: Only one existing rest session shows a strong high-band peak near this frequency; keep inactive until
+      Stage 5/replicated interference evidence confirms it.
+  - name: notch_45p85hz_q20_then_lowpass_8hz
+    type: chain
+    steps:
+    - type: notch
+      freq_hz: 45.85
+      q: 20.0
+    - type: butter_lowpass
+      order: 2
+      cutoff_hz: 8.0
+    reason_not_active: Enable only if the notch target is confirmed as stable across repeated trials.
+  - name: highpass_0p05hz_diagnostic
+    type: butter_highpass
+    order: 2
+    cutoff_hz: 0.05
+    reason_not_active: Diagnostic only; can remove true low-frequency force/baseline content.
+  - name: bandpass_0p05_10hz_diagnostic
+    type: butter_bandpass
+    order: 2
+    low_hz: 0.05
+    high_hz: 10.0
+    reason_not_active: Diagnostic only; can remove true low-frequency force/baseline content.

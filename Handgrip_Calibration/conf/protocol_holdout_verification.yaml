@@ -1,0 +1,205 @@
+session:
+  root_dir: data/calibration
+  operator: unknown
+  purpose: independent_holdout_verification
+  notes: 'Reference PM58/acquisition-board sensor and Arduino/HX711 target sensor in series. Component
+    schemas: D2 + LSL v2.'
+  copy_component_configs:
+  - ../LSL_Bridge/conf/config.yaml
+  - ../LSL_Viewer/conf/config.yaml
+  - ../RS485_GUI/config/config.yaml
+streams:
+  target:
+    name: HandgripTarget
+    type: Force
+    timeout_s: 5.0
+    nominal_srate_hz: null
+    channel_map:
+      seq:
+      - seq
+      - 0
+      clock:
+      - device_clock_us
+      - 1
+      raw:
+      - target_raw_count
+      - 2
+      filtered:
+      - target_filtered_units
+      - 4
+      current_units:
+      - target_current_units
+      - 3
+      status:
+      - target_status
+      - 5
+  reference:
+    name: HandgripReference
+    type: Force
+    timeout_s: 5.0
+    nominal_srate_hz: 500
+    channel_map:
+      seq:
+      - seq
+      - 0
+      clock:
+      - reference_clock_s
+      - 1
+      raw:
+      - reference_force_N
+      - 2
+      status:
+      - reference_status
+      - 3
+markers:
+  stream_name: HandgripCalibrationMarkers
+  stream_type: Markers
+  source_id_prefix: handgrip-calibration
+  emit_lsl: true
+  write_ndjson: true
+protocol:
+  name: holdout_staircase_verification_v1
+  warmup_s: 0
+  prompt_operator: true
+  baseline:
+    duration_s: 30
+    require_stable: true
+  preload:
+    enabled: false
+    cycles: 0
+    max_force_N: 100
+  holds:
+    levels_N:
+    - 0
+    - 7
+    - 15
+    - 25
+    - 45
+    - 65
+    - 75
+    - 95
+    - 75
+    - 65
+    - 45
+    - 25
+    - 15
+    - 7
+    - 0
+    hold_duration_s: 10
+    stable_window_s: 5
+    repeats: 2
+    auto_accept: false
+  dynamic_validation:
+    slow_ramps: 0
+    fast_squeezes: 0
+  type: holdout_verification
+  mode: validate_existing_only
+  validate_existing_only: true
+quality:
+  reference_expected_hz: 500
+  reference_min_hz: 495
+  reference_max_gap_s: 0.02
+  target_expected_hz_min: 85
+  target_expected_hz_max: 105
+  target_max_gap_s: 0.1
+  max_hold_reference_std_N: 0.5
+  max_hold_reference_slope_N_per_s: 0.2
+  max_baseline_drift_N_per_min: 0.5
+  min_hold_target_samples: 20
+  min_hold_reference_samples: 100
+  quality_emit_period_s: 1.0
+fit:
+  primary_model: auto
+  candidate_models:
+  - affine_ols
+  - affine_wls
+  - affine_huber
+  - quadratic_wls
+  - piecewise_linear_monotone
+  - odr_affine
+  - hysteresis_affine_diagnostic
+  - drift_affine_diagnostic
+  target_signal: raw
+  reference_signal: raw
+  reference_scale: 1.0
+  reference_offset: 0.0
+  operating_range_N: 100.0
+  residual_threshold_percent_operating_range: 0.5
+  weighted_by_reference_noise: true
+  reference_noise_floor_N: 0.05
+  target_raw_noise_floor: 1.0
+  export_firmware_constants: true
+  selection:
+    primary_metric: cv_rmse_N
+    max_error_metric: max_abs_error_percent_range
+    prefer_simpler_within_cv_rmse_se: true
+    require_monotonic: true
+    allow_diagnostics_as_primary: false
+    cv_group_by: target_force_nominal_N
+    max_cv_folds: 12
+    alpha_cv_rmse: 40.0
+    beta_max_error: 60.0
+    lambda_complexity: 0.15
+    monotonicity_violation_penalty: 10.0
+    diagnostic_model_penalty: 2.0
+    min_cv_coverage_fraction: 0.5
+  robust:
+    huber_epsilon: 1.35
+    huber_delta_N: null
+    max_iter: 50
+    convergence_tol: 1.0e-09
+    min_weight: 0.05
+  multipoint:
+    min_points: 5
+    interpolation: piecewise_linear
+    extrapolation: reject
+    aggregate_by: target_force_nominal_N
+    max_knots: 12
+  diagnostics:
+    enable_odr_affine: true
+    enable_hysteresis: true
+    enable_drift: true
+    hysteresis_direction_column: direction
+    drift_time_column: t_mid_lsl
+validation:
+  holdout:
+    max_rmse_N: 1.0
+    max_abs_error_N: 2.0
+    max_bias_N: 0.5
+creep:
+  force_levels_N:
+  - 0.0
+  - 80.0
+  - 0.0
+  durations_s:
+  - 120.0
+  - 300.0
+  - 300.0
+  read_times_s:
+  - 30.0
+  - 300.0
+dynamic:
+  ramps:
+  - label: slow
+    count: 0
+    peak_force_N: 100.0
+    speed_N_per_s: 5.0
+  squeezes:
+  - label: fast_squeeze
+    count: 0
+    peak_force_N: 100.0
+    rest_s: 3.0
+holdout_thresholds:
+  max_rmse_N: null
+  max_abs_error_N: null
+  max_bias_N: null
+calibration_artifact:
+  enabled: false
+  mode: direction_balanced_tail_median
+  window:
+    source: stable_window
+    tail_s: 2.0
+  grouping:
+    require_both_directions: true
+    outlier_method: mad
+    max_mad_z: 3.5

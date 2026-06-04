@@ -1,0 +1,22 @@
+# @package analysis
+# Stage 6: Filter design and family review
+
+# Path to the filter candidate YAML file.
+# Override on the command line, e.g.
+#   ha-stage6-design analysis.filter_config=conf/filters/candidates.yaml
+filter_config: conf/filters/candidates.yaml
+
+# HF noise assessment band [low_hz, high_hz] for stage6 only.
+# Matches dsp.bandpower_bands[4] but kept explicit for stage6 legibility.
+hf_noise_band_hz: [30.0, 49.0]
+
+# Per-metric composite review score weights (must sum to 1.0).
+# These drive the multi-trial review ranking in _score_filter_rows().
+# Weights reflect: stationary noise reduction (rest_std_norm),
+# waveform fidelity (peak, rise, timing), and slew-rate preservation (dfdt).
+filter_weights:
+  rest_std_norm: 0.25
+  mean_peak_relative_error: 0.35
+  mean_rise_relative_error: 0.10
+  mean_peak_time_shift_norm: 0.10
+  mean_dfdt_deviation: 0.20

@@ -1,0 +1,180 @@
+session:
+  # Optional. Handgrip_Calibration is authoritative; set this when you want
+  # GUI logs/IPC to carry the active calibration session id.
+  session_id: null
+
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+
+app:
+  log_level: INFO
+  worker_join_timeout_s: 1.5
+
+ui:
+  page_title: High-Speed Acquisition Instrument GUI
+  host: 127.0.0.1
+  port: 8088
+  refresh_interval_s: 0.1
+  plot_height_px: 360
+  log_height_px: 380
+  event_log_height_px: 180
+  visible_log_entries: 40
+  visible_event_entries: 120
+  max_retained_log_entries: 160
+  max_retained_event_entries: 500
+  # Browser-facing retention only. Full-rate IPC to the LSL bridge is unaffected.
+  max_plot_points: 3000
+  max_render_plot_points: 700
+  default_plot_signal_key: net_value
+  plot_signal_key: net_value
+  clear_plot_on_connect: true
+  sampling_rate_window_samples: 5000
+  sampling_rate_outlier_low_ratio: 0.25   # reject grossly too-fast dt outliers vs rolling median
+  sampling_rate_outlier_high_ratio: 4.0   # reject grossly too-slow dt outliers vs rolling median
+  sampling_rate_outlier_min_samples: 16   # only apply outlier rejection once the window is populated
+  # Acquisition max-rate limiter. Keep 0 so file logging and IPC receive full-rate frames.
+  max_signal_samples_per_second: 0
+  # Display-only limiter. This is applied only to GUI plot/log history, not IPC or files.
+  display_max_samples_per_second: 30
+  active_send_render_downsample_factor: 2
+  modbus_rtu_render_downsample_factor: 1
+  max_ui_entry_chars: 300
+  max_log_textarea_chars: 30000
+  max_event_textarea_chars: 20000
+  plot_update_every_n_refreshes: 1
+  log_update_every_n_refreshes: 5
+  sampling_update_every_n_refreshes: 5
+  metadata_update_every_n_refreshes: 10
+  board_config_update_every_n_refreshes: 10
+  controls_update_every_n_refreshes: 10
+  plot_skip_if_unchanged: true
+  plot_trace_type: scattergl
+  light_mode: true
+
+logger:
+  enabled: true
+  directory: RS485_GUI/logs
+  write_mode: overwrite
+  raw_signal_filename: raw_signal.ndjson
+  interpreted_signal_filename: interpreted_signal.ndjson
+  gui_signal_filename: gui_signal.csv
+  debug_log_to_file: true
+  debug_log_filename: acquisition_debug.log
+  event_log_filename: event.log
+  # Avoid flushing every 500 Hz batch; this reduces GUI/process jitter while preserving logs.
+  flush_every_n_batches: 25
+  flush_interval_s: 1.0
+
+ipc:
+  enabled: true
+  transport: zmq_pub
+  bind: tcp://127.0.0.1:5557
+  topic: rs485.measurement.v1
+  event_topic: rs485.event.v1
+
+  # Which MeasurementFrame interpreted value becomes LSL channel 3.
+  # net_value is the recommended calibrated force signal for the reference board.
+  # Published IPC records now also include canonical aliases:
+  #   reference_force_N, reference_clock_s, reference_status, board_profile, session_id
+  signal_key: net_value
+
+  send_hwm: 2000
+  linger_ms: 0
+  drop_on_backpressure: true
+  # Avoid binding the ZMQ endpoint during NiceGUI app construction; NiceGUI may
+  # re-execute the script while serving the root page. Bind only when the user
+  # starts a real acquisition session.
+  start_on_app_launch: false
+  start_on_connect: true
+  stop_on_disconnect: true
+  require_pylsl_clock: true
+
+  # false = publish full RS485 acquisition frames before GUI max-rate filtering.
+  # true  = publish only frames kept by ui.max_signal_samples_per_second.
+  publish_after_max_rate_filter: false
+
+  log_every_s: 5.0
+
+serial:
+  default_port: ""
+  # Protect the Arduino/LSL bridge serial port from accidental GUI ownership.
+  # Update this if udev assigns your Arduino to a different stable name.
+  excluded_ports:
+    # - /dev/ttyUSB0
+  default_baudrate: 460800
+  default_parity: N
+  default_stopbits: 1
+  bytesize: 8
+  timeout_s: 0.2
+  inter_frame_gap_s: 0.001
+  port_hints:
+    - USB
+    - RS485
+    - FTDI
+    - CH340
+    - CP210
+    - PL2303
+    - ttyUSB
+    - ttyACM
+
+device:
+  mode: active_send  # modbus_rtu | active_send
+  slave_address: 1
+  active_send_frequency_code: 8  # 500 Hz
+  poll_interval_s: 0.001  # 1 kHz target cadence; actual RTU rate remains transaction-limited
+  error_backoff_s: 0.25
+  # Promoted register-map constants (v0.2): allows alternate firmware variants
+  read_start_register: 0    # Modbus 0x0000 / PLC 40001
+  read_register_count: 11   # consecutive holding registers per poll
+  command_register: 11      # 0x000B / PLC 40012
+
+active_send:
+  # Timestamp policy for Active-Send batches.
+  # batch_end_anchored is the calibration-safe default: each parsed batch is
+  # anchored to current pylsl.local_clock() and frame times are reconstructed
+  # only inside that batch. This prevents ref_shift drift when effective RS485
+  # rate is not exactly the configured 500 Hz.
+  # Alternatives: host_receive (debug fallback).
+  timestamp_policy: batch_end_anchored
+  default_parser_profile: modbus_rtu_response_11regs  # calibration v2 requires the documented 11-register payload
+  default_numeric_index: 0
+  default_hex_word_endianness: big
+  read_timeout_s: 0.5
+  # Keep Active-Send IPC low-latency. At 500 Hz, 16 frames ≈ 32 ms.
+  # Larger batches are valid but make bridge-side fusion intermittently stale.
+  delivery_window_s: 0.010
+  max_frames_per_delivery: 16
+  # Read enough to drain the OS serial buffer; the parser enforces
+  # max_frames_per_delivery before returning each batch.
+  read_chunk_bytes: 1024
+  max_read_bytes_per_cycle: 8192
+  # Used only by timestamp_policy=continuous_rate. Keep small if you intentionally
+  # use a non-default free-running timestamp reconstruction. Ignored by the default
+  # batch_end_anchored policy.
+  clock_reanchor_max_drift_s: 0.050
+  # If the active-send parser enters a CRC/resync cascade, discard stale
+  # buffered bytes and recover from the current live byte stream.
+  recovery_enabled: true
+  recovery_warning_threshold: 48
+  recovery_min_interval_s: 1.0
+  recovery_reset_input_buffer: true
+  max_binary_frame_bytes: 64
+  max_buffer_bytes: 8192
+  frame_slave_id: 1
+  frame_function_code: 3
+  frame_register_count: 11
+  log_first_n_good_frames: 5
+  log_summary_every_n_good_frames: 250
+  log_bad_frame_hex_bytes: 64
+  warning_emit_interval_s: 5.0
+  detailed_warning_limit: 2
+
+# ---------------------------------------------------------------------------
+# Per-module log level overrides (new in v0.2 refactor)
+# Uncomment and adjust as needed.
+# ---------------------------------------------------------------------------
+logging:
+  root_level: INFO   # alias for app.log_level
+  module_levels: {}  # e.g. rs485_gui.transport.active_send: DEBUG
