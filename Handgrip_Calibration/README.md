@@ -50,7 +50,7 @@ Primary config/protocol files:
 | `conf/default.yaml` / `conf/config.yaml`            | Base/default calibration settings, depending on command path. |
 | `conf/template.yaml`                                | Starting point for new protocol definitions.                  |
 
-Full configuration reference is planned at [Handgrip_Calibration/docs/configuration.md](docs/configuration.md).
+Full configuration reference: [Handgrip_Calibration/docs/configuration.md](docs/configuration.md).
 
 ## Documentation
 

@@ -89,7 +89,7 @@ Main configuration areas:
 | DSP defaults      | Sampling assumptions, filtering utilities, spectral settings. |
 | filter candidates | Candidate families and parameters for Stage 6 evaluation.     |
 
-Full configuration reference is planned at [Handgrip_Analysis/docs/configuration.md](docs/configuration.md).
+Full configuration reference: [Handgrip_Analysis/docs/configuration.md](docs/configuration.md).
 
 ## Documentation
 

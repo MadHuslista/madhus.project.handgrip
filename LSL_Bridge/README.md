@@ -62,7 +62,7 @@ Main configuration areas:
 | processing          | Optional filtering/calibration/derived channels.              |
 | logging/CSV         | Debug logs and optional saved target/reference data.          |
 
-Full configuration reference is planned at [LSL_Bridge/docs/configuration.md](docs/configuration.md).
+Full configuration reference: [LSL_Bridge/docs/configuration.md](docs/configuration.md).
 
 ## Documentation
 

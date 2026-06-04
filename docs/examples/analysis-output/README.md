@@ -12,7 +12,7 @@ The current curated conclusion from prior Stage 6 work is:
 - Do not use continuous high-pass filtering as the primary force path.
 - Do not use band-pass filtering as the primary force path.
 - Notch filtering is not needed for the main product path if a modest low-pass already removes high-frequency contamination.
-- Primary filtered channel recommendation: **2nd-order Butterworth low-pass at 15 Hz, fs = 100 Hz**.
+- Primary filtered channel recommendation: **2nd-order Butterworth low-pass at 9 Hz, fs = 100 Hz** (`butter_lowpass_9hz`).
 - Optional secondary stable-display channel: **2nd-order Butterworth low-pass at 10 Hz, fs = 100 Hz**.
 - Baseline/zero handling should be state-based tare/unloaded baseline tracking, not continuous high-pass filtering during grip events.
 

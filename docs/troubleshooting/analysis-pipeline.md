@@ -52,7 +52,8 @@ Use this guide when `Handgrip_Analysis` cannot load inputs, run stages, or produ
 cd Handgrip_Analysis
 uv run ha-run-all --help
 uv run ha-stage --help
-uv run ha-stage6 --help
+uv run ha-stage6-design --help
+uv run ha-stage6-review --help
 ```
 
 2. Validate manifest file paths.

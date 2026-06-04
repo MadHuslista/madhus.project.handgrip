@@ -45,7 +45,7 @@ Main configuration areas:
 | server           | Host, port, browser UI behavior.                        |
 | keyboard/UI      | Clear, pause, XY lock, toggles.                         |
 
-Full configuration reference is planned at [LSL_Viewer/docs/configuration.md](docs/configuration.md).
+Full configuration reference: [LSL_Viewer/docs/configuration.md](docs/configuration.md).
 
 ## Documentation
 

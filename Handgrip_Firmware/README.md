@@ -72,7 +72,7 @@ Important constants:
 | `HANDGRIP_PAYLOAD_SCHEMA` | Current payload schema. Expected value: `2`.   |
 | `HANDGRIP_FORCE_UNIT`     | Unit emitted in M2 metadata, normally `N`.     |
 
-Full configuration reference is planned at [Handgrip_Firmware/docs/configuration.md](docs/configuration.md).
+Full configuration reference: [Handgrip_Firmware/docs/configuration.md](docs/configuration.md).
 
 ## Documentation
 

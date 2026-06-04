@@ -58,7 +58,7 @@ Main configuration areas:
 | `ipc`                         | ZeroMQ publisher endpoint and topic configuration.          |
 | `parser` / signal settings    | Board payload interpretation and selected displayed signal. |
 
-Full configuration reference is planned at [RS485_GUI/docs/configuration.md](docs/configuration.md).
+Full configuration reference: [RS485_GUI/docs/configuration.md](docs/configuration.md).
 
 ## Library layout
 
