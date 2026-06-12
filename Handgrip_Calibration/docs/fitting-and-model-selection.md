@@ -9,8 +9,9 @@
 
 ## Fitting command
 
+Runs the same from the repo root or from `Handgrip_Calibration/`:
+
 ```bash
-cd Handgrip_Calibration
 uv run handgrip-cal fit data/calibration/<session_id> --config conf/protocol_static_reversible_staircase_v3.yaml
 ```
 

@@ -30,15 +30,14 @@ Run from repo root:
 uv sync
 ```
 
-Then enter the calibration component:
-
-```bash
-cd Handgrip_Calibration
-```
-
 ### What happens
 
 `uv sync` installs the editable local packages and dependencies declared by the repo and component `pyproject.toml`. The `handgrip-cal` entry point becomes available through `uv run`.
+
+All `uv run handgrip-cal ...` commands below can be run from either the repo
+root or `Handgrip_Calibration/` — paths such as `conf/...yaml` and
+`data/calibration/<session_id>` resolve the same in both locations, and
+recorded sessions always land under `Handgrip_Calibration/data/calibration/`.
 
 ### Expected result
 
@@ -741,8 +740,6 @@ LSL_Viewer
 Then run:
 
 ```bash
-cd Handgrip_Calibration
-
 uv run handgrip-cal preflight \
   --config conf/protocol_holdout_verification.yaml
 

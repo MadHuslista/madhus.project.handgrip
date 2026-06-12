@@ -43,9 +43,12 @@ reference_force_N = f(target_raw_count)
 ### Tests to update
 
 ```bash
-cd Handgrip_Calibration
 uv run handgrip-cal preflight --config conf/protocol_<name>.yaml
 uv run handgrip-cal record --config conf/protocol_<name>.yaml --dry-run
+```
+
+```bash
+cd Handgrip_Calibration
 uv run pytest
 ```
 

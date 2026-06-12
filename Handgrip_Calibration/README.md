@@ -12,7 +12,10 @@ conf/protocol_static_reversible_staircase_v3.yaml
 
 ## First command
 
-From `Handgrip_Calibration/`, after the live stack is running:
+From the repo root or from `Handgrip_Calibration/`, after the live stack is
+running — `conf/...yaml` and `data/calibration/<session_id>` resolve the same
+in both locations, and recorded sessions always land under
+`Handgrip_Calibration/data/calibration/`:
 
 ```bash
 uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase_v3.yaml

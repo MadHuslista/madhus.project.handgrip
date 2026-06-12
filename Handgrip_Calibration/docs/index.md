@@ -44,8 +44,11 @@ Before running calibration:
 
 ## Minimal command path
 
+Run from the repo root or from `Handgrip_Calibration/` — `conf/...yaml` and
+`data/calibration/<session_id>` resolve the same either way, and recorded
+sessions always land under `Handgrip_Calibration/data/calibration/`.
+
 ```bash
-cd Handgrip_Calibration
 uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase_v3.yaml
 uv run handgrip-cal record    --config conf/protocol_static_reversible_staircase_v3.yaml
 uv run handgrip-cal fit       data/calibration/<session_id> \
