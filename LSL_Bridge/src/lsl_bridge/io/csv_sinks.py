@@ -12,7 +12,7 @@ limit I/O overhead without risking data loss on abrupt termination.
 
 Typical usage::
 
-    sink = TargetCsvSink(Path("./data/target.csv"), append=False, flush_every_n_rows=1)
+    sink = TargetCsvSink(Path("./data/target.csv"), write_mode="overwrite", flush_every_n_rows=1)
     sink.write(sample, filtered_units)
     sink.close()
 """
@@ -28,6 +28,17 @@ from lsl_bridge.types import ParsedTargetSample, ReferenceSample
 
 _log = logging.getLogger(__name__)
 
+WRITE_MODES = ("timestamped", "append", "overwrite")
+
+
+# @brief Insert a timestamp suffix before a path's file extension.
+#  @param path Original file path.
+#  @param timestamp Timestamp string to insert (e.g. "20260612_143022").
+#  @return New path with "_<timestamp>" inserted before the suffix.
+def apply_timestamp_suffix(path: Path, timestamp: str) -> Path:
+    """Return ``path`` with ``_<timestamp>`` inserted before its extension."""
+    return path.with_name(f"{path.stem}_{timestamp}{path.suffix}")
+
 
 # @brief Persist published target samples into CSV rows.
 class TargetCsvSink:
@@ -38,9 +49,13 @@ class TargetCsvSink:
 
     Args:
         path:               Destination CSV file path.  Parent directories
-                            are created automatically.
-        append:             If ``True`` append to an existing file;
-                            if ``False`` truncate and write a fresh header.
+                            are created automatically.  For ``write_mode="timestamped"``,
+                            the caller is expected to have already inserted the
+                            timestamp suffix into this path.
+        write_mode:         One of ``"timestamped"``, ``"append"``, ``"overwrite"``.
+                            ``"append"`` opens the file in append mode and only
+                            writes a header if the file is empty; the other two
+                            modes truncate and always write a fresh header.
         flush_every_n_rows: Flush the underlying file handle every N rows.
 
     """
@@ -59,19 +74,22 @@ class TargetCsvSink:
 
     # @brief Create and initialize target CSV writer state.
     #  @param path Output CSV file path.
-    #  @param append True to append to existing file, false to truncate.
+    #  @param write_mode "timestamped", "append" or "overwrite".
     #  @param flush_every_n_rows Flush interval in rows.
     #  @return None.
-    def __init__(self, path: Path, append: bool, flush_every_n_rows: int) -> None:
+    def __init__(self, path: Path, write_mode: str, flush_every_n_rows: int) -> None:
+        if write_mode not in WRITE_MODES:
+            raise ValueError(f"Invalid write_mode {write_mode!r}, expected one of {WRITE_MODES}")
         self._path = path
         self._path.parent.mkdir(parents=True, exist_ok=True)
+        append = write_mode == "append"
         self._fh = self._path.open("a" if append else "w", newline="", encoding="utf-8")
         self._writer = csv.DictWriter(self._fh, fieldnames=self.FIELDNAMES)
         if (not append) or self._path.stat().st_size == 0:
             self._writer.writeheader()
         self._flush_every_n_rows = max(1, int(flush_every_n_rows))
         self._rows_since_flush = 0
-        _log.debug("TargetCsvSink opened: %s (append=%s)", path, append)
+        _log.debug("TargetCsvSink opened: %s (write_mode=%s)", path, write_mode)
 
     # @brief Write one target sample row to disk buffer.
     #  @param sample Parsed target sample object.
@@ -115,7 +133,7 @@ class ReferenceCsvSink:
 
     Args:
         path:               Destination CSV file path.
-        append:             Append vs. truncate behaviour.
+        write_mode:         One of ``"timestamped"``, ``"append"``, ``"overwrite"``.
         flush_every_n_rows: Flush interval in rows.
 
     """
@@ -139,19 +157,22 @@ class ReferenceCsvSink:
 
     # @brief Create and initialize reference CSV writer state.
     #  @param path Output CSV file path.
-    #  @param append True to append to existing file, false to truncate.
+    #  @param write_mode "timestamped", "append" or "overwrite".
     #  @param flush_every_n_rows Flush interval in rows.
     #  @return None.
-    def __init__(self, path: Path, append: bool, flush_every_n_rows: int) -> None:
+    def __init__(self, path: Path, write_mode: str, flush_every_n_rows: int) -> None:
+        if write_mode not in WRITE_MODES:
+            raise ValueError(f"Invalid write_mode {write_mode!r}, expected one of {WRITE_MODES}")
         self._path = path
         self._path.parent.mkdir(parents=True, exist_ok=True)
+        append = write_mode == "append"
         self._fh = self._path.open("a" if append else "w", newline="", encoding="utf-8")
         self._writer = csv.DictWriter(self._fh, fieldnames=self.FIELDNAMES)
         if (not append) or self._path.stat().st_size == 0:
             self._writer.writeheader()
         self._flush_every_n_rows = max(1, int(flush_every_n_rows))
         self._rows_since_flush = 0
-        _log.debug("ReferenceCsvSink opened: %s (append=%s)", path, append)
+        _log.debug("ReferenceCsvSink opened: %s (write_mode=%s)", path, write_mode)
 
     # @brief Write one reference sample row to disk buffer.
     #  @param sample Parsed reference sample object.

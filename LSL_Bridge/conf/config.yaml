@@ -146,12 +146,12 @@ csv:
   target:
     enabled: true
     path: LSL_Bridge/data/target_handgrip_samples_v2.csv
-    append: false
+    write_mode: timestamped  # timestamped | append | overwrite
     flush_every_n_rows: 1
   reference:
     enabled: true
     path: LSL_Bridge/data/reference_rs485_samples_v2.csv
-    append: false
+    write_mode: timestamped  # timestamped | append | overwrite
     flush_every_n_rows: 25
 
 logging:
