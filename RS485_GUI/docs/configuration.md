@@ -3,7 +3,7 @@
 ## Summary
 
 - Main config path: `RS485_GUI/config/config.yaml`.
-- The config is loaded directly through OmegaConf, not through `@hydra.main`, because NiceGUI can re-execute the application module while serving pages.
+- The config is loaded directly through OmegaConf, not through `@hydra.main`, since this app is a simple CLI/script entry point rather than a Hydra-managed run.
 - CLI overrides use dotlist syntax, for example `serial.default_port=/dev/ttyUSB1`.
 - The most important calibration-safe defaults are `device.mode=active_send`, `serial.default_baudrate=460800`, `ipc.topic=rs485.measurement.v1`, and `ipc.signal_key=net_value`.
 - GUI display throttling is separate from file logging and IPC publication. Do not confuse display downsampling with acquisition downsampling.
@@ -112,7 +112,7 @@ uv run rs485-gui app.log_level=DEBUG logging.module_levels.rs485_gui.transport.a
 | `ipc.send_hwm`                      | `2000`                 | messages            | ZMQ high-water mark.                                                 | Increase if subscribers are intermittently slow.                | Too high can grow memory; too low can drop more frames.                |
 | `ipc.linger_ms`                     | `0`                    | milliseconds        | ZMQ close behavior.                                                  | Rarely change.                                                  | Nonzero can slow shutdown.                                             |
 | `ipc.drop_on_backpressure`          | `true`                 | bool                | Non-blocking publish behavior.                                       | Keep true for acquisition responsiveness.                       | Drops IPC frames if bridge/subscriber cannot keep up.                  |
-| `ipc.start_on_app_launch`           | `false`                | bool                | Bind at app construction.                                            | Keep false due to NiceGUI re-execution behavior.                | True can cause false port conflicts.                                   |
+| `ipc.start_on_app_launch`           | `false`                | bool                | Bind at app construction.                                            | Conservative default; bind on Connect instead.                  | True binds the endpoint even before a board is connected.              |
 | `ipc.start_on_connect`              | `true`                 | bool                | Start IPC when acquisition starts.                                   | Keep true for bridge integration.                               | False requires manual publisher start not currently operator-friendly. |
 | `ipc.stop_on_disconnect`            | `true`                 | bool                | Stop IPC on disconnect.                                              | Keep true.                                                      | False can leave stale endpoint bound.                                  |
 | `ipc.require_pylsl_clock`           | `true`                 | bool                | Requires `pylsl` clock for LSL-aligned timestamps.                   | Disable only for debug without LSL.                             | Timestamps may diverge from bridge expectations.                       |

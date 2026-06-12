@@ -188,7 +188,7 @@ Display-only throttling happens before UI state updates. It should not affect fi
 1. loads `RS485_GUI/config/config.yaml`,
 2. applies CLI dotlist overrides,
 3. configures logging exactly once,
-4. avoids `@hydra.main` to prevent NiceGUI re-execution issues.
+4. avoids `@hydra.main` since this app is a simple CLI/script entry point, not a Hydra-managed run.
 
 The dataclass schema in `config/schema.py` is documentation/validation support, not the runtime Hydra singleton.
 
