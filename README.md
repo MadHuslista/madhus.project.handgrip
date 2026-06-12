@@ -5,10 +5,10 @@
     - [System Architecture](#system-architecture)
     - [Components](#components)
   - [Quickstart](#quickstart)
+    - [Firmware Workspace](#firmware-workspace)
+    - [Python Workspace](#python-workspace)
     - [What to read and when](#what-to-read-and-when)
-  - [Installation and validation](#installation-and-validation)
-    - [Python workspace](#python-workspace)
-    - [Firmware workspace](#firmware-workspace)
+  - [Validation](#validation)
   - [Documentation map](#documentation-map)
 
 
@@ -50,6 +50,37 @@ Following the system architecture, here are the entry points and purposes for ea
 
 ## Quickstart
 
+### Firmware Workspace
+
+Install PlatformIO from: 
+
+| Option                             | Link                                                                                                                                                           |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI Standalone                     | [https://docs.platformio.org/en/latest/core/installation/index.html](https://docs.platformio.org/en/latest/core/installation/index.html)                       |
+| VSCode extension [**Recommended**] | [https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide](https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide) |
+
+Ensure PlatformIO binaries are in your PATH: 
+- [https://docs.platformio.org/en/stable/core/installation/shell-commands.html](https://docs.platformio.org/en/stable/core/installation/shell-commands.html)
+
+Firmware is built with PlatformIO from the root `platformio.ini`
+Run from the repository root:
+
+```bash
+pio run -e nanoatmega328
+pio run -e nanoatmega328 -t upload
+```
+
+Validate connection and data reception with:
+
+```bash
+pio device monitor -e nanoatmega328
+```
+Expect to see a stream of telemetry lines with raw ADC counts and timestamps. 
+
+Read [Handgrip_Firmware/docs/workflow.md](Handgrip_Firmware/docs/workflow.md) for the full workflow, or before uploading or changing firmware constants.
+
+### Python Workspace
+
 Install UV Python package manager from: 
 - [https://docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/)
 
@@ -78,22 +109,20 @@ This brings up the reference GUI/IPC publisher, the `HandgripTarget` and `Handgr
 
 ### What to read and when
 
-| I want to…                   | Start here                                                                                                 | Then                                                                                                                                                         |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Understand the whole suite   | [docs/system-overview.md](docs/system-overview.md)                                                         | [docs/workflows/handgrip-calibration.md](docs/workflows/handgrip-calibration.md), [docs/workflows/handgrip-analysis.md](docs/workflows/handgrip-analysis.md) |
-| Connect hardware             | [docs/workflows/physical-setup.md](docs/workflows/physical-setup.md)                                       | [Handgrip_Firmware/docs/workflow.md](Handgrip_Firmware/docs/workflow.md)                                                                                     |
-| Start the full live system   | [docs/workflows/full-live-viewer-quickstart.md](docs/workflows/full-live-viewer-quickstart.md)             | —                                                                                                                                                            |
-| Validate target path only    | [docs/workflows/target-only-quickstart.md](docs/workflows/target-only-quickstart.md)                       | —                                                                                                                                                            |
-| Validate reference path only | [docs/workflows/reference-only-quickstart.md](docs/workflows/reference-only-quickstart.md)                 | —                                                                                                                                                            |
-| Build/upload firmware        | [Handgrip_Firmware/docs/workflow.md](Handgrip_Firmware/docs/workflow.md)                                   | [Handgrip_Firmware/docs/index.md](Handgrip_Firmware/docs/index.md)                                                                                           |
-| Calibrate the handgrip       | [docs/workflows/handgrip-calibration.md](docs/workflows/handgrip-calibration.md)                           | [Handgrip_Calibration/docs/workflow.md](Handgrip_Calibration/docs/workflow.md)                                                                               |
-| Run signal analysis          | [docs/workflows/handgrip-analysis.md](docs/workflows/handgrip-analysis.md)                                 | [Handgrip_Analysis/docs/workflow.md](Handgrip_Analysis/docs/workflow.md)                                                                                     |
-| Understand repo structure    | [docs/architecture/repository-layout.md](docs/architecture/repository-layout.md)                           | —                                                                                                                                                            |
-| Troubleshoot                 | [docs/troubleshooting/index.md](docs/troubleshooting/index.md)                                             | Component `*/docs/` links                                                                                                                                    |
+| I want to…                   | Start here                                                                                     | Then                                                                                                                                                         |
+| ---------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Understand the whole suite   | [docs/system-overview.md](docs/system-overview.md)                                             | [docs/workflows/handgrip-calibration.md](docs/workflows/handgrip-calibration.md), [docs/workflows/handgrip-analysis.md](docs/workflows/handgrip-analysis.md) |
+| Connect hardware             | [docs/workflows/physical-setup.md](docs/workflows/physical-setup.md)                           | [Handgrip_Firmware/docs/workflow.md](Handgrip_Firmware/docs/workflow.md)                                                                                     |
+| Start the full live system   | [docs/workflows/full-live-viewer-quickstart.md](docs/workflows/full-live-viewer-quickstart.md) | —                                                                                                                                                            |
+| Validate target path only    | [docs/workflows/target-only-quickstart.md](docs/workflows/target-only-quickstart.md)           | —                                                                                                                                                            |
+| Validate reference path only | [docs/workflows/reference-only-quickstart.md](docs/workflows/reference-only-quickstart.md)     | —                                                                                                                                                            |
+| Build/upload firmware        | [Handgrip_Firmware/docs/workflow.md](Handgrip_Firmware/docs/workflow.md)                       | [Handgrip_Firmware/docs/index.md](Handgrip_Firmware/docs/index.md)                                                                                           |
+| Calibrate the handgrip       | [docs/workflows/handgrip-calibration.md](docs/workflows/handgrip-calibration.md)               | [Handgrip_Calibration/docs/workflow.md](Handgrip_Calibration/docs/workflow.md)                                                                               |
+| Run signal analysis          | [docs/workflows/handgrip-analysis.md](docs/workflows/handgrip-analysis.md)                     | [Handgrip_Analysis/docs/workflow.md](Handgrip_Analysis/docs/workflow.md)                                                                                     |
+| Understand repo structure    | [docs/architecture/repository-layout.md](docs/architecture/repository-layout.md)               | —                                                                                                                                                            |
+| Troubleshoot                 | [docs/troubleshooting/index.md](docs/troubleshooting/index.md)                                 | Component `*/docs/` links                                                                                                                                    |
 
-## Installation and validation
-
-### Python workspace
+## Validation
 
 After the [Quickstart](#quickstart) install, validate the workspace from the repository root:
 
@@ -108,18 +137,6 @@ The root `pyproject.toml` installs the local Python components as editable packa
 - `lsl-viewer`
 - `handgrip-calibration`
 - `handgrip-analysis`
-
-### Firmware workspace
-
-Firmware is built with PlatformIO from the root `platformio.ini`:
-
-```bash
-pio run -e nanoatmega328
-pio run -e nanoatmega328 -t upload
-pio device monitor -e nanoatmega328
-```
-
-Read [Handgrip_Firmware/docs/workflow.md](Handgrip_Firmware/docs/workflow.md) before uploading or changing firmware constants.
 
 ## Documentation map
 
