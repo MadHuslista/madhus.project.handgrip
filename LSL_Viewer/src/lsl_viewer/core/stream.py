@@ -14,6 +14,7 @@ import logging
 import numpy as np
 from omegaconf import DictConfig
 
+from lsl_viewer.errors import StreamConnectionError
 from lsl_viewer.types import (
     DualWindow,
     ReferenceWindow,
@@ -93,14 +94,21 @@ def build_streams(cfg: DictConfig):
         source_id=None if reference_cfg.source_id is None else str(reference_cfg.source_id),
     )
 
-    target.connect(
-        acquisition_delay=target_cfg.acquisition_delay,
-        timeout=target_cfg.timeout,
-    )
-    reference.connect(
-        acquisition_delay=reference_cfg.acquisition_delay,
-        timeout=reference_cfg.timeout,
-    )
+    try:
+        target.connect(
+            acquisition_delay=target_cfg.acquisition_delay,
+            timeout=target_cfg.timeout,
+        )
+    except Exception as exc:
+        raise StreamConnectionError(str(target_cfg.name), str(exc)) from exc
+
+    try:
+        reference.connect(
+            acquisition_delay=reference_cfg.acquisition_delay,
+            timeout=reference_cfg.timeout,
+        )
+    except Exception as exc:
+        raise StreamConnectionError(str(reference_cfg.name), str(exc)) from exc
 
     target_layout = target_layout_from_cfg(cfg)
     reference_layout = reference_layout_from_cfg(cfg)

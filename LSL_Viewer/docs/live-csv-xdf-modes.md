@@ -40,6 +40,17 @@ Expected result:
 - XY correlation updates under force changes,
 - info panel reports live stream status.
 
+### Stream connection errors
+
+Both live modes connect to `HandgripTarget` and `HandgripReference` via `build_streams()`. If a stream is not found (e.g. `LSL_Bridge` is not running), the viewer raises `StreamConnectionError` (`lsl_viewer.errors`), logs:
+
+```sh
+Stream 'HandgripTarget': <mne-lsl reason>
+Hint: Ensure an LSL stream named 'HandgripTarget' is active on the network before starting the viewer.
+```
+
+and exits with code `3`. Start `LSL_Bridge` first, then retry.
+
 ## Live with reference validation
 
 Command:
