@@ -249,6 +249,20 @@ class ReplayCfg:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Diagnostics (XY staircase investigation)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class DiagnosticsCfg:
+    # @brief Opt-in per-tick metrics and raw-sample capture for live mode.
+    enabled: bool = False
+    output_dir: str = "./diagnostics"
+    record_metrics: bool = True
+    record_raw_samples: bool = True
+
+
 @dataclass
 class LoggingCfg:
     # @brief Logging configuration used by the viewer entry point.
@@ -274,6 +288,7 @@ class AppConfig:
     calibration_markers: CalibrationMarkersCfg = field(default_factory=CalibrationMarkersCfg)
     reference: ReferenceCfg = field(default_factory=ReferenceCfg)
     replay: ReplayCfg = field(default_factory=ReplayCfg)
+    diagnostics: DiagnosticsCfg = field(default_factory=DiagnosticsCfg)
     logging: LoggingCfg = field(default_factory=LoggingCfg)
 
 

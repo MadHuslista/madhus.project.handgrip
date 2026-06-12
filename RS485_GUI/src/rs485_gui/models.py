@@ -95,6 +95,8 @@ class ActiveSendStats:
     timestamp_reanchors: int = 0
     timestamp_drift_reanchors: int = 0
     timestamp_parser_reanchors: int = 0
+    monotonic_adjust_events: int = 0
+    monotonic_adjust_total_s: float = 0.0
     recovery_events: int = 0
     last_recovery_monotonic: float = 0.0
     last_recovery_warning_count: int = 0

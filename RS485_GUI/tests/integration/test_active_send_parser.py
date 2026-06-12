@@ -109,3 +109,44 @@ class TestFrameExtraction:
 
         regs = extract_registers_from_modbus_response(raw_frames[0], 1, 3, 11)
         assert all(r == 0 for r in regs)
+
+
+class TestMonotonicAdjustDiagnostics:
+    def _decode(self, transport, n_frames):
+        frames = [_make_valid_frame() for _ in range(n_frames)]
+        return transport._decode_batch(frames, {"decoder": "test"})
+
+    def test_first_batch_has_zero_adjust(self):
+        transport = _make_transport_with_buffer(b"")
+        decoded = self._decode(transport, 3)
+        assert len(decoded) == 3
+        stats = transport.app_state.active_send_stats
+        assert stats.monotonic_adjust_events == 0
+        assert stats.monotonic_adjust_total_s == 0.0
+        for frame in decoded:
+            assert frame.raw_transport["diagnostics"]["monotonic_adjust_s"] == 0.0
+            assert "batch_end_lsl_ts" in frame.raw_transport["diagnostics"]
+            assert "serial_in_waiting_at_decode" in frame.raw_transport["diagnostics"]
+
+    def test_colliding_batches_record_adjust_magnitude(self):
+        transport = _make_transport_with_buffer(b"")
+        self._decode(transport, 4)
+        # Immediately decoding a second batch makes its back-dated start collide
+        # with the previous batch tail, forcing the monotonic guard to fire.
+        decoded = self._decode(transport, 4)
+        stats = transport.app_state.active_send_stats
+        assert stats.monotonic_adjust_events == 1
+        assert stats.monotonic_adjust_total_s > 0.0
+        for frame in decoded:
+            assert frame.raw_transport["diagnostics"]["monotonic_adjust_s"] > 0.0
+            assert frame.raw_transport["diagnostics"]["monotonic_adjust_events"] == 1
+            assert frame.interpreted["timestamp_source"].endswith("_monotonic_adjusted")
+
+    def test_adjusted_timestamps_remain_monotonic(self):
+        transport = _make_transport_with_buffer(b"")
+        first = self._decode(transport, 4)
+        second = self._decode(transport, 4)
+        timestamps = [f.interpreted["host_lsl_ts"] for f in first + second]
+        assert timestamps == sorted(timestamps)
+        deltas = [b - a for a, b in zip(timestamps, timestamps[1:])]
+        assert min(deltas) > 0

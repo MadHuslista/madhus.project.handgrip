@@ -191,7 +191,8 @@ class ActiveSendBoardTransport(BoardTransport):
                 "Active-send backlog summary: parsed_ok=%d batches=%d crc_failures=%d "
                 "resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d "
                 "buffer_len=%d max_buffer=%d max_in_waiting=%d "
-                "timestamp_reanchors=%d suppressed=%d",
+                "timestamp_reanchors=%d monotonic_adjusts=%d monotonic_adjust_total_s=%.6f "
+                "suppressed=%d",
                 stats.frames_ok,
                 stats.frames_delivered,
                 stats.crc_failures,
@@ -203,6 +204,8 @@ class ActiveSendBoardTransport(BoardTransport):
                 stats.max_buffer_len,
                 stats.max_in_waiting,
                 stats.timestamp_reanchors,
+                stats.monotonic_adjust_events,
+                stats.monotonic_adjust_total_s,
                 stats.warning_suppressed,
             )
             stats.last_warning_emit_monotonic = now
@@ -459,7 +462,8 @@ class ActiveSendBoardTransport(BoardTransport):
             LOGGER.info(
                 "Active-send summary: parsed_ok=%d batches=%d bytes=%d crc_failures=%d "
                 "resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d "
-                "max_buffer=%d max_in_waiting=%d timestamp_reanchors=%d",
+                "max_buffer=%d max_in_waiting=%d timestamp_reanchors=%d "
+                "monotonic_adjusts=%d monotonic_adjust_total_s=%.6f",
                 stats.frames_ok,
                 stats.frames_delivered,
                 stats.bytes_received,
@@ -471,6 +475,8 @@ class ActiveSendBoardTransport(BoardTransport):
                 stats.max_buffer_len,
                 stats.max_in_waiting,
                 stats.timestamp_reanchors,
+                stats.monotonic_adjust_events,
+                stats.monotonic_adjust_total_s,
             )
 
         diagnostics: dict[str, Any] = {
@@ -521,6 +527,13 @@ class ActiveSendBoardTransport(BoardTransport):
 
         timestamp_policy = str(active_cfg.timestamp_policy).strip().lower()
         frames: list[MeasurementFrame] = []
+        monotonic_adjust_s = 0.0
+        in_waiting_at_decode = 0
+        if self.ser is not None:
+            try:
+                in_waiting_at_decode = int(self.ser.in_waiting)
+            except Exception:
+                in_waiting_at_decode = 0
 
         if freq_hz > 0:
             dt = 1.0 / float(freq_hz)
@@ -539,6 +552,24 @@ class ActiveSendBoardTransport(BoardTransport):
                         batch_start_lsl_ts += adjust_s
                         batch_start_ts += adjust_s
                         timestamp_source += "_monotonic_adjusted"
+                        monotonic_adjust_s = adjust_s
+                        stats.monotonic_adjust_events += 1
+                        stats.monotonic_adjust_total_s += adjust_s
+                        warn_threshold_s = float(
+                            active_cfg.get("log_monotonic_adjust_warn_s", 0.005)
+                        )
+                        if adjust_s >= warn_threshold_s:
+                            LOGGER.warning(
+                                "Active-send monotonic timestamp adjust: +%.6fs "
+                                "(batch_size=%d, events=%d, total=%.6fs, in_waiting=%d). "
+                                "Reference LSL timestamps for this batch are pushed later "
+                                "than batch-end anchoring would assign.",
+                                adjust_s,
+                                len(frame_bytes_batch),
+                                stats.monotonic_adjust_events,
+                                stats.monotonic_adjust_total_s,
+                                in_waiting_at_decode,
+                            )
 
             elif timestamp_policy in {"continuous_rate", "continuous"}:
                 # DEPRECATED: use only when the RS485 device is proven to emit
@@ -622,6 +653,11 @@ class ActiveSendBoardTransport(BoardTransport):
                     "timestamp_source": timestamp_source,
                     "configured_frequency_hz": freq_hz,
                     "timestamp_reanchors": stats.timestamp_reanchors,
+                    "monotonic_adjust_s": monotonic_adjust_s,
+                    "monotonic_adjust_events": stats.monotonic_adjust_events,
+                    "monotonic_adjust_total_s": stats.monotonic_adjust_total_s,
+                    "batch_end_lsl_ts": batch_end_lsl_ts,
+                    "serial_in_waiting_at_decode": in_waiting_at_decode,
                 }
             )
             decoded = decode_active_send_modbus_response(

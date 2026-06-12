@@ -777,6 +777,11 @@ def update_charts(
         target_signal=cfg.viewer.xy_correlation.target_signal,
     )
 
+    state.xy_pair_count = int(xy_x.size)
+    state.xy_t_min_s = float(np.min(xy_t)) if xy_t.size else float("nan")
+    state.xy_t_max_s = float(np.max(xy_t)) if xy_t.size else float("nan")
+    state.xy_alignment_mode = str(xy_alignment_mode)
+
     _update_xy_series(
         opts_xy,
         xy_x,

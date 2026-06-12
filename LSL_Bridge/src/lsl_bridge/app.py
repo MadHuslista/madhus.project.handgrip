@@ -202,7 +202,7 @@ def app(cfg: DictConfig) -> None:
                         )
 
                         if target_sink is not None:
-                            target_sink.write(sample, filtered_units)
+                            target_sink.write(sample, filtered_units, arrival_lsl_time)
 
                         sample_count += 1
                         if sample_count == 1 or sample_count % int(cfg.logging.log_every_n_samples) == 0:

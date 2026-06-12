@@ -70,6 +70,7 @@ class TargetCsvSink:
         "target_filtered_units",
         "target_status",
         "raw_line",
+        "arrival_lsl_time_s",
     ]
 
     # @brief Create and initialize target CSV writer state.
@@ -94,8 +95,14 @@ class TargetCsvSink:
     # @brief Write one target sample row to disk buffer.
     #  @param sample Parsed target sample object.
     #  @param filtered_units Filtered target value published to LSL.
+    #  @param arrival_lsl_time_s Raw LSL clock at serial byte arrival; nan when unknown.
     #  @return None.
-    def write(self, sample: ParsedTargetSample, filtered_units: float) -> None:
+    def write(
+        self,
+        sample: ParsedTargetSample,
+        filtered_units: float,
+        arrival_lsl_time_s: float = float("nan"),
+    ) -> None:
         """Append one sample row to the CSV."""
         self._writer.writerow(
             {
@@ -108,6 +115,7 @@ class TargetCsvSink:
                 "target_filtered_units": repr(filtered_units),
                 "target_status": sample.target_status,
                 "raw_line": sample.raw_line,
+                "arrival_lsl_time_s": "" if math.isnan(arrival_lsl_time_s) else f"{arrival_lsl_time_s:.9f}",
             }
         )
         self._rows_since_flush += 1

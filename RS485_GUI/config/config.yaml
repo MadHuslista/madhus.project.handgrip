@@ -154,6 +154,10 @@ active_send:
   # use a non-default free-running timestamp reconstruction. Ignored by the default
   # batch_end_anchored policy.
   clock_reanchor_max_drift_s: 0.050
+  # Warn when one batch's monotonic timestamp adjustment (batch_end_anchored
+  # collision with the previous batch) reaches this many seconds. The per-frame
+  # magnitude is always exported as monotonic_adjust_s in diagnostics/IPC.
+  log_monotonic_adjust_warn_s: 0.005
   # If the active-send parser enters a CRC/resync cascade, discard stale
   # buffered bytes and recover from the current live byte stream.
   recovery_enabled: true

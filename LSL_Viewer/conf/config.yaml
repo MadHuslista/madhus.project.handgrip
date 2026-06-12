@@ -130,6 +130,16 @@ replay:
   loop: false
   start_offset_s: 0.0
 
+# Opt-in live-mode diagnostics for the XY staircase investigation. When
+# enabled, the viewer writes one session directory per run containing per-tick
+# alignment metrics (metrics.jsonl) and deduplicated raw stream samples
+# (target_samples.csv / reference_samples.csv). Display behavior is unchanged.
+diagnostics:
+  enabled: false
+  output_dir: ./diagnostics
+  record_metrics: true
+  record_raw_samples: true
+
 logging:
   level: INFO
   log_file: handgrip_realtime_viewer.log  # Explicit path; previously absent (caused empty log)

@@ -116,6 +116,22 @@ class TestTargetCsvSink:
         sink.close()
         assert path.exists()
 
+    def test_arrival_lsl_time_written_when_provided(self, tmp_path: Path):
+        path = tmp_path / "target.csv"
+        sink = TargetCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
+        sink.write(_target_sample(seq=1), filtered_units=0.0, arrival_lsl_time_s=12.345678901)
+        sink.close()
+        rows = list(csv.DictReader(path.open()))
+        assert float(rows[0]["arrival_lsl_time_s"]) == pytest.approx(12.345678901, abs=1e-9)
+
+    def test_arrival_lsl_time_defaults_to_empty(self, tmp_path: Path):
+        path = tmp_path / "target.csv"
+        sink = TargetCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
+        sink.write(_target_sample(seq=1), filtered_units=0.0)
+        sink.close()
+        rows = list(csv.DictReader(path.open()))
+        assert rows[0]["arrival_lsl_time_s"] == ""
+
     def test_flush_interval_respected(self, tmp_path: Path):
         """Sink should not raise on high flush_every_n_rows values."""
         path = tmp_path / "target.csv"

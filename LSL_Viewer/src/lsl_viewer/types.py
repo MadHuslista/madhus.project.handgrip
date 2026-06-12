@@ -111,6 +111,12 @@ class ViewerState:
     xy_reference_tail_delta_s: float = 0.0
     xy_reference_shift_clipped: bool = False
 
+    # XY pairing diagnostics (set by update_charts, read by diagnostics recorder)
+    xy_pair_count: int = 0
+    xy_t_min_s: float = float("nan")
+    xy_t_max_s: float = float("nan")
+    xy_alignment_mode: str = ""
+
     # Live mode control
     live_paused: bool = False
     live_reset_from_latest_window: bool = False
