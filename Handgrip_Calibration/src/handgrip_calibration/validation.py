@@ -92,7 +92,11 @@ def _thresholds(config: AppConfig) -> dict[str, float]:
 
 
 def validate_session_against_model(
-    holdout_session_dir: str | Path, model_fit_result: str | Path, config: AppConfig
+    holdout_session_dir: str | Path,
+    model_fit_result: str | Path,
+    config: AppConfig,
+    *,
+    primary_session_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     # @brief Validate an independent holdout session against an existing fitted model.
     #  @param holdout_session_dir Path to the holdout session directory.
@@ -157,6 +161,12 @@ def validate_session_against_model(
         ],
     }
     write_json(holdout_session_dir / "holdout_validation.json", result)
+
+    if primary_session_dir is not None:
+        pdir = Path(primary_session_dir)
+        write_json(pdir / "holdout_validation.json", result)
+        out_frame.to_csv(pdir / "holdout_predictions.csv", index=False)
+        log.info("Holdout artifacts mirrored to primary session: %s", pdir)
     log.info(
         "Holdout validation complete: passes_gate=%s, RMSE=%.4g N, model=%s",
         passes,

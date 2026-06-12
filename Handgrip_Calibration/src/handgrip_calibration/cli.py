@@ -118,7 +118,10 @@ def _cmd_fit(args: argparse.Namespace) -> int:
 def _cmd_validate_holdout(args: argparse.Namespace) -> int:
     cfg = load_config(args.config)
     session_dir = resolve_session_dir(args.session_dir)
-    result = validate_session_against_model(session_dir, args.model, cfg)
+    primary_session_dir = Path(args.model).resolve().parent
+    result = validate_session_against_model(
+        session_dir, args.model, cfg, primary_session_dir=primary_session_dir
+    )
     metrics = result.get("metrics", {})
     log.info("Holdout validation complete: %s", session_dir / "holdout_validation.json")
     log.info("  selected_model=%s", result.get("selected_model_id"))
@@ -130,6 +133,8 @@ def _cmd_validate_holdout(args: argparse.Namespace) -> int:
         metrics.get("bias_N"),
     )
     log.info("  recommendation=%s", result.get("firmware_deployment_recommendation"))
+    report_path = generate_report(primary_session_dir)
+    log.info("Integrated report regenerated: %s", report_path)
     return 0
 
 
