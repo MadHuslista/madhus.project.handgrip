@@ -55,3 +55,23 @@
 | AICc / BIC / adjusted R²                                         | R01, R03, R08, R10                  | Project calculates these from residual sums, sample count, and parameter count. Use as secondary diagnostics with small calibration datasets. |
 | Sample statistics: median, standard deviation, sample rate, gaps | R12 plus project implementation     | MAD is externally sourced; medians/std/rates/gaps are straightforward descriptive statistics computed by the implementation.                  |
 | Firmware constants / HX711-style scale/offset                    | Project implementation plus R02/R18 | External sources cover calibration curves; exact firmware semantics are project-specific and must be verified against firmware code.          |
+
+## Validation findings (Phase B — semantic/DSP correctness pass, 2026-06-18)
+
+Targeted validation that each model/metric/DSP choice is academically correct, not
+just that the code runs. Verdict legend: OK = correct as implemented; FIX = change
+needed; NOTE = correct but document a caveat.
+
+| # | Concept / claim checked | Source | Verdict | Action |
+| - | ----------------------- | ------ | ------- | ------ |
+| V1 | `odr_affine` uses `scipy.odr` | R07; code `fitting.py:527-545` (`method=deming_regression`) | **FIX** | Code is a pure-NumPy **Deming** approximation, not `scipy.odr`. Correct draft §6.6 wording and stale module docstring `fitting.py:16`. Keep R07 as conceptual ODR reference only. |
+| V2 | `aicc` field is true small-sample AICc | R01; code `fitting.py:204` | OK | `aic + 2k(k+1)/(n−k−1)` correction **is** applied; field genuinely AICc. Draft §7.9 correct. |
+| V3 | Deming λ = Var(y-err)/Var(x-err) | [Deming regression — Wikipedia](https://en.wikipedia.org/wiki/Deming_regression) | OK | Code `variance_ratio_y_over_x = sy²/sx²` matches λ convention. |
+| V4 | Huber ε=1.35 ≈ 95% efficiency under normal model | R06; [Huber loss refs](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.HuberRegressor.html) | OK | Standard value (1.345/1.35). `1.4826·MAD` consistency constant also standard. |
+| V5 | `numpy.polyfit` weights are inverse-σ (not inverse-σ²) for inverse-variance WLS | R04 (numpy docs: "w applies to the unsquared residual"; "use w=1/sigma") | OK | Code `_sigma_to_polyfit_weights = 1/max(σ,eps)` correct — a common pitfall avoided. |
+| V6 | `selection_likelihood` (softmax over −score) is a relative weight, not a probability of truth | R13 | NOTE | Correct; doc already frames it as relative decision weight. |
+| V7 | `sample_rate_hz = n_samples / duration` with gaps present | R14 (descriptive) | NOTE | Average rate; understates instantaneous rate when gaps exist. Document as approximation. |
+| V8 | RMSE/R²/AICc on ~5 calibration points | R01, R10 | NOTE | Valid but low-power at tiny n; prefer residual plots + holdout. Draft already cautions; keep. |
+
+**Net result:** implementation is academically sound; only V1 requires a wording fix
+(no behavior change). V2–V8 confirmed correct; V7/V8 add documentation caveats.
