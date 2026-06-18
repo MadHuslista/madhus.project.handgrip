@@ -33,6 +33,7 @@ Before running calibration:
 | Understand session output files (events, quality, provenance)          | [Handgrip_Calibration/docs/recording.md](recording.md)                                       |
 | Interpret model selection (metrics, residuals, ranking)                | [Handgrip_Calibration/docs/fitting-and-model-selection.md](fitting-and-model-selection.md)   |
 | Read reports, plots, and JSON artifacts                                | [Handgrip_Calibration/docs/reports-and-outputs.md](reports-and-outputs.md)                   |
+| Understand every report metric, model, and plot (non-expert reference)  | [Handgrip_Calibration/docs/calibration-report-reference.md](calibration-report-reference.md) |
 | Understand CLI-to-module internals                                     | [Handgrip_Calibration/docs/architecture.md](architecture.md)                                 |
 | Add protocols, models, or report sections                              | [Handgrip_Calibration/docs/development.md](development.md)                                   |
 

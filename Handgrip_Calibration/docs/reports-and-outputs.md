@@ -5,6 +5,7 @@
 - Reports translate calibration artifacts into a deployment decision.
 - The report should identify the selected model, candidate comparison, residuals, plots, thresholds, and validation status.
 - Generated reports are outputs, not canonical documentation; curated examples belong under `docs/examples/`.
+- For non-expert definitions and how-to-read guidance for every metric, model, and plot, and for the per-value interpretations now embedded in the report, see [Handgrip_Calibration/docs/calibration-report-reference.md](calibration-report-reference.md).
 
 ## Report command
 

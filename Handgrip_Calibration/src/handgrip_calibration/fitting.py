@@ -13,7 +13,8 @@ Implemented candidate models
 - affine_huber: robust affine fit using an iterative Huber loss.
 - quadratic_wls: degree-2 polynomial, gated by monotonicity and CV metrics.
 - piecewise_linear_monotone: firmware-friendly multipoint lookup table.
-- odr_affine: diagnostic errors-in-variables affine fit using scipy.odr.
+- odr_affine: diagnostic errors-in-variables affine fit using a pure-NumPy Deming
+  regression (closed form); conceptually related to ODR but not computed via scipy.odr.
 - hysteresis_affine_diagnostic: separate direction fits for up/down analysis.
 - drift_affine_diagnostic: affine model with a centered elapsed-time term.
 """
