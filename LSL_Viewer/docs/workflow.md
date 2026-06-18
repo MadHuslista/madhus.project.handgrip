@@ -6,6 +6,8 @@ This document covers starting `LSL_Viewer` in live, CSV replay, and XDF replay m
 
 Start `RS485_GUI` and `LSL_Bridge` first when using live mode. Stop before calibration if streams are missing, frozen, or if XY delay grows over time.
 
+If the XY plot shows a steady reference lag between axes, that is the physical relay offset of the reference path, compensated by `viewer.xy_correlation.time_alignment.manual_reference_shift_s`. Measure it (and validate the capture) with `Handgrip_Calibration/scripts/calibration_preflight.py` — see [docs/troubleshooting/viewer-lag-or-xy-delay.md](../../docs/troubleshooting/viewer-lag-or-xy-delay.md). Re-measure after any setup change.
+
 ## Prerequisites
 
 - `RS485_GUI` can read the acquisition board and publish `rs485.measurement.v1`.
