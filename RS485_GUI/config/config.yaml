@@ -90,6 +90,13 @@ ipc:
   send_hwm: 2000
   linger_ms: 0
   drop_on_backpressure: true
+  # Serialize (json.dumps) and send IPC records on a dedicated publisher thread
+  # so the acquisition worker is not blocked between serial reads (same fix as
+  # async file logging). The worker only enqueues; a single thread owns the ZMQ
+  # PUB socket (sockets are not thread-safe). queue overflow drops records with a
+  # counted, throttled warning rather than stalling acquisition.
+  async_publish: true
+  publish_queue_maxsize: 200000
   # Avoid binding the ZMQ endpoint during NiceGUI app construction; NiceGUI may
   # re-execute the script while serving the root page. Bind only when the user
   # starts a real acquisition session.

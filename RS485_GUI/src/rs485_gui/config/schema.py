@@ -97,6 +97,8 @@ class IpcConfig:
     send_hwm: int = 2000
     linger_ms: int = 0
     drop_on_backpressure: bool = True
+    async_publish: bool = True
+    publish_queue_maxsize: int = 200000
     start_on_app_launch: bool = False
     start_on_connect: bool = True
     stop_on_disconnect: bool = True
