@@ -52,6 +52,26 @@ Replace serial paths with stable `/dev/serial/by-id/...` paths when possible.
 | `LSL_Bridge` | Publishes `HandgripTarget` and `HandgripReference`.    |
 | `LSL_Viewer` | Shows target/reference time series and XY correlation. |
 
+## Reference alignment (run before trusting XY / calibration)
+
+The reference stream is stamped at GUI read time and lags the directly-connected target by a stable relay offset. Whenever the physical or runtime setup changes (cabling, ports, host, baud, sample rates), run the calibration preflight first and update `manual_reference_shift_s` before trusting the XY plot or recording calibration data:
+
+```bash
+
+# 1. enable `diagnostics.enabled=true` in the viewer config, 
+# 2. restart the three terminals to capture diagnostics logs, then:
+
+# 3. run the preflight script against the short diagnostics capture
+cd Handgrip_Calibration
+uv run python scripts/calibration_preflight.py \
+  --viewer-session ../diagnostics/<ts> \
+  --bridge-target-csv ../LSL_Bridge/data/target_*.csv \
+  --bridge-reference-csv ../LSL_Bridge/data/reference_*.csv \
+  --gui-ndjson ../RS485_GUI/logs/raw_signal.ndjson
+```
+
+See [docs/troubleshooting/viewer-lag-or-xy-delay.md](../troubleshooting/viewer-lag-or-xy-delay.md) and [docs/architecture/timestamping-and-synchronization.md](../architecture/timestamping-and-synchronization.md).
+
 ## Related docs
 - [docs/architecture/stream-contracts.md](../architecture/stream-contracts.md)
 
