@@ -97,6 +97,10 @@ class ActiveSendStats:
     timestamp_parser_reanchors: int = 0
     monotonic_adjust_events: int = 0
     monotonic_adjust_total_s: float = 0.0
+    #: Batches squeezed by the bounded chain-lead relax (see active_send.max_chain_lead_s).
+    chain_relax_events: int = 0
+    #: Cumulative lead bled by squeezes, in seconds: sum of n*(dt - spacing) per relax.
+    chain_relax_total_s: float = 0.0
     recovery_events: int = 0
     last_recovery_monotonic: float = 0.0
     last_recovery_warning_count: int = 0

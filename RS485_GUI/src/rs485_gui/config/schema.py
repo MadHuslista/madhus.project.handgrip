@@ -157,6 +157,12 @@ class ActiveSendConfig:
     read_chunk_bytes: int = 1024
     max_read_bytes_per_cycle: int = 8192
     clock_reanchor_max_drift_s: float = 0.050
+    log_monotonic_adjust_warn_s: float = 0.005
+    max_chain_lead_s: float = 0.050
+    measured_rate_enabled: bool = True
+    measured_rate_window_s: float = 2.0
+    measured_rate_ewma_alpha: float = 0.25
+    measured_rate_max_dev_frac: float = 0.01
     recovery_enabled: bool = True
     recovery_warning_threshold: int = 48
     recovery_min_interval_s: float = 1.0

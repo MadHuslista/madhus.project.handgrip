@@ -39,6 +39,9 @@ if TYPE_CHECKING:
 
 LOGGER = logging.getLogger(__name__)
 
+#: Minimum inter-frame spacing used when squeezing a batch during chain-lead relax.
+_CHAIN_SQUEEZE_EPSILON_S = 1e-4
+
 
 # @brief Represents the ActiveSendBoardTransport component.
 class ActiveSendBoardTransport(BoardTransport):
@@ -62,6 +65,10 @@ class ActiveSendBoardTransport(BoardTransport):
         self._last_assigned_sample_ts: float | None = None
         self._last_assigned_sample_lsl_ts: float | None = None
         self._force_timestamp_reanchor: bool = False
+        # EWMA measured-rate state (batch_end_anchored only)
+        self._measured_dt_s: float | None = None
+        self._rate_window_start_lsl: float | None = None
+        self._rate_window_frames: int = 0
 
     # ------------------------------------------------------------------
     # BoardTransport interface
@@ -81,6 +88,9 @@ class ActiveSendBoardTransport(BoardTransport):
         self._last_assigned_sample_ts = None
         self._last_assigned_sample_lsl_ts = None
         self._force_timestamp_reanchor = False
+        self._measured_dt_s = None
+        self._rate_window_start_lsl = None
+        self._rate_window_frames = 0
         self.app_state.active_send_stats = ActiveSendStats()
         if self.ser is not None:
             self.ser.reset_input_buffer()
@@ -96,6 +106,9 @@ class ActiveSendBoardTransport(BoardTransport):
         self._last_assigned_sample_ts = None
         self._last_assigned_sample_lsl_ts = None
         self._force_timestamp_reanchor = False
+        self._measured_dt_s = None
+        self._rate_window_start_lsl = None
+        self._rate_window_frames = 0
 
     # @brief Read frames.
     #
@@ -192,7 +205,7 @@ class ActiveSendBoardTransport(BoardTransport):
                 "resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d "
                 "buffer_len=%d max_buffer=%d max_in_waiting=%d "
                 "timestamp_reanchors=%d monotonic_adjusts=%d monotonic_adjust_total_s=%.6f "
-                "suppressed=%d",
+                "chain_relaxes=%d chain_relax_total_s=%.6f suppressed=%d",
                 stats.frames_ok,
                 stats.frames_delivered,
                 stats.crc_failures,
@@ -206,6 +219,8 @@ class ActiveSendBoardTransport(BoardTransport):
                 stats.timestamp_reanchors,
                 stats.monotonic_adjust_events,
                 stats.monotonic_adjust_total_s,
+                stats.chain_relax_events,
+                stats.chain_relax_total_s,
                 stats.warning_suppressed,
             )
             stats.last_warning_emit_monotonic = now
@@ -463,7 +478,8 @@ class ActiveSendBoardTransport(BoardTransport):
                 "Active-send summary: parsed_ok=%d batches=%d bytes=%d crc_failures=%d "
                 "resyncs=%d overflow_events=%d overflow_bytes=%d discarded=%d "
                 "max_buffer=%d max_in_waiting=%d timestamp_reanchors=%d "
-                "monotonic_adjusts=%d monotonic_adjust_total_s=%.6f",
+                "monotonic_adjusts=%d monotonic_adjust_total_s=%.6f "
+                "chain_relaxes=%d chain_relax_total_s=%.6f",
                 stats.frames_ok,
                 stats.frames_delivered,
                 stats.bytes_received,
@@ -477,6 +493,8 @@ class ActiveSendBoardTransport(BoardTransport):
                 stats.timestamp_reanchors,
                 stats.monotonic_adjust_events,
                 stats.monotonic_adjust_total_s,
+                stats.chain_relax_events,
+                stats.chain_relax_total_s,
             )
 
         diagnostics: dict[str, Any] = {
@@ -508,6 +526,48 @@ class ActiveSendBoardTransport(BoardTransport):
     # Internal: timestamp reconstruction and frame decoding
     # ------------------------------------------------------------------
 
+    def _update_measured_dt(
+        self,
+        active_cfg: Any,
+        batch_end_lsl_ts: float,
+        n_frames: int,
+        nominal_dt: float,
+    ) -> float:
+        """Update the EWMA of the measured inter-frame interval; return dt to use.
+
+        Tracks frames-per-wall-second over a sliding window (``measured_rate_window_s``)
+        and smooths the instantaneous interval with an EWMA, clamped to
+        ``nominal_dt * (1 +/- measured_rate_max_dev_frac)``.  Returns the measured dt
+        when enabled and available, otherwise ``nominal_dt``.  Used only by the
+        ``batch_end_anchored`` policy.
+        """
+        if not bool(active_cfg.get("measured_rate_enabled", True)):
+            return nominal_dt
+        if self._rate_window_start_lsl is None:
+            # Anchor the window at this batch end; its frames were acquired before
+            # window_start, so they must not count toward the next interval (this
+            # avoids a low bias on the first/each window's frames-per-second).
+            self._rate_window_start_lsl = batch_end_lsl_ts
+            self._rate_window_frames = 0
+            return self._measured_dt_s if self._measured_dt_s is not None else nominal_dt
+        self._rate_window_frames += n_frames
+        window_s = float(active_cfg.get("measured_rate_window_s", 2.0))
+        elapsed = batch_end_lsl_ts - self._rate_window_start_lsl
+        if elapsed >= window_s and self._rate_window_frames > 0 and elapsed > 0:
+            inst_dt = elapsed / self._rate_window_frames
+            max_dev = float(active_cfg.get("measured_rate_max_dev_frac", 0.01))
+            lo = nominal_dt * (1.0 - max_dev)
+            hi = nominal_dt * (1.0 + max_dev)
+            inst_dt = min(max(inst_dt, lo), hi)
+            if self._measured_dt_s is None:
+                self._measured_dt_s = inst_dt
+            else:
+                alpha = float(active_cfg.get("measured_rate_ewma_alpha", 0.25))
+                self._measured_dt_s = alpha * inst_dt + (1.0 - alpha) * self._measured_dt_s
+            self._rate_window_start_lsl = batch_end_lsl_ts
+            self._rate_window_frames = 0
+        return self._measured_dt_s if self._measured_dt_s is not None else nominal_dt
+
     def _decode_batch(
         self,
         frame_bytes_batch: list[bytes],
@@ -528,6 +588,9 @@ class ActiveSendBoardTransport(BoardTransport):
         timestamp_policy = str(active_cfg.timestamp_policy).strip().lower()
         frames: list[MeasurementFrame] = []
         monotonic_adjust_s = 0.0
+        chain_lead_s = 0.0
+        chain_relax_s = 0.0
+        frame_dt: float | None = None  # per-batch effective spacing; defaults to dt
         in_waiting_at_decode = 0
         if self.ser is not None:
             try:
@@ -539,37 +602,82 @@ class ActiveSendBoardTransport(BoardTransport):
             dt = 1.0 / float(freq_hz)
 
             if timestamp_policy in {"batch_end_anchored", "batch_end", "anchored"}:
-                batch_start_ts = batch_end_ts - dt * (len(frame_bytes_batch) - 1)
-                batch_start_lsl_ts = batch_end_lsl_ts - dt * (len(frame_bytes_batch) - 1)
+                # Use the measured inter-frame interval (EWMA of frames/wall-second)
+                # instead of the nominal table value when available; this shrinks the
+                # ratchet pawl and the residual drift between nominal and real rate.
+                dt = self._update_measured_dt(
+                    active_cfg, batch_end_lsl_ts, len(frame_bytes_batch), dt
+                )
+                n_frames = len(frame_bytes_batch)
+                batch_start_ts = batch_end_ts - dt * (n_frames - 1)
+                batch_start_lsl_ts = batch_end_lsl_ts - dt * (n_frames - 1)
                 timestamp_source = "reconstructed_from_active_send_rate_batch_end_anchored"
                 self._force_timestamp_reanchor = False
 
                 # Guard against non-monotonic timestamps from backlog drainage
                 if self._last_assigned_sample_lsl_ts is not None:
+                    chain_lead_s = self._last_assigned_sample_lsl_ts - batch_end_lsl_ts
                     min_next_lsl_ts = self._last_assigned_sample_lsl_ts + dt
                     if batch_start_lsl_ts < min_next_lsl_ts:
-                        adjust_s = min_next_lsl_ts - batch_start_lsl_ts
-                        batch_start_lsl_ts += adjust_s
-                        batch_start_ts += adjust_s
-                        timestamp_source += "_monotonic_adjusted"
-                        monotonic_adjust_s = adjust_s
-                        stats.monotonic_adjust_events += 1
-                        stats.monotonic_adjust_total_s += adjust_s
-                        warn_threshold_s = float(
-                            active_cfg.get("log_monotonic_adjust_warn_s", 0.005)
-                        )
-                        if adjust_s >= warn_threshold_s:
-                            LOGGER.warning(
-                                "Active-send monotonic timestamp adjust: +%.6fs "
-                                "(batch_size=%d, events=%d, total=%.6fs, in_waiting=%d). "
-                                "Reference LSL timestamps for this batch are pushed later "
-                                "than batch-end anchoring would assign.",
-                                adjust_s,
-                                len(frame_bytes_batch),
-                                stats.monotonic_adjust_events,
-                                stats.monotonic_adjust_total_s,
+                        max_chain_lead_s = float(active_cfg.get("max_chain_lead_s", 0.050))
+                        if chain_lead_s > max_chain_lead_s:
+                            # Chain has ratcheted too far ahead of wall clock: squeeze
+                            # this batch into (last, batch_end] instead of pushing it
+                            # further into the future. Spacing targets batch_end if
+                            # reachable, else the minimal epsilon. Strictly monotonic,
+                            # bleeds the lead back toward wall clock.
+                            spacing = max(
+                                _CHAIN_SQUEEZE_EPSILON_S,
+                                (batch_end_lsl_ts - self._last_assigned_sample_lsl_ts)
+                                / n_frames,
+                            )
+                            frame_dt = spacing
+                            batch_start_lsl_ts = self._last_assigned_sample_lsl_ts + spacing
+                            batch_start_ts = (
+                                self._last_assigned_sample_ts
+                                if self._last_assigned_sample_ts is not None
+                                else batch_end_ts
+                            ) + spacing
+                            chain_relax_s = n_frames * (dt - spacing)
+                            timestamp_source += "_chain_relaxed"
+                            stats.chain_relax_events += 1
+                            stats.chain_relax_total_s += chain_relax_s
+                            LOGGER.info(
+                                "Active-send chain-lead relax: lead=%.6fs > max=%.6fs; "
+                                "squeezed batch of %d frames to spacing=%.6fs "
+                                "(bled=%.6fs, events=%d, total=%.6fs, in_waiting=%d)",
+                                chain_lead_s,
+                                max_chain_lead_s,
+                                n_frames,
+                                spacing,
+                                chain_relax_s,
+                                stats.chain_relax_events,
+                                stats.chain_relax_total_s,
                                 in_waiting_at_decode,
                             )
+                        else:
+                            adjust_s = min_next_lsl_ts - batch_start_lsl_ts
+                            batch_start_lsl_ts += adjust_s
+                            batch_start_ts += adjust_s
+                            timestamp_source += "_monotonic_adjusted"
+                            monotonic_adjust_s = adjust_s
+                            stats.monotonic_adjust_events += 1
+                            stats.monotonic_adjust_total_s += adjust_s
+                            warn_threshold_s = float(
+                                active_cfg.get("log_monotonic_adjust_warn_s", 0.005)
+                            )
+                            if adjust_s >= warn_threshold_s:
+                                LOGGER.warning(
+                                    "Active-send monotonic timestamp adjust: +%.6fs "
+                                    "(batch_size=%d, events=%d, total=%.6fs, in_waiting=%d). "
+                                    "Reference LSL timestamps for this batch are pushed later "
+                                    "than batch-end anchoring would assign.",
+                                    adjust_s,
+                                    len(frame_bytes_batch),
+                                    stats.monotonic_adjust_events,
+                                    stats.monotonic_adjust_total_s,
+                                    in_waiting_at_decode,
+                                )
 
             elif timestamp_policy in {"continuous_rate", "continuous"}:
                 # DEPRECATED: use only when the RS485 device is proven to emit
@@ -642,9 +750,15 @@ class ActiveSendBoardTransport(BoardTransport):
         session_id = self.app_state.get_session_id()
         board_profile = self.app_state.build_board_profile_snapshot()
 
+        # Per-batch effective spacing: the squeeze path sets frame_dt; otherwise
+        # use the (possibly measured) dt computed above.
+        if frame_dt is None:
+            frame_dt = dt
+        effective_dt_s = frame_dt
+
         for idx, frame_bytes in enumerate(frame_bytes_batch):
-            host_ts = batch_start_ts + idx * dt if freq_hz > 0 else batch_end_ts
-            host_lsl_ts = batch_start_lsl_ts + idx * dt if freq_hz > 0 else batch_end_lsl_ts
+            host_ts = batch_start_ts + idx * frame_dt if freq_hz > 0 else batch_end_ts
+            host_lsl_ts = batch_start_lsl_ts + idx * frame_dt if freq_hz > 0 else batch_end_lsl_ts
             frame_diag = dict(diagnostics)
             frame_diag.update(
                 {
@@ -656,6 +770,11 @@ class ActiveSendBoardTransport(BoardTransport):
                     "monotonic_adjust_s": monotonic_adjust_s,
                     "monotonic_adjust_events": stats.monotonic_adjust_events,
                     "monotonic_adjust_total_s": stats.monotonic_adjust_total_s,
+                    "chain_lead_s": chain_lead_s,
+                    "chain_relax_s": chain_relax_s,
+                    "chain_relax_events": stats.chain_relax_events,
+                    "chain_relax_total_s": stats.chain_relax_total_s,
+                    "effective_dt_s": effective_dt_s,
                     "batch_end_lsl_ts": batch_end_lsl_ts,
                     "serial_in_waiting_at_decode": in_waiting_at_decode,
                 }

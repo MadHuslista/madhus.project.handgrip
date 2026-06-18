@@ -158,6 +158,25 @@ active_send:
   # collision with the previous batch) reaches this many seconds. The per-frame
   # magnitude is always exported as monotonic_adjust_s in diagnostics/IPC.
   log_monotonic_adjust_warn_s: 0.005
+  # Bounded chain-lead relax for batch_end_anchored. When the assigned timestamp
+  # chain leads wall clock (lsl_local_clock at decode) by more than this many
+  # seconds, the next colliding batch is squeezed (compressed inter-frame
+  # spacing) instead of pushed forward at nominal dt, bleeding the lead back
+  # toward wall clock while preserving strict monotonicity. Roughly
+  # delivery_window_s + max_frames_per_delivery/500Hz; tune via the chain_relax_*
+  # fields in the periodic summaries.
+  max_chain_lead_s: 0.050
+  # EWMA measured-rate dt for batch_end_anchored back-dating. The board's real
+  # active-send rate drifts slightly from the nominal table value (e.g. 499.5 vs
+  # 500 Hz); using the measured rate shrinks both the ratchet pawl and the
+  # residual drift. The instantaneous rate is averaged over measured_rate_window_s,
+  # clamped to nominal*(1 +/- measured_rate_max_dev_frac), then smoothed with an
+  # EWMA of weight measured_rate_ewma_alpha. Set measured_rate_enabled=false to
+  # fall back to the nominal 1/freq_hz spacing.
+  measured_rate_enabled: true
+  measured_rate_window_s: 2.0
+  measured_rate_ewma_alpha: 0.25
+  measured_rate_max_dev_frac: 0.01
   # If the active-send parser enters a CRC/resync cascade, discard stale
   # buffered bytes and recover from the current live byte stream.
   recovery_enabled: true

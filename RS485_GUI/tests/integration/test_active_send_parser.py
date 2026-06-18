@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
 from omegaconf import OmegaConf
 
 from rs485_gui.core.codec import crc16_modbus
@@ -56,6 +57,12 @@ def _make_app_state():
                 "recovery_min_interval_s": 1.0,
                 "recovery_reset_input_buffer": True,
                 "clock_reanchor_max_drift_s": 0.05,
+                "log_monotonic_adjust_warn_s": 0.005,
+                "max_chain_lead_s": 0.050,
+                "measured_rate_enabled": True,
+                "measured_rate_window_s": 2.0,
+                "measured_rate_ewma_alpha": 0.25,
+                "measured_rate_max_dev_frac": 0.01,
             },
         }
     )
@@ -150,3 +157,182 @@ class TestMonotonicAdjustDiagnostics:
         assert timestamps == sorted(timestamps)
         deltas = [b - a for a, b in zip(timestamps, timestamps[1:])]
         assert min(deltas) > 0
+
+
+class _FakeClock:
+    """Controllable stand-in for ``lsl_local_clock`` (a 0-arg callable)."""
+
+    def __init__(self, start: float = 1000.0) -> None:
+        self.now = start
+
+    def __call__(self) -> float:
+        return self.now
+
+    def advance(self, s: float) -> None:
+        self.now += s
+
+
+_NOMINAL_DT = 1.0 / 500.0  # active_send_frequency_code 8 == 500 Hz
+_EPSILON = 1e-4  # _CHAIN_SQUEEZE_EPSILON_S
+
+
+class TestChainLeadRelax:
+    """Bounded chain-lead relax (squeeze) under a controlled LSL clock.
+
+    With the clock frozen, the EWMA window never elapses so dt stays nominal,
+    keeping the squeeze arithmetic exact.  Measured-rate is also disabled to be
+    explicit.
+    """
+
+    def _make_transport(self, max_chain_lead_s=0.050, measured_rate_enabled=False):
+        transport = _make_transport_with_buffer(b"")
+        transport.app_state.cfg.active_send.max_chain_lead_s = max_chain_lead_s
+        transport.app_state.cfg.active_send.measured_rate_enabled = measured_rate_enabled
+        return transport
+
+    def _decode(self, transport, n_frames=16):
+        frames = [_make_valid_frame() for _ in range(n_frames)]
+        return transport._decode_batch(frames, {"decoder": "test"})
+
+    def test_lead_over_threshold_triggers_squeeze(self):
+        transport = self._make_transport()
+        clock = _FakeClock()
+        with patch("rs485_gui.transport.active_send.lsl_local_clock", clock):
+            # Frozen clock: batches 2 and 3 forward-push (+0.032 lead each), so
+            # batch 4 sees lead ~0.064 > 0.050 and squeezes.
+            for _ in range(3):
+                self._decode(transport, 16)
+            assert transport.app_state.active_send_stats.chain_relax_events == 0
+            decoded = self._decode(transport, 16)
+        stats = transport.app_state.active_send_stats
+        assert stats.chain_relax_events == 1
+        assert all(
+            f.interpreted["timestamp_source"].endswith("_chain_relaxed") for f in decoded
+        )
+        lsl = [f.interpreted["host_lsl_ts"] for f in decoded]
+        deltas = [b - a for a, b in zip(lsl, lsl[1:])]
+        assert all(d == pytest.approx(_EPSILON, rel=1e-6) for d in deltas)
+
+    def test_squeeze_preserves_strict_monotonicity(self):
+        transport = self._make_transport()
+        clock = _FakeClock()
+        all_lsl: list[float] = []
+        all_unix: list[float] = []
+        with patch("rs485_gui.transport.active_send.lsl_local_clock", clock):
+            for _ in range(6):
+                decoded = self._decode(transport, 16)
+                all_lsl.extend(f.interpreted["host_lsl_ts"] for f in decoded)
+                all_unix.extend(f.host_ts for f in decoded)
+        assert transport.app_state.active_send_stats.chain_relax_events >= 1
+        lsl_deltas = [b - a for a, b in zip(all_lsl, all_lsl[1:])]
+        unix_deltas = [b - a for a, b in zip(all_unix, all_unix[1:])]
+        assert min(lsl_deltas) > 0
+        assert min(unix_deltas) > 0
+
+    def test_lead_bleeds_below_threshold(self):
+        transport = self._make_transport()
+        clock = _FakeClock()
+        with patch("rs485_gui.transport.active_send.lsl_local_clock", clock):
+            # Build a chain well ahead of wall clock.
+            for _ in range(4):
+                self._decode(transport, 16)
+            assert transport.app_state.active_send_stats.chain_relax_events >= 1
+            # Now let wall clock advance faster than the squeezed chain tip; the
+            # lead must bleed back under the threshold and relaxing must stop.
+            relaxed_flags = []
+            for _ in range(6):
+                clock.advance(0.05)
+                decoded = self._decode(transport, 16)
+                relaxed_flags.append(
+                    decoded[0].interpreted["timestamp_source"].endswith("_chain_relaxed")
+                )
+            lead = transport._last_assigned_sample_lsl_ts - clock.now
+        assert lead <= 0.050
+        assert relaxed_flags[-1] is False
+
+    def test_chain_relax_stats_and_diagnostics(self):
+        transport = self._make_transport()
+        clock = _FakeClock()
+        with patch("rs485_gui.transport.active_send.lsl_local_clock", clock):
+            for _ in range(3):
+                pre = self._decode(transport, 16)
+            squeezed = self._decode(transport, 16)
+        # Pre-squeeze batch carries the diagnostics but no relax.
+        for f in pre:
+            d = f.raw_transport["diagnostics"]
+            assert d["chain_relax_s"] == 0.0
+            assert "chain_lead_s" in d
+            assert "effective_dt_s" in d
+        stats = transport.app_state.active_send_stats
+        assert stats.chain_relax_total_s == pytest.approx(16 * (_NOMINAL_DT - _EPSILON))
+        for f in squeezed:
+            d = f.raw_transport["diagnostics"]
+            assert d["chain_relax_s"] > 0.0
+            assert d["chain_lead_s"] > 0.050
+            assert d["chain_relax_events"] == 1
+            assert d["effective_dt_s"] == pytest.approx(_EPSILON, rel=1e-6)
+
+    def test_subthreshold_collision_keeps_forward_push(self):
+        transport = self._make_transport()
+        clock = _FakeClock()
+        with patch("rs485_gui.transport.active_send.lsl_local_clock", clock):
+            self._decode(transport, 4)
+            decoded = self._decode(transport, 4)
+        stats = transport.app_state.active_send_stats
+        assert stats.chain_relax_events == 0
+        assert stats.monotonic_adjust_events == 1
+        assert all(
+            f.interpreted["timestamp_source"].endswith("_monotonic_adjusted") for f in decoded
+        )
+
+    def test_single_frame_batch_stays_monotonic_under_squeeze(self):
+        transport = self._make_transport(max_chain_lead_s=0.001)
+        clock = _FakeClock()
+        all_lsl: list[float] = []
+        with patch("rs485_gui.transport.active_send.lsl_local_clock", clock):
+            for _ in range(8):
+                decoded = self._decode(transport, 1)
+                all_lsl.extend(f.interpreted["host_lsl_ts"] for f in decoded)
+        assert transport.app_state.active_send_stats.chain_relax_events >= 1
+        deltas = [b - a for a, b in zip(all_lsl, all_lsl[1:])]
+        assert min(deltas) > 0
+
+
+class TestMeasuredRateDt:
+    """EWMA measured-rate dt for batch_end_anchored back-dating."""
+
+    def _make_transport(self, **overrides):
+        transport = _make_transport_with_buffer(b"")
+        for k, v in overrides.items():
+            setattr(transport.app_state.cfg.active_send, k, v)
+        return transport
+
+    def _run_at_rate(self, transport, clock, rate_hz, n_frames=16, n_batches=80):
+        per_batch_s = n_frames / rate_hz
+        with patch("rs485_gui.transport.active_send.lsl_local_clock", clock):
+            for _ in range(n_batches):
+                frames = [_make_valid_frame() for _ in range(n_frames)]
+                transport._decode_batch(frames, {"decoder": "test"})
+                clock.advance(per_batch_s)
+
+    def test_measured_dt_tracks_real_rate(self):
+        # Board runs slightly slow (499 Hz); dt should converge toward 1/499,
+        # which is inside the +/-1% clamp of nominal 1/500.
+        transport = self._make_transport(measured_rate_window_s=2.0)
+        clock = _FakeClock()
+        self._run_at_rate(transport, clock, rate_hz=499.0)
+        assert transport._measured_dt_s is not None
+        assert transport._measured_dt_s == pytest.approx(1.0 / 499.0, rel=1e-6)
+
+    def test_measured_dt_is_clamped(self):
+        # Absurdly slow cadence (400 Hz) must clamp to nominal * (1 + max_dev).
+        transport = self._make_transport(measured_rate_window_s=2.0, measured_rate_max_dev_frac=0.01)
+        clock = _FakeClock()
+        self._run_at_rate(transport, clock, rate_hz=400.0, n_batches=60)
+        assert transport._measured_dt_s == pytest.approx(_NOMINAL_DT * 1.01, rel=1e-9)
+
+    def test_measured_rate_disabled_keeps_nominal(self):
+        transport = self._make_transport(measured_rate_enabled=False)
+        clock = _FakeClock()
+        self._run_at_rate(transport, clock, rate_hz=499.0)
+        assert transport._measured_dt_s is None
