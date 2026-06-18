@@ -396,6 +396,7 @@ def generate_report(session_dir: str | Path) -> Path:
     """
 
     session_dir = Path(session_dir)
+    ri.configure_doc_link(session_dir)
     manifest = _load_yaml(session_dir / "session_manifest.yaml")
     fit = _load_json(session_dir / "fit_result.json") or {}
     validation = _load_json(session_dir / "holdout_validation.json") or {}

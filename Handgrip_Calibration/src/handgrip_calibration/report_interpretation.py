@@ -15,13 +15,39 @@ concept IDs defined in ``docs/.work/report-concept-inventory.md``.
 from __future__ import annotations
 
 import math
+import os
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
-# Repo-relative path; clickable in repo/Git/editor markdown viewers. The HTML
-# report wraps markdown in <pre>, so there the link shows as plain text.
+# Repo-relative fallback used only when the doc cannot be located on disk.
 DOC_REF = "Handgrip_Calibration/docs/calibration-report-reference.md"
+
+# Resolved doc location (the reference doc ships beside the package, two levels up
+# from this module file: src/handgrip_calibration/ -> Handgrip_Calibration/docs/).
+_DOC_PATH = Path(__file__).resolve().parents[2] / "docs" / "calibration-report-reference.md"
+
+# Link target written into the report. Defaults to the repo-relative string but is
+# replaced per-report with a path relative to the session dir so the link resolves
+# from the generated report file instead of spawning phantom directories.
+_DOC_HREF = DOC_REF
+
+
+def configure_doc_link(session_dir: str | Path) -> None:
+    """Point report links at the reference doc relative to the report's location.
+
+    The generated ``calibration_report.md`` lives in ``session_dir``; a markdown
+    viewer resolves links relative to that file. A relative path keeps the link
+    working regardless of where the session directory sits.
+    """
+    global _DOC_HREF
+    if _DOC_PATH.exists():
+        _DOC_HREF = os.path.relpath(_DOC_PATH, start=Path(session_dir).resolve()).replace(
+            os.sep, "/"
+        )
+    else:
+        _DOC_HREF = DOC_REF
 
 # concept id -> heading anchor in the reference doc (anchors are <a id="..."> tags).
 ANCHORS: dict[str, str] = {
@@ -124,10 +150,38 @@ def _num(value: Any) -> float | None:
     return f if math.isfinite(f) else None
 
 
-def doc_link(concept: str, text: str = "reference") -> str:
+# human-readable title of each linked section, used as the link text.
+TITLES: dict[str, str] = {
+    "plot.target_timeseries": "Target time series plot",
+    "plot.reference_timeseries": "Reference time series plot",
+    "plot.model_comparison_curve": "Model comparison curve plot",
+    "plot.selected_residuals_by_force": "Selected residuals by force plot",
+    "plot.model_comparison_residuals": "Model comparison residuals plot",
+    "plot.model_metric_bars": "Model metric bars plot",
+    "plot.model_likelihoods": "Model likelihoods plot",
+    "plot.robust_huber_weights": "Robust Huber weights plot",
+    "plot.hysteresis_up_down": "Hysteresis up/down plot",
+    "sec.summary": "Calibration Report Reference",
+    "sec.reference_chain": "Reference-chain verification",
+    "sec.events": "Event counts and event summary",
+    "sec.static_fit": "Static fit summary",
+    "sec.accepted_holds": "Accepted hold dataset",
+    "sec.holdout": "Holdout accuracy summary",
+    "diag.hysteresis_deltas": "Hysteresis / reversibility summary",
+    "diag.creep_zero_return": "Creep / zero-return summary",
+    "diag.dynamic_summary": "Dynamic validation summary",
+    "field.selection_likelihood": "Selection likelihood",
+    "field.firmware_deployment_recommendation": "Firmware deployment recommendation",
+    "firmware.hx711_scale_offset": "Firmware constants (HX711-style)",
+    "metric.cv": "Cross-validation metrics",
+}
+
+
+def doc_link(concept: str, text: str | None = None) -> str:
     anchor = ANCHORS.get(concept)
-    target = f"{DOC_REF}#{anchor}" if anchor else DOC_REF
-    return f"[{text}]({target})"
+    target = f"{_DOC_HREF}#{anchor}" if anchor else _DOC_HREF
+    label = text or TITLES.get(concept, "reference")
+    return f"[{label}]({target})"
 
 
 def ref_block(concept: str, summary: str = "", interpretation: str = "") -> list[str]:
