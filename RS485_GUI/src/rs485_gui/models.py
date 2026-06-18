@@ -101,6 +101,10 @@ class ActiveSendStats:
     chain_relax_events: int = 0
     #: Cumulative lead bled by squeezes, in seconds: sum of n*(dt - spacing) per relax.
     chain_relax_total_s: float = 0.0
+    #: Throttle state for hot-path timestamp-adjust logging (monotonic clock).
+    last_timestamp_log_monotonic: float = 0.0
+    #: Adjust/relax events suppressed since the last emitted timestamp log line.
+    timestamp_log_suppressed: int = 0
     recovery_events: int = 0
     last_recovery_monotonic: float = 0.0
     last_recovery_warning_count: int = 0

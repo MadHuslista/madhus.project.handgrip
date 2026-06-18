@@ -298,6 +298,31 @@ class TestChainLeadRelax:
         assert min(deltas) > 0
 
 
+class TestTimestampLogThrottle:
+    """Hot-path timestamp-adjust logging must be rate-limited."""
+
+    def test_monotonic_adjust_warning_is_throttled(self, caplog):
+        import logging as _logging
+
+        transport = _make_transport_with_buffer(b"")
+        # Never squeeze (so every collision is a monotonic adjust) and freeze the
+        # measured-rate window so dt stays nominal.
+        transport.app_state.cfg.active_send.max_chain_lead_s = 10.0
+        transport.app_state.cfg.active_send.measured_rate_enabled = False
+        clock = _FakeClock()
+        with patch("rs485_gui.transport.active_send.lsl_local_clock", clock), caplog.at_level(
+            _logging.WARNING, logger="rs485_gui.transport.active_send"
+        ):
+            for _ in range(30):
+                frames = [_make_valid_frame() for _ in range(16)]
+                transport._decode_batch(frames, {"decoder": "test"})
+        stats = transport.app_state.active_send_stats
+        warn_lines = [r for r in caplog.records if "monotonic timestamp adjust" in r.getMessage()]
+        assert stats.monotonic_adjust_events >= 20  # many collisions occurred
+        assert len(warn_lines) <= 2  # but logging was collapsed
+        assert stats.timestamp_log_suppressed > 0
+
+
 class TestMeasuredRateDt:
     """EWMA measured-rate dt for batch_end_anchored back-dating."""
 

@@ -66,6 +66,13 @@ logger:
   # Avoid flushing every 500 Hz batch; this reduces GUI/process jitter while preserving logs.
   flush_every_n_batches: 25
   flush_interval_s: 1.0
+  # Serialize and write log records on a background thread so the acquisition
+  # worker is not blocked by json.dumps / disk I/O between serial reads (this was
+  # starving the 500 Hz serial drain and inflating reference latency). The worker
+  # only enqueues frame batches. queue_maxsize bounds memory; on overflow records
+  # are dropped with a counted, throttled warning rather than stalling acquisition.
+  async_logging: true
+  queue_maxsize: 200000
 
 ipc:
   enabled: true

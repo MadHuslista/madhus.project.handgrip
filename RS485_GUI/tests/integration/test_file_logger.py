@@ -115,3 +115,28 @@ class TestSignalFileLogger:
         logger = SignalFileLogger(cfg)
         with pytest.raises(RuntimeError, match="before open"):
             logger.write_frames([_make_frame()])
+
+    def test_async_writer_persists_all_records(self, tmp_path):
+        cfg = _make_cfg(tmp_path)
+        cfg.logger.async_logging = True
+        logger = SignalFileLogger(cfg)
+        logger.open()
+        assert logger._writer_thread is not None and logger._writer_thread.is_alive()
+        for i in range(250):
+            logger.write_frames([_make_frame(net_value=float(i))])
+        logger.close()  # must drain the queue before files are closed
+        lines = (tmp_path / "logs" / "interp.ndjson").read_text().strip().splitlines()
+        assert len(lines) == 250
+        assert logger.dropped_records == 0
+        assert logger._writer_thread is None
+
+    def test_sync_logging_mode_still_writes(self, tmp_path):
+        cfg = _make_cfg(tmp_path)
+        cfg.logger.async_logging = False
+        logger = SignalFileLogger(cfg)
+        logger.open()
+        assert logger._writer_thread is None  # no background thread in sync mode
+        logger.write_frames([_make_frame(net_value=float(i)) for i in range(5)])
+        logger.close()
+        lines = (tmp_path / "logs" / "raw.ndjson").read_text().strip().splitlines()
+        assert len(lines) == 5
