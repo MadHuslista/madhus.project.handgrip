@@ -24,7 +24,7 @@ A calibration report is not only a curve fit. It is a chain of evidence:
 5. If available, an independent holdout session was used as a final deployment gate.
 6. Firmware constants were exported only after the fit and holdout checks were acceptable.
 
-The report follows the standard calibration idea of relating a sensor response to known or reference loads, then using that fitted relationship to estimate future loads. NIST describes load-cell calibration this way: a model relates a known load to a cell response and is then used for readings of unknown magnitude [R02]. NIST force-calibration service material also notes that calibration commonly derives polynomial equations from force/response data [R18].
+The report follows the standard calibration idea of relating a sensor response to known or reference loads, then using that fitted relationship to estimate future loads. NIST describes load-cell calibration this way: a model relates a known load to a cell response and is then used for readings of unknown magnitude [\[R02\]](#R02). NIST force-calibration service material also notes that calibration commonly derives polynomial equations from force/response data [\[R18\]](#R18).
 
 ## 2. Quick decision reading order
 
@@ -34,7 +34,7 @@ Read the report in this order when making a deployment decision:
 2. **Holdout accuracy summary**: Prefer decisions based on independent holdout data. A good fit on the same holds used for training is not enough.
 3. **Residual threshold pass**: Confirms the selected fit did not exceed the configured worst-error gate.
 4. **Model candidate ranking**: Check whether a more complex model only marginally improves the score.
-5. **Residual plots**: Look for curvature, load-dependent bias, outliers, or direction-specific effects. NIST emphasizes graphical residual analysis because residual plots reveal patterns that a single number may hide [R01].
+5. **Residual plots**: Look for curvature, load-dependent bias, outliers, or direction-specific effects. NIST emphasizes graphical residual analysis because residual plots reveal patterns that a single number may hide [\[R01\]](#R01).
 6. **Reference-chain verification summary**: Confirm the data capture itself was healthy before trusting the model.
 7. **Hysteresis / creep / dynamic sections**: Treat these as diagnostic layers. They should influence whether to trust the calibration, not silently change the primary static fit.
 
@@ -64,7 +64,7 @@ A **residual** is the observed response minus the model prediction for the same 
 residual_N = reference_force_median_N - predicted_force_N
 ```
 
-Positive residual means the model predicted too low. Negative residual means the model predicted too high. NIST defines residuals as the difference between observed responses and corresponding fitted-model predictions [R01].
+Positive residual means the model predicted too low. Negative residual means the model predicted too high. NIST defines residuals as the difference between observed responses and corresponding fitted-model predictions [\[R01\]](#R01).
 
 ### 3.5 Operating range
 
@@ -106,7 +106,7 @@ This section checks whether target/reference acquisition looked healthy before f
 | `value_col`                 | Data column used for statistics. | Confirms the report selected the intended signal.                                  |
 | `mean`, `std`, `min`, `max` | Basic value statistics.          | Useful for detecting saturation, out-of-range values, or unexpected units.         |
 
-Line plots are appropriate here because they show values against elapsed time [R14].
+Line plots are appropriate here because they show values against elapsed time [\[R14\]](#R14).
 
 <a id="sec.events"></a>
 ### 4.3 Event counts and event summary
@@ -149,12 +149,12 @@ Each row represents one static hold used or considered for fitting.
 | `accepted_by_quality`      | Automatic quality gate result.                      | False rows should not be trusted for primary fitting.          |
 | `quality_rejection_reason` | Gate failure reason.                                | Use it to fix protocol or acquisition issues.                  |
 
-Medians and robust scale estimates are used because they are less sensitive to short spikes than simple means; SciPy describes median absolute deviation as a robust dispersion measure [R12].
+Medians and robust scale estimates are used because they are less sensitive to short spikes than simple means; SciPy describes median absolute deviation as a robust dispersion measure [\[R12\]](#R12).
 
 <a id="sec.holdout"></a>
 ### 4.6 Holdout accuracy summary
 
-Holdout validation applies the selected model to an independent session. It does not refit the model. This is the strongest deployment evidence in the report because it estimates performance on data not used for fitting. Cross-validation uses train/test splits for the same general reason: estimate performance on unseen data [R11].
+Holdout validation applies the selected model to an independent session. It does not refit the model. This is the strongest deployment evidence in the report because it estimates performance on data not used for fitting. Cross-validation uses train/test splits for the same general reason: estimate performance on unseen data [\[R11\]](#R11).
 
 Holdout fields:
 
@@ -184,12 +184,12 @@ Hysteresis means the sensor can report a different raw value at the same force d
 | `target_raw_delta_desc_minus_asc`        | Difference in target raw median.         | Large values indicate load-path dependence in the target sensor/fixture. |
 | `reference_force_delta_desc_minus_asc_N` | Reference force difference by direction. | Helps separate target hysteresis from reference/operator force mismatch. |
 
-ISO 376 preview material explicitly distinguishes increasing and decreasing force series and includes reversibility error as a force-proving instrument characteristic [R17].
+ISO 376 preview material explicitly distinguishes increasing and decreasing force series and includes reversibility error as a force-proving instrument characteristic [\[R17\]](#R17).
 
 <a id="diag.creep_zero_return"></a>
 ### 4.8 Creep / zero-return summary
 
-Creep is slow output change while load is held. Zero-return checks whether the instrument returns close to its unloaded baseline after load removal. ISO 376 preview material includes a creep test and describes readings after force application or removal; it also notes zero changes after unloading as a diagnostic sign [R17].
+Creep is slow output change while load is held. Zero-return checks whether the instrument returns close to its unloaded baseline after load removal. ISO 376 preview material includes a creep test and describes readings after force application or removal; it also notes zero changes after unloading as a diagnostic sign [\[R17\]](#R17).
 
 | Field                     | Meaning                                | Interpretation                          |
 | ------------------------- | -------------------------------------- | --------------------------------------- |
@@ -221,7 +221,7 @@ Interpretation: `approve_constants_for_deployment` means the current evidence su
 <a id="plot.target_timeseries"></a>
 ### 5.1 `target_timeseries`
 
-A line plot of target raw counts/units against elapsed time. Line plots display y-values against x-values and are appropriate for visualizing streams over time [R14].
+A line plot of target raw counts/units against elapsed time. Line plots display y-values against x-values and are appropriate for visualizing streams over time [\[R14\]](#R14).
 
 Look for:
 
@@ -244,7 +244,7 @@ Look for:
 <a id="plot.model_comparison_curve"></a>
 ### 5.3 `model_comparison_curve`
 
-A scatter plot of accepted holds plus candidate calibration curves. Scatter plots place paired x/y observations at their data positions [R15]. The candidate curves show how each deployable model maps target raw values to force.
+A scatter plot of accepted holds plus candidate calibration curves. Scatter plots place paired x/y observations at their data positions [\[R15\]](#R15). The candidate curves show how each deployable model maps target raw values to force.
 
 Look for:
 
@@ -256,7 +256,7 @@ Look for:
 <a id="plot.selected_residuals_by_force"></a>
 ### 5.4 `selected_residuals_by_force`
 
-A residual scatter plot for the selected model. NIST recommends residual plots because they can reveal model misspecification that one-number metrics compress away [R01].
+A residual scatter plot for the selected model. NIST recommends residual plots because they can reveal model misspecification that one-number metrics compress away [\[R01\]](#R01).
 
 Look for:
 
@@ -279,7 +279,7 @@ Look for:
 <a id="plot.model_metric_bars"></a>
 ### 5.6 `model_metric_bars`
 
-A bar chart comparing RMSE and max absolute error. Bar plots encode values by bar height and are useful for categorical comparison [R16].
+A bar chart comparing RMSE and max absolute error. Bar plots encode values by bar height and are useful for categorical comparison [\[R16\]](#R16).
 
 Interpretation:
 
@@ -290,7 +290,7 @@ Interpretation:
 <a id="plot.model_likelihoods"></a>
 ### 5.7 `model_likelihoods`
 
-A bar chart of `selection_likelihood`. The implementation computes a softmax over negative selection scores among eligible candidates. Softmax exponentiates scores and normalizes them so the resulting values sum to one [R13].
+A bar chart of `selection_likelihood`. The implementation computes a softmax over negative selection scores among eligible candidates. Softmax exponentiates scores and normalizes them so the resulting values sum to one [\[R13\]](#R13).
 
 Interpretation:
 
@@ -301,7 +301,7 @@ Interpretation:
 <a id="plot.robust_huber_weights"></a>
 ### 5.8 `robust_huber_weights`
 
-A scatter plot of Huber robust training weights by accepted hold index. Huber regression combines squared loss for small residuals with absolute loss for larger residuals, reducing outlier influence without completely ignoring those samples [R06].
+A scatter plot of Huber robust training weights by accepted hold index. Huber regression combines squared loss for small residuals with absolute loss for larger residuals, reducing outlier influence without completely ignoring those samples [\[R06\]](#R06).
 
 Interpretation:
 
@@ -331,7 +331,7 @@ Formula:
 force_N = a * raw + b
 ```
 
-This is the ordinary least-squares straight-line model. Ordinary least squares chooses coefficients that minimize the sum of squared residuals between observed targets and linear predictions [R03]. NumPy describes polynomial least-squares fitting as minimizing squared error between fitted polynomial values and data [R04].
+This is the ordinary least-squares straight-line model. Ordinary least squares chooses coefficients that minimize the sum of squared residuals between observed targets and linear predictions [\[R03\]](#R03). NumPy describes polynomial least-squares fitting as minimizing squared error between fitted polynomial values and data [\[R04\]](#R04).
 
 Use when:
 
@@ -365,7 +365,7 @@ Caution: weighting cannot fix systematic bias, bad markers, or wrong force label
 
 Formula exported to firmware remains affine, but the training loop uses Huber robust weights.
 
-Huber regression is less influenced by outliers because it transitions from squared loss for small residuals to absolute loss for large residuals [R06]. The implementation initializes scale using a MAD-style robust residual scale; MAD is a robust dispersion estimate based on median absolute deviations [R12].
+Huber regression is less influenced by outliers because it transitions from squared loss for small residuals to absolute loss for large residuals [\[R06\]](#R06). The implementation initializes scale using a MAD-style robust residual scale; MAD is a robust dispersion estimate based on median absolute deviations [\[R12\]](#R12).
 
 Use when:
 
@@ -384,7 +384,7 @@ Formula:
 force_N = a2 * raw^2 + a1 * raw + a0
 ```
 
-This is a degree-2 polynomial fit. NumPy documents polynomial least-squares fitting and warns that polynomial fits can become poorly conditioned depending on degree and data centering [R04]. NIST force calibration material notes that second- or third-order polynomial equations are commonly derived from force/response calibration data [R18].
+This is a degree-2 polynomial fit. NumPy documents polynomial least-squares fitting and warns that polynomial fits can become poorly conditioned depending on degree and data centering [\[R04\]](#R04). NIST force calibration material notes that second- or third-order polynomial equations are commonly derived from force/response calibration data [\[R18\]](#R18).
 
 Use when:
 
@@ -397,7 +397,7 @@ Caution: with few calibration points, a quadratic can look better on training da
 <a id="model.piecewise_linear_monotone"></a>
 ### 6.5 `piecewise_linear_monotone`
 
-This model stores calibration knots and interpolates between them. NumPy defines one-dimensional linear interpolation as evaluating the piecewise-linear interpolant through known data points [R05].
+This model stores calibration knots and interpolates between them. NumPy defines one-dimensional linear interpolation as evaluating the piecewise-linear interpolant through known data points [\[R05\]](#R05).
 
 Use when:
 
@@ -410,7 +410,7 @@ Caution: do not extrapolate beyond the calibrated raw-count range unless explici
 <a id="model.odr_affine"></a>
 ### 6.6 `odr_affine`
 
-This diagnostic affine model is a **pure-NumPy Deming regression** (a closed-form errors-in-variables fit), conceptually related to orthogonal distance regression but **not** computed with `scipy.odr`. It accounts for uncertainty in both the input (target raw) and output (reference force) variables. Deming regression assumes a known ratio of error variances λ = Var(y-error)/Var(x-error); the implementation estimates λ from the per-hold noise medians and stores it as `variance_ratio_y_over_x`. SciPy's ODR documentation [R07] is included as the conceptual reference for errors-in-variables fitting; the orthogonal-regression special case of Deming (λ = 1) is the geometric ODR fit.
+This diagnostic affine model is a **pure-NumPy Deming regression** (a closed-form errors-in-variables fit), conceptually related to orthogonal distance regression but **not** computed with `scipy.odr`. It accounts for uncertainty in both the input (target raw) and output (reference force) variables. Deming regression assumes a known ratio of error variances λ = Var(y-error)/Var(x-error); the implementation estimates λ from the per-hold noise medians and stores it as `variance_ratio_y_over_x`. SciPy's ODR documentation [\[R07\]](#R07) is included as the conceptual reference for errors-in-variables fitting; the orthogonal-regression special case of Deming (λ = 1) is the geometric ODR fit.
 
 Use when:
 
@@ -462,7 +462,7 @@ RMSE is:
 sqrt(mean(residual_N^2))
 ```
 
-The underlying MSE is the mean squared error between true and predicted values [R08]. RMSE returns to Newton units by taking the square root.
+The underlying MSE is the mean squared error between true and predicted values [\[R08\]](#R08). RMSE returns to Newton units by taking the square root.
 
 Interpretation:
 
@@ -473,7 +473,7 @@ Interpretation:
 <a id="metric.mae_N"></a>
 ### 7.2 MAE: `mae_N`
 
-MAE is the mean absolute residual. scikit-learn defines MAE as a non-negative regression loss with best value 0.0 [R09].
+MAE is the mean absolute residual. scikit-learn defines MAE as a non-negative regression loss with best value 0.0 [\[R09\]](#R09).
 
 Interpretation:
 
@@ -510,7 +510,7 @@ Interpretation:
 <a id="metric.r2"></a>
 ### 7.5 R²: `r2`
 
-R² is the coefficient of determination. scikit-learn documents that best possible R² is 1.0, and R² can be negative if a model performs worse than a constant-average predictor [R10].
+R² is the coefficient of determination. scikit-learn documents that best possible R² is 1.0, and R² can be negative if a model performs worse than a constant-average predictor [\[R10\]](#R10).
 
 Interpretation:
 
@@ -563,7 +563,7 @@ Interpretation in this project:
 <a id="metric.cv"></a>
 ### 7.10 Cross-validation metrics
 
-Cross-validation trains on part of the data and validates on held-out folds; scikit-learn describes k-fold CV as fitting on `k-1` folds and validating on the remaining fold, then summarizing performance [R11].
+Cross-validation trains on part of the data and validates on held-out folds; scikit-learn describes k-fold CV as fitting on `k-1` folds and validating on the remaining fold, then summarizing performance [\[R11\]](#R11).
 
 Fields:
 
@@ -602,7 +602,7 @@ Interpretation:
 <a id="field.selection_likelihood"></a>
 ### 8.2 Selection likelihood
 
-The report transforms eligible candidates' negative selection scores with softmax. SciPy defines softmax as exponentiating each input and dividing by the sum of all exponentials; the result sums to 1 [R13].
+The report transforms eligible candidates' negative selection scores with softmax. SciPy defines softmax as exponentiating each input and dividing by the sum of all exponentials; the result sums to 1 [\[R13\]](#R13).
 
 Interpretation:
 
@@ -716,7 +716,7 @@ If affine OLS/WLS/Huber models perform similarly to nonlinear models, choose the
 
 ### 12.2 Residual plots beat dashboard metrics
 
-A single RMSE can hide curvature or direction dependence. NIST explicitly notes that graphical methods reveal broader model/data relationships than narrow numerical summaries [R01].
+A single RMSE can hide curvature or direction dependence. NIST explicitly notes that graphical methods reveal broader model/data relationships than narrow numerical summaries [\[R01\]](#R01).
 
 ### 12.3 Holdout is the strongest deployment check
 
@@ -728,25 +728,25 @@ The selected fit should pass the independent holdout gate. Without holdout valid
 
 ### 12.5 Stay inside the calibrated range
 
-All model interpretations are strongest inside the observed raw-count and force range. Piecewise interpolation is especially range-sensitive; NumPy notes that `interp` expects increasing x-coordinate sample points and gives endpoint behavior outside the known range unless controlled [R05].
+All model interpretations are strongest inside the observed raw-count and force range. Piecewise interpolation is especially range-sensitive; NumPy notes that `interp` expects increasing x-coordinate sample points and gives endpoint behavior outside the known range unless controlled [\[R05\]](#R05).
 
 ## 13. References
 
-- **R01** — [NIST/SEMATECH e-Handbook — Model validation and residual analysis](https://www.itl.nist.gov/div898/handbook/pmd/section4/pmd44.htm).
-- **R02** — [NIST/SEMATECH e-Handbook — Load Cell Calibration case study](https://www.itl.nist.gov/div898/handbook/pmd/section6/pmd61.htm).
-- **R03** — [scikit-learn — LinearRegression](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html).
-- **R04** — [NumPy — numpy.polyfit](https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html).
-- **R05** — [NumPy — numpy.interp](https://numpy.org/doc/stable/reference/generated/numpy.interp.html).
-- **R06** — [scikit-learn — HuberRegressor](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.HuberRegressor.html).
-- **R07** — [SciPy — Orthogonal distance regression](https://docs.scipy.org/doc/scipy/reference/odr.html).
-- **R08** — [scikit-learn — mean_squared_error](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_squared_error.html).
-- **R09** — [scikit-learn — mean_absolute_error](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_absolute_error.html).
-- **R10** — [scikit-learn — r2_score](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.r2_score.html).
-- **R11** — [scikit-learn User Guide — Cross-validation: evaluating estimator performance](https://scikit-learn.org/stable/modules/cross_validation.html).
-- **R12** — [SciPy — median_abs_deviation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.median_abs_deviation.html).
-- **R13** — [SciPy — softmax](https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.softmax.html).
-- **R14** — [Matplotlib — pyplot.plot](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html).
-- **R15** — [Matplotlib — pyplot.scatter](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html).
-- **R16** — [Matplotlib — pyplot.bar](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.bar.html).
-- **R17** — [ISO 376:2011 preview — Calibration of force-proving instruments](https://standards.iteh.ai/catalog/standards/sist/9bf90770-4ac1-49dd-9564-8ef3bbdb281f/sist-en-iso-376-2012).
-- **R18** — [NIST — Force Measurement Services: Equipment, Procedures, and Uncertainty](https://www.nist.gov/system/files/documents/calibrations/97ncs4b.pdf).
+- <a id="R01"></a>**R01** — [NIST/SEMATECH e-Handbook — Model validation and residual analysis](https://www.itl.nist.gov/div898/handbook/pmd/section4/pmd44.htm).
+- <a id="R02"></a>**R02** — [NIST/SEMATECH e-Handbook — Load Cell Calibration case study](https://www.itl.nist.gov/div898/handbook/pmd/section6/pmd61.htm).
+- <a id="R03"></a>**R03** — [scikit-learn — LinearRegression](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html).
+- <a id="R04"></a>**R04** — [NumPy — numpy.polyfit](https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html).
+- <a id="R05"></a>**R05** — [NumPy — numpy.interp](https://numpy.org/doc/stable/reference/generated/numpy.interp.html).
+- <a id="R06"></a>**R06** — [scikit-learn — HuberRegressor](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.HuberRegressor.html).
+- <a id="R07"></a>**R07** — [SciPy — Orthogonal distance regression](https://docs.scipy.org/doc/scipy/reference/odr.html).
+- <a id="R08"></a>**R08** — [scikit-learn — mean_squared_error](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_squared_error.html).
+- <a id="R09"></a>**R09** — [scikit-learn — mean_absolute_error](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_absolute_error.html).
+- <a id="R10"></a>**R10** — [scikit-learn — r2_score](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.r2_score.html).
+- <a id="R11"></a>**R11** — [scikit-learn User Guide — Cross-validation: evaluating estimator performance](https://scikit-learn.org/stable/modules/cross_validation.html).
+- <a id="R12"></a>**R12** — [SciPy — median_abs_deviation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.median_abs_deviation.html).
+- <a id="R13"></a>**R13** — [SciPy — softmax](https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.softmax.html).
+- <a id="R14"></a>**R14** — [Matplotlib — pyplot.plot](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html).
+- <a id="R15"></a>**R15** — [Matplotlib — pyplot.scatter](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html).
+- <a id="R16"></a>**R16** — [Matplotlib — pyplot.bar](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.bar.html).
+- <a id="R17"></a>**R17** — [ISO 376:2011 preview — Calibration of force-proving instruments](https://standards.iteh.ai/catalog/standards/sist/9bf90770-4ac1-49dd-9564-8ef3bbdb281f/sist-en-iso-376-2012).
+- <a id="R18"></a>**R18** — [NIST — Force Measurement Services: Equipment, Procedures, and Uncertainty](https://www.nist.gov/system/files/documents/calibrations/97ncs4b.pdf).
