@@ -230,6 +230,40 @@ class ActiveSendBoardTransport(BoardTransport):
         stats.warning_suppressed += 1
         self._maybe_recover_active_stream("warning_threshold")
 
+    # @brief Emit a throttled timestamp-adjust/relax log line.
+    #
+    #  @param self Parameter description.
+    #  @param level Logging level.
+    #  @param fmt printf-style format string (lazily formatted).
+    #  @param args Format arguments.
+    def _log_timestamp_event_throttled(self, level: int, fmt: str, *args: Any) -> None:
+        """Rate-limit hot-path timestamp logging to ``warning_emit_interval_s``.
+
+        Post-fix, sub-threshold monotonic adjustments are expected steady-state
+        sawtooth behaviour and fire on most batches; emitting per batch floods
+        the acquisition thread with synchronous logging I/O and starves the
+        serial read loop.  Collapse them to one line per interval with a
+        suppressed count.
+        """
+        stats = self.app_state.active_send_stats
+        cfg = self.app_state.cfg.active_send
+        emit_interval_s = float(cfg.get("warning_emit_interval_s", 5.0))
+        now = time.monotonic()
+        if now - stats.last_timestamp_log_monotonic >= emit_interval_s:
+            if stats.timestamp_log_suppressed:
+                LOGGER.log(
+                    level,
+                    fmt + " [+%d similar timestamp events suppressed since last line]",
+                    *args,
+                    stats.timestamp_log_suppressed,
+                )
+            else:
+                LOGGER.log(level, fmt, *args)
+            stats.last_timestamp_log_monotonic = now
+            stats.timestamp_log_suppressed = 0
+        else:
+            stats.timestamp_log_suppressed += 1
+
     # @brief Update active watermarks.
     #
     #  @param self Parameter description.
@@ -642,7 +676,8 @@ class ActiveSendBoardTransport(BoardTransport):
                             timestamp_source += "_chain_relaxed"
                             stats.chain_relax_events += 1
                             stats.chain_relax_total_s += chain_relax_s
-                            LOGGER.info(
+                            self._log_timestamp_event_throttled(
+                                logging.INFO,
                                 "Active-send chain-lead relax: lead=%.6fs > max=%.6fs; "
                                 "squeezed batch of %d frames to spacing=%.6fs "
                                 "(bled=%.6fs, events=%d, total=%.6fs, in_waiting=%d)",
@@ -667,7 +702,8 @@ class ActiveSendBoardTransport(BoardTransport):
                                 active_cfg.get("log_monotonic_adjust_warn_s", 0.005)
                             )
                             if adjust_s >= warn_threshold_s:
-                                LOGGER.warning(
+                                self._log_timestamp_event_throttled(
+                                    logging.WARNING,
                                     "Active-send monotonic timestamp adjust: +%.6fs "
                                     "(batch_size=%d, events=%d, total=%.6fs, in_waiting=%d). "
                                     "Reference LSL timestamps for this batch are pushed later "

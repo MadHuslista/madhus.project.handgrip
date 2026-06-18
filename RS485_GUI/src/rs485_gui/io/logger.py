@@ -18,6 +18,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import queue
 import threading
 import time
 from pathlib import Path
@@ -63,6 +64,17 @@ class SignalFileLogger:
         self._write_batches_since_flush: int = 0
         self._last_flush_monotonic: float = time.monotonic()
 
+        # Background-writer state: the acquisition worker enqueues frame batches
+        # and a dedicated thread does the (CPU-heavy) json serialization + I/O,
+        # so the serial read loop is never blocked by logging.
+        self._async = bool(cfg.logger.get("async_logging", True))
+        self._queue_maxsize = max(0, int(cfg.logger.get("queue_maxsize", 200000)))
+        self._queue: queue.Queue[list[MeasurementFrame]] | None = None
+        self._writer_thread: threading.Thread | None = None
+        self._stop_writer = threading.Event()
+        self.dropped_records: int = 0
+        self._last_drop_warn_monotonic: float = 0.0
+
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
@@ -71,6 +83,9 @@ class SignalFileLogger:
         """Open all log files.  Safe to call on reconnect; previous files are flushed first."""
         if not self.enabled:
             return
+
+        # On reconnect, stop any previous writer thread before reopening files.
+        self._shutdown_writer()
 
         self.directory.mkdir(parents=True, exist_ok=True)
         file_mode = "a" if self.write_mode == "append" else "w"
@@ -101,11 +116,59 @@ class SignalFileLogger:
             )
             self._flush_unlocked()
 
+        if self._async:
+            self._queue = queue.Queue(maxsize=self._queue_maxsize)
+            self._stop_writer.clear()
+            self._writer_thread = threading.Thread(
+                target=self._writer_loop, name="signal-log-writer", daemon=True
+            )
+            self._writer_thread.start()
+
+    # @brief Drain and stop the background writer thread (if any).
+    #
+    #  @param self Parameter description.
+    def _shutdown_writer(self) -> None:
+        """Signal the writer thread to drain the queue and exit; join it.
+
+        Must be called without holding ``self._lock`` (the writer acquires it).
+        """
+        thread = self._writer_thread
+        if thread is None:
+            return
+        self._stop_writer.set()
+        thread.join()
+        self._writer_thread = None
+        self._queue = None
+
+    # @brief Background writer loop.
+    #
+    #  @param self Parameter description.
+    def _writer_loop(self) -> None:
+        """Drain queued frame batches to disk until stopped and the queue is empty."""
+        q = self._queue
+        assert q is not None
+        while True:
+            try:
+                frames = q.get(timeout=0.1)
+            except queue.Empty:
+                if self._stop_writer.is_set():
+                    return
+                continue
+            try:
+                self._write_frames_sync(frames)
+            except Exception:  # pragma: no cover — never let the writer thread die silently
+                LOGGER.exception("Signal log writer failed on a batch")
+            finally:
+                q.task_done()
+
     # @brief Close.
     #
     #  @param self Parameter description.
     def close(self) -> None:
         """Flush and close all open log files."""
+        # Drain + stop the writer thread before touching files (join needs the
+        # lock free).
+        self._shutdown_writer()
         with self._lock:
             self._flush_unlocked()
             for fp in (self._raw_fp, self._interpreted_fp, self._gui_fp, self._event_fp):
@@ -123,12 +186,40 @@ class SignalFileLogger:
     # ------------------------------------------------------------------
 
     def write_frames(self, frames: list[MeasurementFrame]) -> None:
-        """Write a batch of frames to the NDJSON and CSV logs."""
+        """Enqueue a batch of frames for the background writer (or write inline).
+
+        Called from the acquisition hot path: when async logging is enabled this
+        only hands the batch to the writer thread so the serial read loop is not
+        blocked by serialization/disk I/O.
+        """
+        if not self.enabled or not frames:
+            return
+        if self._raw_fp is None or self._interpreted_fp is None or self._gui_writer is None:
+            raise RuntimeError("SignalFileLogger.write_frames called before open()")
+        if self._async and self._queue is not None:
+            try:
+                self._queue.put_nowait(frames)
+            except queue.Full:
+                self.dropped_records += len(frames)
+                now = time.monotonic()
+                if now - self._last_drop_warn_monotonic >= 5.0:
+                    LOGGER.warning(
+                        "Signal log queue full (maxsize=%d); dropped %d records so far. "
+                        "Disk cannot keep up with acquisition rate.",
+                        self._queue_maxsize,
+                        self.dropped_records,
+                    )
+                    self._last_drop_warn_monotonic = now
+            return
+        self._write_frames_sync(frames)
+
+    def _write_frames_sync(self, frames: list[MeasurementFrame]) -> None:
+        """Serialize and write a batch of frames to the NDJSON and CSV logs."""
         if not self.enabled or not frames:
             return
         with self._lock:
             if self._raw_fp is None or self._interpreted_fp is None or self._gui_writer is None:
-                raise RuntimeError("SignalFileLogger.write_frames called before open()")
+                raise RuntimeError("SignalFileLogger._write_frames_sync called before open()")
 
             plot_signal_key = get_plot_signal_key(self.cfg)
             for frame in frames:
