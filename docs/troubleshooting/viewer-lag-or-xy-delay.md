@@ -54,6 +54,23 @@ Use this decision table:
 | Use tail-aligned LSL mode    | Comparing most recent target/reference tails is preferred. |
 | Reanchor target timestamping | Device clock drift exceeds bridge threshold.               |
 | Validate RS485 profile       | Reference stream itself is delayed or bursty.              |
+| Set `manual_reference_shift_s` | Saved data shows a stable reference offset (relay latency). Measure it with the calibration preflight (below). |
+
+## Measure and compensate the reference offset
+
+The reference path (`board → RS485 → RS485_GUI → IPC → LSL_Bridge`) is stamped at GUI read time and lags the directly-connected target by a stable **relay offset** — see [docs/architecture/timestamping-and-synchronization.md](../architecture/timestamping-and-synchronization.md). When the saved CSVs (not just the browser) show that offset, compensate it with a constant viewer shift rather than changing acquisition.
+
+Run the calibration preflight (from the `Handgrip_Calibration` directory):
+
+```bash
+uv run python scripts/calibration_preflight.py \
+  --viewer-session ../diagnostics/<ts> \
+  --bridge-target-csv ../LSL_Bridge/data/target_*.csv \
+  --bridge-reference-csv ../LSL_Bridge/data/reference_*.csv \
+  --gui-ndjson ../RS485_GUI/logs/raw_signal.ndjson
+```
+
+It validates that the capture config/logs are correct, confirms the ratchet/throughput/jitter issues are absent, and — when the offset is stable — prints the exact `manual_reference_shift_s` plus the file and key to set in `LSL_Viewer/conf/config.yaml` (`viewer.xy_correlation.time_alignment`). Re-measure after any setup change (cabling, ports, host, baud, rates); the offset is physical.
 
 
 **Related docs:** [LSL_Viewer/docs/xy-correlation.md](../../LSL_Viewer/docs/xy-correlation.md), [docs/architecture/timestamping-and-synchronization.md](../architecture/timestamping-and-synchronization.md), [LSL_Bridge/docs/timestamping.md](../../LSL_Bridge/docs/timestamping.md)

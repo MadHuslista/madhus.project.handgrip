@@ -79,10 +79,11 @@ viewer:
       # time and arrives ~120 ms after the simultaneous target sample. This shift
       # is ADDED to reference timestamps (alignment.py interpolate_reference_to_target),
       # so a negative value moves reference earlier to meet the later-stamped
-      # target. Value = median published onset lag from analyze_xy_lag.py
-      # (target-reference); measured -0.123 s on session 20260618_060302 after the
-      # ratchet/throughput/async fixes. Re-measure and retune if the pipeline or
-      # host load changes. NOT acquisition truth — a host-read-latency correction.
+      # target. Measure it with Handgrip_Calibration/scripts/calibration_preflight.py
+      # (it prints the exact value); = median published onset lag (target-reference).
+      # Measured -0.123 s on session 20260618_060302 after the ratchet/throughput/
+      # async fixes. Re-measure and retune if the pipeline, cabling, or host load
+      # changes. NOT acquisition truth — a host-read-latency correction.
       manual_reference_shift_s: -0.123
       # null means "use viewer.window_seconds" as the max allowed shift.
       max_auto_shift_s: null

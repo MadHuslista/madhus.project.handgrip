@@ -133,6 +133,10 @@ Expected fixture images:
 - `docs/hardware/assets/acq_board_n_pm58_n_handgrip_setup.jpg`
 - `docs/hardware/assets/force_application_setup.jpg`
 
+## After any wiring/topology change: re-measure the reference offset
+
+Changing cabling, serial ports, adapters, baud, or sample rates changes the physical relay latency of the reference path, which the viewer compensates with a constant `manual_reference_shift_s`. That value is **not portable across setups** — re-measure it after any change here before trusting the XY plot or recording calibration data. Run `Handgrip_Calibration/scripts/calibration_preflight.py` (see [docs/troubleshooting/viewer-lag-or-xy-delay.md](../troubleshooting/viewer-lag-or-xy-delay.md) and [docs/architecture/timestamping-and-synchronization.md](../architecture/timestamping-and-synchronization.md)).
+
 ## Stop conditions
 
 Stop before software acquisition if:
