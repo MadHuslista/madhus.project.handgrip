@@ -72,8 +72,18 @@ viewer:
     # that is a real timestamping/backlog diagnostic and should not be hidden by
     # viewer-side correction. Use tail_aligned_lsl only as a temporary display aid.
     time_alignment:
-      mode: raw_lsl                 # raw_lsl | tail_aligned_lsl | manual
-      manual_reference_shift_s: 0.0
+      mode: manual                  # raw_lsl | tail_aligned_lsl | manual
+      # Compensates the stable reference relay-hop latency (board->RS485->GUI->
+      # ZMQ->bridge) that the target's direct USB path does not incur. The frame
+      # carries no acquisition timestamp, so reference is stamped at GUI read
+      # time and arrives ~120 ms after the simultaneous target sample. This shift
+      # is ADDED to reference timestamps (alignment.py interpolate_reference_to_target),
+      # so a negative value moves reference earlier to meet the later-stamped
+      # target. Value = median published onset lag from analyze_xy_lag.py
+      # (target-reference); measured -0.123 s on session 20260618_060302 after the
+      # ratchet/throughput/async fixes. Re-measure and retune if the pipeline or
+      # host load changes. NOT acquisition truth — a host-read-latency correction.
+      manual_reference_shift_s: -0.123
       # null means "use viewer.window_seconds" as the max allowed shift.
       max_auto_shift_s: null
       min_auto_shift_s: 0.0
