@@ -91,9 +91,9 @@ LabRecorder/Data/
 !Handgrip_Analysis/data/manifests/
 .doxygen
 *.zip
+
 *.claude
 *.agents
 *.codex
-graphify-out/
-.augment
 *.github
+*.uncomment*
