@@ -92,14 +92,14 @@ source .venv/bin/activate
 uv sync
 ```
 
-Then run the live system in this order:
+From repository root, run the live system in this order:
 
 ```bash
 # Terminal 1 — reference acquisition board GUI / IPC publisher
-uv run rs485-gui
+uv run rs485-gui serial.default_port=/dev/ttyUSB_RS485
 
 # Terminal 2 — target/reference bridge to Lab Streaming Layer
-uv run lsl-bridge
+uv run lsl-bridge serial.port=/dev/ttyUSB_TARGET
 
 # Terminal 3 — live viewer
 uv run lsl-viewer

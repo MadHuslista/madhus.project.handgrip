@@ -58,8 +58,8 @@
 #define SCALE_OFFSET                   0.0F
 
 /** Sampling period in microseconds - 5000us = 5ms = 200Hz
- *  Empirical máximum frequency for the HX711 is 92Hz
- *  Sampling is done at >= 2 x 92Hz allows for non-blocking reads on IRQ. 
+ *  Empirical maximum frequency for the HX711 is ~93Hz (see HX711_EXPECTED_OUTPUT_RATE_HZ).
+ *  Sampling is done at >= 2 x 93Hz allows for non-blocking reads on IRQ.
  *  If sensor is not ready, 200Hz ensure that the new sample will be captured
  *  within the next IRQ.
  */
