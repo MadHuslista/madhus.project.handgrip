@@ -1,16 +1,5 @@
 # Calibration Report Reference
 
----
-- **Creation Date**: 2026-06-17
-- **Last Updated**: 2026-06-18
-- **Branch@Commit**: general_overview@00d5972
-- **Applies to**: `Handgrip_Calibration/data/calibration/*/calibration_report.md`, `fit_result.json`, `fit_candidates.json`, `holdout_validation.json`, and generated `plots/`.
-- **Scope**: Static, non-expert reference for every metric, model, plot, table, and schema field shown in the generated calibration report; provides stable concept-ID anchors deep-linked from the generated report.
-- **Purpose**: Let a reviewer understand what each number, model, plot, and table means, and how to judge whether a calibration is safe to use.
-- **Claude Plan Path**: /home/levi/.claude/plans/lexical-stargazing-noodle.md
-- **Version**: 1.0
----
-
 ## 1. How to read this reference
 
 This document explains the static concepts used by the Handgrip calibration report. It is written for reviewers who need to understand what each number, model, plot, and table means before deciding whether a calibration is safe to use.

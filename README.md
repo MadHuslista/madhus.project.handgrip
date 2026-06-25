@@ -41,7 +41,7 @@ flowchart TD
 Following the system architecture, here are the entry points and purposes for each module:
 
 - [PM58 Load Cell & Acquisition Board](docs/workflows/physical-setup.md): Reference-force sensing hardware and wiring stack. 
-- [RS485_GUI](RS485_GUI/docs/index.md): GUI for reading PM58 data and streaming it to LSL_Bridge in real time. 
+- [RS485_GUI](RS485_GUI/docs/index.md): Control interface for reading PM58 data and streaming it to LSL_Bridge in real time. 
 - [Handgrip_Firmware](Handgrip_Firmware/docs/index.md): Firmware that samples HX711 load-cell data and sends UART telemetry. 
 - [LSL_Bridge](LSL_Bridge/docs/index.md): Middleware that ingests target/reference signals and publishes synchronized LSL streams.
 - [LSL_Viewer](LSL_Viewer/docs/index.md): Real-time dashboard for monitoring synchronized LSL streams.
