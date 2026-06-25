@@ -31,6 +31,7 @@ from __future__ import annotations
 import logging
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 import hydra
@@ -43,7 +44,7 @@ import __main__
 from lsl_bridge.core.parser import D2LineParser
 from lsl_bridge.core.processing import build_processor
 from lsl_bridge.core.timestamping import SampleTimeResolver, TargetTimestampResolver
-from lsl_bridge.io.csv_sinks import ReferenceCsvSink, TargetCsvSink
+from lsl_bridge.io.csv_sinks import ReferenceCsvSink, TargetCsvSink, apply_timestamp_suffix
 from lsl_bridge.io.lsl_outlets import (
     build_reference_outlet,
     build_target_outlet,
@@ -63,22 +64,30 @@ LIBRARY_ROOT = Path(__file__).parent.parent.parent.absolute()
 # ---------------------------------------------------------------------------
 
 
-def _open_target_sink(cfg: DictConfig) -> TargetCsvSink | None:
+def _open_target_sink(cfg: DictConfig, run_timestamp: str) -> TargetCsvSink | None:
     if not bool(cfg.csv.target.enabled):
         return None
+    write_mode = str(cfg.csv.target.write_mode)
+    path = Path(to_absolute_path(str(cfg.csv.target.path)))
+    if write_mode == "timestamped":
+        path = apply_timestamp_suffix(path, run_timestamp)
     return TargetCsvSink(
-        Path(to_absolute_path(str(cfg.csv.target.path))),
-        bool(cfg.csv.target.append),
+        path,
+        write_mode,
         int(cfg.csv.target.flush_every_n_rows),
     )
 
 
-def _open_reference_sink(cfg: DictConfig) -> ReferenceCsvSink | None:
+def _open_reference_sink(cfg: DictConfig, run_timestamp: str) -> ReferenceCsvSink | None:
     if not bool(cfg.csv.reference.enabled):
         return None
+    write_mode = str(cfg.csv.reference.write_mode)
+    path = Path(to_absolute_path(str(cfg.csv.reference.path)))
+    if write_mode == "timestamped":
+        path = apply_timestamp_suffix(path, run_timestamp)
     return ReferenceCsvSink(
-        Path(to_absolute_path(str(cfg.csv.reference.path))),
-        bool(cfg.csv.reference.append),
+        path,
+        write_mode,
         int(cfg.csv.reference.flush_every_n_rows),
     )
 
@@ -114,8 +123,9 @@ def app(cfg: DictConfig) -> None:
         session_id=cfg.session.get("session_id"),
     )
 
-    target_sink = _open_target_sink(cfg)
-    reference_sink = _open_reference_sink(cfg)
+    run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    target_sink = _open_target_sink(cfg, run_timestamp)
+    reference_sink = _open_reference_sink(cfg, run_timestamp)
     reference_outlet = build_reference_outlet(cfg) if bool(cfg.streams.reference.enabled) else None
     reference_publisher = RS485IpcReferencePublisher(cfg, reference_outlet, reference_sink, events)
     reference_publisher.start()
@@ -192,7 +202,7 @@ def app(cfg: DictConfig) -> None:
                         )
 
                         if target_sink is not None:
-                            target_sink.write(sample, filtered_units)
+                            target_sink.write(sample, filtered_units, arrival_lsl_time)
 
                         sample_count += 1
                         if sample_count == 1 or sample_count % int(cfg.logging.log_every_n_samples) == 0:

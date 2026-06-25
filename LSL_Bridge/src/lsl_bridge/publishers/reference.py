@@ -82,6 +82,12 @@ class RS485IpcReferencePublisher:
         self._malformed_count: int = 0
         self._gap_count: int = 0
         self._last_seq: int | None = None
+        # Rolling per-interval stats of (received_lsl_ts - host_lsl_ts): the
+        # GUI-batching + IPC-transit age of each sample at bridge receive time.
+        self._age_count: int = 0
+        self._age_sum_s: float = 0.0
+        self._age_min_s: float = math.inf
+        self._age_max_s: float = -math.inf
 
     # ------------------------------------------------------------------
     # Public lifecycle
@@ -221,6 +227,7 @@ class RS485IpcReferencePublisher:
             if self._sink is not None:
                 self._sink.write(sample, timestamp)
             self._published_count += 1
+            self._track_sample_age(sample)
             self._log_status_if_due(sample, timestamp)
 
     # ------------------------------------------------------------------
@@ -295,14 +302,33 @@ class RS485IpcReferencePublisher:
     # Status logging
     # ------------------------------------------------------------------
 
+    # @brief Accumulate per-interval (received - host) timestamp age stats.
+    #  @param sample Decoded reference sample.
+    #  @return None.
+    def _track_sample_age(self, sample: ReferenceSample) -> None:
+        if not (math.isfinite(sample.host_lsl_ts) and math.isfinite(sample.received_lsl_ts)):
+            return
+        age_s = sample.received_lsl_ts - sample.host_lsl_ts
+        self._age_count += 1
+        self._age_sum_s += age_s
+        self._age_min_s = min(self._age_min_s, age_s)
+        self._age_max_s = max(self._age_max_s, age_s)
+
     def _log_status_if_due(self, sample: ReferenceSample, timestamp: float) -> None:
         now = time.monotonic()
         log_interval = float(self._cfg.rs485_ipc.log_status_every_s)
         if self._published_count == 1 or now - self._last_status_log_monotonic >= log_interval:
             self._last_status_log_monotonic = now
+            if self._age_count > 0:
+                age_text = (
+                    f"min={self._age_min_s:.6f} mean={self._age_sum_s / self._age_count:.6f} "
+                    f"max={self._age_max_s:.6f} n={self._age_count}"
+                )
+            else:
+                age_text = "n=0"
             _log.info(
                 "Reference LSL status: published=%d malformed=%d gaps=%d "
-                "latest_seq=%s force_N=%s timestamp_age_s=%.6f mode=%s",
+                "latest_seq=%s force_N=%s timestamp_age_s=%.6f mode=%s ipc_age_s[%s]",
                 self._published_count,
                 self._malformed_count,
                 self._gap_count,
@@ -310,4 +336,9 @@ class RS485IpcReferencePublisher:
                 sample.reference_force_N,
                 local_clock() - timestamp,
                 sample.mode,
+                age_text,
             )
+            self._age_count = 0
+            self._age_sum_s = 0.0
+            self._age_min_s = math.inf
+            self._age_max_s = -math.inf

@@ -21,6 +21,7 @@ import hydra
 from omegaconf import DictConfig
 
 from lsl_viewer.config import register_config
+from lsl_viewer.errors import ViewerError
 from lsl_viewer.logging_setup import configure_logging
 
 log = logging.getLogger(__name__)
@@ -62,26 +63,33 @@ def app(cfg: DictConfig) -> int:
         raise RuntimeError(f"Unsupported mode={mode!r}. Allowed modes: {sorted(_ALLOWED_MODES)}")
 
     # ── Mode dispatch ─────────────────────────────────────────────────────
-    if mode == "live":
-        from lsl_viewer.viz.app import run_live_mode_nicegui
+    try:
+        if mode == "live":
+            from lsl_viewer.viz.app import run_live_mode_nicegui
 
-        return run_live_mode_nicegui(cfg, validate_reference=False)
+            return run_live_mode_nicegui(cfg, validate_reference=False)
 
-    if mode == "live_with_reference_validation":
-        from lsl_viewer.viz.app import run_live_mode_nicegui
+        if mode == "live_with_reference_validation":
+            from lsl_viewer.viz.app import run_live_mode_nicegui
 
-        return run_live_mode_nicegui(cfg, validate_reference=True)
+            return run_live_mode_nicegui(cfg, validate_reference=True)
 
-    if mode == "csv_replay":
-        from lsl_viewer.core.replay import load_csv_replay
-        from lsl_viewer.viz.app import run_replay_mode_nicegui
+        if mode == "csv_replay":
+            from lsl_viewer.core.replay import load_csv_replay
+            from lsl_viewer.viz.app import run_replay_mode_nicegui
 
-        return run_replay_mode_nicegui(cfg, load_csv_replay(cfg), mode)
+            return run_replay_mode_nicegui(cfg, load_csv_replay(cfg), mode)
 
-    if mode == "xdf_replay":
-        from lsl_viewer.core.replay import load_xdf_replay
-        from lsl_viewer.viz.app import run_replay_mode_nicegui
+        if mode == "xdf_replay":
+            from lsl_viewer.core.replay import load_xdf_replay
+            from lsl_viewer.viz.app import run_replay_mode_nicegui
 
-        return run_replay_mode_nicegui(cfg, load_xdf_replay(cfg), mode)
+            return run_replay_mode_nicegui(cfg, load_xdf_replay(cfg), mode)
 
-    raise AssertionError("Unreachable mode dispatch")  # pragma: no cover
+        raise AssertionError("Unreachable mode dispatch")  # pragma: no cover
+    except ViewerError as exc:
+        log.error(exc.user_message())
+        remediation = exc.remediation()
+        if remediation:
+            log.error("Hint: %s", remediation)
+        return exc.exit_code

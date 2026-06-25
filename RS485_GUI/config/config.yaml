@@ -66,6 +66,13 @@ logger:
   # Avoid flushing every 500 Hz batch; this reduces GUI/process jitter while preserving logs.
   flush_every_n_batches: 25
   flush_interval_s: 1.0
+  # Serialize and write log records on a background thread so the acquisition
+  # worker is not blocked by json.dumps / disk I/O between serial reads (this was
+  # starving the 500 Hz serial drain and inflating reference latency). The worker
+  # only enqueues frame batches. queue_maxsize bounds memory; on overflow records
+  # are dropped with a counted, throttled warning rather than stalling acquisition.
+  async_logging: true
+  queue_maxsize: 200000
 
 ipc:
   enabled: true
@@ -83,6 +90,13 @@ ipc:
   send_hwm: 2000
   linger_ms: 0
   drop_on_backpressure: true
+  # Serialize (json.dumps) and send IPC records on a dedicated publisher thread
+  # so the acquisition worker is not blocked between serial reads (same fix as
+  # async file logging). The worker only enqueues; a single thread owns the ZMQ
+  # PUB socket (sockets are not thread-safe). queue overflow drops records with a
+  # counted, throttled warning rather than stalling acquisition.
+  async_publish: true
+  publish_queue_maxsize: 200000
   # Avoid binding the ZMQ endpoint during NiceGUI app construction; NiceGUI may
   # re-execute the script while serving the root page. Bind only when the user
   # starts a real acquisition session.
@@ -154,6 +168,29 @@ active_send:
   # use a non-default free-running timestamp reconstruction. Ignored by the default
   # batch_end_anchored policy.
   clock_reanchor_max_drift_s: 0.050
+  # Warn when one batch's monotonic timestamp adjustment (batch_end_anchored
+  # collision with the previous batch) reaches this many seconds. The per-frame
+  # magnitude is always exported as monotonic_adjust_s in diagnostics/IPC.
+  log_monotonic_adjust_warn_s: 0.005
+  # Bounded chain-lead relax for batch_end_anchored. When the assigned timestamp
+  # chain leads wall clock (lsl_local_clock at decode) by more than this many
+  # seconds, the next colliding batch is squeezed (compressed inter-frame
+  # spacing) instead of pushed forward at nominal dt, bleeding the lead back
+  # toward wall clock while preserving strict monotonicity. Roughly
+  # delivery_window_s + max_frames_per_delivery/500Hz; tune via the chain_relax_*
+  # fields in the periodic summaries.
+  max_chain_lead_s: 0.050
+  # EWMA measured-rate dt for batch_end_anchored back-dating. The board's real
+  # active-send rate drifts slightly from the nominal table value (e.g. 499.5 vs
+  # 500 Hz); using the measured rate shrinks both the ratchet pawl and the
+  # residual drift. The instantaneous rate is averaged over measured_rate_window_s,
+  # clamped to nominal*(1 +/- measured_rate_max_dev_frac), then smoothed with an
+  # EWMA of weight measured_rate_ewma_alpha. Set measured_rate_enabled=false to
+  # fall back to the nominal 1/freq_hz spacing.
+  measured_rate_enabled: true
+  measured_rate_window_s: 2.0
+  measured_rate_ewma_alpha: 0.25
+  measured_rate_max_dev_frac: 0.01
   # If the active-send parser enters a CRC/resync cascade, discard stale
   # buffered bytes and recover from the current live byte stream.
   recovery_enabled: true

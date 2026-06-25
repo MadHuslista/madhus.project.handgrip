@@ -22,6 +22,44 @@ Complete the upstream setup before recording:
 
 ---
 
+## Smoke Test — Fast end-to-end pipeline validation
+
+Run this sequence to verify the full pipeline path (record → fit → report → holdout → integrated report) without completing a full production session. Uses relaxed quality thresholds and short hold durations. **Do not use resulting coefficients in production.**
+
+```bash
+# 1. Capture primary session (5 levels, 2 s holds)
+uv run handgrip-cal record \
+  --config conf/protocol_smoke_test_capture.yaml \
+  --session-id smoke_capture_01
+
+# 2. Fit model
+uv run handgrip-cal fit \
+  data/calibration/smoke_capture_01 \
+  --config conf/protocol_smoke_test_capture.yaml
+
+# 3. Generate preliminary report — section 3 shows holdout-pending notice
+uv run handgrip-cal report data/calibration/smoke_capture_01
+
+# 4. Record holdout session (different force levels: 0, 15, 30 N)
+uv run handgrip-cal record \
+  --config conf/protocol_smoke_test_holdout.yaml \
+  --session-id smoke_holdout_01
+
+# 5. Validate + auto-regenerate integrated report
+uv run handgrip-cal validate-holdout \
+  data/calibration/smoke_holdout_01 \
+  --model data/calibration/smoke_capture_01/fit_result.json \
+  --config conf/protocol_smoke_test_holdout.yaml
+```
+
+Expected after step 5:
+- `data/calibration/smoke_capture_01/calibration_report.md` is regenerated with section 3 populated (full holdout metrics and pass/fail verdict)
+- `data/calibration/smoke_capture_01/holdout_validation.json` and `holdout_predictions.csv` are present
+
+See [docs/protocols.md](protocols.md) for the smoke test protocol design and force level rationale.
+
+---
+
 ## Step 0 — One-time environment setup
 
 Run from repo root:
@@ -30,15 +68,14 @@ Run from repo root:
 uv sync
 ```
 
-Then enter the calibration component:
-
-```bash
-cd Handgrip_Calibration
-```
-
 ### What happens
 
 `uv sync` installs the editable local packages and dependencies declared by the repo and component `pyproject.toml`. The `handgrip-cal` entry point becomes available through `uv run`.
+
+All `uv run handgrip-cal ...` commands below can be run from either the repo
+root or `Handgrip_Calibration/` — paths such as `conf/...yaml` and
+`data/calibration/<session_id>` resolve the same in both locations, and
+recorded sessions always land under `Handgrip_Calibration/data/calibration/`.
 
 ### Expected result
 
@@ -347,10 +384,10 @@ The report generator reads session artifacts, fit artifacts, candidate rankings,
 
 ### Expected result
 
-Files such as:
+Files written:
 
 ```text
-calibration_report.md
+calibration_report.md    ← PRELIMINARY: section 3 shows holdout-pending notice
 calibration_report.html
 plots/
 ```
@@ -365,6 +402,16 @@ firmware deployment recommendation
 firmware export JSON
 limitations
 ```
+
+**Section 3 (Holdout accuracy summary)** shows a notice at this stage:
+
+```text
+> Holdout validation not yet performed.
+> Run handgrip-cal validate-holdout <holdout_dir> --model <this_dir>/fit_result.json
+> to populate this section and finalize the deployment recommendation.
+```
+
+This is expected. The report upgrades automatically to an integrated view after Step 7.
 
 ### Human decision
 
@@ -457,12 +504,21 @@ holdout reference_force_N
 
 ### Expected result
 
-Files written:
+Files written to the **holdout session dir** (provenance copy):
 
 ```text
-holdout_predictions.csv
-holdout_validation.json
+data/calibration/20260603_holdout_cal_v1/holdout_predictions.csv
+data/calibration/20260603_holdout_cal_v1/holdout_validation.json
 ```
+
+Files mirrored to the **primary session dir** (for integrated report):
+
+```text
+data/calibration/20260603_primary_cal_v1/holdout_predictions.csv
+data/calibration/20260603_primary_cal_v1/holdout_validation.json
+```
+
+`calibration_report.md` in the primary session dir is **automatically regenerated** as the integrated report — section 3 is now populated with full holdout metrics. No separate `report` command is needed.
 
 Important fields in `holdout_validation.json`:
 
@@ -741,8 +797,6 @@ LSL_Viewer
 Then run:
 
 ```bash
-cd Handgrip_Calibration
-
 uv run handgrip-cal preflight \
   --config conf/protocol_holdout_verification.yaml
 
@@ -845,12 +899,27 @@ data/calibration/<primary_session_id>/
 
 ## Holdout validation artifacts
 
+Holdout session dir (raw data provenance):
+
 ```text
 data/calibration/<holdout_session_id>/
+  target.csv
+  reference.csv
+  events.ndjson
+  session_manifest.yaml
+  quality_live.ndjson
   holdout_predictions.csv
   holdout_validation.json
-  calibration_report.md
-  calibration_report.html
+```
+
+Primary session dir (integrated after `validate-holdout`):
+
+```text
+data/calibration/<primary_session_id>/
+  holdout_predictions.csv    ← mirrored from holdout session
+  holdout_validation.json    ← mirrored from holdout session
+  calibration_report.md      ← INTEGRATED: section 3 now has full holdout results
+  calibration_report.html    ← regenerated alongside .md
 ```
 
 ## Firmware implementation

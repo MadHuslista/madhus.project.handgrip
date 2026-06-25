@@ -18,6 +18,8 @@ from typing import Any, Mapping
 
 import pandas as pd
 
+from ._paths import resolve_existing_path
+
 MetricValue = int | float | str | bool | None
 Metrics = dict[str, MetricValue]
 
@@ -196,13 +198,13 @@ class StageConfig:
         if "channels" in data:
             data["channels"] = tuple(str(ch) for ch in data["channels"])
         if "filter_config" in data and data["filter_config"] is not None:
-            data["filter_config"] = Path(data["filter_config"])
+            data["filter_config"] = resolve_existing_path(data["filter_config"])
         if "lsl_bridge_root" in data and data["lsl_bridge_root"] is not None:
-            data["lsl_bridge_root"] = Path(data["lsl_bridge_root"])
+            data["lsl_bridge_root"] = resolve_existing_path(data["lsl_bridge_root"])
         if "lsl_bridge_config" in data and data["lsl_bridge_config"] is not None:
-            data["lsl_bridge_config"] = Path(data["lsl_bridge_config"])
+            data["lsl_bridge_config"] = resolve_existing_path(data["lsl_bridge_config"])
         if "stage_context_manifest" in data and data["stage_context_manifest"] is not None:
-            data["stage_context_manifest"] = Path(data["stage_context_manifest"])
+            data["stage_context_manifest"] = resolve_existing_path(data["stage_context_manifest"])
         if "hf_noise_band_hz" in data:
             lo, hi = data["hf_noise_band_hz"]
             data["hf_noise_band_hz"] = (float(lo), float(hi))

@@ -72,8 +72,19 @@ viewer:
     # that is a real timestamping/backlog diagnostic and should not be hidden by
     # viewer-side correction. Use tail_aligned_lsl only as a temporary display aid.
     time_alignment:
-      mode: raw_lsl                 # raw_lsl | tail_aligned_lsl | manual
-      manual_reference_shift_s: 0.0
+      mode: manual                  # raw_lsl | tail_aligned_lsl | manual
+      # Compensates the stable reference relay-hop latency (board->RS485->GUI->
+      # ZMQ->bridge) that the target's direct USB path does not incur. The frame
+      # carries no acquisition timestamp, so reference is stamped at GUI read
+      # time and arrives ~120 ms after the simultaneous target sample. This shift
+      # is ADDED to reference timestamps (alignment.py interpolate_reference_to_target),
+      # so a negative value moves reference earlier to meet the later-stamped
+      # target. Measure it with Handgrip_Calibration/scripts/calibration_preflight.py
+      # (it prints the exact value); = median published onset lag (target-reference).
+      # Measured -0.123 s on session 20260618_060302 after the ratchet/throughput/
+      # async fixes. Re-measure and retune if the pipeline, cabling, or host load
+      # changes. NOT acquisition truth — a host-read-latency correction.
+      manual_reference_shift_s: -0.123
       # null means "use viewer.window_seconds" as the max allowed shift.
       max_auto_shift_s: null
       min_auto_shift_s: 0.0
@@ -129,6 +140,16 @@ replay:
   speed: 1.0
   loop: false
   start_offset_s: 0.0
+
+# Opt-in live-mode diagnostics for the XY staircase investigation. When
+# enabled, the viewer writes one session directory per run containing per-tick
+# alignment metrics (metrics.jsonl) and deduplicated raw stream samples
+# (target_samples.csv / reference_samples.csv). Display behavior is unchanged.
+diagnostics:
+  enabled: false
+  output_dir: ./diagnostics
+  record_metrics: true
+  record_raw_samples: true
 
 logging:
   level: INFO

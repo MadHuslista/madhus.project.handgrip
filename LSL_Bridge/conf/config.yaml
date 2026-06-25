@@ -120,7 +120,11 @@ target_timestamping:
   policy: device_clock_anchor
   reset_on_nonmonotonic: true
   max_gap_s: 1.0
-  max_anchor_drift_s: 0.050
+  # Re-anchor when the device-clock prediction drifts more than this from host
+  # arrival time. Tightened 0.050 -> 0.020 to bound target early-drift (measured
+  # ~-23 ms median, -50 ms worst at 0.050), which otherwise adds to the XY
+  # reference->target misalignment.
+  max_anchor_drift_s: 0.020
   monotonic_epsilon_s: 0.000000001
 
 protocol:
@@ -146,12 +150,12 @@ csv:
   target:
     enabled: true
     path: LSL_Bridge/data/target_handgrip_samples_v2.csv
-    append: false
+    write_mode: timestamped  # timestamped | append | overwrite
     flush_every_n_rows: 1
   reference:
     enabled: true
     path: LSL_Bridge/data/reference_rs485_samples_v2.csv
-    append: false
+    write_mode: timestamped  # timestamped | append | overwrite
     flush_every_n_rows: 25
 
 logging:

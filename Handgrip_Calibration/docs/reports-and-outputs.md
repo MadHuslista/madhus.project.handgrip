@@ -5,6 +5,7 @@
 - Reports translate calibration artifacts into a deployment decision.
 - The report should identify the selected model, candidate comparison, residuals, plots, thresholds, and validation status.
 - Generated reports are outputs, not canonical documentation; curated examples belong under `docs/examples/`.
+- For non-expert definitions and how-to-read guidance for every metric, model, and plot, and for the per-value interpretations now embedded in the report, see [Handgrip_Calibration/docs/calibration-report-reference.md](calibration-report-reference.md).
 
 ## Report command
 
@@ -22,6 +23,8 @@ The `report` command and its place in the full sequence are documented in [Handg
 | `calibration_dataset.csv`     | Accepted holds used for fitting.                         |
 | `calibration_hold_dataset_raw.csv` | Pre-correction hold dataset; written if `calibration_artifact.enabled`. |
 | `calibration_artifact_summary.csv` | Per-level direction-balanced medians and exclusions; written if `calibration_artifact.enabled`. |
+| `holdout_validation.json`     | Holdout pass/fail metrics (mirrored to primary dir by `validate-holdout`). |
+| `holdout_predictions.csv`     | Per-hold predicted vs actual force (mirrored to primary dir by `validate-holdout`). |
 | `plots/`                      | Time series, residuals, model comparisons, metric bars.  |
 | config snapshots              | Reproducibility of upstream components.                  |
 
@@ -119,8 +122,30 @@ After static fitting, use dynamic trial data from the session to check behavior 
 
 Do not optimize dynamic metrics until the static fit is stable.
 
+## Report lifecycle
+
+`calibration_report.md` is a regenerable artifact — not a one-time output. It reflects all data available in the session dir at the time `report` is called, or at the time `validate-holdout` completes.
+
+**Phase 1 — Preliminary** (after `fit` + `report`):
+- Section 3 (Holdout accuracy summary) shows a holdout-pending notice with the exact `validate-holdout` command to run
+- `deployment_recommendation` is `fit_available_but_holdout_validation_missing`
+- Report is valid and reviewable; the fit quality sections are fully populated
+
+**Phase 2 — Integrated** (after `validate-holdout`):
+- `validate-holdout` mirrors `holdout_validation.json` and `holdout_predictions.csv` to the primary session dir
+- It then calls `generate_report(primary_session_dir)` automatically — no manual `report` command needed
+- Section 3 is populated with full holdout metrics, predictions table, and pass/fail verdict
+- `deployment_recommendation` reflects the holdout outcome (`approve_constants_for_deployment` or `do_not_deploy_investigate_protocol_or_model`)
+
+**Idempotency**: Re-running `report <primary_dir>` at any time regenerates `calibration_report.md` from whatever artifacts are currently present. If holdout data is in the dir, the report is integrated. If not, it is preliminary. There is no separate "final" vs "draft" report file.
+
+**Artifact locations**: After `validate-holdout`, `holdout_validation.json` and `holdout_predictions.csv` exist in two places:
+- The holdout session dir — raw data provenance, the holdout session's own record
+- The primary session dir — consumed by `generate_report` for the integrated view
+
 ## Output lifecycle
 
 - Keep full reports with the session folder.
 - Do not edit generated reports manually without marking them as edited.
+- Re-generating a report after new data is available (e.g. after `validate-holdout`) is the correct workflow — not manual editing.
 - If a report is useful for teaching, curate an excerpt under `docs/examples/calibration-session/`.

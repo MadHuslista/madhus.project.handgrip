@@ -114,14 +114,17 @@ Do not add plots that are not referenced in a report or interpretation workflow.
 | CLI tests         | Entry points, argument parsing, output folder creation. |
 | Report tests      | Required sections/artifacts present.                    |
 
-Suggested commands:
+Suggested commands (run from the repo root or from `Handgrip_Analysis/` —
+both resolve `data/...`/`conf/...` paths under `Handgrip_Analysis/`):
 
 ```bash
-cd Handgrip_Analysis
 uv run pytest
 uv run ha-run-all --help
 uv run ha-stage --help
 ```
+
+Note: `uv run pytest` must be run from `Handgrip_Analysis/` (pytest discovers
+`tests/` relative to cwd).
 
 ## Documentation update checklist
 

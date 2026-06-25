@@ -2,20 +2,11 @@
 
 ``run_app`` wires all subsystems together and starts the NiceGUI server.
 ``main`` is the CLI entry point registered in ``pyproject.toml``.
-
-NiceGUI re-execution note
--------------------------
-NiceGUI re-executes this module when serving the root page or a 404
-fallback.  The os.environ guard used in the original monolith has been replaced by the idempotent
-``configure_logging`` guard in ``config/loader.py`` (checks
-``root.handlers``).  The config is loaded fresh on each execution but
-``configure_logging`` is a no-op after the first call.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 import threading
 from collections import deque
 
@@ -232,11 +223,7 @@ def _start_ipc_publisher(app_state: AppState) -> None:
 
 def run_app(cfg: DictConfig) -> None:
     """Wire all subsystems and start the NiceGUI server."""
-    # Log config once per process (env-var guard replaced by idempotent
-    # configure_logging() handler check in loader.py)
-    if os.environ.get("_RS485_GUI_CONFIG_LOGGED") != "1":
-        LOGGER.info("Loaded config:\n%s", __import__("omegaconf").OmegaConf.to_yaml(cfg))
-        os.environ["_RS485_GUI_CONFIG_LOGGED"] = "1"
+    LOGGER.info("Loaded config:\n%s", __import__("omegaconf").OmegaConf.to_yaml(cfg))
 
     signal_logger = SignalFileLogger(cfg)
 
@@ -291,11 +278,13 @@ def run_app(cfg: DictConfig) -> None:
 
     nicegui_app.on_shutdown(cleanup)
 
-    run_ui_page(
-        app_state,
-        connect_fn=lambda: connect_state(app_state),
-        disconnect_fn=lambda: disconnect_state(app_state),
-    )
+    @ui.page("/")
+    def index() -> None:
+        run_ui_page(
+            app_state,
+            connect_fn=lambda: connect_state(app_state),
+            disconnect_fn=lambda: disconnect_state(app_state),
+        )
 
     try:
         ui.run(

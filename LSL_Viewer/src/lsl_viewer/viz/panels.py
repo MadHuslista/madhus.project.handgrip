@@ -179,7 +179,8 @@ def build_page_layout(
         # ── Keyboard shortcuts (browser key events — no OS focus needed) ──
         # @brief Browser keyboard handler for page-level shortcuts.
         def _on_key(e: Any) -> None:
-            if getattr(e, "action", None) != "keydown":
+            action = getattr(e, "action", None)
+            if action is None or not action.keydown or action.repeat:
                 return
             key = getattr(e, "key", "")
             clear_k = str(cfg.viewer.controls.clear_key).strip()

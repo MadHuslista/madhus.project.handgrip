@@ -46,10 +46,10 @@ Use this guide when `Handgrip_Analysis` cannot load inputs, run stages, or produ
 
 ## Diagnostic workflow
 
-1. Run `--help` for available CLI entry points:
+1. Run `--help` for available CLI entry points (these can be run from the
+   repo root or from `Handgrip_Analysis/`):
 
 ```bash
-cd Handgrip_Analysis
 uv run ha-run-all --help
 uv run ha-stage --help
 uv run ha-stage6-design --help

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import queue
 import threading
 import time
 from datetime import datetime
@@ -66,6 +67,17 @@ class MeasurementFramePublisher:
         self._published: int = 0
         self._last_log_monotonic: float = 0.0
         self._lock = threading.Lock()
+
+        # Background-publisher state: the acquisition worker enqueues frame
+        # batches and a single dedicated thread owns the (non-thread-safe) ZMQ
+        # socket, doing the json serialization + send off the serial read loop.
+        self._async = bool(cfg.ipc.get("async_publish", True))
+        self._queue_maxsize = max(0, int(cfg.ipc.get("publish_queue_maxsize", 200000)))
+        self._queue: queue.Queue[tuple[str, Any]] | None = None
+        self._writer_thread: threading.Thread | None = None
+        self._stop_writer = threading.Event()
+        self.dropped_records: int = 0
+        self._last_drop_warn_monotonic: float = 0.0
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -119,11 +131,62 @@ class MeasurementFramePublisher:
             self.signal_key,
         )
 
+        if self._async:
+            self._queue = queue.Queue(maxsize=self._queue_maxsize)
+            self._stop_writer.clear()
+            self._writer_thread = threading.Thread(
+                target=self._publisher_loop, name="signal-ipc-publisher", daemon=True
+            )
+            self._writer_thread.start()
+
+    # @brief Drain and stop the background publisher thread (if any).
+    #
+    #  @param self Parameter description.
+    def _shutdown_writer(self) -> None:
+        """Signal the publisher thread to drain its queue and exit; join it.
+
+        Must be called without holding ``self._lock`` (the thread acquires it).
+        """
+        thread = self._writer_thread
+        if thread is None:
+            return
+        self._stop_writer.set()
+        thread.join()
+        self._writer_thread = None
+        self._queue = None
+
+    # @brief Background publisher loop.
+    #
+    #  @param self Parameter description.
+    def _publisher_loop(self) -> None:
+        """Own the ZMQ socket: drain queued frame batches / events until stopped."""
+        q = self._queue
+        assert q is not None
+        while True:
+            try:
+                kind, payload = q.get(timeout=0.1)
+            except queue.Empty:
+                if self._stop_writer.is_set():
+                    return
+                continue
+            try:
+                if kind == "frames":
+                    self._publish_frames_sync(payload)
+                elif kind == "event":
+                    self._send_event_sync(payload)
+            except Exception:  # pragma: no cover — never let the publisher thread die silently
+                LOGGER.exception("RS485 IPC publisher failed on a %s item", kind)
+            finally:
+                q.task_done()
+
     # @brief Stop.
     #
     #  @param self Parameter description.
     def stop(self) -> None:
         """Close the ZMQ socket.  Idempotent if already stopped."""
+        # Drain + stop the publisher thread before closing the socket it owns
+        # (join needs the lock free).
+        self._shutdown_writer()
         with self._lock:
             if self._socket is not None:
                 try:
@@ -137,7 +200,32 @@ class MeasurementFramePublisher:
     # ------------------------------------------------------------------
 
     def publish_frames(self, frames: list[MeasurementFrame]) -> None:
-        """Publish *frames* on the measurement topic."""
+        """Enqueue *frames* for the background publisher (or send inline).
+
+        Called from the acquisition hot path: when async publish is enabled this
+        only hands the batch to the publisher thread so the serial read loop is
+        not blocked by serialization / socket sends.
+        """
+        if not self.enabled or not frames:
+            return
+        if self._async and self._queue is not None:
+            try:
+                self._queue.put_nowait(("frames", frames))
+            except queue.Full:
+                self.dropped_records += len(frames)
+                now = time.monotonic()
+                if now - self._last_drop_warn_monotonic >= 5.0:
+                    LOGGER.warning(
+                        "RS485 IPC publish queue full (maxsize=%d); dropped %d records so far.",
+                        self._queue_maxsize,
+                        self.dropped_records,
+                    )
+                    self._last_drop_warn_monotonic = now
+            return
+        self._publish_frames_sync(frames)
+
+    def _publish_frames_sync(self, frames: list[MeasurementFrame]) -> None:
+        """Serialize and send *frames* on the measurement topic."""
         if not self.enabled or not frames:
             return
         with self._lock:
@@ -182,18 +270,31 @@ class MeasurementFramePublisher:
         """
         if not self.enabled:
             return
+        # Build the record at call time (captures session/payload state), then
+        # route it through the same queue so only the publisher thread touches
+        # the socket. Falls back to inline send in sync mode.
+        record = {
+            "schema": "rs485.event.v1",
+            "session_id": self.session_id,
+            "event": event,
+            "host_unix_ts": time.time(),
+            "host_ts_iso": datetime.now().isoformat(timespec="milliseconds"),
+            "board_profile": self.board_profile,
+            **payload,
+        }
+        if self._async and self._queue is not None:
+            try:
+                self._queue.put_nowait(("event", record))
+            except queue.Full:
+                pass  # events are diagnostic; never perturb acquisition
+            return
+        self._send_event_sync(record)
+
+    def _send_event_sync(self, record: dict[str, Any]) -> None:
+        """Send a pre-built event record on the event topic (socket-owning thread)."""
         with self._lock:
             if self._socket is None:
                 return
-            record = {
-                "schema": "rs485.event.v1",
-                "session_id": self.session_id,
-                "event": event,
-                "host_unix_ts": time.time(),
-                "host_ts_iso": datetime.now().isoformat(timespec="milliseconds"),
-                "board_profile": self.board_profile,
-                **payload,
-            }
             try:
                 self._socket.send_multipart(
                     [

@@ -12,7 +12,7 @@ import math
 from pathlib import Path
 
 import pytest
-from lsl_bridge.io.csv_sinks import ReferenceCsvSink, TargetCsvSink
+from lsl_bridge.io.csv_sinks import ReferenceCsvSink, TargetCsvSink, apply_timestamp_suffix
 from lsl_bridge.types import ParsedTargetSample, ReferenceSample
 
 # ---------------------------------------------------------------------------
@@ -60,7 +60,7 @@ def _reference_sample(seq: int = 0) -> ReferenceSample:
 class TestTargetCsvSink:
     def test_creates_file_with_header(self, tmp_path: Path):
         path = tmp_path / "target.csv"
-        sink = TargetCsvSink(path, append=False, flush_every_n_rows=1)
+        sink = TargetCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
         sink.close()
         assert path.exists()
         rows = list(csv.DictReader(path.open()))
@@ -68,7 +68,7 @@ class TestTargetCsvSink:
 
     def test_header_matches_fieldnames(self, tmp_path: Path):
         path = tmp_path / "target.csv"
-        sink = TargetCsvSink(path, append=False, flush_every_n_rows=1)
+        sink = TargetCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
         sink.close()
         with path.open() as f:
             header = f.readline().strip().split(",")
@@ -76,7 +76,7 @@ class TestTargetCsvSink:
 
     def test_writes_sample_row(self, tmp_path: Path):
         path = tmp_path / "target.csv"
-        sink = TargetCsvSink(path, append=False, flush_every_n_rows=1)
+        sink = TargetCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
         sample = _target_sample(seq=7)
         sink.write(sample, filtered_units=0.5)
         sink.close()
@@ -87,7 +87,7 @@ class TestTargetCsvSink:
 
     def test_writes_multiple_rows(self, tmp_path: Path):
         path = tmp_path / "target.csv"
-        sink = TargetCsvSink(path, append=False, flush_every_n_rows=1)
+        sink = TargetCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
         for i in range(10):
             sink.write(_target_sample(i), filtered_units=float(i))
         sink.close()
@@ -98,12 +98,12 @@ class TestTargetCsvSink:
     def test_append_mode_preserves_existing_data(self, tmp_path: Path):
         path = tmp_path / "target.csv"
         # First write — 3 rows
-        sink = TargetCsvSink(path, append=False, flush_every_n_rows=1)
+        sink = TargetCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
         for i in range(3):
             sink.write(_target_sample(i), 0.0)
         sink.close()
         # Append — 2 more rows
-        sink = TargetCsvSink(path, append=True, flush_every_n_rows=1)
+        sink = TargetCsvSink(path, write_mode="append", flush_every_n_rows=1)
         for i in range(3, 5):
             sink.write(_target_sample(i), 0.0)
         sink.close()
@@ -112,14 +112,30 @@ class TestTargetCsvSink:
 
     def test_creates_parent_directories(self, tmp_path: Path):
         path = tmp_path / "deep" / "nested" / "target.csv"
-        sink = TargetCsvSink(path, append=False, flush_every_n_rows=1)
+        sink = TargetCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
         sink.close()
         assert path.exists()
+
+    def test_arrival_lsl_time_written_when_provided(self, tmp_path: Path):
+        path = tmp_path / "target.csv"
+        sink = TargetCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
+        sink.write(_target_sample(seq=1), filtered_units=0.0, arrival_lsl_time_s=12.345678901)
+        sink.close()
+        rows = list(csv.DictReader(path.open()))
+        assert float(rows[0]["arrival_lsl_time_s"]) == pytest.approx(12.345678901, abs=1e-9)
+
+    def test_arrival_lsl_time_defaults_to_empty(self, tmp_path: Path):
+        path = tmp_path / "target.csv"
+        sink = TargetCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
+        sink.write(_target_sample(seq=1), filtered_units=0.0)
+        sink.close()
+        rows = list(csv.DictReader(path.open()))
+        assert rows[0]["arrival_lsl_time_s"] == ""
 
     def test_flush_interval_respected(self, tmp_path: Path):
         """Sink should not raise on high flush_every_n_rows values."""
         path = tmp_path / "target.csv"
-        sink = TargetCsvSink(path, append=False, flush_every_n_rows=100)
+        sink = TargetCsvSink(path, write_mode="overwrite", flush_every_n_rows=100)
         for i in range(50):
             sink.write(_target_sample(i), 0.0)
         sink.close()
@@ -135,7 +151,7 @@ class TestTargetCsvSink:
 class TestReferenceCsvSink:
     def test_creates_file_with_header(self, tmp_path: Path):
         path = tmp_path / "reference.csv"
-        sink = ReferenceCsvSink(path, append=False, flush_every_n_rows=1)
+        sink = ReferenceCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
         sink.close()
         assert path.exists()
         with path.open() as f:
@@ -144,7 +160,7 @@ class TestReferenceCsvSink:
 
     def test_writes_sample_row(self, tmp_path: Path):
         path = tmp_path / "reference.csv"
-        sink = ReferenceCsvSink(path, append=False, flush_every_n_rows=1)
+        sink = ReferenceCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
         sample = _reference_sample(seq=3)
         sink.write(sample, lsl_timestamp_s=0.006)
         sink.close()
@@ -155,7 +171,7 @@ class TestReferenceCsvSink:
 
     def test_nan_frequency_written_as_empty_string(self, tmp_path: Path):
         path = tmp_path / "reference.csv"
-        sink = ReferenceCsvSink(path, append=False, flush_every_n_rows=1)
+        sink = ReferenceCsvSink(path, write_mode="overwrite", flush_every_n_rows=1)
         # Build the sample directly with nan frequency (slots=True means no __dict__)
         sample = ReferenceSample(
             sequence=0,
@@ -179,9 +195,42 @@ class TestReferenceCsvSink:
 
     def test_writes_multiple_rows(self, tmp_path: Path):
         path = tmp_path / "reference.csv"
-        sink = ReferenceCsvSink(path, append=False, flush_every_n_rows=5)
+        sink = ReferenceCsvSink(path, write_mode="overwrite", flush_every_n_rows=5)
         for i in range(20):
             sink.write(_reference_sample(i), float(i) * 0.002)
         sink.close()
         rows = list(csv.DictReader(path.open()))
         assert len(rows) == 20
+
+
+# ---------------------------------------------------------------------------
+# apply_timestamp_suffix
+# ---------------------------------------------------------------------------
+
+
+class TestApplyTimestampSuffix:
+    def test_inserts_suffix_before_extension(self, tmp_path: Path):
+        path = tmp_path / "target_handgrip_samples_v2.csv"
+        result = apply_timestamp_suffix(path, "20260612_143022")
+        assert result == tmp_path / "target_handgrip_samples_v2_20260612_143022.csv"
+
+
+# ---------------------------------------------------------------------------
+# write_mode="timestamped"
+# ---------------------------------------------------------------------------
+
+
+class TestTimestampedWriteMode:
+    def test_timestamped_mode_writes_fresh_header(self, tmp_path: Path):
+        path = tmp_path / "target_20260612_143022.csv"
+        path.write_text("stale content\n")
+        sink = TargetCsvSink(path, write_mode="timestamped", flush_every_n_rows=1)
+        sink.close()
+        with path.open() as f:
+            header = f.readline().strip().split(",")
+        assert header == TargetCsvSink.FIELDNAMES
+
+    def test_invalid_write_mode_raises(self, tmp_path: Path):
+        path = tmp_path / "target.csv"
+        with pytest.raises(ValueError):
+            TargetCsvSink(path, write_mode="bogus", flush_every_n_rows=1)

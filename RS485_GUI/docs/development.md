@@ -196,7 +196,7 @@ If changing any of these, update the bridge and root contract docs in the same c
 4. Add tests in `tests/unit/test_config.py`.
 5. Document the key in `docs/configuration.md`.
 
-Do not use `@hydra.main` in this app. The loader deliberately avoids Hydra global runtime initialization due to NiceGUI re-execution behavior.
+Do not use `@hydra.main` in this app. The loader deliberately avoids Hydra global runtime initialization since this app is a simple CLI/script entry point, not a Hydra-managed run.
 
 ## Manual validation after development
 

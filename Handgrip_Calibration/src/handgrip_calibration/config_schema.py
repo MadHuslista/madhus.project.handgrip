@@ -27,6 +27,12 @@ from typing import Any
 
 log = logging.getLogger(__name__)
 
+#: Root of the Handgrip_Calibration package checkout (parent of ``src/``).
+#: Used to anchor package-relative defaults (output dir, component config
+#: copies, ``conf/`` paths) so the CLI behaves the same whether invoked from
+#: the repo root or from within ``Handgrip_Calibration/``.
+PACKAGE_ROOT = Path(__file__).resolve().parents[2]
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Exceptions
@@ -812,14 +818,21 @@ class SessionConfig:
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any] | None) -> SessionConfig:
         data = data or {}
+        root_dir = Path(str(data.get("root_dir", "data/calibration"))).expanduser()
+        if not root_dir.is_absolute():
+            root_dir = PACKAGE_ROOT / root_dir
+        copy_component_configs = []
+        for p in data.get("copy_component_configs", []):
+            cfg_path = Path(str(p)).expanduser()
+            if not cfg_path.is_absolute():
+                cfg_path = PACKAGE_ROOT / cfg_path
+            copy_component_configs.append(cfg_path)
         return cls(
-            root_dir=Path(str(data.get("root_dir", "data/calibration"))).expanduser(),
+            root_dir=root_dir,
             operator=str(data.get("operator", "unknown")),
             purpose=str(data.get("purpose", "model_selection_handgrip_calibration")),
             notes=str(data.get("notes", "")),
-            copy_component_configs=[
-                Path(str(p)).expanduser() for p in data.get("copy_component_configs", [])
-            ],
+            copy_component_configs=copy_component_configs,
         )
 
 
@@ -899,7 +912,10 @@ def load_config(path: str | Path) -> AppConfig:
         directory becomes the config search path and the file stem is the
         config name.
     """
-    path = Path(path).resolve()
+    path = Path(path)
+    if not path.is_absolute() and not path.exists() and (PACKAGE_ROOT / path).exists():
+        path = PACKAGE_ROOT / path
+    path = path.resolve()
 
     data: dict[str, Any]
     try:
@@ -928,6 +944,28 @@ def load_config(path: str | Path) -> AppConfig:
     if not isinstance(data, Mapping):
         raise ConfigError(f"{path} must contain a YAML mapping at the top level")
     return AppConfig.from_dict(data)
+
+
+def resolve_session_dir(path: str | Path) -> Path:
+    # @brief Resolve a session directory argument, cwd-first with a
+    #  Handgrip_Calibration/-relative fallback.
+    #  @param path Session directory as given on the CLI.
+    #  @return Absolute Path to the session directory.
+    """Resolve a ``session_dir`` CLI argument.
+
+    Relative paths are resolved against the current working directory first
+    (preserving existing behavior). If that location doesn't exist, fall back
+    to resolving against ``PACKAGE_ROOT`` (the ``Handgrip_Calibration/``
+    directory), so paths like ``data/calibration/<session_id>`` work the same
+    whether the command is run from the repo root or from within
+    ``Handgrip_Calibration/``.
+    """
+    session_dir = Path(path)
+    if not session_dir.is_absolute() and not session_dir.exists():
+        fallback = PACKAGE_ROOT / session_dir
+        if fallback.exists():
+            session_dir = fallback
+    return session_dir.resolve()
 
 
 def dump_yaml(data: Mapping[str, Any], path: str | Path) -> None:

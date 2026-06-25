@@ -102,15 +102,17 @@ Run from repo root:
 uv sync
 ```
 
-Then verify both tools:
+Then verify both tools (all `uv run ha-...` commands in this workflow can be
+run from the repo root or from `Handgrip_Analysis/` — `data/...` and
+`conf/...` paths resolve to `Handgrip_Analysis/data/...` and
+`Handgrip_Analysis/conf/...` either way):
 
 ```bash
-cd Handgrip_Analysis
 uv run ha-stage --help
 uv run ha-run-all --help
 uv run ha-stage6-design --help
 
-cd ../LSL_Bridge
+cd LSL_Bridge
 uv run lsl-bridge --help
 ```
 
@@ -252,8 +254,6 @@ stage1,cold_start,startup,trial01,20260604,../calibration_signals/20260604_stage
 ### Execute Stage 1
 
 ```bash
-cd Handgrip_Analysis
-
 uv run ha-stage1 \
   manifest=data/manifests/production_analysis_manifest.csv \
   outdir=data/analysis_results/production/stage1 \
@@ -348,8 +348,6 @@ stage2,rest_after_warmup,rest,trial01,20260604,../calibration_signals/20260604_s
 ### Execute Stage 2
 
 ```bash
-cd Handgrip_Analysis
-
 uv run ha-stage2 \
   manifest=data/manifests/production_analysis_manifest.csv \
   outdir=data/analysis_results/production/stage2 \
@@ -430,8 +428,6 @@ stage3,loaded_40N,loaded_hold,trial01,20260604,../calibration_signals/20260604_s
 ### Execute Stage 3
 
 ```bash
-cd Handgrip_Analysis
-
 uv run ha-stage3 \
   manifest=data/manifests/production_analysis_manifest.csv \
   outdir=data/analysis_results/production/stage3 \
@@ -532,8 +528,6 @@ stage4,sustained_hold,sustained_hold,trial01,20260604,../calibration_signals/202
 ### Execute Stage 4
 
 ```bash
-cd Handgrip_Analysis
-
 uv run ha-stage4 \
   manifest=data/manifests/production_analysis_manifest.csv \
   outdir=data/analysis_results/production/stage4 \
@@ -634,8 +628,6 @@ stage5,battery_power,interference_rest,trial01,20260604,../calibration_signals/2
 ### Execute Stage 5
 
 ```bash
-cd Handgrip_Analysis
-
 uv run ha-stage5 \
   manifest=data/manifests/production_analysis_manifest.csv \
   outdir=data/analysis_results/production/stage5 \
@@ -713,8 +705,6 @@ You can run each stage separately, or run them as a batch.
 ### Recommended batch command
 
 ```bash
-cd Handgrip_Analysis
-
 uv run ha-run-all \
   manifest=data/manifests/production_analysis_manifest.csv \
   base_outdir=data/analysis_results/production \
@@ -815,8 +805,6 @@ Do not change weights unless you intentionally change the clinical/product prior
 ### Command
 
 ```bash
-cd Handgrip_Analysis
-
 uv run ha-stage6-design \
   manifest=data/manifests/production_analysis_manifest.csv \
   outdir=data/analysis_results/production/stage6 \
@@ -1092,8 +1080,6 @@ stage4,deployed_fast_filtered,fast_max,trial01,20260604,../calibration_signals/2
 ### Run validation stages
 
 ```bash
-cd Handgrip_Analysis
-
 uv run ha-run-all \
   manifest=data/manifests/deployed_filter_validation_manifest.csv \
   base_outdir=data/analysis_results/deployed_filter_validation \

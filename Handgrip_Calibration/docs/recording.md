@@ -57,6 +57,7 @@ Do not start the protocol until all gates pass:
 | Reference zero noise   | low enough that a 3 s hold passes `max_hold_reference_std_N: 0.5`         |
 | Force response sign    | reference and target move monotonically in the same physical direction     |
 | No target parser drops | `target_status` does not show persistent not-ready/overflow conditions     |
+| Reference sync offset  | measured and compensated via `manual_reference_shift_s` (see below)         |
 
 These thresholds correspond to the `QualityConfig` defaults in the protocol YAML:
 
@@ -74,6 +75,29 @@ quality:
   min_hold_target_samples: 20
   min_hold_reference_samples: 100
 ```
+
+### Capture preflight and reference-offset measurement
+
+The reference stream is stamped at GUI read time and lags the directly-connected target by a stable relay offset (see [docs/architecture/timestamping-and-synchronization.md](../../docs/architecture/timestamping-and-synchronization.md)). Before recording — and after **any** change to the physical or runtime setup (cabling, ports, host, baud, rates) — run the calibration preflight to validate the capture and obtain the offset:
+
+**1. Enable diagnostics in the viewer:** 
+
+- Set `diagnostics.enabled=true` in the viewer config and launching the viewer.
+
+**2. Run the preflight script against a short diagnostics capture:**
+
+```bash
+# from the Handgrip_Calibration directory, against a short diagnostics capture
+uv run python scripts/calibration_preflight.py \
+  --viewer-session ../diagnostics/<ts> \
+  --bridge-target-csv ../LSL_Bridge/data/target_*.csv \
+  --bridge-reference-csv ../LSL_Bridge/data/reference_*.csv \
+  --gui-ndjson ../RS485_GUI/logs/raw_signal.ndjson
+```
+
+It checks that GUI/Bridge/Viewer diagnostic + logging config is correct and the logs are from the current binary, confirms the timing issues are absent, and prints the exact `manual_reference_shift_s` (plus the file and key) to set in `LSL_Viewer/conf/config.yaml`. 
+
+The shift is a host-read-latency compensation, not acquisition truth, so it must be re-measured per setup.
 
 ## Recommended acquisition board configuration for recording
 

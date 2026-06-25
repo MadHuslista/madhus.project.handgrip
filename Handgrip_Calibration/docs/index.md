@@ -33,6 +33,7 @@ Before running calibration:
 | Understand session output files (events, quality, provenance)          | [Handgrip_Calibration/docs/recording.md](recording.md)                                       |
 | Interpret model selection (metrics, residuals, ranking)                | [Handgrip_Calibration/docs/fitting-and-model-selection.md](fitting-and-model-selection.md)   |
 | Read reports, plots, and JSON artifacts                                | [Handgrip_Calibration/docs/reports-and-outputs.md](reports-and-outputs.md)                   |
+| Understand every report metric, model, and plot (non-expert reference)  | [Handgrip_Calibration/docs/calibration-report-reference.md](calibration-report-reference.md) |
 | Understand CLI-to-module internals                                     | [Handgrip_Calibration/docs/architecture.md](architecture.md)                                 |
 | Add protocols, models, or report sections                              | [Handgrip_Calibration/docs/development.md](development.md)                                   |
 
@@ -44,8 +45,11 @@ Before running calibration:
 
 ## Minimal command path
 
+Run from the repo root or from `Handgrip_Calibration/` — `conf/...yaml` and
+`data/calibration/<session_id>` resolve the same either way, and recorded
+sessions always land under `Handgrip_Calibration/data/calibration/`.
+
 ```bash
-cd Handgrip_Calibration
 uv run handgrip-cal preflight --config conf/protocol_static_reversible_staircase_v3.yaml
 uv run handgrip-cal record    --config conf/protocol_static_reversible_staircase_v3.yaml
 uv run handgrip-cal fit       data/calibration/<session_id> \

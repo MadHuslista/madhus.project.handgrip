@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from . import report_interpretation as ri
 from .export import ensure_dir, read_ndjson
 from .protocol_analysis import (
     creep_zero_return_summary,
@@ -395,6 +396,7 @@ def generate_report(session_dir: str | Path) -> Path:
     """
 
     session_dir = Path(session_dir)
+    ri.configure_doc_link(session_dir)
     manifest = _load_yaml(session_dir / "session_manifest.yaml")
     fit = _load_json(session_dir / "fit_result.json") or {}
     validation = _load_json(session_dir / "holdout_validation.json") or {}
@@ -474,6 +476,8 @@ def generate_report(session_dir: str | Path) -> Path:
         "",
         "## 1. Reference-chain verification summary",
         "",
+        ri.SECTION_INTROS["1. Reference-chain verification summary"],
+        "",
         "This section verifies acquisition integrity before treating the RS485 reference as ground truth.",
         "",
         _table(
@@ -492,11 +496,17 @@ def generate_report(session_dir: str | Path) -> Path:
             ],
         ),
         "",
+        *ri.ref_block(
+            "sec.reference_chain", interpretation=ri.interpret_stream_health(stream_table)
+        ),
         "### Event counts",
         "",
         _table(counts_table, ["event", "count"]),
         "",
+        *ri.ref_block("sec.events", interpretation=ri.interpret_event_completeness(counts_table)),
         "## 2. Static fit summary",
+        "",
+        ri.SECTION_INTROS["2. Static fit summary"],
         "",
         _dict_table(hold_summary),
         "",
@@ -519,30 +529,43 @@ def generate_report(session_dir: str | Path) -> Path:
         "",
         "## 3. Holdout accuracy summary",
         "",
-        "Use this section only for an independent holdout session validated with `handgrip-cal validate-holdout`.",
+        ri.SECTION_INTROS["3. Holdout accuracy summary"],
         "",
-        "### Holdout validation result",
-        "",
-        "```json",
-        _safe_json_excerpt(validation, 4000),
-        "```",
-        "",
-        "### Holdout predictions",
-        "",
-        _table(
-            holdout_predictions,
+        *ri.ref_block("sec.holdout", interpretation=ri.interpret_holdout(validation)),
+        *(
             [
-                "trial_id",
-                "target_force_nominal_N",
-                "direction",
-                "reference_force_median_N",
-                "predicted_force_N",
-                "holdout_residual_N",
-                "accepted_by_quality",
-            ],
+                "### Holdout validation result",
+                "",
+                "```json",
+                _safe_json_excerpt(validation, 4000),
+                "```",
+                "",
+                "### Holdout predictions",
+                "",
+                _table(
+                    holdout_predictions,
+                    [
+                        "trial_id",
+                        "target_force_nominal_N",
+                        "direction",
+                        "reference_force_median_N",
+                        "predicted_force_N",
+                        "holdout_residual_N",
+                        "accepted_by_quality",
+                    ],
+                ),
+            ]
+            if validation
+            else [
+                "> **Holdout validation not yet performed.**",
+                "> Run `handgrip-cal validate-holdout <holdout_dir> --model <this_dir>/fit_result.json`",
+                "> to populate this section and upgrade this report to the integrated view.",
+            ]
         ),
         "",
         "## 4. Hysteresis / reversibility summary",
+        "",
+        ri.SECTION_INTROS["4. Hysteresis / reversibility summary"],
         "",
         _table(
             hyst,
@@ -556,6 +579,8 @@ def generate_report(session_dir: str | Path) -> Path:
         ),
         "",
         "## 5. Creep / zero-return summary",
+        "",
+        ri.SECTION_INTROS["5. Creep / zero-return summary"],
         "",
         _table(
             creep,
@@ -573,15 +598,21 @@ def generate_report(session_dir: str | Path) -> Path:
         "",
         "## 6. Dynamic validation summary",
         "",
+        ri.SECTION_INTROS["6. Dynamic validation summary"],
+        "",
         _table(
             dyn, ["trial_type", "label", "index", "duration_s", "peak_force_N", "speed_N_per_s"]
         ),
         "",
         "## 7. Previous calibration comparison",
         "",
+        ri.SECTION_INTROS["7. Previous calibration comparison"],
+        "",
         "Not computed automatically in this report. Compare sessions by running the same holdout protocol against the old and new `fit_result.json` files, then compare `holdout_validation.json` metrics: RMSE, max absolute error, bias, zero return, and hysteresis.",
         "",
         "## 8. Firmware deployment recommendation",
+        "",
+        ri.SECTION_INTROS["8. Firmware deployment recommendation"],
         "",
         f"**Recommendation:** `{deployment_recommendation}`",
         "",
@@ -593,10 +624,20 @@ def generate_report(session_dir: str | Path) -> Path:
         _safe_json_excerpt(firmware, 4000),
         "```",
         "",
+        *ri.ref_block("firmware.hx711_scale_offset", interpretation=ri.interpret_firmware(firmware)),
         "## Model candidate ranking",
+        "",
+        ri.SECTION_INTROS["Model candidate ranking"],
         "",
         _candidate_table(candidates),
         "",
+        *(
+            ["**Selected-model read-out:**", ""]
+            + [f"- {line}" for line in ri.interpret_metrics(fit)]
+            + ["", f"- {ri.interpret_selection(fit, candidates)}", ""]
+            if fit
+            else []
+        ),
         "## Selected fit result JSON excerpt",
         "",
         "```json",
@@ -625,9 +666,19 @@ def generate_report(session_dir: str | Path) -> Path:
         rel = plot.relative_to(session_dir)
         lines.append(f"![{plot.stem}]({rel.as_posix()})")
         lines.append("")
+        lines.extend(
+            ri.ref_block(
+                f"plot.{plot.stem}",
+                summary=ri.PLOT_SUMMARIES.get(plot.stem, ""),
+                interpretation=ri.interpret_plot(plot.stem, fit, dataset, candidates),
+            )
+        )
     lines.extend(
         [
             "## Interpretation guidance",
+            "",
+            f"For full definitions and how-to-read guidance for every metric, model, and plot "
+            f"above, see the {ri.doc_link('sec.summary', 'Calibration Report Reference')}.",
             "",
             "- Use static staircase holds for primary model fitting.",
             "- Use low-force refinement only if low-force residuals are systematic and reference noise is acceptable.",

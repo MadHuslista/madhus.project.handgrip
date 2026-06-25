@@ -112,6 +112,8 @@ CSV sinks write the samples the bridge publishes.
 | `TargetCsvSink`    | `csv.target.path`    | every row     | Includes raw line and filtered target value.                                             |
 | `ReferenceCsvSink` | `csv.reference.path` | every 25 rows | Includes reference mode, signal key, timestamp source, configured frequency, session ID. |
 
+By default (`write_mode: timestamped`), each run writes to a fresh file with `_<YYYYMMDD_HHMMSS>` inserted before the extension of `csv.*.path`, using one timestamp shared between both sinks. `overwrite` and `append` modes are also available — see [LSL_Bridge/docs/configuration.md](configuration.md).
+
 CSV persistence is useful for debugging. Calibration workflows should still use dedicated calibration session recordings when available.
 
 ## Processing path

@@ -139,7 +139,7 @@ The bridge event stream is intentionally separate from calibration trial markers
 Target CSV field order:
 
 ```text
-host_unix_time_ns,lsl_timestamp_s,seq,device_clock_us,target_raw_count,target_current_units,target_filtered_units,target_status,raw_line
+host_unix_time_ns,lsl_timestamp_s,seq,device_clock_us,target_raw_count,target_current_units,target_filtered_units,target_status,raw_line,arrival_lsl_time_s
 ```
 
 Reference CSV field order:

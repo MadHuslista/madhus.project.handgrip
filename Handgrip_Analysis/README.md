@@ -11,7 +11,9 @@ It is file-based by design. Use it after acquisition/calibration data exists, no
 New recordings can be done with the `LSL_Bridge`. 
 After recording, copy the generated CSV files to `Handgrip_Analysis/data/calibration_signals/` and update the corresponding manifest in `Handgrip_Analysis/data/manifests/` before running the analysis.
 
-From `Handgrip_Analysis/`:
+All `uv run ha-...` commands below can be run from the repo root or from
+`Handgrip_Analysis/` — `data/...` and `conf/...` paths resolve to
+`Handgrip_Analysis/data/...` and `Handgrip_Analysis/conf/...` either way:
 
 ```bash
 uv run ha-run-all --help
@@ -35,7 +37,7 @@ uv run ha-run-all \
   
 Initial Handgrip recordings done following [Handgrip_Analysis/docs/stages.md](docs/stages.md) are available in `data/calibration_signals/` and indexed in `data/manifests/`.
 
-To observe the analysis results on these example recordings, go to `Handgrip_Analysis` and run:
+To observe the analysis results on these example recordings, run (from the repo root or `Handgrip_Analysis/`):
 
 ```bash
 # Per-stage analysis:
@@ -123,13 +125,14 @@ Handgrip_Analysis/
 
 ## Tests
 
-Run from `Handgrip_Analysis/` after dependencies are installed:
+Run from `Handgrip_Analysis/` after dependencies are installed (`uv run pytest`
+discovers `tests/` relative to cwd, so this must run from `Handgrip_Analysis/`):
 
 ```bash
 uv run pytest
 ```
 
-For a quick CLI smoke check:
+For a quick CLI smoke check (can run from the repo root or `Handgrip_Analysis/`):
 
 ```bash
 uv run ha-run-all --help

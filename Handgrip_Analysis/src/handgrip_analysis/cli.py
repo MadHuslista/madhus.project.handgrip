@@ -26,6 +26,7 @@ from typing import Any
 from omegaconf import OmegaConf
 
 from ._logging import setup_logging
+from ._paths import resolve_existing_path, resolve_output_path
 from .domain import HandgripAnalysisError, StageConfig
 from .manifest import load_manifest
 from .pipeline import run_manifest_analysis
@@ -161,7 +162,7 @@ def _stage_config_from_cli(stage: str, args: argparse.Namespace, overrides: dict
     elif "filter_config" in overrides:
         merged["filter_config"] = overrides["filter_config"]
     elif stage == "stage6" and "filter_config" not in merged:
-        default_filter = Path("conf/filters/candidates.yaml")
+        default_filter = resolve_existing_path("conf/filters/candidates.yaml")
         if default_filter.exists():
             merged["filter_config"] = str(default_filter)
 
@@ -243,9 +244,9 @@ def stage_main(argv: list[str] | None = None) -> int:
     try:
         cfg = _stage_config_from_cli(stage, args, overrides)
         paths = run_manifest_analysis(
-            manifest_path=manifest,
+            manifest_path=resolve_existing_path(manifest),
             stage=stage,
-            outdir=outdir,
+            outdir=resolve_output_path(outdir),
             cfg=cfg,
             condition=condition,
             trial_type=trial_type,
@@ -313,6 +314,8 @@ def run_all_main(argv: list[str] | None = None) -> int:
     log_file = _nested_get(overrides, ("logging", "file"))
     setup_logging(level=str(log_level), log_file=log_file if log_file else None)
     try:
+        manifest = resolve_existing_path(manifest)
+        base_outdir = resolve_output_path(base_outdir)
         if stages_raw:
             stages = [normalize_stage(part.strip()) for part in str(stages_raw).split(",") if part.strip()]
         else:
@@ -320,7 +323,7 @@ def run_all_main(argv: list[str] | None = None) -> int:
 
         completed: dict[str, dict[str, str]] = {}
         for stage in stages:
-            stage_outdir = Path(base_outdir) / stage
+            stage_outdir = base_outdir / stage
             cfg = _stage_config_from_cli(stage, args, overrides)
             paths = run_manifest_analysis(
                 manifest_path=manifest,

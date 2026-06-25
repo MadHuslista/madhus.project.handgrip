@@ -210,12 +210,18 @@ Any `type` outside this set raises at build time. Add a new type with `tests/uni
 | ---------------------------------- | ------------------------------------------------ | -------------------------------------- |
 | `csv.target.enabled`               | `true`                                           | Writes target samples to local CSV.    |
 | `csv.target.path`                  | `LSL_Bridge/data/target_handgrip_samples_v2.csv` | Target CSV destination.                |
-| `csv.target.append`                | `false`                                          | Truncate vs append.                    |
+| `csv.target.write_mode`            | `timestamped`                                   | `timestamped` \| `append` \| `overwrite`. See below. |
 | `csv.target.flush_every_n_rows`    | `1`                                              | Low-latency target persistence.        |
 | `csv.reference.enabled`            | `true`                                           | Writes reference samples to local CSV. |
 | `csv.reference.path`               | `LSL_Bridge/data/reference_rs485_samples_v2.csv` | Reference CSV destination.             |
-| `csv.reference.append`             | `false`                                          | Truncate vs append.                    |
+| `csv.reference.write_mode`         | `timestamped`                                   | `timestamped` \| `append` \| `overwrite`. See below. |
 | `csv.reference.flush_every_n_rows` | `25`                                             | Batches higher-rate reference writes.  |
+
+`csv.target.write_mode` / `csv.reference.write_mode` accept:
+
+- `timestamped` (default) — start of run, `_<YYYYMMDD_HHMMSS>` is inserted before the file extension of `csv.*.path` (e.g. `target_handgrip_samples_v2_20260612_143022.csv`), and the file is written fresh with a header. One run timestamp is shared between the target and reference sinks so the pair stays correlated.
+- `overwrite` — truncate `csv.*.path` and write a fresh header.
+- `append` — append rows to `csv.*.path`, writing a header only if the file is empty.
 
 See [LSL_Bridge/docs/architecture.md](architecture.md) for CSV sink ownership and [LSL_Bridge/docs/stream-contracts.md](stream-contracts.md) for CSV field meanings.
 

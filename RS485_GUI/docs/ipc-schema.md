@@ -37,7 +37,7 @@ ipc:
 | Acquisition loop | Worker publishes frames at full acquisition rate before UI filtering when `publish_after_max_rate_filter=false`. |
 | Disconnect       | Publisher closes when `stop_on_disconnect=true`.                                                                 |
 
-The delayed bind is intentional: NiceGUI can re-execute the application module while serving pages, and binding during construction can cause false port-conflict errors.
+The delayed bind is intentional: the IPC endpoint binds on Connect so it is only held while a board session is active.
 
 ## Measurement topic
 

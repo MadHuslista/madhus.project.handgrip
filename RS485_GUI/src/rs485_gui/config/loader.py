@@ -3,13 +3,11 @@
 ``load_app_config`` is the single entry point for configuration:
   1. Loads ``config/config.yaml`` relative to this file's package root.
   2. Merges OmegaConf dotlist overrides from CLI argv.
-  3. Calls ``configure_logging`` exactly once (idempotent guard prevents
-     duplicate handlers on NiceGUI's second script execution).
+  3. Calls ``configure_logging`` once per process.
 
-``the Hydra main decorator`` is deliberately NOT used — NiceGUI re-executes the script
-when serving the root page, which would trigger a ``GlobalHydra``
-re-initialisation crash.  Only ``OmegaConf.load`` / ``OmegaConf.merge``
-are used, so no Hydra singleton is ever created.
+``@hydra.main`` is deliberately NOT used — this app is a simple CLI/script
+entry point, so config is loaded directly via ``OmegaConf.load`` /
+``OmegaConf.merge`` without a Hydra-managed run.
 """
 
 from __future__ import annotations
@@ -25,12 +23,6 @@ LOGGER = logging.getLogger(__name__)
 # config/config.yaml is four levels above this file:
 #   src/rs485_gui/config/loader.py  →  project_root/config/config.yaml
 _CONFIG_PATH = Path(__file__).parent.parent.parent.parent / "config" / "config.yaml"
-
-# Idempotency sentinel: set to True once configure_logging has run so that
-# NiceGUI's second script execution does not re-add duplicate handlers.
-# Using a module-level flag rather than checking root.handlers avoids false
-# positives from pytest's own log capture handler.
-_LOGGING_CONFIGURED: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -72,7 +64,6 @@ def load_app_config(argv: list[str] | None = None) -> DictConfig:
     if overrides:
         cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist(overrides))
 
-    # Configure logging exactly once per process
     configure_logging(cfg)
 
     if ignored:
@@ -85,15 +76,7 @@ def load_app_config(argv: list[str] | None = None) -> DictConfig:
 #
 #  @param cfg Parameter description.
 def configure_logging(cfg: DictConfig) -> None:
-    """Set up the root logger with a stream handler and optional file handler.
-
-    Idempotent: if handlers are already attached to the root logger the
-    function returns immediately.  This prevents duplicate log entries when
-    NiceGUI re-executes the script on page serving.
-    """
-    global _LOGGING_CONFIGURED
-    if _LOGGING_CONFIGURED:
-        return  # already configured — NiceGUI re-execution guard
+    """Set up the root logger with a stream handler and optional file handler."""
     root = logging.getLogger()
 
     # Prefer logging.root_level (new) over app.log_level (legacy alias)
@@ -124,8 +107,6 @@ def configure_logging(cfg: DictConfig) -> None:
         file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         root.addHandler(file_handler)
-
-    _LOGGING_CONFIGURED = True
 
     # Apply per-module level overrides (new in v0.2)
     try:

@@ -7,7 +7,7 @@ import logging
 import sys
 from pathlib import Path
 
-from .config_schema import ConfigError, load_config
+from .config_schema import ConfigError, load_config, resolve_session_dir
 from .fitting import fit_session
 from .logging_setup import configure_logging
 from .lsl_io import preflight_streams
@@ -71,24 +71,26 @@ def _cmd_record(args: argparse.Namespace) -> int:
 
 def _cmd_segment(args: argparse.Namespace) -> int:
     cfg = load_config(args.config) if args.config else None
+    session_dir = resolve_session_dir(args.session_dir)
     if args.dry_run:
-        log.info("[DRY-RUN] Would segment accepted holds in %s", args.session_dir)
+        log.info("[DRY-RUN] Would segment accepted holds in %s", session_dir)
         return 0
-    dataset = segment_accepted_holds(args.session_dir, config=cfg)
+    dataset = segment_accepted_holds(session_dir, config=cfg)
     log.info(
         "Segmented %d accepted holds -> %s",
         len(dataset),
-        Path(args.session_dir) / "calibration_dataset.csv",
+        session_dir / "calibration_dataset.csv",
     )
     return 0
 
 
 def _cmd_fit(args: argparse.Namespace) -> int:
     cfg = load_config(args.config)
+    session_dir = resolve_session_dir(args.session_dir)
     if args.dry_run:
-        log.info("[DRY-RUN] Would fit models for session in %s", args.session_dir)
+        log.info("[DRY-RUN] Would fit models for session in %s", session_dir)
         return 0
-    dataset, result = fit_session(args.session_dir, cfg)
+    dataset, result = fit_session(session_dir, cfg)
     log.info(
         "Fit complete — %d points, model=%s", result.metrics.n_points, result.selected_model_id
     )
@@ -115,9 +117,13 @@ def _cmd_fit(args: argparse.Namespace) -> int:
 
 def _cmd_validate_holdout(args: argparse.Namespace) -> int:
     cfg = load_config(args.config)
-    result = validate_session_against_model(args.session_dir, args.model, cfg)
+    session_dir = resolve_session_dir(args.session_dir)
+    primary_session_dir = Path(args.model).resolve().parent
+    result = validate_session_against_model(
+        session_dir, args.model, cfg, primary_session_dir=primary_session_dir
+    )
     metrics = result.get("metrics", {})
-    log.info("Holdout validation complete: %s", Path(args.session_dir) / "holdout_validation.json")
+    log.info("Holdout validation complete: %s", session_dir / "holdout_validation.json")
     log.info("  selected_model=%s", result.get("selected_model_id"))
     log.info("  passes_holdout_gate=%s", result.get("passes_holdout_gate"))
     log.info(
@@ -127,21 +133,25 @@ def _cmd_validate_holdout(args: argparse.Namespace) -> int:
         metrics.get("bias_N"),
     )
     log.info("  recommendation=%s", result.get("firmware_deployment_recommendation"))
+    report_path = generate_report(primary_session_dir)
+    log.info("Integrated report regenerated: %s", report_path)
     return 0
 
 
 def _cmd_report(args: argparse.Namespace) -> int:
+    session_dir = resolve_session_dir(args.session_dir)
     if args.dry_run:
-        log.info("[DRY-RUN] Would generate report for %s", args.session_dir)
+        log.info("[DRY-RUN] Would generate report for %s", session_dir)
         return 0
-    path = generate_report(args.session_dir)
+    path = generate_report(session_dir)
     log.info("Report written: %s", path)
     return 0
 
 
 def _cmd_import_xdf(args: argparse.Namespace) -> int:
     cfg = load_config(args.config)
-    out = import_xdf(args.xdf_path, args.session_dir, cfg, session_id=args.session_id)
+    session_dir = resolve_session_dir(args.session_dir)
+    out = import_xdf(args.xdf_path, session_dir, cfg, session_id=args.session_id)
     log.info("Imported XDF into canonical session files: %s", out)
     return 0
 

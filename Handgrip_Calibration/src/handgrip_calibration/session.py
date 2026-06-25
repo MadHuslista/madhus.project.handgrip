@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-from .config_schema import AppConfig
+from .config_schema import AppConfig, resolve_session_dir
 from .export import ensure_dir
 
 log = logging.getLogger(__name__)
@@ -74,8 +74,18 @@ class SessionManager:
         #  @param session_id Optional explicit session id.
         #  @return None.
         self.config = config
-        self.session_id = session_id or self.make_session_id()
-        root = config.session.root_dir / self.session_id
+        if session_id:
+            sid = Path(session_id)
+            if sid.is_absolute() or len(sid.parts) > 1:
+                # Multi-component or absolute path — resolve like other CLI commands do
+                root = resolve_session_dir(sid)
+                self.session_id = root.name
+            else:
+                self.session_id = session_id
+                root = config.session.root_dir / self.session_id
+        else:
+            self.session_id = self.make_session_id()
+            root = config.session.root_dir / self.session_id
         self.paths = SessionPaths(
             root=root,
             manifest=root / "session_manifest.yaml",

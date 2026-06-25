@@ -22,6 +22,7 @@ from omegaconf import DictConfig
 
 from lsl_viewer.core.replay import window_from_replay
 from lsl_viewer.core.stream import build_streams, fetch_live_window
+from lsl_viewer.diagnostics import DiagnosticsRecorder, compute_tick_metrics
 from lsl_viewer.types import (
     DualReplayData,
     DualWindow,
@@ -128,6 +129,7 @@ def _live_tick(
     state: ViewerState,
     ch: ChartHandles,
     validate_reference: bool,
+    recorder: DiagnosticsRecorder | None = None,
 ) -> None:
     # @brief Live-mode timer callback.
     # @param cfg Hydra configuration.
@@ -138,6 +140,7 @@ def _live_tick(
     # @param state Viewer state.
     # @param ch Chart handle bundle.
     # @param validate_reference Whether reference validation is enabled.
+    # @param recorder Optional diagnostics recorder (inert when disabled).
     if state.live_paused:
         return
 
@@ -148,6 +151,10 @@ def _live_tick(
     live = fetch_live_window(target_stream, reference_stream, cfg, target_layout, reference_layout)
     if live is None:
         return
+
+    lsl_now = _lsl_local_clock()
+    target_new_samples = int(target_stream.n_new_samples)  # type: ignore[attr-defined]
+    reference_new_samples = int(reference_stream.n_new_samples)  # type: ignore[attr-defined]
 
     live = _slice_dual_after_cutoffs(live, state)
     if live is None:
@@ -161,9 +168,37 @@ def _live_tick(
         source_name=f"{target_stream.name} + {reference_stream.name}",  # type: ignore[attr-defined]
         source_type="dual_native_lsl",
         mode="live_ref" if validate_reference else "live",
-        target_new_samples=int(target_stream.n_new_samples),  # type: ignore[attr-defined]
-        reference_new_samples=int(reference_stream.n_new_samples),  # type: ignore[attr-defined]
+        target_new_samples=target_new_samples,
+        reference_new_samples=reference_new_samples,
     )
+
+    if recorder is not None and recorder.enabled:
+        recorder.record_window(live)
+        recorder.record_tick(
+            compute_tick_metrics(
+                live,
+                state,
+                tick_index=recorder.tick_index,
+                wall_time_s=time.time(),
+                monotonic_s=time.monotonic(),
+                lsl_local_clock_s=lsl_now,
+                target_new_samples=target_new_samples,
+                reference_new_samples=reference_new_samples,
+            )
+        )
+
+
+def _lsl_local_clock() -> float | None:
+    # @brief Sample the LSL local clock if a provider is importable.
+    # @return local_clock() in seconds, or None when unavailable.
+    try:
+        from mne_lsl.lsl import local_clock  # type: ignore[import]
+    except ImportError:
+        try:
+            from pylsl import local_clock  # type: ignore[import]
+        except ImportError:
+            return None
+    return float(local_clock())
 
 
 # ---------------------------------------------------------------------------
@@ -236,6 +271,7 @@ def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
     target_stream, reference_stream, target_layout, reference_layout = build_streams(cfg)
     state = ViewerState()
     ch = build_chart_handles(cfg)
+    recorder = DiagnosticsRecorder(cfg)
 
     mode_label = "live_with_reference_validation" if validate_reference else "live"
 
@@ -263,6 +299,7 @@ def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
                 state,
                 ch,
                 validate_reference,
+                recorder,
             ),
         )
 
@@ -270,6 +307,7 @@ def run_live_mode_nicegui(cfg: DictConfig, validate_reference: bool) -> int:
     # @brief Shutdown hook that disconnects both LSL streams.
     def _cleanup() -> None:
         log.info("Viewer shutting down — disconnecting LSL streams")
+        recorder.close()
         try:
             target_stream.disconnect()  # type: ignore[union-attr]
         except Exception:
