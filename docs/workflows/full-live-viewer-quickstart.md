@@ -70,7 +70,7 @@ uv run python scripts/calibration_preflight.py \
   --gui-ndjson ../RS485_GUI/logs/raw_signal.ndjson
 ```
 
-See [docs/troubleshooting/viewer-lag-or-xy-delay.md](../troubleshooting/viewer-lag-or-xy-delay.md) and [docs/architecture/timestamping-and-synchronization.md](../architecture/timestamping-and-synchronization.md).
+See  [docs/architecture/timestamping-and-synchronization.md](../architecture/timestamping-and-synchronization.md) and [docs/troubleshooting/viewer-lag-or-xy-delay.md](../troubleshooting/viewer-lag-or-xy-delay.md).
 
 ## Related docs
 - [docs/architecture/stream-contracts.md](../architecture/stream-contracts.md)
