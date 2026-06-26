@@ -42,10 +42,9 @@ This is valuable because it makes the effective sampling rate, regular and indep
 
 However, the frames carry **no acquisition timestamp** —force/status only—, so the reference sample timestamp must be reconstructed from the host read time (`rs485_clock = host_lsl_ts`) of the last batch of buffered frames, and the known frame interval `rs485_frame_dt_s` (the reciprocal of the Active-Send rate). 
 
-This means the reference is effectively timestamped when the GUI reads it.
+This means the reference is only effectively timestamped thanks to the GUI reconstruction.
 
-The reference chain should be faster than the target chain. 
-The recommended calibration profile uses high-rate acquisition and Active-Send when parser stability by the board control interface (`RS485_GUI`) has been validated.
+The recommended calibration profile uses high-rate acquisition and Active-Send after parser stability by the board control interface (`RS485_GUI`) has been validated.
 
 Recommended treatment:
 
